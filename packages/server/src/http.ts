@@ -21,6 +21,11 @@ export interface Reply {
   contentType?: string;
   etag?: string;
   cache?: string;
+  /**
+   * Long-lived streaming reply (SSE). Called once, after the handler returned, with the response and the merged response
+   * headers (security headers, CORS, request id). The callback owns the response from then on and must write the head.
+   */
+  stream?: (res: ServerResponse, headers: Record<string, string>) => void;
 }
 
 export interface Ctx {
@@ -55,7 +60,7 @@ export interface Route {
 }
 
 const PARAM_RE: Record<string, RegExp> = {
-  id: ELECTION_ID_RE, org: ORG_ID_RE, invite: ORG_ID_RE, seq: /^\d{1,12}$/, kid: /^[A-Za-z0-9_-]{16,64}$/, leaf: /^[A-Za-z0-9_-]{43}$/,
+  id: ELECTION_ID_RE, org: ORG_ID_RE, invite: ORG_ID_RE, seq: /^\d{1,12}$/, wh: ORG_ID_RE, kid: /^[A-Za-z0-9_-]{16,64}$/, leaf: /^[A-Za-z0-9_-]{43}$/,
   j: /^\d{1,2}$/, keyid: /^[A-Za-z0-9_-]{16,64}$/,
 };
 
@@ -335,6 +340,10 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
       };
       const reply = await route.handler(ctx);
       status = reply.status;
+      if (reply.stream) {
+        reply.stream(res, { ...headers, ...(reply.headers ?? {}) });
+        return;
+      }
       const h: Record<string, string> = { ...headers, ...(reply.headers ?? {}) };
       h['Cache-Control'] = reply.cache ?? route.cache ?? (route.auth === 'none' ? 'no-cache' : 'no-store');
       let payload: Uint8Array | undefined;

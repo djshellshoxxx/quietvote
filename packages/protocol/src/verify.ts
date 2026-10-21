@@ -1,7 +1,10 @@
 import { bytesToHex, jcs, parseQvJson, pointToBytes, type Point } from '@quietvote/crypto';
 import { aggregate, analyzeBallotLog, countedRoot, type Finding, type FindingClass } from './ballotlog.ts';
-import type { ElectionParams } from './ballot.ts';
+import { ballotCode, type ElectionParams } from './ballot.ts';
 import { adjudicateDkg, verifyKeyconf, type DkgOutcome, type MarkerSeqs } from './dkg.ts';
+import {
+  verifyLogStructure, verifyReceiptClaims, verifyWitnessing, type LogEvidence, type LogStructure, type PhaseSeqs,
+} from './logcheck.ts';
 import { effectiveMinCounted, manifestHash, rollRoot, validateManifest } from './manifest.ts';
 import { verifyMultiSig, verifySig } from './records.ts';
 import { evaluateAll } from './rules.ts';
@@ -45,8 +48,17 @@ const ALL_CHECKS: CheckId[] = [
 
 type Entry = { seq: number; entry: unknown };
 
+export interface VerifyElectionOptions {
+  /**
+   * QV-18 log-layer evidence (C3 step 11): the log export whose entry bodies are the records of `bundle.log`, plus optional
+   * witness anchors, externally observed tree heads and voter receipts. Without it `chk.board.*` and `chk.receipts.sample`
+   * stay `not_run` and the report carries the log-integrity caveat.
+   */
+  log?: LogEvidence;
+}
+
 /** Verifies a strictly parsed JSON text (QV-JSON profile) end to end. */
-export async function verifyElectionText(text: string | Uint8Array): Promise<VerificationReport> {
+export async function verifyElectionText(text: string | Uint8Array, opts: VerifyElectionOptions = {}): Promise<VerificationReport> {
   let v: unknown;
   try {
     v = parseQvJson(text);
@@ -57,7 +69,7 @@ export async function verifyElectionText(text: string | Uint8Array): Promise<Ver
     r.verdict = 'FAIL';
     return r;
   }
-  return verifyElection(v);
+  return verifyElection(v, opts);
 }
 
 function blank(): VerificationReport {
@@ -72,12 +84,12 @@ function blank(): VerificationReport {
 
 /**
  * Appendix C verifier. Pure with respect to its input: no I/O, no clock, no randomness. Never throws on hostile input.
- * Board-level checks (tree heads, inclusion/consistency, witness cosignatures: C3) belong to @quietvote/board and are
- * reported as `not_run` here.
+ * C3 (tree heads, entry/record binding, witness cosignatures and gating, witnessed times, receipts) runs when
+ * `opts.log` supplies the QV-18 log export (logcheck.ts, NOTES X-21..X-30); otherwise those checks are `not_run`.
  */
-export async function verifyElection(input: unknown): Promise<VerificationReport> {
+export async function verifyElection(input: unknown, opts: VerifyElectionOptions = {}): Promise<VerificationReport> {
   try {
-    return await run(input);
+    return await run(input, opts);
   } catch (e) {
     const r = blank();
     r.findings.push({ code: 'E_SCHEMA', cls: 'F', detail: `verifier internal rejection: ${e instanceof Error ? e.message : 'unknown'}` });
@@ -85,13 +97,41 @@ export async function verifyElection(input: unknown): Promise<VerificationReport
   }
 }
 
-async function run(input: unknown): Promise<VerificationReport> {
+async function run(input: unknown, opts: VerifyElectionOptions): Promise<VerificationReport> {
   const R = blank();
+  // C3 log layer state, completed in done() so that it runs on every exit path once the structure was checked.
+  let logLayer: { m: Manifest; ls: LogStructure; ev: LogEvidence } | undefined;
+  let phaseSeqs: PhaseSeqs | undefined;
+  let ctxBytes: Uint8Array | undefined;
+  const finishLog = (): void => {
+    if (logLayer === undefined) return;
+    const { m, ls, ev } = logLayer;
+    logLayer = undefined;
+    const w = verifyWitnessing(m, ls, ev, phaseSeqs);
+    R.findings.push(...w.findings);
+    R.caveats.push(...w.caveats);
+    R.checks['chk.board.witness'] = w.status;
+    if (w.windowFailed) R.checks['chk.time.window'] = 'fail';
+    if (w.timesWitnessed) R.caveats = R.caveats.filter((c) => !c.startsWith('election times are unwitnessed'));
+    const codeAt = (seq: number): string | undefined => {
+      const e = ls.records.get(seq) as { body?: unknown } | undefined;
+      if (ctxBytes === undefined || e === undefined) return undefined;
+      try {
+        return H(ballotCode(ctxBytes, e.body as never));
+      } catch {
+        return undefined;
+      }
+    };
+    const rr = verifyReceiptClaims(ls, ev.receipts ?? [], codeAt);
+    R.findings.push(...rr.findings);
+    R.checks['chk.receipts.sample'] = rr.status;
+  };
   const F = (code: ErrorCode, detail: string, seq?: number, cls: FindingClass = 'F'): void => {
     R.findings.push(seq === undefined ? { code, cls, detail } : { code, cls, seq, detail });
   };
   const fatal = (): boolean => R.findings.some((f) => f.cls === 'F');
   const done = (): VerificationReport => {
+    finishLog();
     for (const f of R.findings) if (f.cls === 'L' || f.cls === 'ALARM') R.counts.ignored[f.code] = (R.counts.ignored[f.code] ?? 0) + 1;
     R.verdict = fatal() ? 'FAIL' : R.checks['chk.tally.decrypt'] === 'not_run' ? 'INCOMPLETE' : 'PASS';
     return R;
@@ -162,6 +202,16 @@ async function run(input: unknown): Promise<VerificationReport> {
     }
     prevSeq = x.seq;
     log.push({ seq: x.seq, entry: x.entry });
+  }
+
+  // ---- C3 (QV-18 log layer): entries <-> records, tree, tree heads, observed views. Witnessing/receipts finish in done().
+  if (opts.log !== undefined) {
+    const ls = verifyLogStructure(m, mrec, rollHex, log, opts.log);
+    R.findings.push(...ls.findings);
+    R.warnings.push(...ls.warnings.map((w) => `log: ${w}`));
+    R.checks['chk.board.append_only'] = ls.ok ? 'pass' : 'fail';
+    R.caveats = R.caveats.filter((c) => !c.startsWith('log integrity'));
+    logLayer = { m, ls, ev: opts.log };
   }
 
   const trusteeKey = (idx: number): string | undefined => m.trustees[idx - 1]?.sign_pk;
@@ -348,6 +398,7 @@ async function run(input: unknown): Promise<VerificationReport> {
   R.ctx = H(dkg.ctx);
   R.jointKey = H(pointToBytes(dkg.K));
   const p: ElectionParams = { manifest: m, mh: mhb, K: dkg.K, ctx: dkg.ctx };
+  ctxBytes = dkg.ctx;
 
   // ---- election markers (scope = ctx)
   for (const { seq, rec } of pendingCtxMarkers) {
@@ -368,6 +419,10 @@ async function run(input: unknown): Promise<VerificationReport> {
     return done();
   }
   R.caveats.push('election times are unwitnessed (no witness cosignatures checked)');
+  phaseSeqs = {
+    setupEnd: Math.max(mk['dkg-final'], ...rollCommits.map((c) => c.seq)), open: open.seq, close: close.seq,
+    ...(tallies[0] === undefined ? {} : { tally: tallies[0].seq }),
+  };
 
   // ---- C4: ballots
   const rollSet = new Set(rollHex);

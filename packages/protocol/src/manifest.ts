@@ -9,7 +9,8 @@ export function manifestHash(m: Manifest): Uint8Array {
 
 const BIDI = /[‎‏‪-‮⁦-⁩]/;
 
-function validTs(s: string): number | null {
+/** Strict `YYYY-MM-DDTHH:MM:SSZ` -> unix milliseconds, or null. */
+export function validTs(s: string): number | null {
   const d = new Date(s.replace('Z', '.000Z'));
   const t = d.getTime();
   if (Number.isNaN(t)) return null;
@@ -75,6 +76,16 @@ export function validateManifest(body: unknown, rollSize: number): Result<Manife
   if (new Set(m.coordinator.keys).size !== m.coordinator.keys.length || m.coordinator.m > m.coordinator.keys.length) return bad('coordinator');
   if (!m.coordinator.keys.every((k) => ed25519IsStrictPoint(hexToBytes(k)))) return bad('coordinator key invalid');
   if (!ed25519IsStrictPoint(hexToBytes(m.bb.log_pk))) return bad('log key invalid');
+  if (m.bb.witnesses !== undefined) {
+    // NOTES X-23: distinct names and keys, strict Ed25519, never the log key, never a log-origin name; quorum must be attainable.
+    const names = new Set(m.bb.witnesses.map((w) => w.name));
+    const wks = new Set(m.bb.witnesses.map((w) => w.pk));
+    if (names.size !== m.bb.witnesses.length || wks.size !== m.bb.witnesses.length) return bad('duplicate witness name/key');
+    for (const w of m.bb.witnesses) {
+      if (w.name.startsWith('quietvote/') || w.pk === m.bb.log_pk || !ed25519IsStrictPoint(hexToBytes(w.pk))) return bad('witness entry invalid');
+    }
+    if (m.bb.witness_quorum > m.bb.witnesses.length) return bad('witness_quorum exceeds listed witnesses');
+  }
 
   const created = validTs(m.created), open = validTs(m.voting_open), close = validTs(m.voting_close);
   if (created === null || open === null || close === null) return bad('timestamp');

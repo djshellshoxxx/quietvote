@@ -21,7 +21,7 @@ export function prep(db: DatabaseSync, sql: string): StatementSync {
   return s;
 }
 
-export function run(db: DatabaseSync, sql: string, ...p: SqlValue[]): { changes: number | bigint } {
+export function run(db: DatabaseSync, sql: string, ...p: SqlValue[]): { changes: number | bigint; lastInsertRowid: number | bigint } {
   return prep(db, sql).run(...p);
 }
 export function get<T = Record<string, SqlValue>>(db: DatabaseSync, sql: string, ...p: SqlValue[]): T | undefined {

@@ -8,7 +8,10 @@ export type ErrorCode =
   | 'E_DKG_R1' | 'E_DKG_R2' | 'E_DKG_COMPLAINT' | 'E_DKG_FINAL' | 'E_DKG_QUORUM' | 'E_DKG_KEYCONF' | 'E_DKG_MARKERS'
   | 'E_DKG_EQUIVOCATION' | 'E_AGG_IDENTITY' | 'E_AGG_MISMATCH' | 'E_DEC_PROOF' | 'E_TALLY_INSUFFICIENT'
   | 'E_TALLY_MISSING' | 'E_DLOG_RANGE' | 'E_COUNTED_ROOT' | 'E_RESULT' | 'E_BELOW_FLOOR' | 'E_MANIFEST' | 'E_MANIFEST_HASH'
-  | 'E_MANIFEST_SIG' | 'E_ROLL' | 'E_MARKERS' | 'E_TRUSTEE_REFUSE' | 'E_LOG_ORDER';
+  | 'E_MANIFEST_SIG' | 'E_ROLL' | 'E_MARKERS' | 'E_TRUSTEE_REFUSE' | 'E_LOG_ORDER'
+  // QV-16 §8 `E_LOG_*` family (QV-18 log layer, NOTES X-21..X-30)
+  | 'E_LOG_FORMAT' | 'E_LOG_BINDING' | 'E_LOG_CHECKPOINT' | 'E_LOG_FORK' | 'E_LOG_ROLLBACK' | 'E_LOG_WITNESS'
+  | 'E_LOG_RECEIPT' | 'E_LOG_RECEIPT_CLASH';
 
 export type Result<T, E = ErrorCode> = { ok: true; value: T } | { ok: false; error: E; detail?: string };
 export const ok = <T>(value: T): { ok: true; value: T } => ({ ok: true, value });
@@ -60,7 +63,8 @@ export interface Manifest {
   t: number;
   coordinator: { keys: Hex[]; m: number };
   ballots: { max_per_voter: number; max_spoils_per_voter: number };
-  bb: { log_id: Hex; log_pk: Hex; witness_quorum: number };
+  /** `witnesses` (optional, NOTES X-23): QV-18 REQ-020 witness keys pinned by the manifest hash (tlog-cosignature Ed25519, type 0x04). */
+  bb: { log_id: Hex; log_pk: Hex; witness_quorum: number; witnesses?: { name: string; pk: Hex }[] };
   min_counted_ballots?: number;
   privacy_ack?: boolean;
   spoil_trustee_decrypt?: boolean;

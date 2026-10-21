@@ -1,7 +1,9 @@
 // HTTP client for QV-09. Injected `fetch` and `sleep` make it testable without a network (QV-09-REQ-020 reference client).
-// No cookies, no ambient credentials: bearer tokens only on organizer endpoints; log appends are self-authenticating and
-// never carry a bearer (QV-09-REQ-005).
+// No cookies, no ambient credentials: organizer management calls carry a QV-08 signed request (signing.ts); log appends are
+// self-authenticating and never carry a credential (QV-09-REQ-005).
+import { utf8 } from '@quietvote/crypto';
 import { ApiError, BAD_RESPONSE, NETWORK, TIMEOUT, isRetryable } from './errors.ts';
+import { qvSigHeader, type RequestSigning } from './signing.ts';
 import type {
   AppendResult, Challenge, ConsistencyProofView, ElectionState, ElectionSummary, EntryPage, EntryView, InclusionProofView,
   Instance, InviteResult, RegistrationBody, RegistrationResult, RollPage, Session, VoterStatus,
@@ -10,6 +12,8 @@ import type {
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export interface ClientOptions {
+  /** Organizer key for QV-08 signed management requests (createElection, putDraft, createInvites). */
+  signing?: RequestSigning | undefined;
   /** Base of the API origin, e.g. "" (same origin) or "https://board.example". */
   baseUrl?: string;
   fetch?: FetchLike;
@@ -30,6 +34,7 @@ export class ApiClient {
   private readonly timeoutMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly onRetry: ClientOptions['onRetry'];
+  private readonly signing: RequestSigning | undefined;
   private token: string | undefined;
 
   constructor(o: ClientOptions = {}) {
@@ -39,25 +44,34 @@ export class ApiClient {
     this.timeoutMs = o.timeoutMs ?? 20_000;
     this.sleep = o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
     this.onRetry = o.onRetry;
+    this.signing = o.signing;
   }
 
   setSessionToken(t: string | undefined): void {
     this.token = t;
   }
 
-  private async req(method: string, path: string, opts: { body?: unknown; bearer?: boolean; headers?: Record<string, string>; accept?: string; query?: Record<string, string | number | undefined> } = {}): Promise<Response> {
-    let url = `${this.base}${path}`;
+  private async req(method: string, path: string, opts: { body?: unknown; bearer?: boolean; signed?: boolean; headers?: Record<string, string>; accept?: string; query?: Record<string, string | number | undefined> } = {}): Promise<Response> {
+    let target = path;
     if (opts.query) {
       const q = Object.entries(opts.query).filter(([, v]) => v !== undefined).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
-      if (q.length > 0) url += `?${q.join('&')}`;
+      if (q.length > 0) target += `?${q.join('&')}`;
     }
+    const url = `${this.base}${target}`;
     const headers: Record<string, string> = { Accept: opts.accept ?? 'application/json', ...opts.headers };
     if (this.readKey !== undefined) headers['QV-Read-Key'] = this.readKey;
     if (opts.bearer === true && this.token !== undefined) headers.Authorization = `Bearer ${this.token}`;
     const init: RequestInit = { method, headers, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer' };
+    let bodyBytes: Uint8Array = new Uint8Array(0);
     if (opts.body !== undefined) {
+      const text = JSON.stringify(opts.body);
+      bodyBytes = utf8(text);
       headers['Content-Type'] = 'application/json; charset=utf-8';
-      init.body = JSON.stringify(opts.body);
+      init.body = text;
+    }
+    if (opts.signed === true) {
+      if (this.signing === undefined) throw new ApiError({ status: 0, code: 'UNAUTHENTICATED', message: 'no organizer signing key configured' });
+      headers.Authorization = await qvSigHeader(this.signing, method, target, bodyBytes);
     }
     const ctl = new AbortController();
     init.signal = ctl.signal;
@@ -170,13 +184,14 @@ export class ApiClient {
     return s;
   }
   async createElection(orgId: string, title: string, idempotencyKey: string): Promise<ElectionSummary> {
-    return this.json(await this.req('POST', `${API}/orgs/${enc(orgId)}/elections`, { body: { title }, bearer: true, headers: { 'Idempotency-Key': idempotencyKey } }));
+    return this.json(await this.req('POST', `${API}/orgs/${enc(orgId)}/elections`, { body: { title }, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
   }
   async putDraft(id: string, draft: unknown): Promise<unknown> {
-    return this.json(await this.req('PUT', `${API}/elections/${enc(id)}/draft`, { body: draft, bearer: true }));
+    return this.json(await this.req('PUT', `${API}/elections/${enc(id)}/draft`, { body: draft, signed: true }));
   }
+  /** Returns codes once. An idempotent replay answers `code_withheld: true` and no `code`; the first response must be kept. */
   async createInvites(id: string, count: number, idempotencyKey: string): Promise<InviteResult> {
-    return this.json(await this.req('POST', `${API}/elections/${enc(id)}/invites`, { body: { count }, bearer: true, headers: { 'Idempotency-Key': idempotencyKey } }));
+    return this.json(await this.req('POST', `${API}/elections/${enc(id)}/invites`, { body: { count }, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
   }
 }
 

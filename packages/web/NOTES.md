@@ -18,15 +18,23 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   (QV-19 over QV-09 wording). Passphrase policy (>= 12 chars or 6 words) follows QV-19, not QV-10 "optional".
 * Entry bodies are JCS bytes of protocol records/envelopes; ballots use type `ballot`, tests `ballot_audit`. Organizer auth
   challenge message and `bb.log_id = SHA-256(origin)` are my choices (undefined in specs).
+* Organizer management calls (createElection, putDraft, createInvites) are QV-08 signed requests (`api/signing.ts`, mirrors
+  server `auth.ts`), because the server has no `/auth/*` session routes. `authChallenge`/`authSession`/bearer in `ApiClient` are
+  left over from QV-09 and are not used by the server. The audience (`qv:<instance_id>@<publicUrl>`) is supplied by the caller.
 * Client derives K/ctx itself by re-running DKG adjudication from the log. Word list is generated (placeholder, QV-19 open question).
 * Sealing runs in a Worker via a Trusted Types policy `qv-default` (script URL only); falls back in-thread.
 * Under hash-pinned CSP the standalone verifier page has inline script/style by spec (QV-19 section 7); index.html has none.
 
 ## Gaps
-* es/fr/de/pt-BR/ar have key tables but no translations, so only `en` is offered (REQ-064 gating works, tested). RTL CSS is logical-only.
+* es/fr/de/pt-BR/ar have complete message tables (`src/i18n/catalogs/*.ts`), drafted by an AI model and not native-reviewed. They stay unoffered (only `en`) until each locale's `review` map holds a hash for every guarantee key; the matching-review path is tested in `test/i18n-catalogs.test.ts`. RTL CSS is logical-only; the ar layout has not been checked visually.
 * Messages are parsed at runtime (REQ-062 wants precompile). No lazy chunks (single bundle ~94 kB gzip); no import-map integrity (inline script).
 * No QR codes (text/file alternatives only). Receipt "superseded" detection, SSE, `/verify-client`, results charts not done.
-* Organizer UI stops at building/validating the manifest and roll preview; publishing manifest/roll-commit/markers and invites via API
-  is not wired (server does not exist yet; `ApiClient` has the endpoints, `signMulti` exists). Trustee flows are CLI-only (ADR-024).
+* Organizer publish: `flow/publish.ts` (`publishElection`: election, signed manifest, dkg-open marker, invites; `commitRoll`:
+  roll-commit) is implemented and unit-tested against a fake client and against the real `ApiClient` over a fake fetch. Not done:
+  the UI still stops at the roll preview (`ui/app.ts` needs a publish button and its strings, which need catalog keys owned by the
+  i18n work); no run against a live server or e2e; `commitRoll` only works after registrations are approved (server gate), so it
+  is a separate step, not part of `publishElection`; other ceremony markers (r1..r3, dkg-final) and trustee invites are not driven
+  from the web; withheld invite codes on a replayed request are not recoverable (the batch is re-issued, the old invites stay open).
+  Trustee flows are CLI-only (ADR-024).
 * Standalone verifier does bundle verification only (no audit-package or canary self-test; packages/verifier was in flux).
 * Unit tests cover no DOM; a11y checks (axe), RTL visual and AT matrix are not automated here.

@@ -52,8 +52,36 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
 * Bucket for IPv6 is /64 (spec says /56); archive deletes erase the DEK and files but do not require an acknowledged export.
 * `max_per_voter`/`max_spoils` overruns answer 429 `REVOTE_LIMIT` with `retryable:false` (QV-09 table).
 
+## Event stream and webhooks (QV-09 §9, §6.3; QV-09-REQ-010/014)
+* **Outbox**: election DB migration 2 adds the QV-28 `event` table (types `entry|checkpoint|phase|witness|alert`, P0 data only, no entry bodies).
+  `entry` + `checkpoint` rows are written in the SAME transaction as the append; `phase`/`alert` rows right after (a crash in between can lose a
+  phase row, never an entry; clients can always resync from the log). `witness` rows are written when a valid new cosignature is attached.
+  Rows are published to live subscribers only after commit. Failed/rejected writes emit nothing.
+* **SSE** (`sse.ts`): `GET /api/v1/elections/{id}/events`, class R, public (link elections need `QV-Read-Key`). Resume via `Last-Event-ID` header
+  (wins) or `?last_event_id=`; malformed -> 400; id beyond the last issued, or older than the retained window -> `410 EVENT_GONE`. Without an id the
+  stream starts at "now". Each client owns a cursor into the outbox and is fed in batches (`sseBatch`), so per-client memory is one batch plus the socket
+  buffer; a socket that stays backpressured for `sseSlowClientMs` or queues more than `sseMaxBufferBytes` is dropped (reconnect resumes). Heartbeat
+  comment every `sseHeartbeatMs` (default 15 s, hard max 20 s); no event for `sseIdleCloseMs` (10 min) -> closed. Caps: `maxSseStreams` per network
+  bucket (429 + Retry-After), `maxSseTotal` per process (503 BUSY). Streams end when the runtime is evicted/deleted or the server stops.
+  Outbox is pruned 30 days after ARCHIVED (checked lazily on connect). The outbox is not otherwise size-capped (3 rows per entry).
+* **Webhooks** (`webhooks.ts`, `ssrf.ts`): `POST/GET /orgs/{org}/webhooks`, `DELETE /orgs/{org}/webhooks/{id}` (owner, signed, POST needs Idempotency-Key).
+  Body `{url, events[], election_id?}`; response includes the signing secret exactly once (`whsec_...`); URL and secret are sealed under the KEK in
+  `control.webhook`; the idempotency cache drops `secret` and `url`. Quota `maxWebhooksPerOrg` (10). Delivery: `POST` JSON with `QV-Webhook-Id`
+  (stable across retries), `-Event`, `-Timestamp`, `-Signature: v1=hex(HMAC-SHA256(secret, "<ts>.<id>.<body>"))`. 2xx = delivered; 408/429/5xx/network/
+  DNS failure = retry with exponential backoff (`webhookBackoffBaseMs` x2^n, cap `webhookMaxBackoffMs`, `webhookMaxAttempts` incl. first); other 4xx and
+  3xx are permanent (redirects are NEVER followed). `webhookDisableAfter` consecutive failed deliveries disable the hook. Bounds: per-attempt deadline
+  (`webhookTimeoutMs`, hard max 30 s), response read up to `webhookMaxResponseBytes` then dropped, body <= `webhookMaxBodyBytes`, queue+retry-wait
+  <= `webhookMaxQueue` (oldest dropped), `webhookMaxInflight` concurrent sends. The queue is in memory: a restart drops pending retries.
+* **SSRF policy**: https only; no credentials; ports 443/8443 only; no `localhost`, single-label, `.local/.internal/.lan/...` names; IP literals in any
+  spelling are canonicalised by the URL parser then range-checked (v4: 0/8, 10/8, 100.64/10, 127/8, 169.254/16, 172.16/12, 192.0.0/24, 192.0.2/24,
+  192.168/16, 198.18/15, test nets, multicast, 240/4; v6: only 2000::/3 minus Teredo/ORCHID/documentation, IPv4-mapped/NAT64/6to4 judged by the embedded
+  v4). Names are resolved and EVERY address must be public. The check runs at registration and again before every attempt; the socket then connects
+  to the validated address (lookup is overridden: no second resolution, TLS still verifies the certificate and SNI against the URL host).
+* Not covered / limits: no per-election event size cap; webhook delivery state is not persisted; `webhookResolver`/`webhookTransport` options exist
+  only as test seams. Real-TLS transport tests need `openssl` (skipped without it). The 30-day post-ARCHIVED pruning (`pruneEventsIfExpired`) is not covered by a test (only the resulting 410 on a pruned window is).
+
 ## Not implemented (known gaps)
-SSE `/events`, webhooks, `/imports`, jobs, `/admin/*`, gossip endpoint, `Range` on export, OpenAPI/JSON-Schema generation,
+`/imports`, jobs, `/admin/*`, gossip endpoint, `Range` on export, OpenAPI/JSON-Schema generation,
 proof-of-work challenges and L0-L3 load levels (queue shedding via `maxVerifyQueue` -> 503 BUSY exists), worker-thread proof
 verification (verification runs on the event loop under a per-election mutex), `merkle_node` table and `rebuild-projections`
 command (tree is rebuilt from leaf hashes at open), encrypted backups, scheduled integrity checks, TLS termination, per-org quotas

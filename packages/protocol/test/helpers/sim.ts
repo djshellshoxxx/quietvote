@@ -5,7 +5,7 @@ import {
 import {
   PROTO_ID, adjudicateDkg, analyzeBallotLog, buildBallot, buildTally, checkDealing, dkgDeal, dkgFinalShare, dkgKeyconf,
   dkgMakeComplaint, dkgMakeShares, dkgReceiveShare, makeCast, makeSpoil, manifestHash, mth, rollLeaf, rollRoot,
-  signRecord, signRecordRaw, trusteeDecryptSpoiled, trusteeDecryptTally, NO_SUPERSEDES,
+  signRecord, signRecordRaw, trusteeDecryptSpoiled, expectedLogId, logOrigin, trusteeDecryptTally, NO_SUPERSEDES,
   type BuiltBallot, type CastEnvelope, type DealerSecret, type DkgOutcome, type ElectionBundle, type ElectionParams,
   type LogEntry, type Manifest, type ManifestContest, type MarkerBody, type ParsedDealing, type Selections, type ShareSet,
   type SpoilEnvelope, type SpoilMode, type TrusteeKey,
@@ -39,6 +39,10 @@ export interface SimOpts {
   minCounted?: number;
   spoilTrustees?: boolean;
   quorum?: Manifest['quorum'];
+  /** Board-bound manifest (log-layer tests): log_id = H(origin), witness quorum and keys. Defaults keep existing vectors unchanged. */
+  boundLog?: boolean;
+  witnessQuorum?: number;
+  witnesses?: { name: string; pk: string }[];
 }
 
 export function defaultContests(): ManifestContest[] {
@@ -90,6 +94,9 @@ export function buildManifest(o: SimOpts, coord: Ed25519Keypair[], tk: Ed25519Ke
   if (o.quorum !== undefined) m.quorum = o.quorum;
   if (o.minCounted !== undefined) m.min_counted_ballots = o.minCounted;
   if (o.spoilTrustees === true) m.spoil_trustee_decrypt = true;
+  if (o.witnessQuorum !== undefined) m.bb.witness_quorum = o.witnessQuorum;
+  if (o.witnesses !== undefined) m.bb.witnesses = o.witnesses;
+  if (o.boundLog === true) m.bb.log_id = expectedLogId(logOrigin(m));
   return m;
 }
 

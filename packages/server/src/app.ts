@@ -19,7 +19,10 @@ import { Logger } from './logger.ts';
 import { ElectionPool } from './pool.ts';
 import { ApiError, conflict, forbidden, notFound } from './problem.ts';
 import { FailureCounter, RateLimiter } from './ratelimit.ts';
+import { SseHub } from './sse.ts';
+import { TargetRejected } from './ssrf.ts';
 import { StaticAssets } from './static.ts';
+import { WEBHOOK_EVENTS, WebhookService } from './webhooks.ts';
 import { ctEq, fArr, fBool, fEnum, fInt, fObj, fStr, opt, originOf as _o, req, toIso } from './util.ts';
 import { effectiveMinCounted } from '@quietvote/protocol';
 void _M; void _o;
@@ -28,6 +31,8 @@ export interface QuietVoteServer {
   http: HttpApp;
   env: Env;
   pool: ElectionPool;
+  sse: SseHub;
+  webhooks: WebhookService;
   start(): Promise<{ port: number; host: string; url: string }>;
   stop(): Promise<void>;
 }
@@ -58,6 +63,9 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   };
   for (const k of cfg.adminKeys) control.seedAdmin(keyIdOf(hexToBytes(k, 32)), hexToBytes(k, 32));
   const pool = new ElectionPool(env);
+  const sse = new SseHub(env);
+  const webhooks = new WebhookService(env);
+  env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
   const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
   const releaseKey = cfg.releaseSeedHex ? ed25519Keypair(hexToBytes(cfg.releaseSeedHex, 32)) : undefined;
 
@@ -705,6 +713,70 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     },
   });
 
+  // ---- event stream (QV-09 §9)
+  add({
+    method: 'GET', path: '/api/v1/elections/:id/events', cls: 'R', auth: 'none',
+    handler: async (c) => sse.open(c, await readable(c)),
+  });
+
+  // ---- webhooks (QV-09 §6.3; owner only, public events only)
+  const ownerOnly = (c: Ctx): void => {
+    if (c.auth!.role !== 'org_owner' && c.auth!.role !== 'instance_admin') throw forbidden('owner only');
+  };
+  add({
+    method: 'POST', path: '/api/v1/orgs/:org/webhooks', cls: 'M', auth: 'sig', body: 'json', maxBody: 4096,
+    handler: (c) => {
+      const org = orgOf(c);
+      ownerOnly(c);
+      const b = c.parse(fObj({
+        url: req(fStr({ min: 1, max: 2048 })), events: req(fArr(fEnum(...WEBHOOK_EVENTS), WEBHOOK_EVENTS.length)),
+        election_id: opt(fStr({ min: 32, max: 32, re: /^[0-9a-f]{32}$/ })),
+      }));
+      if (b.events.length === 0) throw new ApiError(400, 'BAD_REQUEST', 'events must not be empty');
+      return idem(c, c.auth!.keyId, async () => {
+        if (b.election_id !== undefined) {
+          const rt = await pool.get(b.election_id);
+          if (!rt || rt.orgId !== org) throw notFound('election');
+        }
+        if (control.countWebhooks(org) >= cfg.maxWebhooksPerOrg) throw new ApiError(429, 'RATE_LIMITED', 'webhook quota reached for this organization', { retryable: false });
+        let made;
+        try {
+          made = await webhooks.create(org, b.url, b.events, b.election_id);
+        } catch (e) {
+          if (e instanceof TargetRejected) throw new ApiError(422, 'VALIDATION_FAILED', e.message, { reason: e.code });
+          throw e;
+        }
+        control.audit(c.auth!.keyId, 'webhook.create', made.row.webhook_id);
+        return { status: 201, json: { ...webhooks.view(made.row), secret: made.secret } };
+      }, (r) => {
+        const j = { ...(r.json as Record<string, unknown>) };
+        delete j['secret']; // shown once, never replayed from the idempotency cache
+        delete j['url']; // may embed a token; kept out of the plaintext idempotency table (list shows it, decrypted)
+        return { ...r, json: j };
+      });
+    },
+  });
+  add({
+    method: 'GET', path: '/api/v1/orgs/:org/webhooks', cls: 'M', auth: 'sig',
+    handler: (c) => {
+      const org = orgOf(c);
+      ownerOnly(c);
+      return { status: 200, json: { items: control.webhooksOf(org).map((r) => webhooks.view(r)), next_cursor: null } };
+    },
+  });
+  add({
+    method: 'DELETE', path: '/api/v1/orgs/:org/webhooks/:wh', cls: 'M', auth: 'sig',
+    handler: (c) => {
+      const org = orgOf(c);
+      ownerOnly(c);
+      const w = control.webhook(c.params['wh']!);
+      if (!w || w.org_id !== org) throw notFound('webhook');
+      control.deleteWebhook(w.webhook_id);
+      control.audit(c.auth!.keyId, 'webhook.delete', w.webhook_id);
+      return { status: 204 };
+    },
+  });
+
   // ---- export
   add({
     method: 'GET', path: '/api/v1/elections/:id/export.qvb', cls: 'X', auth: 'none',
@@ -726,12 +798,14 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
 
   const http = createHttpApp(env, R, statics);
   return {
-    http, env, pool,
+    http, env, pool, sse, webhooks,
     async start() {
       const a = await http.listen();
       return { ...a, url: `http://${a.host}:${a.port}` };
     },
     async stop() {
+      sse.closeAll();
+      webhooks.stop();
       await http.close();
       await pool.closeAll();
       control.close();

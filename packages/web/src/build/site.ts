@@ -2,7 +2,7 @@
 // Deterministic: no timestamps; same inputs give byte-identical output (QV-19 §9).
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build as esbuild, type BuildOptions } from 'esbuild';
 
@@ -72,7 +72,13 @@ export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; version: str
 }
 
 export async function verifierHtml(): Promise<{ html: string; scriptHash: string; styleHash: string }> {
-  const r = await esbuild({ ...common, format: 'iife', entryPoints: ['src/verifier/page.ts'], outdir: 'out' });
+  const stubCatalogs = {
+    name: 'stub-catalogs',
+    setup(b: { onResolve(o: { filter: RegExp }, cb: () => { path: string }): void }) {
+      b.onResolve({ filter: /catalogs\/(es|fr|de|pt-BR|ar)\.ts$/ }, () => ({ path: resolve('src/i18n/catalogs/verifier-stub.ts') }));
+    },
+  };
+  const r = await esbuild({ ...common, format: 'iife', entryPoints: ['src/verifier/page.ts'], outdir: 'out', plugins: [stubCatalogs] });
   const js = new TextDecoder().decode(r.outputFiles![0]!.contents).replace(/<\/script/gi, '<\\/script');
   const css = 'body{font:1.1rem/1.6 system-ui,sans-serif;max-inline-size:44rem;margin:1rem auto;padding-inline:16px;background:#fff;color:#14213d}@media(prefers-color-scheme:dark){body{background:#10151f;color:#eef2f8}}label{display:block;font-weight:600;margin-block-start:1rem}input,button{font:inherit;min-block-size:44px}:focus-visible{outline:3px solid #b45309;outline-offset:2px}.sr{position:absolute;clip-path:inset(50%);inline-size:1px;block-size:1px}';
   const sh = `sha256-${hashOf('sha256', js, 'base64')}`;

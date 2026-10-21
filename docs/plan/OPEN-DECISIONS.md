@@ -100,3 +100,11 @@
 | D-81 | Dogfood governance votes | QV-27 | Optional after audit | M7 |
 | D-82 | Machine-checked verification | QV-11 Q-11-4 | Could; not blocking | 2027 |
 | D-83 | Anonymity-set estimator, cover traffic, default D | QV-26 | Conservative counter only; no cover traffic; 10 min | Phase 2 |
+
+## G. [Added 2026-10-21] Spec–implementation reconciliation
+
+Entries added by the consistency pass in [CONSISTENCY-REPORT](CONSISTENCY-REPORT.md) (rows 19–20). QV-08 and QV-09 spec files were not edited.
+
+| ID | Decision | Source | Recommended default | Deadline |
+|---|---|---|---|---|
+| D-84 | **Organizer/admin request authentication: QV-08 signed requests (`Authorization: QV-Sig`, implemented in `packages/server`) vs QV-09 challenge/session bearer (`/auth/challenge`, `/auth/session`, `Bearer qvs_…`, specified in QV-09 §3.2, REQ-006; still called by `packages/web`).** | QV-08 §7 (REQ-019, QV-ADR-P08-4) vs QV-09 §3.2 (REQ-005/006, QV-ADR-P09-2); CONSISTENCY-REPORT row 20 | **QV-08 signed requests.** Already implemented and negative-tested; no server session store, token rotation or revocation to get wrong; no bearer to leak; ±120 s window plus nonce cache bounds replay; audience binding is kept in the signed message. QV-09 §3.2 and REQ-006 to be rewritten to the signed-request form, and `packages/web` auth client moved to match, once accepted. | **M1** (before the QV-09 freeze); needed before any organizer UI is tested end to end |

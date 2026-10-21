@@ -1,9 +1,14 @@
 // Locale registry and quality gating (QV-13 §9.3, §9.6, REQ-064).
-// Translations are NOT machine-generated here: es, fr, de, pt-BR and ar ship their key tables empty, so they are not offered to
-// voters until native-reviewed translations and review records exist. A locale is offered iff every `guarantee` key has a
-// message AND a review record whose source hash equals the hash of the current English string.
+// es, fr, de, pt-BR and ar have complete message tables (catalogs/*.ts, drafted, not native-reviewed). Their `review` maps stay
+// empty, so they are NOT offered to voters until native review records exist. A locale is offered iff every `guarantee` key has
+// a message AND a review record whose source hash equals the hash of the current English string.
 import { bytesToHex, sha256, utf8 } from '@quietvote/crypto';
 import { EN, MESSAGE_KEYS, type MessageKey } from './en.ts';
+import { ES } from './catalogs/es.ts';
+import { FR } from './catalogs/fr.ts';
+import { DE } from './catalogs/de.ts';
+import { PT_BR } from './catalogs/pt-BR.ts';
+import { AR } from './catalogs/ar.ts';
 
 export type Dir = 'ltr' | 'rtl';
 export interface LocaleDef {
@@ -26,11 +31,11 @@ const empty = (): Partial<Record<MessageKey, string>> => ({});
 
 export const LOCALES: readonly LocaleDef[] = [
   { tag: 'en', dir: 'ltr', autonym: 'English', tier: 'source', messages: {}, review: {} },
-  { tag: 'es', dir: 'ltr', autonym: 'Español', tier: 1, messages: empty(), review: empty() },
-  { tag: 'fr', dir: 'ltr', autonym: 'Français', tier: 1, messages: empty(), review: empty() },
-  { tag: 'de', dir: 'ltr', autonym: 'Deutsch', tier: 1, messages: empty(), review: empty() },
-  { tag: 'pt-BR', dir: 'ltr', autonym: 'Português (Brasil)', tier: 1, messages: empty(), review: empty() },
-  { tag: 'ar', dir: 'rtl', autonym: 'العربية', tier: 1, messages: empty(), review: empty() },
+  { tag: 'es', dir: 'ltr', autonym: 'Español', tier: 1, messages: ES, review: empty() },
+  { tag: 'fr', dir: 'ltr', autonym: 'Français', tier: 1, messages: FR, review: empty() },
+  { tag: 'de', dir: 'ltr', autonym: 'Deutsch', tier: 1, messages: DE, review: empty() },
+  { tag: 'pt-BR', dir: 'ltr', autonym: 'Português (Brasil)', tier: 1, messages: PT_BR, review: empty() },
+  { tag: 'ar', dir: 'rtl', autonym: 'العربية', tier: 1, messages: AR, review: empty() },
 ];
 
 /** Why a locale is (not) offered. `missing` lists guarantee keys without a message or with a stale/absent review. */

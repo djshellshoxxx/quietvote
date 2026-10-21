@@ -103,7 +103,8 @@ export interface Session {
   org_id?: string;
 }
 export interface InviteResult {
-  invites: { invite_id: string; code: string; label?: string }[];
+  /** `code` is present only on the first (non-replayed) response; replays carry `code_withheld: true`. */
+  invites: { invite_id: string; code?: string; code_withheld?: boolean; label?: string }[];
 }
 export interface VoterStatus {
   registered: boolean;

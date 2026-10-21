@@ -60,7 +60,30 @@ CREATE TABLE projection_state (key TEXT PRIMARY KEY, value TEXT NOT NULL, as_of_
 CREATE TABLE redaction (seq INTEGER PRIMARY KEY REFERENCES log_entry(seq), redacted_at INTEGER NOT NULL, reason TEXT NOT NULL) STRICT;
 `,
   },
+  {
+    version: 2,
+    name: 'event_outbox',
+    // SSE / webhook outbox (QV-28 §8.2 `event`, QV-09 §9). Public (P0) data only.
+    sql: `
+CREATE TABLE event (
+  event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts       INTEGER NOT NULL,
+  type     TEXT NOT NULL CHECK (type IN ('entry','checkpoint','phase','witness','alert')),
+  seq      INTEGER,
+  data     TEXT NOT NULL
+) STRICT;
+`,
+  },
 ];
+
+/** One row of the event outbox. `data` is a JSON string containing public data only. */
+export interface EventRow {
+  id: number;
+  ts: number;
+  type: string;
+  seq: number | null;
+  data: string;
+}
 
 export interface ElectionRow {
   election_id: string;
@@ -208,6 +231,27 @@ export class ElectionDb {
   setQuarantine(reason: string | null): void {
     run(this.db, 'UPDATE election SET quarantine=?', reason);
   }
+  // ---- event outbox
+  insertEvent(ts: number, type: string, seq: number | null, data: string): EventRow {
+    const r = run(this.db, 'INSERT INTO event(ts,type,seq,data) VALUES (?,?,?,?)', ts, type, seq, data);
+    return { id: Number(r.lastInsertRowid), ts, type, seq, data };
+  }
+  /** Events with id > after, ascending, at most `limit`. */
+  eventsAfter(after: number, limit: number): EventRow[] {
+    return all<EventRow>(this.db, 'SELECT event_id AS id, ts, type, seq, data FROM event WHERE event_id > ? ORDER BY event_id LIMIT ?', after, limit);
+  }
+  eventBounds(): { first: number; last: number } | undefined {
+    const r = get<{ f: number | null; l: number | null }>(this.db, 'SELECT MIN(event_id) AS f, MAX(event_id) AS l FROM event');
+    return r && r.f !== null && r.l !== null ? { first: r.f, last: r.l } : undefined;
+  }
+  /** Highest event id ever issued (survives pruning thanks to AUTOINCREMENT). */
+  lastEventId(): number {
+    return get<{ s: number | null }>(this.db, "SELECT seq AS s FROM sqlite_sequence WHERE name='event'")?.s ?? 0;
+  }
+  pruneEvents(): void {
+    run(this.db, 'DELETE FROM event');
+  }
+
   eraseKeys(): void {
     run(this.db, 'UPDATE election SET log_sk_enc=NULL, srv_sk_enc=NULL');
   }

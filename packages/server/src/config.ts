@@ -1,3 +1,4 @@
+import type { WebhookResolver, WebhookTransport } from './ssrf.ts';
 // Server configuration with compiled-in hard bounds (QV-29 §5): a misconfiguration refuses start.
 
 export interface RateSpec {
@@ -70,14 +71,51 @@ export interface ServerOptions {
   maxHalts?: number;
   stalledMaxSec?: number;
   auditWindowSec?: number;
+  /** SSE streams per network bucket (QV-09 §5: 4). */
   maxSseStreams?: number;
+  /** SSE streams per process. */
+  maxSseTotal?: number;
+  /** Heartbeat comment interval (hard max 20 s, QV-09-REQ-010). */
+  sseHeartbeatMs?: number;
+  /** A stream with no event for this long is closed; clients reconnect with Last-Event-ID (QV-09 §9: 10 min). */
+  sseIdleCloseMs?: number;
+  /** A client whose socket stays backpressured this long is dropped. */
+  sseSlowClientMs?: number;
+  /** Bytes a client may have queued in its socket before writes stop (the per-client buffer bound). */
+  sseMaxBufferBytes?: number;
+  /** Events written per pump step (bounds per-client memory and event-loop time). */
+  sseBatch?: number;
+  /** Webhooks per organization. */
+  maxWebhooksPerOrg?: number;
+  /** Per-attempt connect+response deadline. */
+  webhookTimeoutMs?: number;
+  /** Delivery attempts including the first. */
+  webhookMaxAttempts?: number;
+  /** First retry delay; doubles per attempt up to webhookMaxBackoffMs. */
+  webhookBackoffBaseMs?: number;
+  webhookMaxBackoffMs?: number;
+  /** Response bytes read before the connection is dropped. */
+  webhookMaxResponseBytes?: number;
+  /** Largest request body a delivery may carry. */
+  webhookMaxBodyBytes?: number;
+  /** Queued + waiting-for-retry deliveries; the oldest is dropped beyond this. */
+  webhookMaxQueue?: number;
+  /** Concurrent outbound deliveries. */
+  webhookMaxInflight?: number;
+  /** Consecutive failed deliveries after which a webhook is disabled. */
+  webhookDisableAfter?: number;
+  /** Test seams: DNS resolution and the HTTPS transport used for deliveries. */
+  webhookResolver?: WebhookResolver;
+  webhookTransport?: WebhookTransport;
 }
 
-export interface ServerConfig extends Required<Omit<ServerOptions, 'staticDir' | 'releaseSeedHex' | 'bucketHeader' | 'rate'>> {
+export interface ServerConfig extends Required<Omit<ServerOptions, 'staticDir' | 'releaseSeedHex' | 'bucketHeader' | 'rate' | 'webhookResolver' | 'webhookTransport'>> {
   staticDir: string | undefined;
   releaseSeedHex: string | undefined;
   bucketHeader: string | undefined;
   rate: RateConfig;
+  webhookResolver: WebhookResolver | undefined;
+  webhookTransport: WebhookTransport | undefined;
 }
 
 const MIN = 60;
@@ -106,6 +144,8 @@ export const HARD = {
   maxConnections: 65_536,
   maxVerifyQueue: 10_000,
   minBallotIntervalSec: 2,
+  sseHeartbeatMs: 20_000,
+  webhookTimeoutMs: 30_000,
 } as const;
 
 function bound(name: string, v: number, hi: number, lo = 1): number {
@@ -156,5 +196,23 @@ export function resolveConfig(o: ServerOptions): ServerConfig {
     stalledMaxSec: bound('stalledMaxSec', o.stalledMaxSec ?? 30 * 86400, 365 * 86400),
     auditWindowSec: bound('auditWindowSec', o.auditWindowSec ?? 7 * 86400, 365 * 86400, 0),
     maxSseStreams: bound('maxSseStreams', o.maxSseStreams ?? 4, 64),
+    maxSseTotal: bound('maxSseTotal', o.maxSseTotal ?? 1024, 10_000),
+    sseHeartbeatMs: bound('sseHeartbeatMs', o.sseHeartbeatMs ?? 15_000, HARD.sseHeartbeatMs, 5),
+    sseIdleCloseMs: bound('sseIdleCloseMs', o.sseIdleCloseMs ?? 600_000, 3_600_000, 10),
+    sseSlowClientMs: bound('sseSlowClientMs', o.sseSlowClientMs ?? 10_000, 60_000, 5),
+    sseMaxBufferBytes: bound('sseMaxBufferBytes', o.sseMaxBufferBytes ?? 64 * 1024, 1024 * 1024, 256),
+    sseBatch: bound('sseBatch', o.sseBatch ?? 100, 1000),
+    maxWebhooksPerOrg: bound('maxWebhooksPerOrg', o.maxWebhooksPerOrg ?? 10, 100),
+    webhookTimeoutMs: bound('webhookTimeoutMs', o.webhookTimeoutMs ?? 5_000, HARD.webhookTimeoutMs, 10),
+    webhookMaxAttempts: bound('webhookMaxAttempts', o.webhookMaxAttempts ?? 6, 12),
+    webhookBackoffBaseMs: bound('webhookBackoffBaseMs', o.webhookBackoffBaseMs ?? 2_000, 600_000, 1),
+    webhookMaxBackoffMs: bound('webhookMaxBackoffMs', o.webhookMaxBackoffMs ?? 300_000, 3_600_000, 1),
+    webhookMaxResponseBytes: bound('webhookMaxResponseBytes', o.webhookMaxResponseBytes ?? 16 * 1024, 1024 * 1024, 0),
+    webhookMaxBodyBytes: bound('webhookMaxBodyBytes', o.webhookMaxBodyBytes ?? 8 * 1024, 64 * 1024),
+    webhookMaxQueue: bound('webhookMaxQueue', o.webhookMaxQueue ?? 1000, 100_000),
+    webhookMaxInflight: bound('webhookMaxInflight', o.webhookMaxInflight ?? 8, 64),
+    webhookDisableAfter: bound('webhookDisableAfter', o.webhookDisableAfter ?? 5, 1000),
+    webhookResolver: o.webhookResolver,
+    webhookTransport: o.webhookTransport,
   };
 }

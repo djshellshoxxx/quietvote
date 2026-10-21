@@ -70,6 +70,47 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 * **[X-20] Hash-to-scalar of `u32(L)`** etc. use big-endian widths exactly as §5.1; PoK/DLEQ/keyconf nonces are plain CSPRNG
   (OQ-7 unresolved), not hedged.
 
+### Log layer (C3 step 11, QV-05 V4/V7, receipts): `src/logcheck.ts`, `verifyElection(bundle, { log })`
+
+* **[X-21] Origin and `bb.log_id`.** QV-18 REQ-001 says origin = `quietvote/v1/<32-char hex election_id>`, but `board` only accepts
+  `quietvote/v1/[a-z2-7]{26}` and `server` derives `quietvote/v1/base32(election_id)`; the base32 form is used. QV-16 never defines
+  `bb.log_id`; it is read as `hex(SHA-256(origin))` (as `web` builds it; the tlog-witness monitoring path component) and must match,
+  else `E_LOG_BINDING`. (`trustee/src/transcript.ts` uses `quietvote/v1/<log_id>`: inconsistent, flagged for its owner.)
+* **[X-22] Entry/record binding.** Log entry 0 is the manifest record; protocol log entry `seq` is log entry `seq`, and the entry body is
+  exactly `JCS(record)` (QV-ADR-019); a body-less entry is accepted only if listed in `redactions` and its header digest still matches the
+  record. Every log entry must appear in the protocol view and vice versa (else a ballot could be hidden from verification). Header type
+  must follow the QV-18 §5.2 mapping (`dkg-open`->`ceremony_start`, other `dkg-*` markers->`notice` (unmapped in QV-18; server choice),
+  `dkg-final`->`joint_key`, `tally`->`tally_result`, cast/spoil->`ballot`/`ballot_audit`, ...). Header author: a coordinator key for the
+  manifest, markers and `roll-commit` (QV-18 "organizer" = QV-16 coordinator), the trustee `sign_pk` of the record's index, the roll key
+  equal to `body.voter`, or the tally's own `sig.key` ("anyone"); unrecognised bodies: coordinator/trustee/caller `extraAuthorKeys`.
+  Header signatures are strict Ed25519. Every violation is F (QV-18 REQ-006: server acceptance is never evidence).
+* **[X-23] Witness keys.** QV-16 `bb` has only `witness_quorum`; QV-18 REQ-020 requires the manifest to carry the witness list. Added
+  optional `bb.witnesses: [{name, pk}]` (Ed25519 tlog-cosignature 0x04 only; distinct names/keys, strict points, not the log key,
+  quorum <= list). Trust order: manifest list (hash-pinned), else caller anchors (`log.witnesses`, reported as a caveat); the export's
+  own `policy` is never trusted. `witness_quorum > 0` without enough trusted keys is `E_LOG_WITNESS` (F). ML-DSA-44 is not supported.
+* **[X-24] Quorum 0.** QV-18 REQ-023 wants a `none_acknowledged` flag that QV-16's closed schema lacks; QV-16 allows 0 with an
+  unwitnessed caveat. Followed QV-16/QV-34: `chk.board.witness = not_run`, caveat `NOT WITNESSED`, times reported unwitnessed.
+* **[X-25] Gating and witnessed times.** election-open needs a quorum-witnessed head of size in `[max(seq dkg-final, seq roll-commit)+1,
+  seq(open)]`; with a tally record, a witnessed head of size in `[seq(close), seq(tally)]` (QV-18 §9.4) else F; unwitnessed tally/latest head
+  is a caveat. QV-16 §5.14.3 times use the *earliest* quorum-witnessed head covering the marker (size > seq), and at least `k` of its
+  valid cosignature timestamps must satisfy the bound (open: `>= voting_open - skew`; close: within `voting_close +/- skew`), else
+  `E_TIME_WINDOW` (F, QV-05 V7); a missing covering head is F only once a tally exists. Witness timestamps only bound append time from
+  above, so the "not early" checks are weak against an operator who delays cosigning (inherent; stated).
+* **[X-26] Evidence rule.** Only log-signed notes are evidence. Externally observed heads (`log.observed`: pins, gossip, witness
+  monitoring) that do not parse/verify are warnings; a log-signed head larger than the log is `E_LOG_ROLLBACK`, a different prefix root
+  `E_LOG_FORK` (both F). Two log-signed roots for one size in the export are `E_LOG_FORK`; a missing full-size head is `E_LOG_CHECKPOINT`.
+* **[X-27] Receipts.** A receipt whose promise verifies under `bb.log_pk` but is not honoured (seq beyond the log, another leaf at seq,
+  receipt head not a prefix) is F. A malformed or non-log-signed receipt is class I: `chk.receipts.sample` fails, the verdict does not.
+* **[X-28] Clash.** The receipt holder's key must be the entry's author and the envelope's `voter` (and the recorded code must match when
+  given); two claimants for one entry are flagged. These are ALARM: anyone can fetch any receipt, so a claim alone proves nothing to a
+  third party (same reasoning as X-10). `verifyReceiptChain` (voter side) fails closed on the same mismatch.
+* **[X-29] Witness monotonicity.** A witness whose cosignature timestamps decrease as tree size grows is excluded from quorum counting
+  with an ALARM (QV-18 §9.6 `witness_conflict` is a witness fault; one witness must not force a FAIL, nor help reach quorum).
+* **[X-30] API/codes.** `verifyElection(bundle, {log})`: `log.board` is the `board.bundleToJson` export; absent => C3 checks `not_run`
+  (unchanged). New F-family codes `E_LOG_FORMAT/BINDING/CHECKPOINT/FORK/ROLLBACK/WITNESS/RECEIPT` and ALARM `E_LOG_RECEIPT_CLASH`
+  (QV-16 §8 `E_LOG_*`). `verifyReceiptChain` (QV-05 §4.3): promise + inclusion + own header/voter + consistency to a later log-signed head;
+  when `witness_quorum > 0` the later head must carry the quorum, else `E_LOG_WITNESS`.
+
 ## Mismatches the consistency editor asked to list
 
 * `KeyId` (QV-09) is undefined in QV-16/QV-30; this code identifies keys by 32-byte Ed25519 public key hex everywhere.
@@ -89,9 +130,9 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 | 1 weak Fiat-Shamir | `crypto/test/proofs.test.ts` (per-field mutation for CDS, limit, dec, PoK, DLEQ), vectors tagged `attack:frozen-heart` |
 | 2 DST confusion | `protocol/test/attacks.test.ts` (all proof-type pairs), crypto cross-verify test |
 | 3 replay / copy | `ballot.test.ts` (copy re-signed, re-randomised copy, cross-election, ctx rewrite) |
-| 4 clash | protocol part only (codes/randomness differ); receipts are `board` scope: NOT covered |
-| 5 drop/reorder | `attacks.test.ts`, `verify.test.ts` (reorder, drop); silent tail drop is detectable only via `countedBallots` + receipts |
-| 6 split views | `board` scope: NOT covered |
+| 4 clash | `loglayer.test.ts` (identical choices give distinct leaves/receipts; receipt for another voter's entry, double claim, code mismatch: X-28) |
+| 5 drop/reorder | `attacks.test.ts`, `verify.test.ts` (reorder, drop); `loglayer.test.ts`: dropped revote and silent tail drop caught by the voter receipt, reordered entries break signed heads |
+| 6 split views | `loglayer.test.ts`: forked head in export, observed head from another view, receipt chain across views |
 | 7 invalid ballots | `ballot.test.ts` forged plaintext 2, overvote, undervote, zero sum |
 | 8 encodings/identity | `crypto/test/ristretto.test.ts`, ballot tamper matrix, DKG identity commitments, roll small-order keys |
 | 9, 10 rogue key, DKG replay | `dkg.test.ts` |
@@ -106,8 +147,9 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 
 ## Known gaps
 
-* No Merkle log / tree head / witness / receipt verification (`board` package): checks `chk.board.*`, `chk.receipts.sample` are
-  `not_run`; election times are unwitnessed (reported as caveats).
+* Log layer (X-21..X-30) runs only when the caller passes `{log}`; `packages/verifier` still composes `board.verifyLog` itself and does
+  not pass log evidence to `verifyElection` yet (not changed here). QV-18 control entries (`pause/resume/invalidate`, `notice/witness_waiver`,
+  `extension`) are not interpreted, so a waiver never relaxes a gate. No log-layer test vectors (QV-34 set) were added.
 * Secret types (`SecretScalar` etc., QV-30 S2), wiping, and lint rules (QV-30 §5.2) not done; scalars are plain `bigint`.
 * Constant-time claims are those of `@noble/*` only.
 * Test vectors: `status: candidate`; no independent second implementation; MANIFEST unsigned; external-standard sets contain only

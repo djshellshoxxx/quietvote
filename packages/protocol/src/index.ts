@@ -9,3 +9,4 @@ export * from './ballotlog.ts';
 export * from './rules.ts';
 export * from './tally.ts';
 export * from './verify.ts';
+export * from './logcheck.ts';

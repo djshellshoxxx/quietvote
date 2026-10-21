@@ -23,6 +23,8 @@ export const obj = (req: Record<string, Schema>, opt: Record<string, Schema> = {
 
 export const ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 export const OPT_ID_RE = /^(?:[a-z0-9][a-z0-9_-]{0,63}|~ph[1-9][0-9]{0,2})$/;
+/** C2SP signed-note key name: non-empty, no whitespace, no '+'. */
+export const WITNESS_NAME_RE = /^[^\s+]{1,64}$/;
 export const TS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 export const PROTO = 'qv1-r255-sha2';
 
@@ -218,7 +220,10 @@ export function manifestSchema(): Schema {
       t: int(1, 32),
       coordinator: obj({ keys: arr(hex(32), 1, 8), m: int(1, 8) }),
       ballots: obj({ max_per_voter: int(1, 1000), max_spoils_per_voter: int(0, 1000) }),
-      bb: obj({ log_id: hex(32), log_pk: hex(32), witness_quorum: int(0, 32) }),
+      bb: obj(
+        { log_id: hex(32), log_pk: hex(32), witness_quorum: int(0, 32) },
+        { witnesses: arr(obj({ name: str(64, WITNESS_NAME_RE), pk: hex(32) }), 1, 32) },
+      ),
     },
     {
       quorum: obj(

@@ -51,7 +51,29 @@ CREATE TABLE operator_audit (
 CREATE TRIGGER operator_audit_ro_u BEFORE UPDATE ON operator_audit BEGIN SELECT RAISE(ABORT,'append-only'); END;
 `,
   },
+  {
+    version: 2,
+    name: 'webhook',
+    // QV-28 §8.1 `webhook`: target URL and signing secret are stored sealed under the instance KEK.
+    sql: `
+CREATE TABLE webhook (
+  webhook_id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES org(org_id), election_id TEXT, url_enc BLOB NOT NULL, secret_enc BLOB NOT NULL,
+  events TEXT NOT NULL, created_at INTEGER NOT NULL, disabled_at INTEGER) STRICT;
+CREATE INDEX webhook_org ON webhook(org_id, election_id) WHERE disabled_at IS NULL;
+`,
+  },
 ];
+
+export interface WebhookRow {
+  webhook_id: string;
+  org_id: string;
+  election_id: string | null;
+  url_enc: Uint8Array;
+  secret_enc: Uint8Array;
+  events: string;
+  created_at: number;
+  disabled_at: number | null;
+}
 
 export interface AccountKey {
   key_id: string;
@@ -167,6 +189,31 @@ export class ControlDb {
   }
   markDeleted(id: string): void {
     run(this.db, "UPDATE election_registry SET state='DELETED', dek_wrapped=NULL, deleted_at=? WHERE election_id=?", this.now(), id);
+  }
+
+  // ---- webhooks
+  insertWebhook(r: { webhook_id: string; org_id: string; election_id: string | null; url_enc: Uint8Array; secret_enc: Uint8Array; events: string }): void {
+    run(this.db, 'INSERT INTO webhook(webhook_id,org_id,election_id,url_enc,secret_enc,events,created_at) VALUES (?,?,?,?,?,?,?)',
+      r.webhook_id, r.org_id, r.election_id, r.url_enc, r.secret_enc, r.events, this.now());
+  }
+  webhook(id: string): WebhookRow | undefined {
+    return get<WebhookRow>(this.db, 'SELECT * FROM webhook WHERE webhook_id=?', id);
+  }
+  webhooksOf(orgId: string): WebhookRow[] {
+    return all<WebhookRow>(this.db, 'SELECT * FROM webhook WHERE org_id=? ORDER BY created_at, webhook_id', orgId);
+  }
+  countWebhooks(orgId: string): number {
+    return get<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM webhook WHERE org_id=?', orgId)?.n ?? 0;
+  }
+  /** Enabled webhooks of the organization that listen to this election (or to all of its elections). */
+  webhooksFor(orgId: string, electionId: string): WebhookRow[] {
+    return all<WebhookRow>(this.db, 'SELECT * FROM webhook WHERE org_id=? AND disabled_at IS NULL AND (election_id IS NULL OR election_id=?)', orgId, electionId);
+  }
+  deleteWebhook(id: string): void {
+    run(this.db, 'DELETE FROM webhook WHERE webhook_id=?', id);
+  }
+  disableWebhook(id: string): void {
+    run(this.db, 'UPDATE webhook SET disabled_at=? WHERE webhook_id=? AND disabled_at IS NULL', this.now(), id);
   }
 
   // ---- idempotency (QV-09 §4.4)

@@ -4,7 +4,7 @@ import { statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import {
-  BoardLog, MAX_BODY, authorKeyId, b64u, buildEntry, checkEntry, decodeHeader, nonceKey, parseCheckpoint, toHex, witnessStatus,
+  BoardLog, MAX_BODY, authorKeyId, b64, b64u, buildEntry, checkEntry, decodeHeader, nonceKey, parseCheckpoint, toHex, witnessStatus,
   type EntryHeader, type EntryType, type Receipt,
 } from '@quietvote/board';
 import {
@@ -20,8 +20,9 @@ import {
   type ShareSet, type SharesBody, type SignedRecord, type SpoilEnvelope, type TallyBody,
 } from '@quietvote/protocol';
 import type { RegistryRow, ElectionStateName } from './controldb.ts';
-import { ElectionDb } from './electiondb.ts';
+import { ElectionDb, type EventRow } from './electiondb.ts';
 import type { Env } from './env.ts';
+import { toIso } from './util.ts';
 import { transition, typeAllowed, effectiveState, TERMINAL, type LifecycleEvent } from './lifecycle.ts';
 import { ApiError, conflict, forbidden, invalid, wrongPhase } from './problem.ts';
 import {
@@ -94,6 +95,12 @@ function sec(iso: string): number {
   return Date.parse(iso) / 1000;
 }
 
+/** Receives committed outbox rows; `close` is called when the runtime is evicted or deleted. */
+export interface EventSubscriber {
+  event(row: EventRow): void;
+  close(): void;
+}
+
 export class ElectionRuntime {
   readonly id: string;
   readonly origin: string;
@@ -108,6 +115,8 @@ export class ElectionRuntime {
   private readonly srvKeys: Ed25519Keypair | undefined;
   poisoned = false;
   inUse = 0;
+  private readonly subscribers = new Set<EventSubscriber>();
+  private alertedQuarantine = false;
   private readonly coordByKid = new Map<string, Uint8Array>();
   private readonly trusteeByKid = new Map<string, { pk: Uint8Array; index: number }>();
   private readonly reg: RegistryRow;
@@ -151,7 +160,73 @@ export class ElectionRuntime {
   }
 
   close(): void {
+    for (const s of [...this.subscribers]) {
+      try {
+        s.close();
+      } catch {
+        /* subscriber teardown must not block eviction */
+      }
+    }
+    this.subscribers.clear();
     this.edb.close();
+  }
+
+  // ------------------------------------------------------------------ event outbox (QV-09 §9)
+
+  /** Live subscription for SSE streams. Rows are delivered after their transaction committed. */
+  subscribe(s: EventSubscriber): () => void {
+    this.subscribers.add(s);
+    return () => void this.subscribers.delete(s);
+  }
+
+  private record(out: EventRow[], type: string, seq: number | null, data: Record<string, unknown>): void {
+    out.push(this.edb.insertEvent(this.env.nowMs(), type, seq, JSON.stringify(data)));
+  }
+
+  private checkpointData(): Record<string, unknown> {
+    const w = this.witnessInfo();
+    return { tree_size: this.log.size, root: b64(this.log.root()), witnessed: w.witnessed, cosigners: w.cosigners, issued_at: toIso(this.env.nowSec()) };
+  }
+
+  private quarantineAlert(out: EventRow[]): void {
+    const q = this.quarantineReason();
+    if (q === undefined || this.alertedQuarantine) return;
+    this.alertedQuarantine = true;
+    this.record(out, 'alert', null, { kind: 'quarantine', detail_code: 'LOG_QUARANTINED' });
+  }
+
+  /** Hands committed rows to live streams and to the webhook dispatcher. Never throws. */
+  private publish(rows: EventRow[]): void {
+    for (const r of rows) {
+      for (const s of [...this.subscribers]) {
+        try {
+          s.event(r);
+        } catch {
+          this.subscribers.delete(s);
+        }
+      }
+      try {
+        this.env.onEvent?.({ electionId: this.id, orgId: this.orgId }, r);
+      } catch {
+        /* integrations are best effort */
+      }
+    }
+  }
+
+  /** Records and publishes events outside an append (cosignatures, alerts). */
+  private emitNow(fn: (out: EventRow[]) => void): void {
+    const out: EventRow[] = [];
+    this.edb.tx(() => fn(out));
+    this.publish(out);
+  }
+
+  /** Retention (QV-09 §9): the outbox is dropped 30 days after ARCHIVED. Returns true when it was pruned. */
+  pruneEventsIfExpired(): boolean {
+    const at = this.env.control.election(this.id)?.archived_at ?? null;
+    if (this.st.state !== 'ARCHIVED' || at === null || this.env.nowMs() - at < 30 * 86400_000) return false;
+    if (this.edb.eventBounds() === undefined) return false;
+    this.edb.pruneEvents();
+    return true;
   }
 
   // ------------------------------------------------------------------ state views
@@ -521,6 +596,8 @@ export class ElectionRuntime {
     const at = this.env.nowSec();
     const seq = this.log.size;
     let receipt: Receipt | undefined;
+    const evs: EventRow[] = [];
+    const from = this.st.state;
     try {
       this.edb.tx(() => {
         const r = this.log.append(headerBytes, body);
@@ -529,6 +606,9 @@ export class ElectionRuntime {
         this.project(h, seq, v);
         const cp = this.log.checkpoint();
         if (!cp.ok) throw this.mapBoardErr(cp.error.code, cp.error.message);
+        // entry events carry no bodies (QV-09 §9); written atomically with the append
+        this.record(evs, 'entry', seq, { seq, type: h.type, author: b64u(h.author), leaf_hash: b64u(r.value.receipt.leafHash) });
+        this.record(evs, 'checkpoint', seq, this.checkpointData());
       });
     } catch (e) {
       if (this.log.size !== this.edb.store.size()) this.poisoned = true; // in-memory tree ran ahead of the rolled-back DB
@@ -538,6 +618,15 @@ export class ElectionRuntime {
     await this.apply(seq, h.type, v.rec, at);
     if (h.type === 'audit_close') this.finalizeArchive();
     this.syncState();
+    try {
+      this.edb.tx(() => {
+        if (this.st.state !== from) this.record(evs, 'phase', seq, { from, to: this.st.state, seq });
+        this.quarantineAlert(evs);
+      });
+    } catch {
+      /* the append is durable; a lost phase event is recoverable from the log */
+    }
+    this.publish(evs);
     this.env.stats.appended++;
     this.env.logger.event('append', { election_id: this.id, seq, entry_type: h.type, outcome: 'ok', bytes_in: body.length }, h.type === 'ballot' || h.type === 'ballot_audit');
     const out = this.outcomeFor(seq, false);
@@ -946,9 +1035,24 @@ export class ElectionRuntime {
 
   async attachCosignatures(size: number, lines: string[]): Promise<{ accepted: number; witnessed: boolean }> {
     return this.queued(async () => {
+      const had = new Set(this.witnessInfo().cosigners);
       const r = this.log.attachCosignatures(size, lines, this.witnessPolicy());
       if (!r.ok) throw this.mapBoardErr(r.error.code, r.error.message);
       const before = lines.length;
+      try {
+        const info = this.witnessInfo();
+        const fresh = info.cosigners.filter((x) => !had.has(x));
+        if (fresh.length > 0) {
+          const e = this.edb.store.getEntry(Math.max(0, size - 1));
+          const lag = e ? Math.max(0, this.env.nowSec() - e.sequencedAt) : 0;
+          this.emitNow((out) => {
+            for (const wname of fresh) this.record(out, 'witness', null, { witness: wname, lag_seconds: lag, quorum_met: r.value.witnessed });
+            if (info.size === size) this.record(out, 'checkpoint', null, this.checkpointData());
+          });
+        }
+      } catch {
+        /* events are best effort relative to the cosignature itself */
+      }
       await this.maybeAggregateLocked();
       return { accepted: before, witnessed: r.value.witnessed };
     });
