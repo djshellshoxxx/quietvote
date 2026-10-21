@@ -1,19 +1,19 @@
 # Roadmap and Status
 
-> **Draft – unaudited software.** Pre-implementation. Not for real elections.
+> **Draft – unaudited software.** Not for real elections.
 
 ## Current status
 
 | Item | State |
 |---|---|
-| Stage | Framework and pre-implementation; specs are drafts |
+| Stage | Early implementation; specs are drafts |
 | Specifications | Written but unresolved in places. Acceptance criteria are not complete. |
-| Code | Early scaffold. `crypto` and `board` have some code. Other packages are placeholders. |
-| Tests | One smoke test. Test vectors not yet written. |
-| Typecheck | Currently failing on `packages/board/src/bytes.ts` (see [[Getting Started Dev]]) |
+| Code | Workspaces with code and tests: `board`, `cli`, `crypto`, `protocol`, `server`, `trustee`, `verifier`, `web`. Unaudited and incomplete. |
+| Tests | As of commit `c8348f4`: 473 tests across 8 workspaces; 472 pass, 1 fails (`packages/cli` `board verify: election bundle with board export uses manifest anchors`). Test vectors exist under `test-vectors/` (see [[Testing and Conformance]]). |
+| Typecheck | As of commit `c8348f4`: `npm run typecheck` passes. Other sessions are changing the code; rerun to confirm (see [[Getting Started Dev]]). |
 | Audit | None. Planned in spec 11 section 9. |
 | Release | None |
-| Licence | Proposed, not yet in a LICENSE file |
+| Licence | AGPL-3.0-or-later (see `LICENSE`) |
 
 Read the [README](https://github.com/djshellshoxxx/quietvote/blob/main/README.md) for the project's own status statement.
 
@@ -49,7 +49,7 @@ Dates are not commitments.
 
 ## Known gaps in the repo
 
-- No CI workflows, ESLint config, DCO file or LICENSE file yet.
-- The backlog (`docs/plan/BACKLOG.md`) is referenced by the spec index but is not in the repo.
+- No ESLint config yet. A CI workflow (`.github/workflows/ci.yml`), `DCO` and `LICENSE` files exist.
+- One failing test at the commit above (see Tests).
 
 Full list: [[Specification Index]].

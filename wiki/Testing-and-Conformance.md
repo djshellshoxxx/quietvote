@@ -1,6 +1,6 @@
 # Testing and Conformance
 
-> **Draft – unaudited software.** Most of the test suite described here does not exist yet.
+> **Draft – unaudited software.** Only part of the test suite described here exists.
 
 Sources: spec [11 Testing and assurance](https://github.com/djshellshoxxx/quietvote/blob/main/docs/11-testing-assurance.md) and spec [34 Test vectors](https://github.com/djshellshoxxx/quietvote/blob/main/docs/34-test-vectors-conformance.md).
 
@@ -18,7 +18,7 @@ Adversarial cryptographic tests (spec 11 section 6), fuzzing and mutation testin
 
 ## Conformance
 
-- **Test vectors:** language-neutral JSON files in `test-vectors/`, shared with the spec and with independent verifiers. The directory is currently empty.
+- **Test vectors:** language-neutral JSON files in `test-vectors/`, shared with the spec and with independent verifiers. The directory currently holds `MANIFEST.json`, a `schema/` directory and `v1/` vectors; coverage is not complete.
 - **Verifier conformance:** canary and mutation checks to prove the verifier rejects bad inputs.
 - **Cross-implementation suite:** so that a second implementation can prove it matches.
 
@@ -34,4 +34,4 @@ No audit has been performed. See [[Roadmap and Status]].
 
 ## Running tests today
 
-See [[Getting Started Dev]]. Only `packages/crypto` has a test file.
+See [[Getting Started Dev]]. As of commit `c8348f4`, `npm run typecheck` passes and `npm test` runs 473 tests across 8 workspaces (board 46, cli 17, crypto 49, protocol 163, server 71, trustee 40, verifier 20, web 67): 472 pass and 1 fails (`packages/cli`, `board verify: election bundle with board export uses manifest anchors`). Other sessions are changing the code, so rerun before relying on these numbers.

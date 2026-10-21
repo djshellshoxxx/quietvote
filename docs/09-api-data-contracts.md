@@ -171,7 +171,7 @@ Per QV-18 §10 and in addition:
 | `X` export | export creation | 2/hour/election |
 | `G` gossip | `POST /gossip/checkpoints`, `log/cosignatures` | 30/min/bucket |
 
-Responses carry `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` (IETF httpapi RateLimit header fields — Internet-Draft, naming may change `[UNVERIFIED]`) and `Retry-After` on `429`. "Bucket" semantics: in-memory HMAC of client address, daily rotating, never persisted (QV-18 §10); with `logging.ip=off` and on onion deployments all unauthenticated callers share one bucket, and per-key limits dominate.
+Responses carry `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` and `Retry-After` on `429`. Note: the `RateLimit-*` names are early-draft names of the IETF httpapi RateLimit header fields; the current Internet-Draft (draft-ietf-httpapi-ratelimit-headers-11, May 2026, not final) uses `RateLimit-Policy` and `RateLimit` instead. The reference server currently emits the early-draft names (see docs/errata/spec-errata-log.md); the names may change again before the draft is published as an RFC. "Bucket" semantics: in-memory HMAC of client address, daily rotating, never persisted (QV-18 §10); with `logging.ip=off` and on onion deployments all unauthenticated callers share one bucket, and per-key limits dominate.
 
 ## 5. Requirements
 
@@ -704,5 +704,5 @@ None of the following were fetched in this authoring session (network access to 
 - JSON Schema 2020-12 — https://json-schema.org/draft/2020-12 `[VERIFIED: json-schema.org draft page, 2026-10-21]`
 - OpenAPI Specification 3.1 — https://spec.openapis.org/oas/v3.1.0 `[UNVERIFIED]`
 - WHATWG HTML Living Standard, Server-sent events
-- IETF httpapi `RateLimit` header fields (Internet-Draft; name/semantics may change) `[UNVERIFIED]`
+- IETF httpapi `RateLimit` header fields — https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/ (Internet-Draft -11, May 2026; not final; current draft defines `RateLimit-Policy` and `RateLimit`, not the `-Limit/-Remaining/-Reset` names) `[VERIFIED: datatracker, per research/verification-results/part-2-standards-crypto.md S12]`
 - C2SP tlog-checkpoint / tlog-witness / tlog-cosignature (fetched; see QV-18 §24)
