@@ -93,7 +93,7 @@ sequenceDiagram
 - **Invite code:** 128-bit random, base32 (26 chars); server stores only `SHA-256("QV-invite/1" ‖ code)`; single use; TTL default 336 h (rules); bound optionally to a `label_hint` (reserved label) so a steward can pre-assign who it is for.
 - **Redeem request:** `{code, pk, label, pop}` with `pop = Ed25519.sign(sk, "QV-enroll/1" ‖ group_id ‖ invite_id ‖ pk ‖ label)` (proof of possession; prevents registering someone else's key).
 - **Approval:** `steward` mode = one steward signature (policy may require k); `auto` = code suffices.
-- **Log entry** `member.enrolled`: `{pk, label_hash = SHA-256(label), invite_id, approver_sigs}`; the code, IP and contact handle are never logged.
+- **Log entry** `member.enrolled`: `{pk, label_hash = SHA-256(group_salt ‖ label), invite_id, approver_sigs}`; the code, IP and contact handle are never logged.
 - **Error codes:** `E_INVITE_USED`, `E_INVITE_EXPIRED`, `E_INVITE_UNKNOWN` (same response time as USED to prevent oracle), `E_LABEL_TAKEN`, `E_POP_INVALID`, `E_KEY_DUPLICATE` (pk already enrolled), `E_RATE_LIMIT`.
 
 ### 5.2 Eligibility lifecycle

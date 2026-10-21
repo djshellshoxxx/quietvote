@@ -89,6 +89,8 @@ Canonical JSON (RFC 8785 JCS) signed by ≥ `stewards.approval.k` steward keys; 
 | `tie_break` | §7.3 | | | |
 | `disputes.*` | §8 | | **window ≥ 72 h; arbiters ≥ 3 odd** | |
 | `halt.*` | §9 | | **max_hours_each ≤ 168; max_halts ≥ 1 if authority ≠ none** | |
+| `elections.min_counted_ballots` | int ≥ 1 | 5 if N ≥ 8 else 1 (+`W-SMALL-ROLL`) | | If fewer counted voters at close, trustees do not decrypt → `FAILED(PRIVACY_MIN)` (QV-06 §6) |
+| `disclosure.log_read_during_open` | `public`\|`members` | `public` | | QV-06 §6 |
 | `disclosure.roll_labels` | `members`\|`public`\|`hidden` | `members` | voter *keys* are always in the public log (needed to verify) | See QV-06 §9 |
 | `retention_profile` | id | `default-v1` | must exist in QV-06 §5 | |
 
@@ -189,6 +191,7 @@ stateDiagram-v2
 |---|---|---|
 | `FAILED(CEREMONY)` | DKG aborted twice, trustee unreachable | No ballots ever accepted; steward may start a new election with new trustees |
 | `FAILED(DECRYPT)` | < t shares by `decrypt_deadline` (+ one extension of ≤ 72 h if stewards decide) | Result **not published**. Fallback options, set per election in manifest `decrypt_fallback`: `rerun` (default: annul and re-run election) or `recover` (trustees holding shares who later respond may still publish; record flagged late). **No fallback may substitute a steward-held master key** (none exists). |
+| `FAILED(PRIVACY_MIN)` | Counted voters < `min_counted_ballots` | Trustees do not decrypt; no totals published; group may re-run with extended window or accept lower floor via new manifest |
 | `FAILED(VERIFY)` | Aggregation/decryption proof invalid | Treated as `HALTED` pending dispute (G2) |
 | `INVALID` report | Any verifier check fails | Result displayed as "UNVERIFIED — see report"; state moves to CHALLENGED automatically with ground G2 |
 
