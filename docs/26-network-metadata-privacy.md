@@ -125,7 +125,7 @@ Definitions: the **anonymity set** for a ballot is the set of voters to whom an 
 | **3: ZK Merkle membership + nullifiers (Semaphore-style [R8])** | Proof reveals only that some leaf in the root set voted; nullifier prevents double-vote | Group size N (the whole roll's leaf set at manifest time), minus voters known to have *not* voted via out-of-band channels | Timing/IP are the only residual links; S1/S2 apply; the roll root must be fixed before open (late additions shrink set); proving needs client-side heavy computation (device fingerprint: time) | "Anonymous participation within the roll," given Phase 3 maturity and review |
 
 ### 9.1 Effective anonymity-set estimator (documented to organizers, QV-10)
-For Phase 2 with issuance cohort size `I(t)` at time `t` and batch size `k`: effective set ≈ `min(I(t_spend), epoch_batch_size · …)` is **not** computed precisely; the UI shows a simple conservative number: *"at least the number of tokens issued before this ballot's epoch and not yet spent by others"* and warns when < 10. Quantitative entropy modelling is a Could (research item QV-OQ-26-2).
+For Phase 2 with issuance cohort size `I(t)` at time `t` and batch size `k`: the effective set is **not** computed precisely; the UI shows a simple conservative number: *"at least the number of tokens issued before this ballot's epoch and not yet spent by others"* and warns when < 10. Quantitative entropy modelling is a Could (research item QV-OQ-26-2).
 ### 9.2 Tied observations that destroy sets
 - Few-member groups (< 10) — all cases.
 - Everyone-votes-quickly flows (all submit in one minute): timing carries little info, but a single early voter's set is 1 after issuance if issuance and spend happen only seconds apart for her.

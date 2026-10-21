@@ -67,7 +67,7 @@ Member opens "My receipt": client fetches inclusion proof and latest STH, verifi
 Restore from key file/QR on the new device; or, if lost, request recovery: steward issues replacement credential per QV-04 §6 (only before close unless policy allows), logged and visible. **A:** key compromised → rotate (signed by old key) or steward revoke + re-enroll.
 
 ### J8 — Close, tally, publish (Priya, Lin, Amara)
-At close, no more ballots accepted; M7 aggregates; ≥ t trustees post partial decryptions with proofs; tally and outcome computed per manifest; report published; status PUBLISHED; challenge window starts. **A:** < t trustees respond within decrypt deadline → extend once by policy, else `FAILED_DECRYPT` with documented fallback (QV-03 §7). **A:** proof failure → `HALTED` for investigation.
+At close, no more ballots accepted; M7 aggregates; ≥ t trustees post partial decryptions with proofs; tally and outcome computed per manifest; report published; status PUBLISHED; challenge window starts. **A:** < t trustees respond within decrypt deadline → extend once by policy, else `FAILED_DECRYPT` with documented fallback (QV-03 §5.4). **A:** proof failure → `HALTED` for investigation.
 
 ### J9 — Independently verify (Amara)
 Downloads export bundle (or points CLI to URL), runs `qv verify bundle.qv`; outputs PASS/FAIL per check (manifest signature, roll root, DKG transcript, every ballot's proofs and signature, log consistency, aggregation, decryption proofs, outcome rules) plus a report hash. **A:** FAIL on any check → report names the entry and rule.
