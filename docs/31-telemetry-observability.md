@@ -30,7 +30,7 @@ Product analytics (none exist: no analytics, ADR-009); billing metrics (QV-14); 
 |---|---|---|---|
 | `qv_http_requests_total` | counter | `route` (template), `status_class` (2xx/4xx/5xx), `method` | route templates only; e.g. `/api/v1/elections/:id/ballots` |
 | `qv_http_request_duration_seconds` | histogram | `route`, `status_class` | buckets fixed |
-| `qv_ballots_accepted_total` | counter | `method` (voting method), `phase` (1/2/3) | **no election id** unless instance has ≥ 5 elections concurrently? → default: omit election label; per-election counts are public in the log anyway |
+| `qv_ballots_accepted_total` | counter | `method` (voting method), `phase` (1/2/3) | no election id label (per-election counts are public in the log anyway) |
 | `qv_ballots_rejected_total` | counter | `code` (E_ENCODING, E_PROOF, E_AUTH, E_SUPERSEDED, E_CLOSED, E_RATE) | QV-20 §13 |
 | `qv_log_entries_total`, `qv_log_tree_size` | counter/gauge | none | public information |
 | `qv_sth_age_seconds` | gauge | none | |
@@ -47,7 +47,7 @@ Product analytics (none exist: no analytics, ADR-009); billing metrics (QV-14); 
 | `qv_active_elections` | gauge | `state` | counts only |
 
 ### 4.2 Logs (server)
-Allowed fields: `ts` (rounded to the minute, UTC), `level`, `event` (enumerated name), `route` (template), `status`, `dur_bucket` (`<50ms`, `<250ms`, `<1s`, `<5s`, `>=5s`), `code` (error enumeration), `component`, `build`, `msg` (static message from catalog, no interpolated user data), `org_hash` (**not allowed**; omit), `epoch_no`, `tree_size`. Admin audit events (`org_created`, `manifest_published`, `close`, `extend`, `pause`, `key_rotated`) may carry the public object ids already present in the public log.
+Allowed fields: `ts` (rounded to the minute, UTC), `level`, `event` (enumerated name), `route` (template), `status`, `dur_bucket` (`<50ms`, `<250ms`, `<1s`, `<5s`, `>=5s`), `code` (error enumeration), `component`, `build`, `msg` (static message from catalog, no interpolated user data), `epoch_no`, `tree_size`. Admin audit events (`org_created`, `manifest_published`, `close`, `extend`, `pause`, `key_rotated`) may carry the public object ids already present in the public log.
 
 ### 4.3 Forbidden everywhere (logs, metrics, traces, crash dumps, tickets)
 IP address (any form, including hashed or truncated, except the ephemeral in-memory rate-limit key in QV-26 §6, which is never exported), User-Agent, Accept-Language, Referer, cookies, full URL with query string or path params, voter public key, signature, ballot ciphertext, ballot hash/id, receipt, token/credential, nullifier, trustee key material, backup keys, email addresses, names, free text from users, timing of a *specific* voter's request, request/response bodies, stack traces containing request data, environment variables, core dumps.

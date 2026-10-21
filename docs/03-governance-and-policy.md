@@ -72,6 +72,7 @@ Canonical JSON (RFC 8785 JCS) signed by ≥ `stewards.approval.k` steward keys; 
 | `stewards.term_days`, `max_consecutive_terms` | int | 365 / 2 | 0 = unlimited (warns) | Enforced by roll of steward set at next rules version |
 | `enrollment.approval` | `auto`\|`steward` | `steward` | | `auto` = any valid invite enrols |
 | `enrollment.invite_ttl_hours` | 1–2160 | 336 | | |
+| `enrollment.vouches` | 0–10 | 0 | | Number of existing-member vouch signatures required (QV-04 §5.3) |
 | `enrollment.label_policy` | `pseudonym_ok`\|`unique_only` | `pseudonym_ok` | | No real-name mode (non-goal) |
 | `proposals.who` | `any_member`\|`sponsored`\|`stewards` | `any_member` | | `sponsored` requires `sponsors_required` ≥ 1 distinct members' signatures |
 | `proposals.min_review_hours` | 0–2160 | 168 | **≥ 24** | Overridable upward per decision class |
