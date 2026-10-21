@@ -303,6 +303,11 @@ export class ControlDb {
       principal, key, method, path, reqHash, status, response, t, t + 24 * 3600_000);
   }
 
+  /** Removes the in-progress marker of a request that failed, so the client may retry with the same key. */
+  dropIdemInProgress(principal: string, key: string): void {
+    run(this.db, 'DELETE FROM idempotency WHERE idem_key=? AND principal=? AND status=0', key, principal);
+  }
+
   // ---- signed-request replay cache
   /** Returns false if (key, nonce) was already used inside its window. */
   recordNonce(keyId: string, nonce: string, expiresAtMs: number): boolean {

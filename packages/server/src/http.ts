@@ -41,6 +41,8 @@ export interface Ctx {
   bucket: string;
   body: Uint8Array;
   auth: AuthInfo | undefined;
+  /** Set by handlers that served read-key protected content: the reply is then forced to `private, no-store`. */
+  restricted: boolean;
   header(name: string): string | undefined;
   /** Strict-parse the JSON body against a shape (unknown members -> 400 UNKNOWN_FIELD). */
   parse<T>(f: Field<T>): T;
@@ -323,7 +325,7 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
         if (!mk.ok) throw new ApiError(429, 'RATE_LIMITED', 'too many management requests', { retryAfter: mk.retryAfterSec });
       }
       const ctx: Ctx = {
-        env, req, method, target: rawUrl, path, query: url.searchParams, params: hit.params, requestId, bucket, body, auth,
+        env, req, method, target: rawUrl, path, query: url.searchParams, params: hit.params, requestId, bucket, body, auth, restricted: false,
         header: (n) => {
           const v = req.headers[n.toLowerCase()];
           return Array.isArray(v) ? v[0] : v;
@@ -345,7 +347,7 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
         return;
       }
       const h: Record<string, string> = { ...headers, ...(reply.headers ?? {}) };
-      h['Cache-Control'] = reply.cache ?? route.cache ?? (route.auth === 'none' ? 'no-cache' : 'no-store');
+      h['Cache-Control'] = ctx.restricted ? 'private, no-store' : reply.cache ?? route.cache ?? (route.auth === 'none' ? 'no-cache' : 'no-store');
       let payload: Uint8Array | undefined;
       if (reply.json !== undefined) {
         payload = Buffer.from(JSON.stringify(reply.json));
@@ -376,7 +378,7 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
       if (closeAfter) h['Connection'] = 'close';
       if (!res.headersSent) send(res, method, err.status, h, Buffer.from(JSON.stringify(problemBody(err, requestId))));
       else res.destroy();
-      if (closeAfter) res.once('finish', () => req.socket.destroy());
+      if (closeAfter) res.once('finish', () => req.socket?.destroy()); // the peer may already be gone: socket is null then
     } finally {
       env.logger.event('request', {
         request_id: requestId, route: routeTpl, method, status, outcome: status < 400 ? 'ok' : status < 500 ? 'rejected' : 'error',
