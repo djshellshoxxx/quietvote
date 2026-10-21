@@ -3,7 +3,7 @@
 // opt-in-by-default test (spoil) posting after AUDIT (QV-10 §10.1 rule 1: no ciphertext leaves before the choice).
 import { bytesToHex, hexToBytes, type Rng } from '@quietvote/crypto';
 import { NO_SUPERSEDES, castDigest, ballotCode, type BallotBody, type CastEnvelope, type SpoilMode } from '@quietvote/protocol';
-import { ApiError, uxCodeFor, type UxCode } from '../api/errors.ts';
+import { ApiError, BAD_RESPONSE, uxCodeFor, type UxCode } from '../api/errors.ts';
 import type { ApiClient } from '../api/client.ts';
 import type { DeviceStorage } from '../key/storage.ts';
 import type { Signer } from '../key/signer.ts';
@@ -13,7 +13,9 @@ import { auditLink, auditText, buildAuditPackage, checkAuditPackage, makeSpoilEn
 import { initialBallotState, reduce, type BallotEvent, type BallotState, type Selections, type SubmissionOutcome } from './ballot-machine.ts';
 import { prepareEntry, type PreparedEntry } from './entries.ts';
 import type { ElectionContext } from './election.ts';
-import { BoardIntegrityError, receiptFileText, verifyAppendResult, type ReceiptFile } from './receipt.ts';
+import { BoardIntegrityError, checkHeadAgainstPin, receiptFileText, verifyAppendResult, type ReceiptFile } from './receipt.ts';
+import { parseCheckpoint, unb64 } from '@quietvote/board';
+
 import { requestFor, type SealedBallot, type Sealer } from './seal.ts';
 
 export interface BallotDeps {
@@ -85,12 +87,18 @@ export class BallotController {
     const { selections, attempt } = this.state;
     this.dispatch({ type: 'SEAL' });
     this.discardSecrets();
-    const res = await this.d.sealer.seal(
-      requestFor(this.d.ctx.params, {
-        voterPk: bytesToHex(this.d.signer.publicKey), nonceKey: bytesToHex(this.d.signer.nonceKey), supersedes: this.d.supersedes,
-        selections, attempt, selfCheck: true,
-      }),
-    );
+    let res: Awaited<ReturnType<Sealer['seal']>>;
+    try {
+      res = await this.d.sealer.seal(
+        requestFor(this.d.ctx.params, {
+          voterPk: bytesToHex(this.d.signer.publicKey), nonceKey: bytesToHex(this.d.signer.nonceKey), supersedes: this.d.supersedes,
+          selections, attempt, selfCheck: true,
+        }),
+      );
+    } catch (e) {
+      res = { ok: false, error: e instanceof Error ? e.message : 'seal failed' };
+    }
+    if ((this.state as BallotState).kind !== 'sealing') return; // locked while sealing: drop the result
     if (!res.ok) {
       this.dispatch({ type: 'SEAL_FAILED', error: res.error });
       return;
@@ -130,6 +138,8 @@ export class BallotController {
       }
       const res = await api.postEntryWithRetry(apiElectionId, this.pending.headerB64u, this.pending.bodyB64u);
       const info = verifyAppendResult(res, { origin, leafHash: this.pending.leafHash, logPk });
+      // W2: the head in the receipt must extend the pinned one (rollback / fork alarms) before it replaces the pin.
+      if (info.checkpointNote !== undefined && info.treeSize !== undefined) await this.checkAgainstPin(info.checkpointNote);
       const report: CastReport = { outcome: info.outcome, seq: info.seq, codeHex, codeDisplay };
       if (info.outcome === 'ACCEPTED_RECORDED') {
         const file: ReceiptFile = {
@@ -146,7 +156,8 @@ export class BallotController {
       this.dispatch({ type: 'CAST_RESULT', outcome: info.outcome });
       return report;
     } catch (e) {
-      const unknown = e instanceof ApiError && (e.code === 'NETWORK' || e.code === 'TIMEOUT' || e.status === 503 || e.status === 429);
+      // W1: anything that is not a definite refusal (4xx with a problem body) may have been recorded: retry the SAME bytes.
+      const unknown = e instanceof ApiError && (e.code === 'NETWORK' || e.code === 'TIMEOUT' || e.code === BAD_RESPONSE || e.status >= 500 || e.status === 429);
       const ux = e instanceof BoardIntegrityError ? e.code : uxCodeFor(e, true);
       const rejected = e instanceof ApiError && !unknown;
       const outcome: SubmissionOutcome | undefined = rejected
@@ -165,6 +176,20 @@ export class BallotController {
       }
       return report;
     }
+  }
+
+  private async checkAgainstPin(note: string): Promise<void> {
+    const cp = parseCheckpoint(note);
+    if (!cp.ok) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'checkpoint in receipt is malformed');
+    const pinnedHead = await this.d.storage.getHead(this.d.apiElectionId);
+    const pc = pinnedHead ? parseCheckpoint(pinnedHead.note) : undefined;
+    const pin = pc?.ok ? pc.value : undefined;
+    let proof: Uint8Array[] | undefined;
+    if (pin && cp.value.size > pin.size) {
+      const cons = await this.d.api.consistency(this.d.apiElectionId, pin.size, cp.value.size);
+      proof = cons.path.map((p) => unb64(p) ?? new Uint8Array());
+    }
+    checkHeadAgainstPin(cp.value, pin, proof);
   }
 
   /** TEST (audit): open the ballot, check it here, and post the spoil record (default) without the reveal unless opted in. */
@@ -200,6 +225,13 @@ export class BallotController {
   newSeal(): void {
     this.lastAudit = this.lastAudit ? { ...this.lastAudit, text: '', link: '' } : undefined;
     this.dispatch({ type: 'NEW_SEAL' });
+  }
+
+  /** Auto-lock / page hide: drops randomness and any not-yet-submitted sealed ballot (W4). A submission in flight is kept. */
+  lockSession(): void {
+    this.dispatch({ type: 'LOCK' });
+    if (this.state.kind === 'reviewing') this.sealed = undefined;
+    this.discardSecrets();
   }
 
   /** Zeroises randomness and drops cached bytes. Safe to call repeatedly (also on lock / page hide). */

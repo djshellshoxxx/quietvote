@@ -10,7 +10,7 @@ import { bindServerLog, deriveElectionContext, type ElectionContext } from '../f
 import { entryRecord } from '../flow/entries.ts';
 import { parseFragment } from '../flow/invite.ts';
 import { ORGANIZER_SLOT, createKey, importKeyFile, keySlot, recoveryCodeFor, registrationBody, unlockKey } from '../flow/onboarding.ts';
-import { buildManifest, parseRoll, TEMPLATES, type Template } from '../flow/organizer.ts';
+import { buildManifest, isoUtc, parseRoll, TEMPLATES, type Template } from '../flow/organizer.ts';
 import { runPublish, type PublishOutcome } from '../flow/publish-ui.ts';
 import type { PublishForm, PublishState } from '../flow/publish.ts';
 import { BoardIntegrityError, checkInclusion, parseReceiptFile } from '../flow/receipt.ts';
@@ -73,9 +73,12 @@ export function startApp(env: AppEnv): void {
   const loaded = new Map<string, Loaded>();
   const timer = new LockTimer(Date.now());
 
+  /** The open ballot session (if any): auto-lock drops its randomness and unsubmitted sealed ballot, then repaints (W4). */
+  let ballotLock: (() => void) | undefined;
   const lockAll = (): void => {
     for (const s of signers.values()) s.lock();
     signers.clear();
+    ballotLock?.();
   };
   document.addEventListener('visibilitychange', () => {
     timer.setHidden(document.hidden, Date.now());
@@ -89,10 +92,22 @@ export function startApp(env: AppEnv): void {
   }, 15_000);
   for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, () => timer.touch(Date.now()), { passive: true });
 
+  /** Clears this device's keys and receipts; a failure is announced (E-KEY-STORAGE), never reported as cleared (W9). */
+  const clearDevice = async (): Promise<boolean> => {
+    try {
+      await env.storage.clearAll();
+    } catch {
+      say.say(t('qv.err.E-KEY-STORAGE.title'), true);
+      return false;
+    }
+    lockAll();
+    say.say(t('qv.device.cleared'));
+    return true;
+  };
   const link = (href: string, text: string, cls = ''): HTMLElement =>
     h('a', { href, class: cls, onclick: (e: Event) => { e.preventDefault(); go(href); } }, text);
   const STEPS: MessageKey[] = ['qv.step.check', 'qv.step.key', 'qv.step.choose', 'qv.step.send'];
-  const stepper = (n: number): HTMLElement => h('p', { class: 'step', 'aria-label': t('qv.step.of', { current: n, total: 4, name: t(STEPS[n - 1]!) }) }, t('qv.step.of', { current: n, total: 4, name: t(STEPS[n - 1]!) }));
+  const stepper = (n: number): HTMLElement => h('p', { class: 'step' }, t('qv.step.of', { current: n, total: 4, name: t(STEPS[n - 1]!) }));
   const more = (...kids: Child[]): HTMLElement => h('details', {}, h('summary', {}, t('qv.vote.moreDetails')), ...kids);
   const heading = (text: string, lvl = 1): HTMLElement => h(`h${lvl}`, { tabindex: -1, class: 'step-heading' }, text);
   const btn = (text: string, on: () => void, o: { primary?: boolean; disabled?: boolean; id?: string } = {}): HTMLElement =>
@@ -109,7 +124,7 @@ export function startApp(env: AppEnv): void {
     wrap.append(input);
     return wrap;
   };
-  const codeEl = (text: string): HTMLElement => h('bdi', { dir: 'ltr', class: 'code' }, ...text.split('-').map((g, i, a) => h('span', { 'aria-label': [...g].join(' ') }, g + (i < a.length - 1 ? '-' : ''))));
+  const codeEl = (text: string): HTMLElement => h('bdi', { dir: 'ltr', class: 'code' }, ...text.split('-').map((g, i, a) => h('span', {}, h('span', { 'aria-hidden': 'true' }, g + (i < a.length - 1 ? '-' : '')), h('span', { class: 'sr-only' }, [...g].join(' ') + (i < a.length - 1 ? ', ' : ''))))); // spoken form as real text (aria-label on a span is ignored)
   const copyBtn = (text: string): HTMLElement =>
     btn(t('qv.shell.copy'), () => {
       navigator.clipboard.writeText(text).then(() => say.say(t('qv.shell.copied')), () => say.say(t('qv.shell.copyFailed'), true));
@@ -177,6 +192,7 @@ export function startApp(env: AppEnv): void {
         }
       },
       onAlert: () => say.say(t('qv.live.alert'), true),
+      onError: () => { if (loaded.get(L.apiId)?.live === live) { liveLine.textContent = t('qv.live.failed'); say.say(t('qv.live.failed')); } },
     });
     L.live = live;
     live.start();
@@ -340,7 +356,16 @@ export function startApp(env: AppEnv): void {
     const finish = async (signer: Signer, created?: { keyFile: string; container: Parameters<typeof recoveryCodeFor>[0] }): Promise<void> => {
       signers.set(L.apiId, signer);
       if (token) {
-        try { await L.api.register(L.apiId, await registrationBody({ apiElectionId: L.apiId, token, signer })); } catch { /* shown below as not on roll */ }
+        try {
+          await L.api.register(L.apiId, await registrationBody({ apiElectionId: L.apiId, token, signer }));
+        } catch (e) {
+          // 409: this key or invite was already registered (same link used again): fine. Anything else is shown, not hidden.
+          if (!(e instanceof ApiError && e.status === 409)) {
+            clear(out);
+            add(out, [errorBox(uxCodeFor(e), {}, e instanceof ApiError ? e.requestId : undefined)]);
+            return;
+          }
+        }
       }
       clear(out);
       add(out, [h('p', {}, t('qv.key.registered')), created ? h('div', {}, btn(t('qv.key.download'), () => download(`voting-key-${L.apiId.slice(0, 6)}.qvkey`, created.keyFile)),
@@ -385,7 +410,7 @@ export function startApp(env: AppEnv): void {
     };
     render(t('qv.key.title'), ...head, stepper(2), heading(t('qv.key.title')), h('p', {}, t('qv.vote.keyWhat')), h('p', {}, t('qv.key.backup')), more(h('p', {}, t('qv.key.local')), h('p', {}, t('qv.key.residual')), h('p', {}, t('qv.device.shared'))),
       token ? null : h('p', { class: 'hint' }, t('qv.key.noInvite')), act, status, out,
-      btn(t('qv.key.forget'), () => { void env.storage.clearAll().then(() => { lockAll(); say.say(t('qv.device.cleared')); void renderForm(); }); }));
+      btn(t('qv.key.forget'), () => { void clearDevice().then((ok) => { if (ok) void renderForm(); }); }));
     void renderForm();
     void ctx;
   }
@@ -398,6 +423,7 @@ export function startApp(env: AppEnv): void {
     const ctl = new BallotController({ ctx, apiElectionId: L.apiId, origin: L.origin, signer, api: L.api, sealer, storage: env.storage, rng: systemRng, logPk: L.logPk, supersedes: supersedes || NO_SUPERSEDES, clientBuild: env.build.id });
     const draw = (): void => {
       const s = ctl.state;
+      ballotLock = (): void => { const before = ctl.state; ctl.lockSession(); if (ctl.state !== before) draw(); };
       const area = h('div', {});
       if (s.kind === 'selecting') {
         const sel: Record<string, string[]> = { ...s.selections };
@@ -435,9 +461,9 @@ export function startApp(env: AppEnv): void {
           h('h2', {}, t('qv.ballot.choose')), h('p', {}, t('qv.vote.codeWhat')),
           h('div', { class: 'row equal' }, h('div', {}, castB, h('p', { class: 'hint' }, t('qv.ballot.castHelp'))), h('div', {}, testB, h('p', { class: 'hint' }, t('qv.ballot.testHelp')))),
           h('h3', {}, t('qv.vote.doubleCheck')), h('p', {}, t('qv.vote.optional')), h('p', {}, t('qv.audit.why')),
-          more(h('p', {}, t('qv.audit.public')),
+          h('p', {}, t('qv.audit.public')),
           h('label', {}, h('input', { type: 'checkbox', id: 'post-chk', checked: true }), ' ', t('qv.audit.postOpt')), h('br'),
-          h('label', {}, h('input', { type: 'checkbox', id: 'rev-chk' }), ' ', t('qv.audit.publishReveal')))]);
+          h('label', {}, h('input', { type: 'checkbox', id: 'rev-chk' }), ' ', t('qv.audit.publishReveal'))]);
         // The code is in the DOM now; only then do the buttons become usable (REQ-011).
         queueMicrotask(() => { ctl.codeRendered(); (castB as HTMLButtonElement).disabled = false; (testB as HTMLButtonElement).disabled = false; say.say(t('qv.ballot.sealedAnnounce')); (castB as HTMLElement).focus(); });
       } else if (s.kind === 'casting' || s.kind === 'auditing') add(area, [h('p', { role: 'status' }, s.kind === 'casting' ? t('qv.ballot.casting') : t('qv.ballot.testing')), h('progress', { 'aria-label': t('qv.a11y.working') })]);
@@ -457,7 +483,7 @@ export function startApp(env: AppEnv): void {
           h('p', {}, t('qv.receipt.proves')), h('p', {}, t('qv.receipt.doesnt')), h('p', {}, t('qv.receipt.shared')),
           rep?.error ? errorBox(rep.error.ux, {}, rep.error.requestId) : null,
           rep?.receipt ? btn(t('qv.receipt.save'), () => download(`qv-receipt-${L.apiId.slice(0, 6)}.json`, JSON.stringify(rep.receipt, null, 2))) : null,
-          btn(t('qv.receipt.clearDevice'), () => { void env.storage.clearAll().then(() => { lockAll(); say.say(t('qv.device.cleared')); }); }), link(electionPath(L.apiId, 'receipt'), t('qv.receipt.checkNow'))]);
+          btn(t('qv.receipt.clearDevice'), () => { void clearDevice(); }), link(electionPath(L.apiId, 'receipt'), t('qv.receipt.checkNow'))]);
       } else add(area, [errorBox(s.error.startsWith('E-') ? s.error : 'E-GEN-UNKNOWN'), s.retryCast ? btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true }) : btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); })]);
       render(t('qv.nav.vote'), ...head, stepper(s.kind === 'selecting' || s.kind === 'reviewing' || s.kind === 'sealing' ? 3 : 4), heading(t('qv.ballot.title')), h('p', {}, t('qv.vote.privacyNote')), area, more(h('p', {}, t('qv.ballot.revoteNote')), guaranteePanel(L)));
       const nh = area.querySelector('.step-heading') as HTMLElement | null;
@@ -646,13 +672,16 @@ export function startApp(env: AppEnv): void {
         const roll = parseRoll(rollT.value);
         if (roll.errors.length) return void add(out, [h('ul', { role: 'alert' }, ...roll.errors.map((e) => h('li', {}, t('qv.org.rollRow', { row: e.row, problem: t(e.problem === 'dup' ? 'qv.org.rollDup' : e.problem === 'badHex' ? 'qv.org.rollBadHex' : 'qv.org.rollBadKey') }))))]);
         const tl = trustees.value.split(/\r?\n/).filter(Boolean).map((l) => { const [n, k] = l.split(','); return { name: (n ?? '').trim(), signPkHex: (k ?? '').trim().toLowerCase() }; });
+        const opensIso = isoUtc(opens.value);
+        const closesIso = isoUtc(closes.value);
+        if (opensIso === undefined || closesIso === undefined) return void add(out, [errorBox('E-ORG-MANIFEST', { detail: 'invalid date' })]);
         const form: PublishForm = { title: title.value, contests: [{ template: tpl.value as Template, question: q.value, options: opts.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean), k: 1 }],
-          opensIso: new Date(opens.value).toISOString().replace('.000Z', 'Z'), closesIso: new Date(closes.value).toISOString().replace('.000Z', 'Z'), maxBallots: 8, quorumCount: 0, trustees: tl, t: Number(tt.value) };
+          opensIso: opensIso, closesIso: closesIso, maxBallots: 8, quorumCount: 0, trustees: tl, t: Number(tt.value) };
         const res = buildManifest({ ...form, coordinatorPkHex: '00'.repeat(32), logPkHex: logPk.value.trim(), origin: location.origin, rollHex: roll.keys, electionIdHex: bytesToHex(systemRng.bytes(16)) });
         if (!res.ok) return void add(out, [errorBox(res.code, { detail: res.detail })]);
         prepared = { form, rollHex: roll.keys };
         add(publishBox, [publishSection()]);
-        add(out, [h('p', {}, t('qv.org.rollSummary', { count: roll.keys.length, root: roll.rootHex ?? '' })), h('p', {}, t('qv.org.announce', { id: 'see Election ID after signing' }))]);
+        add(out, [h('p', {}, t('qv.org.rollSummary', { count: roll.keys.length, root: roll.rootHex ?? '' }))]);
       }, { primary: true }), out, publishBox);
   }
 

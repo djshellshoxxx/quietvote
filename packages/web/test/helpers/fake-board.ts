@@ -10,7 +10,7 @@ import { b64uDecode, b64uEncode } from '../../src/util/hex.ts';
 import { kp, setup, defaultContests, bundleOf, type Sim, type SimOpts } from '../../../protocol/test/helpers/sim.ts';
 import type { FetchLike } from '../../src/api/client.ts';
 
-export type Fault = 'network' | 'timeout' | '503' | '429' | 'drop-response' | 'wrong-phase';
+export type Fault = 'network' | 'timeout' | '503' | '429' | '500' | 'bad-body' | 'drop-response' | 'wrong-phase';
 
 export interface StoredEntry {
   seq: number;
@@ -168,6 +168,8 @@ export class FakeBoard {
     if (fault === 'network') throw new TypeError('fetch failed');
     if (fault === 'timeout') return new Promise((_, rej) => init?.signal?.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError'))));
     if (fault === '503') return this.problem(503, 'LOG_UNAVAILABLE');
+    if (fault === '500') return this.problem(500, 'INTERNAL');
+    if (fault === 'bad-body') return new Response('<html>oops</html>', { status: 502 });
     if (fault === '429') return this.problem(429, 'RATE_LIMITED', {}, { 'Retry-After': '1' });
     if (fault === 'wrong-phase' || this.closed) return this.problem(409, 'WRONG_PHASE', { detail: 'Election closed; ballots are no longer accepted.' });
     let sub: { header?: string; body?: string };
