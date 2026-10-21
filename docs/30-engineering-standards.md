@@ -65,7 +65,7 @@ Rule changes affecting `crypto`/`protocol` need a security-reviewer approval.
 
 ## 6. Constant-time and secret-handling rules
 
-JavaScript gives no hard constant-time guarantee (JIT, GC, BigInt). The rules aim to avoid *avoidable* leaks and to rely on audited implementations (`@noble/curves`, `@noble/hashes` are designed for constant-time-ish scalar operations and publish a security stance ADR-003). We make no stronger claim.
+JavaScript gives no hard constant-time guarantee (JIT, GC, BigInt). The rules aim to avoid *avoidable* leaks and to rely on implementations with published third-party audit reports (`@noble/curves`, `@noble/hashes` are designed for constant-time-ish scalar operations and publish a security stance ADR-003). We make no stronger claim.
 
 | ID | Rule |
 |---|---|
@@ -289,7 +289,7 @@ A change is done when **all** hold:
 | Compromised maintainer account | Attacker | Backdoor merge | 2FA/hardware keys, two-person review on critical paths, signed tags, rebuild checks | Collusion |
 | Reviewer fatigue on crypto diff | Process | Missed flaw | Mandatory security reviewer, vectors, small PRs | Human error |
 | Secret leaked in log | Bug | Key exposure | Redacting types, canary tests, lint | Low |
-| Timing leak in JS | Platform | Partial key info | Audited libs, avoid secret branching, accepted residual (documented) | JIT/GC effects |
+| Timing leak in JS | Platform | Partial key info | Libraries with published third-party audit reports, avoid secret branching, accepted residual (documented) | JIT/GC effects |
 | Dependency drift | Upstream | Backdoor | QV-19 P1–P11 | Zero-day |
 | Protocol drift between impls | Maintenance | Unverifiable elections | Vectors, differential tests, immutable versions | Low |
 

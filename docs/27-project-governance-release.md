@@ -153,7 +153,7 @@ T-14 d: feature freeze, rc.1 build, reproducibility check. T-14..T-3: fixes only
 
 ## 11. Code of conduct approach
 
-- Adopt the **Contributor Covenant** (current 2.1 text `[UNVERIFIED — check latest]`) as `CODE_OF_CONDUCT.md`, adapted with a narrow scope: **conduct within project spaces** (repository, issues, PRs, chats, calls, events) and public conduct that directly targets project participants.
+- Adopt the **Contributor Covenant** (Contributor Covenant 3.0 was announced 28 July 2025 by the Organization for Ethical Source; the repository's `CODE_OF_CONDUCT.md` states which version is adopted; 2.1 is no longer the latest `[VERIFIED: ethicalsource.dev/blog/contributor-covenant-3, per part-2-standards-crypto.md O15]`) as `CODE_OF_CONDUCT.md`, adapted with a narrow scope: **conduct within project spaces** (repository, issues, PRs, chats, calls, events) and public conduct that directly targets project participants.
 - Explicit neutrality clause: contributors' political, religious, economic, or ideological views — including the project's own libertarian/anti-gatekeeping stance and users' diverse uses within the voluntary-organization scope — are not conduct matters. Harassment, threats, doxxing, discrimination in participation, spam and bad-faith disruption are. No political test or identity disclosure is required to contribute.
 - Enforcement by a **Conduct Panel** of 3 people (at least one non-maintainer), with recusal for conflicts; graduated responses (private note, warning, temporary restriction, removal); reports confidential and acknowledged within 3 days; decisions summarised publicly without identifying reporters; appeal to the maintainers' body other than the involved parties.
 - Moderation transparency: aggregate counts of reports/outcomes published annually.
@@ -241,7 +241,7 @@ T-14 d: feature freeze, rc.1 build, reproducibility check. T-14..T-3: fixes only
 
 ## 17. References (accessed 2026-10-21; external fetches were blocked in the authoring sandbox, so these are cited from general knowledge and flagged)
 
-- Contributor Covenant — https://www.contributor-covenant.org `[UNVERIFIED current version]`.
+- Contributor Covenant — https://www.contributor-covenant.org (3.0 announced 28 July 2025: https://ethicalsource.dev/blog/contributor-covenant-3) `[VERIFIED: announcement; per part-2-standards-crypto.md O17]`.
 - Developer Certificate of Origin — https://developercertificate.org `[UNVERIFIED access]`.
 - Semantic Versioning 2.0.0 — https://semver.org; Conventional Commits — https://www.conventionalcommits.org.
 - Google Project Zero disclosure policy (90-day norm) — https://googleprojectzero.blogspot.com/p/vulnerability-disclosure-policy.html `[UNVERIFIED access]`.

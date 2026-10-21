@@ -221,7 +221,7 @@ MVP is pull-based plus optional webhooks (REQ-075). No email addresses stored by
 
 ## 9. Non-goals
 
-- Legal compliance for statutory or certified elections; government use.
+- Legal compliance for statutory or certified elections; government use. <!-- claims-lint-ignore -->
 - Anonymity of participation in Phase 1 (explicit non-claim).
 - Coercion resistance / vote-buying prevention.
 - Secure voting from compromised devices.

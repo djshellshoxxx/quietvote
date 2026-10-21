@@ -1,0 +1,4 @@
+# py-qv-verify has NO third-party dependencies: Python 3.11+ standard library only.
+# (Ed25519, ristretto255, AES-256-GCM and HKDF are implemented in qv_verifier/ from
+#  RFC 8032, RFC 9496, FIPS 197 / NIST SP 800-38D and RFC 5869; SHA-2 comes from hashlib.)
+# Any dependency added later must be pinned here with an exact version and hash.

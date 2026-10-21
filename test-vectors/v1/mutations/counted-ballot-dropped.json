@@ -483,19 +483,39 @@
         "entry": {
           "body": {
             "proto": "qv1-r255-sha2",
-            "type": "marker",
-            "name": "election-open"
+            "type": "roll-commit",
+            "root": "58c2215a3ad2e07d512d85f37e764110ebec9bb57999f0812142f43d9b7bf60e",
+            "size": 5
           },
           "sigs": [
             {
               "key": "19ccde6f7a0f2c01f48f30225aedf8799a0864ca167919c903bfc5de737280af",
-              "sig": "58b3444f58efbb9b398539367d2139ca4a6a371832aeb625f7398201a66b8d4a2b39aa6d87bcbd9422b44f45d9208b33a15e3e8ab859d33841c60d610297720e"
+              "sig": "3fa3715095504d917e19fd90a83fb287f3d27bbae33b141e087ec0a602ca11d5e5da1d30696f34e1a3ac97c44272559cb88c39ea3262f6af2da59b02ae74df0c"
             }
           ]
         }
       },
       {
         "seq": 20,
+        "entry": {
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "marker",
+            "name": "election-open",
+            "manifest_hash": "826796490d5aedd80e4377290e0c2eb667bd4dfe69afd41eb9f321678d924e1f",
+            "joint_key_seq": 18,
+            "roll_commit_seq": 19
+          },
+          "sigs": [
+            {
+              "key": "19ccde6f7a0f2c01f48f30225aedf8799a0864ca167919c903bfc5de737280af",
+              "sig": "35ba1db3d29d2e7bbbb59555ed61a07aa7fad92ff07af0b15c9dce272cfaae47f1c57124e129ceea6e0490417b4e4d4242cfc505ee836f4257fffeb8558f8008"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 21,
         "entry": {
           "intent": "cast",
           "body": {
@@ -549,7 +569,7 @@
         }
       },
       {
-        "seq": 21,
+        "seq": 22,
         "entry": {
           "intent": "cast",
           "body": {
@@ -603,7 +623,7 @@
         }
       },
       {
-        "seq": 23,
+        "seq": 24,
         "entry": {
           "intent": "cast",
           "body": {
@@ -657,7 +677,7 @@
         }
       },
       {
-        "seq": 24,
+        "seq": 25,
         "entry": {
           "intent": "spoil",
           "body": {
@@ -720,7 +740,7 @@
         }
       },
       {
-        "seq": 25,
+        "seq": 26,
         "entry": {
           "body": {
             "proto": "qv1-r255-sha2",
@@ -736,7 +756,7 @@
         }
       },
       {
-        "seq": 26,
+        "seq": 27,
         "entry": {
           "body": {
             "proto": "qv1-r255-sha2",

@@ -25,3 +25,4 @@ Quick answers are in [[FAQ]]. Hard words are explained in [[Glossary]].
 
 - QuietVote does **not** protect you if someone watches you vote, if your phone is hacked, or if someone forces you to vote a certain way. In version 1, others can see **that** you voted, but not **how**. Read [[Privacy and Guarantees]] before you rely on it.
 - The detailed rules are in the specifications under `docs/` (see [[Specification Index]]). These wiki pages are simple summaries.
+- Current status, with test results and known gaps, is in [[Roadmap and Status]]. The public-claims register, which lists what the project may and may not say, is at [docs/claims/claims-register-v0.md](https://github.com/djshellshoxxx/quietvote/blob/main/docs/claims/claims-register-v0.md). The dependency licence snapshot is at [docs/reports/dependency-licence-snapshot.md](https://github.com/djshellshoxxx/quietvote/blob/main/docs/reports/dependency-licence-snapshot.md).

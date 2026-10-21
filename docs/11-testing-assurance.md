@@ -368,7 +368,7 @@ For each release `evidence/<version>/` (immutable, hash-listed in `EVIDENCE.json
 |---|---|---|---|---|
 | L-0 | Experimental | G1–G3, G8, G11–G14 | "Experimental software for low-stakes decisions among people who accept the risk." No claims of anonymity/integrity guarantees | "has not yet been independently reviewed" |
 | L-1 | Beta | + G4, G5, G6, G10 | "Designed to provide…; verifiable by independent tools"; still no "secure" | same, plus beta notice |
-| L-2 | Reviewed | + G9 (R1+R2) | "Independently reviewed by {reviewer}, {date}, report linked; findings fixed" and properties as stated in ADR-008 scope | Review line with link |
+| L-2 | Reviewed | + G9 (R1+R2) | "Independently reviewed by {reviewer}, {date}, report linked; findings fixed" and properties as stated in ADR-008 scope | Review line with link | <!-- claims-lint-ignore -->
 | L-3 | Hardened | + R3, R4, R5, one year bounty without open Critical, ≥ 3 real elections completed with independent observers | "Production-ready for voluntary-organization decisions within stated limits" | Review line + date |
 
 Never claimed at any level: coercion resistance, protection from compromised devices, quantum-resistant secrecy, anonymity of participation in Phase 1 (ADR-008).

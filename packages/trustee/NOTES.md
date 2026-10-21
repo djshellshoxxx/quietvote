@@ -74,3 +74,7 @@ POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"g
 * Needs from protocol (not done here): none blocking. Nice to have: a `spoil-share` record type + `collectSpoilShares` in protocol so the
   coordinator/verifier need not use trustee-local types, and publishing into the tally record's `spoiled[].shares` (types exist).
 * Unaudited; not for real elections.
+
+## QV-ADR-015 election-open binding
+Test harness now posts a `roll-commit` and an `election-open` built with `electionOpenBody()` (binds manifest hash, `dkg-final` seq, roll-commit seq).
+Trustee code needed no change: it ignores `roll-commit` entries and relies on the full-log `verifyElection` gate.
