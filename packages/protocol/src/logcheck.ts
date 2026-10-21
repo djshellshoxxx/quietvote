@@ -52,8 +52,14 @@ export function witnessAnchors(m: Manifest, caller?: readonly WitnessAnchor[]): 
   const conv = (ws: readonly WitnessAnchor[]): PolicyWitness[] | undefined => {
     const out: PolicyWitness[] = [];
     const names = new Set<string>();
+    // One key under two names would let a single witness count twice towards witness_quorum (witnessStatus dedupes by
+    // name). The manifest path already refuses duplicate keys (validateManifest); caller anchors must too (review 2026-10-21, SR-5).
+    const keys = new Set<string>();
     for (const w of ws) {
       if (typeof w?.name !== 'string' || !isHex(w.pk, 32) || names.has(w.name) || w.name.length === 0 || /[\s+]/.test(w.name)) return undefined;
+      const k = w.pk.toLowerCase();
+      if (keys.has(k)) return undefined;
+      keys.add(k);
       names.add(w.name);
       out.push({ name: w.name, alg: 'ed25519', publicKey: hexToBytes(w.pk, 32) });
     }

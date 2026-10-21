@@ -182,3 +182,18 @@ state mapping, `quarantineReason` used by the admission phase gate. `problem.ts`
 **Open questions for the owner.** D-84 (above). Should `link` elections accept anonymous gossip (QV-09 says anon; implemented stricter)? Should the bundle format carry the
 organizer/server keys officially (QV-18 §12 file list)? Should the verifier's `bind()` accept the organizer key for the manifest entry (per `logcheck.ts` `bind()` it allows only coordinator
 keys for the manifest entry, while this server has an org organizer key sign it; not run end to end, which is why the importer verifies the board layer itself instead of passing `{log}` to `verifyElection`)? Retention/encryption of backups?
+
+## Security review 2026-10-21 (AI-assisted, not an independent audit)
+Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/security-review.test.ts` (SR-1..SR-4; SR-5 is in `packages/protocol`).
+* **SR-1 (`auth.ts`)**: the `(key, nonce)` replay record now lives until `max(now, ts) + 120 + 5 s` (was `now + 125 s`, which let a future-dated request be
+  replayed after its nonce expired while its `ts` was still inside the window).
+* **SR-2 (`admin.ts` `clearQuarantine`)**: fork evidence, the current incident id and the rollback minimum size are re-checked on the freshly re-opened runtime
+  after the last `await`; evidence that arrives through gossip during the clear can no longer be cleared away.
+* **SR-3 (`admin.ts` `auditLog`)**: the self-audit compares against the in-memory root at the audited size and checks checkpoints signed during the audit
+  against the in-memory tree, so appends during a yielding audit no longer cause a false quarantine.
+* **SR-4 (`ssrf.ts`)**: host names with empty labels (`localhost..`, `a..b`) are refused statically.
+* **Flagged, not changed**: `control.webhook_outbox.body` keeps the public P0 delivery payload in the control DB, a literal deviation from QV-28-REQ-019 (owner
+  decision: store only `(election_id, event_id)` and rebuild at send time, or record an erratum). See the report for unconfirmed suspicions (SSE slot release
+  when the client vanishes before attach, pre-auth upload reservation, duplicate witness keys in `cfg.witnesses`).
+* **Webhook receivers** should reject deliveries whose `QV-Webhook-Timestamp` is outside their own window (e.g. +-5 min), compare the `v1=` signature in
+  constant time, dedupe on `QV-Webhook-Id`, and take the event type from the signed body (the `QV-Webhook-Event` header is not signed).
