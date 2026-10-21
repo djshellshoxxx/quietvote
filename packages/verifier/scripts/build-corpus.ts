@@ -2,7 +2,7 @@
 // Usage: node packages/verifier/scripts/build-corpus.ts [--check]   (--check: exit 1 if the checked-in file differs)
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const tv = join(here, '..', '..', '..', 'test-vectors', 'v1');
@@ -23,7 +23,7 @@ export function buildCorpus(): string {
   return JSON.stringify({ format: 'qv-canary-corpus/v1', protocol_version: 'qv1', control: { id: 'tiny-yesno-3v', expect: { verdict: 'PASS' }, bundle: control }, canaries }) + '\n';
 }
 
-if (process.argv[1] !== undefined && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const text = buildCorpus();
   if (process.argv.includes('--check')) {
     if (readFileSync(out, 'utf8') !== text) {

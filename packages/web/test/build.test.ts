@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { buildSite, csp } from '../src/build/site.ts';
 import { EN } from '../src/i18n/en.ts';
 
@@ -68,7 +69,7 @@ function walk(dir: string, out: string[] = []): string[] {
   }
   return out;
 }
-const SRC = new URL('../src/', import.meta.url).pathname;
+const SRC = fileURLToPath(new URL('../src/', import.meta.url));
 
 test('lint: DOM injection sinks and eval are banned (REQ-019); secrets never touch localStorage (REQ-009)', () => {
   const banned = /\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML|document\.write|\beval\(|new Function\(|setAttribute\(\s*['"]style['"]|createContextualFragment|srcdoc|localStorage\.setItem\([^)]*(seed|pass|secret|xi)/i;

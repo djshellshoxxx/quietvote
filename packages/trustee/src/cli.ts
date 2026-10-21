@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { pathToFileURL } from 'node:url';
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, type Rng } from '@quietvote/crypto';
 import type { Aggregate, Manifest, MultiSignedRecord } from '@quietvote/protocol';
@@ -218,7 +219,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
 
 void OVERRIDE_UNWITNESSED; void bytesToHex;
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { createInterface } = await import('node:readline');
   const io: CliIo = {
     out: (s) => process.stdout.write(`${s}\n`),
