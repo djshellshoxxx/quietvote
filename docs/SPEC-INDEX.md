@@ -31,11 +31,14 @@ This is the entry point for product and engineering specifications. Specs are in
 | QV-13 | [Accessibility and localization](13-accessibility-localization.md) | Accessibility, language, device and network support | QV-10 | Framework |
 | QV-14 | [Business and sustainability](14-business-sustainability.md) | Funding model, pricing, governance, sustainability | QV-00, QV-08, QV-12 | Framework |
 | QV-15 | [Decision log](decision-log.md) | Durable record of accepted decisions | All | Active |
-| QV-16 | [Cryptography and technical design](15-cryptography-and-technical-design.md) | Candidate protocol flow, cryptographic components, tech roles, assumptions, and open decisions | QV-03–QV-09 | Draft |
+| QV-16 | [Cryptography and technical design](15-cryptography-and-technical-design.md) | Candidate protocol flow, cryptographic components, supporting technologies, assumptions, and open decisions | QV-03–QV-09 | Draft |
+| QV-17 | [Portable membership credentials](17-portable-membership-credentials.md) | Privacy-preserving eligibility credentials, nullifiers, revocation, recovery | QV-04–QV-07, QV-16 | Draft |
+| QV-18 | [Federated governance](18-federated-governance.md) | Opt-in decisions and signed records across independent groups | QV-03, QV-06–QV-09, QV-16–QV-17 | Draft |
+| QV-19 | [Delegation, exit, and governance forks](19-delegation-exit-fork.md) | Bounded revocable delegation, portable export, rule forks | QV-03–QV-09, QV-16–QV-18 | Draft |
 
 ## Exploratory ideas
 
-[IDEAS.md](../IDEAS.md) holds non-binding concepts for future consideration. Ideas are not part of the MVP until they are selected, specified, threat-modeled, and recorded in the decision log.
+[IDEAS.md](../IDEAS.md) holds non-binding concepts for future consideration. Ideas are not part of the MVP until selected, specified, threat-modeled, and recorded in the decision log.
 
 ## Proposed completion order
 
@@ -46,6 +49,7 @@ This is the entry point for product and engineering specifications. Specs are in
 5. Specify architecture, interfaces, data contracts, and user journeys.
 6. Define testing and assurance gates before implementation.
 7. Complete operational, accessibility, and sustainability requirements before launch.
+8. Review optional credential, federation, delegation, and fork modules after the core model is agreed.
 
 This is a proposed sequence, not approval to implement. Security and privacy review must recur as designs change.
 
