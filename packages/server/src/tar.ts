@@ -39,6 +39,11 @@ export function writeTar(files: { name: string; data: Uint8Array }[]): Uint8Arra
   return out;
 }
 
+/**
+ * Reads the subset of ustar that writeTar emits. Hostile input is rejected rather than interpreted: sizes must be plain octal
+ * digits and fit inside the archive, names may not be absolute, contain `.`/`..`/empty segments or backslashes, and a name may
+ * appear once (a duplicate would let a later member silently replace an earlier, already-checksummed one).
+ */
 export function readTar(buf: Uint8Array): Map<string, Uint8Array> {
   const out = new Map<string, Uint8Array>();
   const dec = new TextDecoder();
@@ -47,8 +52,12 @@ export function readTar(buf: Uint8Array): Map<string, Uint8Array> {
     const h = buf.subarray(o, o + 512);
     if (h.every((b) => b === 0)) break;
     const name = dec.decode(h.subarray(0, 100)).replace(/\0.*$/, '');
-    const size = parseInt(dec.decode(h.subarray(124, 136)).replace(/\0.*$/, '').trim() || '0', 8);
-    if (name.includes('..') || name.startsWith('/')) throw new Error('unsafe tar path');
+    const sizeField = dec.decode(h.subarray(124, 136)).replace(/\0.*$/, '').trim();
+    if (!/^[0-7]{1,11}$/.test(sizeField)) throw new Error('bad tar size field');
+    const size = parseInt(sizeField, 8);
+    if (name === '' || name.startsWith('/') || name.includes('\\') || name.split('/').some((seg) => seg === '' || seg === '.' || seg === '..')) throw new Error('unsafe tar path');
+    if (out.has(name)) throw new Error('duplicate tar member');
+    if (o + 512 + size > buf.length) throw new Error('truncated tar member');
     out.set(name, buf.slice(o + 512, o + 512 + size));
     o += 512 + Math.ceil(size / 512) * 512;
   }

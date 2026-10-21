@@ -64,6 +64,8 @@ export interface ServerOptions {
   /** Attempts per voter key per hour, counted after signature verification. */
   maxBallotAttemptsPerHour?: number;
   maxLogBytes?: number;
+  /** Soft cap on the entry bytes (headers + bodies) in one GET log/entries page; a page always holds at least one entry. */
+  maxPageBytes?: number;
   minFreeBytes?: number;
   maxOpenElections?: number;
   maxElectionsPerOrg?: number;
@@ -221,6 +223,7 @@ export function resolveConfig(o: ServerOptions): ServerConfig {
     minBallotIntervalSec: bound('minBallotIntervalSec', o.minBallotIntervalSec ?? 10, 3600, HARD.minBallotIntervalSec),
     maxBallotAttemptsPerHour: bound('maxBallotAttemptsPerHour', o.maxBallotAttemptsPerHour ?? 30, 120),
     maxLogBytes: bound('maxLogBytes', o.maxLogBytes ?? 1024 ** 3, 4 * 1024 ** 3),
+    maxPageBytes: bound('maxPageBytes', o.maxPageBytes ?? 4 * 1024 * 1024, 16 * 1024 * 1024, 1),
     minFreeBytes: bound('minFreeBytes', o.minFreeBytes ?? 500 * 1024 * 1024, 1024 ** 4, 0),
     maxOpenElections: bound('maxOpenElections', o.maxOpenElections ?? 64, 4096),
     maxElectionsPerOrg: bound('maxElectionsPerOrg', o.maxElectionsPerOrg ?? 100, 100_000),

@@ -66,14 +66,14 @@ export function check(s: Schema, v: unknown, path = '$'): string | null {
       if (typeof v !== 'object' || v === null || Array.isArray(v)) return `${path}: expected object`;
       const o = v as Record<string, unknown>;
       const opt = s.opt ?? {};
-      for (const k of Object.keys(o)) if (!(k in s.req) && !(k in opt)) return `${path}.${k}: unknown field`;
+      for (const k of Object.keys(o)) if (!Object.hasOwn(s.req, k) && !Object.hasOwn(opt, k)) return `${path}.${k}: unknown field`;
       for (const [k, sub] of Object.entries(s.req)) {
-        if (!(k in o)) return `${path}.${k}: missing`;
+        if (!Object.hasOwn(o, k)) return `${path}.${k}: missing`;
         const e = check(sub, o[k], `${path}.${k}`);
         if (e !== null) return e;
       }
       for (const [k, sub] of Object.entries(opt)) {
-        if (k in o) {
+        if (Object.hasOwn(o, k)) {
           const e = check(sub, o[k], `${path}.${k}`);
           if (e !== null) return e;
         }

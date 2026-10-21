@@ -142,5 +142,5 @@ test('TR-01: a trustees-mode spoil that re-wraps a cast ballot\'s ciphertexts is
   publishTally(sim, [2, 3], { spoilTrustees: true });
   const rep = await verifyElection(bundleOf(sim));
   assert.equal(rep.checks['chk.benaloh.spoiled'], 'fail');
-  assert.ok(rep.findings.some((f) => f.code === 'E_SPOILED_CODE_CAST' && /TR-01/.test(f.detail ?? '')), JSON.stringify(rep.findings));
+  assert.ok(rep.findings.some((f) => f.code === 'E_SPOILED_CODE_CAST' && /re-wrapped/.test(f.detail ?? '')), JSON.stringify(rep.findings));
 });

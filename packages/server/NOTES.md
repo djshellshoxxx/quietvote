@@ -49,7 +49,7 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
   (codes are never stored). Registration PoP message: `"QV-REG-v1\0" election_id "\0" pk`.
 * Spoil `trustees` mode (QV-ADR-020) is accepted only if the manifest enables it, but the trustee spoil-decryption relay is not built.
 * `reveal` verification (`verifySpoilReveal`) is done at admission (costly); rejected with E_SPOIL_MISMATCH.
-* Bucket for IPv6 is /64 (spec says /56); archive deletes erase the DEK and files but do not require an acknowledged export.
+* Bucket for IPv6 is /64 (spec says /56; the address is fully expanded first, so `::`-compressed text cannot leak host bits into the bucket); archive deletes erase the DEK and files but do not require an acknowledged export.
 * `max_per_voter`/`max_spoils` overruns answer 429 `REVOTE_LIMIT` with `retryable:false` (QV-09 table).
 
 ## Event stream and webhooks (QV-09 §9, §6.3; QV-09-REQ-010/014)
@@ -79,6 +79,17 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
   to the validated address (lookup is overridden: no second resolution, TLS still verifies the certificate and SNI against the URL host).
 * Not covered / limits: no per-election event size cap; webhook delivery state is not persisted; `webhookResolver`/`webhookTransport` options exist
   only as test seams. Real-TLS transport tests need `openssl` (skipped without it). The 30-day post-ARCHIVED pruning (`pruneEventsIfExpired`) is not covered by a test (only the resulting 410 on a pruned window is).
+
+## Audit hardening (docs/audit/server.md, 2026-10-21; behaviour changes)
+* A refused request that asks for `Connection: close` no longer throws when the peer already disconnected (`req.socket` is null): this was an
+  unauthenticated remote crash (SRV-001).
+* Responses to read-key (`access: link`) elections are `Cache-Control: private, no-store` on every route (`Ctx.restricted`), including the otherwise
+  immutable/public proofs, entries and manifest (SRV-003).
+* `GET .../log/entries` pages stop at `maxPageBytes` (default 4 MiB, hard max 16 MiB; a page always holds >= 1 entry) as well as at `limit`; a cut page
+  is `no-cache` and `next_from` continues it (SRV-004). Clients must follow `next_from` rather than assume `limit` rows.
+* `readTar` rejects non-octal/negative/oversize size fields, truncated members, duplicate names and `.`/`..`/empty/backslash path segments (SRV-005).
+* The static handler never answers `/api` or `/api/...` (unknown API paths are 404 problem+json, not the SPA shell) (SRV-006).
+* The failed-idempotency cleanup uses a bound statement instead of a string-built one (SRV-007).
 
 ## Not implemented (known gaps)
 OpenAPI/JSON-Schema generation (imports, jobs, `/admin/*`, gossip and single-range `Range` are implemented, see the last section),
