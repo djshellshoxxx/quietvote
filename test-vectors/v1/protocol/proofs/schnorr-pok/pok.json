@@ -1,0 +1,151 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "protocol/proofs/schnorr-pok",
+  "operation": "pok.verify",
+  "description": "DKG proofs of possession (QV-16 §5.7.2)",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "pok-valid",
+      "input": {
+        "manifest_hash_hex": "4463f2a9e4daf5edc0f53ebc001401cb61ef639777c08ac59d464af407a15429",
+        "i": 2,
+        "k": 1,
+        "A_hex": "14d02048b9d4ee4902321e981fd6b3cf0dfaeee3b70629b5efad20da9ae22205",
+        "proof": {
+          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
+          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "valid": true
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "pok-replay-other-index",
+      "input": {
+        "manifest_hash_hex": "4463f2a9e4daf5edc0f53ebc001401cb61ef639777c08ac59d464af407a15429",
+        "i": 3,
+        "k": 1,
+        "A_hex": "14d02048b9d4ee4902321e981fd6b3cf0dfaeee3b70629b5efad20da9ae22205",
+        "proof": {
+          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
+          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DKG_R1"
+      },
+      "tags": [
+        "negative",
+        "attack:dkg-replay"
+      ]
+    },
+    {
+      "id": "pok-replay-other-coefficient",
+      "input": {
+        "manifest_hash_hex": "4463f2a9e4daf5edc0f53ebc001401cb61ef639777c08ac59d464af407a15429",
+        "i": 2,
+        "k": 0,
+        "A_hex": "14d02048b9d4ee4902321e981fd6b3cf0dfaeee3b70629b5efad20da9ae22205",
+        "proof": {
+          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
+          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DKG_R1"
+      },
+      "tags": [
+        "negative",
+        "attack:dkg-replay"
+      ]
+    },
+    {
+      "id": "pok-other-manifest",
+      "input": {
+        "manifest_hash_hex": "1f83969720662fba3a003d2d5914a2388e7cba3045919f4e66890916b12f3cae",
+        "i": 2,
+        "k": 1,
+        "A_hex": "14d02048b9d4ee4902321e981fd6b3cf0dfaeee3b70629b5efad20da9ae22205",
+        "proof": {
+          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
+          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DKG_R1"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "pok-rogue-key",
+      "comment": "A replaced by Y - A_honest, proof reused",
+      "input": {
+        "manifest_hash_hex": "4463f2a9e4daf5edc0f53ebc001401cb61ef639777c08ac59d464af407a15429",
+        "i": 2,
+        "k": 1,
+        "A_hex": "9e0a92bc679219c63a137a6b8995d7c2124ffd171f150085f85f3070d7b29749",
+        "proof": {
+          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
+          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DKG_R1"
+      },
+      "tags": [
+        "negative",
+        "attack:rogue-key"
+      ]
+    },
+    {
+      "id": "pok-identity",
+      "input": {
+        "manifest_hash_hex": "4463f2a9e4daf5edc0f53ebc001401cb61ef639777c08ac59d464af407a15429",
+        "i": 2,
+        "k": 1,
+        "A_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "proof": {
+          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
+          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DKG_R1"
+      },
+      "tags": [
+        "negative",
+        "attack:identity"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "protocol/proofs/contest-limit",
+  "operation": "limit.verify",
+  "description": "Selection-limit proofs (QV-16 §5.10.2)",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "limit-valid",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "binder_hex": "f914319d646e2bc9efb8bea2e651f29c927595e98e326524f611d4bb2a706def",
+        "cid": "budget",
+        "L": 1,
+        "K_hex": "dcb908584394e267d01580aaf43cb1e725af65f26156074b20c9d1c343860763",
+        "Asum_hex": "5aac81128e34e15b9916eebf51475fbae5e67a5cfe040e9c719eea8fc521d040",
+        "Bsum_hex": "325665e2192080b134205a3e6433b6e335c1e85e15207783afc530774451ce30",
+        "proof": {
+          "c": "82534276c2ee9070a158ac5cef7604b297ac2427ab8b652f549efa2da208cc0a",
+          "s": "2c27cab856fdacaf8744ee7c5f3ec93df7d68937ecf9d0f82dc8d2b80c38ec0c"
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "valid": true
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "limit-wrong-L",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "binder_hex": "f914319d646e2bc9efb8bea2e651f29c927595e98e326524f611d4bb2a706def",
+        "cid": "budget",
+        "L": 2,
+        "K_hex": "dcb908584394e267d01580aaf43cb1e725af65f26156074b20c9d1c343860763",
+        "Asum_hex": "5aac81128e34e15b9916eebf51475fbae5e67a5cfe040e9c719eea8fc521d040",
+        "Bsum_hex": "325665e2192080b134205a3e6433b6e335c1e85e15207783afc530774451ce30",
+        "proof": {
+          "c": "82534276c2ee9070a158ac5cef7604b297ac2427ab8b652f549efa2da208cc0a",
+          "s": "2c27cab856fdacaf8744ee7c5f3ec93df7d68937ecf9d0f82dc8d2b80c38ec0c"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LIMIT_PROOF"
+      },
+      "tags": [
+        "negative",
+        "attack:frozen-heart"
+      ]
+    },
+    {
+      "id": "limit-wrong-cid",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "binder_hex": "f914319d646e2bc9efb8bea2e651f29c927595e98e326524f611d4bb2a706def",
+        "cid": "other",
+        "L": 1,
+        "K_hex": "dcb908584394e267d01580aaf43cb1e725af65f26156074b20c9d1c343860763",
+        "Asum_hex": "5aac81128e34e15b9916eebf51475fbae5e67a5cfe040e9c719eea8fc521d040",
+        "Bsum_hex": "325665e2192080b134205a3e6433b6e335c1e85e15207783afc530774451ce30",
+        "proof": {
+          "c": "82534276c2ee9070a158ac5cef7604b297ac2427ab8b652f549efa2da208cc0a",
+          "s": "2c27cab856fdacaf8744ee7c5f3ec93df7d68937ecf9d0f82dc8d2b80c38ec0c"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LIMIT_PROOF"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "limit-wrong-binder",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "binder_hex": "8094a475e2cbe66cff3f154ad6dcd71483d625c0a85f09313085e2171c1968cd",
+        "cid": "budget",
+        "L": 1,
+        "K_hex": "dcb908584394e267d01580aaf43cb1e725af65f26156074b20c9d1c343860763",
+        "Asum_hex": "5aac81128e34e15b9916eebf51475fbae5e67a5cfe040e9c719eea8fc521d040",
+        "Bsum_hex": "325665e2192080b134205a3e6433b6e335c1e85e15207783afc530774451ce30",
+        "proof": {
+          "c": "82534276c2ee9070a158ac5cef7604b297ac2427ab8b652f549efa2da208cc0a",
+          "s": "2c27cab856fdacaf8744ee7c5f3ec93df7d68937ecf9d0f82dc8d2b80c38ec0c"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LIMIT_PROOF"
+      },
+      "tags": [
+        "negative",
+        "attack:ballot-copy"
+      ]
+    },
+    {
+      "id": "limit-overvote",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "binder_hex": "f914319d646e2bc9efb8bea2e651f29c927595e98e326524f611d4bb2a706def",
+        "cid": "budget",
+        "L": 1,
+        "K_hex": "dcb908584394e267d01580aaf43cb1e725af65f26156074b20c9d1c343860763",
+        "Asum_hex": "f4ca899d8d4c4a9abefd5b968a833d295a20d8dda5b99e354bf9792399eb921d",
+        "Bsum_hex": "d4f0e479b61ccd07433784b7d4271aa7c360f53385cfa57270c72d9e5984c55a",
+        "proof": {
+          "c": "0843abdee5b6b2c0131ed6fbd58ee748f9fb5ebf00224da335001f5354994a0f",
+          "s": "d8e9056d852efbf06474443257f992f9c922826210874238c7413b6a1c18700e"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LIMIT_PROOF"
+      },
+      "tags": [
+        "negative",
+        "attack:overvote"
+      ]
+    }
+  ]
+}

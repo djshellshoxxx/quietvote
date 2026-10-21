@@ -1,0 +1,23 @@
+{
+  "checks": [
+    "chk.manifest.hash",
+    "chk.manifest.sig",
+    "chk.keys.trustees",
+    "chk.board.append_only",
+    "chk.board.witness",
+    "chk.ballots.valid",
+    "chk.ballots.latest",
+    "chk.tally.aggregate",
+    "chk.tally.decrypt",
+    "chk.result.rules",
+    "chk.benaloh.spoiled",
+    "chk.receipts.sample",
+    "chk.encoding.canonical",
+    "chk.time.window"
+  ],
+  "statuses": [
+    "pass",
+    "fail",
+    "not_run"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "quietvote",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm test --workspaces --if-present",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": { "typescript": "5.9.3", "@types/node": "22.18.0" }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@quietvote/verifier",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test --test-reporter=spec \"test/**/*.test.ts\""
+  },
+  "bin": {
+    "qv-verify": "./src/bin.ts"
+  },
+  "files": [
+    "src",
+    "canary"
+  ]
+}

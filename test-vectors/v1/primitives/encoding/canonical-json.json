@@ -1,0 +1,345 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "primitives/encoding",
+  "operation": "enc.canon_json",
+  "description": "QV-JSON strict parse + RFC 8785 serialisation",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "key-order",
+      "input": {
+        "text": "{\"b\":1,\"a\":2}"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "{\"a\":2,\"b\":1}"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "nested-key-order",
+      "input": {
+        "text": "{\"z\":{\"y\":1,\"x\":[{\"b\":true,\"a\":false}]}}"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "{\"z\":{\"x\":[{\"a\":false,\"b\":true}],\"y\":1}}"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "utf16-order",
+      "input": {
+        "text": "{\"\\uff5e\":1,\"\\ud83d\\ude00\":2}"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "{\"😀\":2,\"～\":1}"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "escapes",
+      "input": {
+        "text": "{\"s\":\"\\u0001\\n\\t\\\"\\\\\\/\"}"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "{\"s\":\"\\u0001\\n\\t\\\"\\\\/\"}"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "unicode-literal",
+      "input": {
+        "text": "{\"s\":\"é€\"}"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "{\"s\":\"é€\"}"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "whitespace",
+      "input": {
+        "text": " [ 1 , 2 ,\n3 ] "
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "[1,2,3]"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "empty-object",
+      "input": {
+        "text": "{}"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "{}"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "empty-array",
+      "input": {
+        "text": "[]"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "[]"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "max-safe-int",
+      "input": {
+        "text": "9007199254740991"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "9007199254740991"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "negative-int",
+      "input": {
+        "text": "-17"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "-17"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "booleans",
+      "input": {
+        "text": "[true,false]"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "canonical": "[true,false]"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "reject-duplicate-key",
+      "input": {
+        "text": "{\"a\":1,\"a\":2}"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-nested-duplicate-key",
+      "input": {
+        "text": "{\"x\":{\"a\":1,\"a\":1}}"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-float",
+      "input": {
+        "text": "1.0"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-exponent",
+      "input": {
+        "text": "1e2"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-null",
+      "input": {
+        "text": "{\"a\":null}"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-negative-zero",
+      "input": {
+        "text": "-0"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-unsafe-int",
+      "input": {
+        "text": "9007199254740992"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-lone-surrogate",
+      "input": {
+        "text": "\"\\ud800\""
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-non-nfc",
+      "input": {
+        "text": "\"é\""
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-leading-zero",
+      "input": {
+        "text": "01"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-trailing-data",
+      "input": {
+        "text": "[1] 2"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "reject-control-char",
+      "input": {
+        "text": "\"\t\""
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_PARSE"
+      },
+      "tags": [
+        "negative"
+      ]
+    }
+  ]
+}

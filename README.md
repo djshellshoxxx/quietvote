@@ -4,7 +4,16 @@
 
 QuietVote is a proposed platform for organizations that want members to make collective decisions without publishing each person's ballot. It is intended for groups such as cooperatives, member associations, unions, collectives, and online communities. The project explores how a group can verify that eligible members participated, prevent duplicate voting, and audit the result while keeping individual choices private.
 
-QuietVote is at the **documentation and specification framework stage**. This repository defines the questions, capabilities, and assurance work that must be settled before implementation. It does not yet claim to provide anonymous voting, cryptographic verifiability, or production-ready election software.
+QuietVote is at the **specification and early implementation stage**. This repository defines the questions, capabilities, and assurance work that must be settled before implementation, and it contains initial code for the cryptographic, protocol, and bulletin-board layers. It does not yet claim to provide anonymous voting, cryptographic verifiability, or production-ready election software.
+
+## What is QuietVote?
+
+- QuietVote is a tool that lets a group vote in secret and still check that the result is right.
+- It is for clubs, co-ops, unions, open-source groups and other voluntary groups.
+- Your choice is locked away. Nobody can read it alone, not even the server.
+- Anyone can check the final count, so you do not have to trust the people who run it.
+- It is an unaudited draft, not ready for real votes. In version 1, others can see who voted, but not how.
+- It does not protect you from someone watching you vote, a hacked phone, or being forced to vote a certain way.
 
 ## Product direction
 
@@ -43,12 +52,15 @@ Start with the [specification index](docs/SPEC-INDEX.md), which tracks each spec
 
 ## Current status
 
-**Stage:** Framework / pre-implementation  
-**Implementation:** None  
-**Specification status:** Draft; decisions and acceptance criteria remain to be completed  
+**Stage:** Specification drafted; early implementation  
+**Implementation:** Core crypto, protocol, and bulletin-board (`packages/crypto`, `packages/protocol`, `packages/board`) have initial implementations. They are **unaudited**. Other packages are not yet complete.  
+**Specification status:** Drafted; decisions and acceptance criteria remain to be completed  
+**Use:** **Not for real elections.** Do not rely on this software for any real decision.  
 **Release status:** No release
 
 Do not treat placeholder requirements or proposed capability boundaries as approved product decisions.
+
+For the roadmap and open work, see [wiki/](wiki/) and [docs/plan/](docs/plan/).
 
 ## Guiding principles
 
@@ -62,7 +74,7 @@ Do not treat placeholder requirements or proposed capability boundaries as appro
 
 ## Contributing
 
-The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md) when available.
+The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md) for DCO sign-off and the development workflow.
 
 ## Repository description
 
