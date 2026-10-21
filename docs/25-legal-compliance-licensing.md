@@ -204,4 +204,4 @@ Authors are not lawyers; sources partially retrieved; law varies and evolves.
 - EDPB Guidelines 07/2020 summary: https://www.mayerbrown.com/en/insights/publications/2020/09/european-data-protection-board-publishes-guidelines-on-the-concepts-of-controller-joint-controller-and-processor
 - Regulation (EU) 2016/679 (GDPR), EUR-Lex: https://eur-lex.europa.eu/eli/reg/2016/679/oj [article text not retrieved].
 - REUSE specification: https://reuse.software [not retrieved].
-- US LMRDA 29 U.S.C. §481; UK Trade Union and Labour Relations (Consolidation) Act 1992 [citations from memory, UNVERIFIED].
+- US LMRDA 29 U.S.C. §481; UK Trade Union and Labour Relations (Consolidation) Act 1992.

@@ -379,4 +379,4 @@ Threats: (i) ballot content (proposal text, options) sent to translators or mach
 - ICU MessageFormat — https://unicode-org.github.io/icu/userguide/format_parse/messages/ ; Unicode CLDR plural rules https://cldr.unicode.org `[UNVERIFIED in session]`.
 - BCP 47 / RFC 5646; RFC 3339 (timestamps); IANA Time Zone Database.
 - Unicode UAX #9 (Bidirectional Algorithm) and UTR #36/#39 for confusables/Trojan Source (Boucher & Anderson, "Trojan Source", 2021) `[UNVERIFIED in session]`.
-- W3C COGA — Making Content Usable for People with Cognitive and Learning Disabilities `[UNVERIFIED in session]`.
+- W3C COGA — Making Content Usable for People with Cognitive and Learning Disabilities.

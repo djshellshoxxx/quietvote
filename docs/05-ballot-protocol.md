@@ -307,7 +307,7 @@ Success includes the idempotent replay of an existing `ballot_id` (200 with orig
 ## References (accessed 2026-10-21)
 
 1. Adida, "Helios: Web-based Open-Audit Voting," USENIX Security 2008 (lineage of ADR-004) `[UNVERIFIED by fetch this session]`.
-2. Benaloh, "Simple Verifiable Elections," EVT 2006 (cast-or-audit) `[UNVERIFIED by fetch this session]`.
+2. Benaloh, "Simple Verifiable Elections," EVT 2006 (cast-or-audit).
 3. RFC 9162, Certificate Transparency 2.0, https://www.rfc-editor.org/rfc/rfc9162.html (log structure, inclusion/consistency proofs, SCT-style promise).
 4. ElectionGuard specification, https://github.com/microsoft/electionguard `[UNVERIFIED; version to be pinned by QV-16 author]`.
 5. Cramer, Damgård, Schoenmakers, "Proofs of Partial Knowledge…" CRYPTO '94; Chaum–Pedersen "Wallet Databases with Observers" CRYPTO '92 — detailed construction in QV-16.

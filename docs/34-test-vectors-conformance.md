@@ -457,8 +457,8 @@ Constraints: JSON only (no CBOR in v1) for reviewability; vectors reflect QV-16 
 | Project owner | Pending | — | Draft authored 2026-10-21 |
 
 ## References (accessed 2026-10-21 unless noted)
-- RFC 8032 (EdDSA), RFC 9496 (ristretto255/decaf448), RFC 9474 (RSA Blind Signatures), RFC 9162 (Certificate Transparency v2.0 Merkle trees), RFC 6962, RFC 5869 (HKDF), RFC 3339, RFC 8785 (JCS) — from author knowledge; searches did not return RFC text `[UNVERIFIED in session]`.
-- NIST FIPS 180-4 and CAVP SHA vectors `[UNVERIFIED in session]`.
+- RFC 8032 (EdDSA), RFC 9496 (ristretto255/decaf448), RFC 9474 (RSA Blind Signatures), RFC 9162 (Certificate Transparency v2.0 Merkle trees), RFC 6962, RFC 5869 (HKDF), RFC 3339, RFC 8785 (JCS) — from author knowledge; searches did not return RFC text.
+- NIST FIPS 180-4 and CAVP SHA vectors.
 - Project Wycheproof (Google/C2SP) `[UNVERIFIED in session]`.
 - Trail of Bits, "The Frozen Heart vulnerability in Girault's proof of knowledge" https://blog.trailofbits.com/2022/04/14/the-frozen-heart-vulnerability-in-giraults-proof-of-knowledge/ (accessed 2026-10-21) — Fiat–Shamir challenge must hash all public statement values and prover commitments.
 - Bernhard, Pereira, Warinschi, "How not to Prove Yourself: Pitfalls of the Fiat-Shamir Heuristic and Applications to Helios", ASIACRYPT 2012 — via https://eprint.iacr.org/2016/771 search listing and summary (accessed 2026-10-21).

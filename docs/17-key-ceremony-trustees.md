@@ -162,7 +162,7 @@ Because the share is **the only copy of `sk_i`**, lost shares reduce absence tol
 
 1. **Primary defence: threshold slack** (`n−t ≥ 1`). Prefer this to backups.
 2. **Own-device redundancy** (optional): a second copy of the *encrypted bundle* on a USB stick in a different physical location. Counts as a "backup" in transcript metadata. The encrypted bundle carries the same compromise surface as the passphrase — more copies mean more theft chances for the file but not for the passphrase.
-3. **Shamir split of the bundle passphrase / bundle decryption key** (Could, REQ-024): SLIP-0039 mnemonic shares (e.g. 2-of-3) given to the trustee's trusted people. Protects against trustee forgetting the passphrase; each split makes a new custody group. SLIP-0039 details `[UNVERIFIED: spec not re-fetched 2026-10-21]`. Not used to split `sk_i` itself, because that would introduce a second threshold scheme on top of the election's.
+3. **Shamir split of the bundle passphrase / bundle decryption key** (Could, REQ-024): SLIP-0039 mnemonic shares (e.g. 2-of-3) given to the trustee's trusted people. Protects against trustee forgetting the passphrase; each split makes a new custody group. SLIP-0039 details. Not used to split `sk_i` itself, because that would introduce a second threshold scheme on top of the election's.
 4. **Paper card** (§13): printed, containing the passphrase (generated words) and the bundle QR/hash only if the bundle fits; stored in an envelope in a safe place. Mandatory suggestion; not a mandatory action.
 
 Not supported (and warned): cloud sync (Dropbox, iCloud) of bundles; password-manager storage is acceptable for passphrase only if the manager is not the same place as the file; emailing bundles.
@@ -528,6 +528,6 @@ Design principle: **the trustee should never need to know the words "polynomial"
 
 - age file encryption format (C2SP) — https://github.com/C2SP/C2SP/blob/main/age.md (fetched: X25519 recipient, scrypt recipient with work-factor log2 argument and sole-recipient rule, plugin mechanism for hardware-tagged recipients, ChaCha20-Poly1305 64 KiB STREAM payload).
 - C2SP tlog-witness / tlog-checkpoint (witness quorum gating; see QV-18 §24).
-- Pedersen, *A Threshold Cryptosystem without a Trusted Party*, EUROCRYPT '91 `[UNVERIFIED: not re-fetched]`; Feldman, *A Practical Scheme for Non-interactive Verifiable Secret Sharing*, FOCS '87 `[UNVERIFIED]`; Gennaro, Jarecki, Krawczyk, Rabin, *Secure Distributed Key Generation for Discrete-Log Based Cryptosystems*, J. Cryptology 2007 `[UNVERIFIED]`. Exact DKG selection and analysis: QV-16.
-- Shamir, *How to share a secret*, CACM 1979 `[UNVERIFIED]`; SLIP-0039 (Shamir's Secret-Sharing for Mnemonic Codes) — https://github.com/satoshilabs/slips/blob/master/slip-0039.md `[UNVERIFIED: not fetched]`.
-- Adida, *Helios: Web-based Open-Audit Voting*, USENIX Security 2008 `[UNVERIFIED]`; ElectionGuard specification (key ceremony) — https://github.com/microsoft/electionguard `[UNVERIFIED: not fetched]`.
+- Pedersen, *A Threshold Cryptosystem without a Trusted Party*, EUROCRYPT '91; Feldman, *A Practical Scheme for Non-interactive Verifiable Secret Sharing*, FOCS '87; Gennaro, Jarecki, Krawczyk, Rabin, *Secure Distributed Key Generation for Discrete-Log Based Cryptosystems*, J. Cryptology 2007 `[UNVERIFIED]`. Exact DKG selection and analysis: QV-16.
+- Shamir, *How to share a secret*, CACM 1979; SLIP-0039 (Shamir's Secret-Sharing for Mnemonic Codes) — https://github.com/satoshilabs/slips/blob/master/slip-0039.md.
+- Adida, *Helios: Web-based Open-Audit Voting*, USENIX Security 2008; ElectionGuard specification (key ceremony) — https://github.com/microsoft/electionguard.

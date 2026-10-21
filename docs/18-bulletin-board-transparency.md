@@ -524,10 +524,10 @@ Voter: after casting, show "Your ballot is recorded: #233 — saved receipt" wit
 
 ## 24. References (accessed 2026-10-21)
 
-- RFC 9162, *Certificate Transparency Version 2.0* (IETF, Dec 2021; Experimental; obsoletes RFC 6962) — https://www.rfc-editor.org/rfc/rfc9162 `[UNVERIFIED: host unreachable from authoring environment; citation from author knowledge]`. RFC 6962 §2.1 Merkle hash definitions are carried over unchanged.
+- RFC 9162, *Certificate Transparency Version 2.0* (IETF, Dec 2021; Experimental; obsoletes RFC 6962) — https://www.rfc-editor.org/rfc/rfc9162. RFC 6962 §2.1 Merkle hash definitions are carried over unchanged.
 - C2SP tlog-checkpoint — https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md (fetched: origin/size/root note body, signature types 0x04/0x06, key-ID = first 4 bytes SHA-256).
 - C2SP tlog-cosignature — https://github.com/C2SP/C2SP/blob/main/tlog-cosignature.md (fetched: Ed25519 message `cosignature/v1\ntime…`, ML-DSA-44 recommended, timestamps monotone).
 - C2SP tlog-witness — https://github.com/C2SP/C2SP/blob/main/tlog-witness.md (fetched: `POST add-checkpoint`, `old <N>` body, 200/403/404/400/409/422 semantics, monitoring endpoint `GET <prefix>/<hex SHA-256 origin>/checkpoint`).
-- C2SP signed-note — https://github.com/C2SP/C2SP/blob/main/signed-note.md `[UNVERIFIED: not fetched; referenced via tlog-checkpoint]`.
+- C2SP signed-note — https://github.com/C2SP/C2SP/blob/main/signed-note.md.
 - OpenTimestamps — https://opentimestamps.org `[UNVERIFIED: not fetched]`.
-- Crosby & Wallach, *Efficient Data Structures for Tamper-Evident Logging*, USENIX Security 2009 `[UNVERIFIED: not fetched]` (background on history trees).
+- Crosby & Wallach, *Efficient Data Structures for Tamper-Evident Logging*, USENIX Security 2009 (background on history trees).

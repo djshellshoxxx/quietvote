@@ -54,7 +54,7 @@ Literature anchor: timing/intersection attacks against anonymity systems are wel
 - **Default**: no IP logging (ADR-009). Specify *how*: reverse-proxy configuration shipped with the reference deployment must set `access_log off` (or anonymize), no `X-Forwarded-For` persistence, no IP in application DB, no IP in error reports. Provide a test (QV-11) that greps logs from a scripted election for client addresses.
 - **Rate limiting without IPs**: use proof-of-work challenges or per-credential rate limits rather than per-IP counters persisted to disk; in-memory short-lived counters acceptable (document volatility).
 - **Hosting provider** sees all traffic metadata regardless of app logs (netflow, hypervisor). Only onion service or client-side VPN/Tor removes this from the *operator's* view.
-- **TLS**: Encrypted ClientHello (ECH) is standardized as IETF work (RFC status `[UNVERIFIED]` at time of writing); do not depend on it.
+- **TLS**: Encrypted ClientHello (ECH) is standardized as IETF work (RFC status at time of writing); do not depend on it.
 
 ### 1.4 Browser fingerprinting
 

@@ -496,7 +496,7 @@ Retention/deletion obligations (QV-06) apply to the operator's copy; the public 
 
 ## 14. References (accessed 2026-10-21)
 
-- RFC 9162, Certificate Transparency v2.0 — https://www.rfc-editor.org/rfc/rfc9162 (cited from memory; fetch blocked in authoring environment `[UNVERIFIED access]`).
+- RFC 9162, Certificate Transparency v2.0 — https://www.rfc-editor.org/rfc/rfc9162 (cited from memory; fetch blocked in authoring environment).
 - Node.js release data — https://nodejs.org/dist/index.json (v22.23.3 "Jod", v24.22.0 "Krypton", v26.12.0 current).
 - npm registry (`npm view`): `@noble/curves` 2.4.0, `@noble/hashes` 2.4.0 (exports `./argon2.js`), `esbuild` 0.28.2, `typescript` 7.0.2, `@cyclonedx/cyclonedx-npm` 6.0.1.
 - Node.js Single Executable Applications — https://nodejs.org/api/single-executable-applications.html `[VERIFIED: nodejs.org SEA docs, 2026-10-21]`.

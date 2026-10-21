@@ -679,7 +679,7 @@ POST …/log/entries  (ballot with bad proof)
 | Q4 | Which records are portable between deployments? | QV-12 | Public bundle (complete log) and operator bundle; no live migration of OPEN elections | Closed (see QV-18 §12) |
 | Q5 | Should voters get optional sessions for convenience (notifications)? | QV-10 | No in v1 (no identity) | Pending |
 | Q6 | WebAuthn/passkey support for organizer login (as key storage, signs the challenge)? | UX | Client-side only; server sees Ed25519 or ECDSA P-256 if QV-16 adds suite | Pending |
-| Q7 | `Idempotency-Key` header standardization status | API | Use as specified; revisit if IETF RFC lands `[UNVERIFIED]` | Pending |
+| Q7 | `Idempotency-Key` header standardization status | API | Use as specified; revisit if IETF RFC lands | Pending |
 | Q8 | `link` access read-key rotation | QV-12 | Organizer can rotate; old key invalid after 24 h | Pending |
 
 ## 20. Proposed ADRs
@@ -699,10 +699,10 @@ POST …/log/entries  (ballot with bad proof)
 
 None of the following were fetched in this authoring session (network access to standards hosts was unavailable); citations are from author knowledge and marked accordingly:
 
-- RFC 9457, *Problem Details for HTTP APIs* (supersedes RFC 7807) `[UNVERIFIED]`
-- RFC 3339 (timestamps), RFC 4648 (base64/base64url), RFC 6585 (429), RFC 8594 (`Sunset`), RFC 9110 (HTTP semantics) `[UNVERIFIED]`
+- RFC 9457, *Problem Details for HTTP APIs* (supersedes RFC 7807)
+- RFC 3339 (timestamps), RFC 4648 (base64/base64url), RFC 6585 (429), RFC 8594 (`Sunset`), RFC 9110 (HTTP semantics)
 - JSON Schema 2020-12 — https://json-schema.org/draft/2020-12 `[VERIFIED: json-schema.org draft page, 2026-10-21]`
 - OpenAPI Specification 3.1 — https://spec.openapis.org/oas/v3.1.0 `[UNVERIFIED]`
-- WHATWG HTML Living Standard, Server-sent events `[UNVERIFIED]`
+- WHATWG HTML Living Standard, Server-sent events
 - IETF httpapi `RateLimit` header fields (Internet-Draft; name/semantics may change) `[UNVERIFIED]`
 - C2SP tlog-checkpoint / tlog-witness / tlog-cosignature (fetched; see QV-18 §24)

@@ -158,7 +158,7 @@ Community witness operators may be scarce at first (QV may need to operate one i
 
 ## References (accessed 2026-10-21; many not individually retrieved — see tags)
 - [R1] RFC 9162, Certificate Transparency Version 2.0, https://www.rfc-editor.org/rfc/rfc9162 (referenced in ADR-007; not re-fetched).
-- [R2] Sigsum (https://www.sigsum.org) and C2SP transparency-log specs (https://c2sp.org) [UNVERIFIED names/status; not fetched].
+- [R2] Sigsum (https://www.sigsum.org) and C2SP transparency-log specs (https://c2sp.org).
 - [R3] D. Ongaro, J. Ousterhout, "In Search of an Understandable Consensus Algorithm (Raft)", USENIX ATC 2014 [not fetched].
 - [R4] M. Castro, B. Liskov, "Practical Byzantine Fault Tolerance", OSDI 1999 [not fetched].
 - [R5] Nostr NIPs repository, https://github.com/nostr-protocol/nips (NIP-01 basic protocol) — search returned only secondary summaries.

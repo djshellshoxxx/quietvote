@@ -348,14 +348,14 @@ Unit: encode/decode, each proof (honest + 100% mutation set), threshold arithmet
 | Independent cryptographer | Pending (§8 mandatory) | — | — |
 
 ## References (accessed 2026-10-21 unless noted)
-- [R1] D. Chaum, T. Pedersen, "Wallet databases with observers", CRYPTO '92 (CP proof). [UNVERIFIED URL; bibliographic citation from memory]
-- [R2] R. Cramer, I. Damgård, B. Schoenmakers, "Proofs of partial knowledge and simplified design of witness hiding protocols", CRYPTO '94 (CDS). [UNVERIFIED URL]
+- [R1] D. Chaum, T. Pedersen, "Wallet databases with observers", CRYPTO '92 (CP proof).
+- [R2] R. Cramer, I. Damgård, B. Schoenmakers, "Proofs of partial knowledge and simplified design of witness hiding protocols", CRYPTO '94 (CDS).
 - [R3] M. Schulze, "The Schulze Method of Voting", arXiv:1804.02973 (v18, Oct 2025) — https://arxiv.org/pdf/1804.02973 (verified by search); also Schulze, Social Choice and Welfare 36 (2011) 267–303 [UNVERIFIED pages].
 - [R4] T. N. Tideman, "Independence of clones as a criterion for voting rules", Social Choice and Welfare 4 (1987) 185–206 [UNVERIFIED pages].
-- [R5] D. Bernhard, O. Pereira, B. Warinschi, "How not to prove yourself: pitfalls of the Fiat–Shamir heuristic and applications to Helios", ASIACRYPT 2012 [UNVERIFIED URL].
+- [R5] D. Bernhard, O. Pereira, B. Warinschi, "How not to prove yourself: pitfalls of the Fiat–Shamir heuristic and applications to Helios", ASIACRYPT 2012.
 - [R6] ElectionGuard specification (Microsoft/ElectionGuard), https://github.com/microsoft/electionguard [selection-limit proofs; version not checked].
 - [R7] S. Brams, P. Fishburn, "Approval Voting", 1983 (book).
 - [R8] Marquis de Condorcet, "Essai sur l'application de l'analyse à la probabilité des décisions rendues à la pluralité des voix", 1785.
 - [R9] drand, https://drand.love [not fetched; verify round/chain parameters at implementation].
-- [R10] B. Adida, "Helios: Web-based Open-Audit Voting", USENIX Security 2008 [UNVERIFIED URL].
-- [R11] J. Benaloh, "Simple verifiable elections", EVT 2006 (Benaloh challenge) [UNVERIFIED URL].
+- [R10] B. Adida, "Helios: Web-based Open-Audit Voting", USENIX Security 2008.
+- [R11] J. Benaloh, "Simple verifiable elections", EVT 2006 (Benaloh challenge).

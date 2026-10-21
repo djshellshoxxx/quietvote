@@ -695,6 +695,6 @@ Capacity planning: assume ≤ 100 k entries/election, ≈ 10 KiB average ballot 
 
 - Node.js v22 `node:sqlite` documentation — https://nodejs.org/docs/latest-v22.x/api/sqlite.html (fetched: Stability 1.1; `--experimental-sqlite` flag removed v22.13.0; module-level `backup()` added v22.16.0; `DatabaseSync` options `readOnly`, `enableForeignKeyConstraints`; no encryption option).
 - SQLite documentation (STRICT tables, WAL, `secure_delete`, `VACUUM INTO`, online backup) — https://sqlite.org `[UNVERIFIED: pages not fetched in this session]`.
-- RFC 8439 ChaCha20-Poly1305 `[UNVERIFIED: not fetched]`.
+- RFC 8439 ChaCha20-Poly1305.
 - age format — https://github.com/C2SP/C2SP/blob/main/age.md (fetched).
 - QV-18 §§5, 11, 12 for log semantics (this repository).

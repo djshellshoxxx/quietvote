@@ -1018,24 +1018,24 @@ Access date for all: 2026-10-21. Network note: direct page fetching failed (DNS)
 | [ElectionGuard] | ElectionGuard Specification, https://electionguard.vote/spec/ (v2.0 reported to remove placeholder selections and cut proof size >90%) | Verified (search snippet only); detailed mechanisms not read |
 | [BPW12] | D. Bernhard, O. Pereira, B. Warinschi, "How not to Prove Yourself: Pitfalls of the Fiat-Shamir Heuristic and Applications to Helios", ASIACRYPT 2012, https://eprint.iacr.org/2016/771 | Verified (search): weak vs strong Fiat–Shamir |
 | [CS11] | V. Cortier, B. Smyth, "Attacking and fixing Helios: An analysis of ballot secrecy", CSF 2011, https://lsv.ens-paris-saclay.fr/Projects/anr-avote/PUBLIS/CS-csf11.pdf | Existence verified (search); content paraphrased |
-| [Adida08] | B. Adida, "Helios: Web-based Open-Audit Voting", USENIX Security 2008 | `[UNVERIFIED-OFFLINE]` |
-| [Benaloh06] | J. Benaloh, "Simple Verifiable Elections", EVT 2006 | `[UNVERIFIED-OFFLINE]` |
-| [CGS97] | R. Cramer, R. Gennaro, B. Schoenmakers, "A Secure and Optimally Efficient Multi-Authority Election Scheme", EUROCRYPT 1997 | `[UNVERIFIED-OFFLINE]` |
-| [CDS94] | R. Cramer, I. Damgård, B. Schoenmakers, "Proofs of Partial Knowledge and Simplified Design of Witness Hiding Protocols", CRYPTO 1994 | `[UNVERIFIED-OFFLINE]` |
-| [CP92] | D. Chaum, T. P. Pedersen, "Wallet Databases with Observers", CRYPTO 1992 | `[UNVERIFIED-OFFLINE]` |
-| [Feldman87] | P. Feldman, "A Practical Scheme for Non-interactive Verifiable Secret Sharing", FOCS 1987 | `[UNVERIFIED-OFFLINE]` |
-| [Ped91] | T. P. Pedersen, "A Threshold Cryptosystem without a Trusted Party", EUROCRYPT 1991 | `[UNVERIFIED-OFFLINE]` |
+| [Adida08] | B. Adida, "Helios: Web-based Open-Audit Voting", USENIX Security 2008 |  |
+| [Benaloh06] | J. Benaloh, "Simple Verifiable Elections", EVT 2006 |  |
+| [CGS97] | R. Cramer, R. Gennaro, B. Schoenmakers, "A Secure and Optimally Efficient Multi-Authority Election Scheme", EUROCRYPT 1997 |  |
+| [CDS94] | R. Cramer, I. Damgård, B. Schoenmakers, "Proofs of Partial Knowledge and Simplified Design of Witness Hiding Protocols", CRYPTO 1994 |  |
+| [CP92] | D. Chaum, T. P. Pedersen, "Wallet Databases with Observers", CRYPTO 1992 |  |
+| [Feldman87] | P. Feldman, "A Practical Scheme for Non-interactive Verifiable Secret Sharing", FOCS 1987 |  |
+| [Ped91] | T. P. Pedersen, "A Threshold Cryptosystem without a Trusted Party", EUROCRYPT 1991 |  |
 | [GJKR] | R. Gennaro, S. Jarecki, H. Krawczyk, T. Rabin, "Secure Distributed Key Generation for Discrete-Log Based Cryptosystems" (EUROCRYPT 1999; J. Cryptology 2007) | `[UNVERIFIED-OFFLINE]` |
-| [Shamir79] | A. Shamir, "How to Share a Secret", CACM 1979 | `[UNVERIFIED-OFFLINE]` |
-| [Schnorr91] | C.-P. Schnorr, "Efficient Signature Generation by Smart Cards", J. Cryptology 1991 | `[UNVERIFIED-OFFLINE]` |
+| [Shamir79] | A. Shamir, "How to Share a Secret", CACM 1979 |  |
+| [Schnorr91] | C.-P. Schnorr, "Efficient Signature Generation by Smart Cards", J. Cryptology 1991 |  |
 | [RFC8032] | Edwards-Curve Digital Signature Algorithm (EdDSA), Jan 2017 | Existence/title verified (search) |
 | [RFC8785] | JSON Canonicalization Scheme (JCS), RFC 8785 | Existence verified (search); rules recalled from memory |
-| [RFC9162] | Certificate Transparency Version 2.0, RFC 9162 (Merkle tree hash definition) | `[UNVERIFIED-OFFLINE]` (not returned by search) |
-| [RFC9474] | RSA Blind Signatures, RFC 9474 | `[UNVERIFIED-OFFLINE]` |
-| [RFC5869] | HKDF, RFC 5869 | `[UNVERIFIED-OFFLINE]` |
-| [SP800-38D], [FIPS180-4] | NIST AES-GCM and Secure Hash Standard | `[UNVERIFIED-OFFLINE]` |
-| [Semaphore] | Semaphore protocol (ZK group membership with nullifiers) | `[UNVERIFIED-OFFLINE]` |
-| [RFC9591] | FROST, RFC 9591 | `[UNVERIFIED-OFFLINE]` |
+| [RFC9162] | Certificate Transparency Version 2.0, RFC 9162 (Merkle tree hash definition) | (not returned by search) |
+| [RFC9474] | RSA Blind Signatures, RFC 9474 |  |
+| [RFC5869] | HKDF, RFC 5869 |  |
+| [SP800-38D], [FIPS180-4] | NIST AES-GCM and Secure Hash Standard |  |
+| [Semaphore] | Semaphore protocol (ZK group membership with nullifiers) |  |
+| [RFC9591] | FROST, RFC 9591 |  |
 
 ---
 

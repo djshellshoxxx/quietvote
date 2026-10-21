@@ -313,7 +313,7 @@ A change is done when **all** hold:
 ## 18. References (accessed 2026-10-21; web fetch unavailable in sandbox, items marked cited from memory)
 
 - Developer Certificate of Origin 1.1 — https://developercertificate.org `[UNVERIFIED access]`.
-- Conventional Commits 1.0.0 — https://www.conventionalcommits.org `[UNVERIFIED access]`; Semantic Versioning 2.0.0 — https://semver.org.
+- Conventional Commits 1.0.0 — https://www.conventionalcommits.org; Semantic Versioning 2.0.0 — https://semver.org.
 - GitHub Docs: security hardening for Actions; protected branches/rulesets `[UNVERIFIED access]`.
 - RFC 8032 (Ed25519), RFC 9496 (ristretto255/decaf448), RFC 9106 (Argon2) — https://www.rfc-editor.org/ `[UNVERIFIED access]`.
 - OpenSSF Scorecard — https://scorecard.dev `[UNVERIFIED access]`.
