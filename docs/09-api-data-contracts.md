@@ -654,7 +654,7 @@ POST …/log/entries  (ballot with bad proof)
 
 ## 17. Testing and verification
 
-- **Contract tests** generated from JSON Schemas (every request/response, positive and negative); OpenAPI lint (Spectral or equivalent `[UNVERIFIED tool choice]`).
+- **Contract tests** generated from JSON Schemas (every request/response, positive and negative); OpenAPI lint (Spectral or equivalent `[VERIFIED: spectral README, OpenAPI 3.1, 2026-10-21]`).
 - **Auth tests**: replay, cross-audience, expired/used challenges, bearer on `POST entries` ignored, cross-org access matrix.
 - **Idempotency/chaos**: kill server between append commit and response; client retry returns original receipt.
 - **Conformance suite** shared with mirrors/witnesses: proof endpoints vs QV-18 vectors; checkpoint note parsing.
@@ -701,7 +701,7 @@ None of the following were fetched in this authoring session (network access to 
 
 - RFC 9457, *Problem Details for HTTP APIs* (supersedes RFC 7807) `[UNVERIFIED]`
 - RFC 3339 (timestamps), RFC 4648 (base64/base64url), RFC 6585 (429), RFC 8594 (`Sunset`), RFC 9110 (HTTP semantics) `[UNVERIFIED]`
-- JSON Schema 2020-12 — https://json-schema.org/draft/2020-12 `[UNVERIFIED]`
+- JSON Schema 2020-12 — https://json-schema.org/draft/2020-12 `[VERIFIED: json-schema.org draft page, 2026-10-21]`
 - OpenAPI Specification 3.1 — https://spec.openapis.org/oas/v3.1.0 `[UNVERIFIED]`
 - WHATWG HTML Living Standard, Server-sent events `[UNVERIFIED]`
 - IETF httpapi `RateLimit` header fields (Internet-Draft; name/semantics may change) `[UNVERIFIED]`

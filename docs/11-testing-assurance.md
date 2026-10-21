@@ -212,7 +212,7 @@ Targets (harness per target in `fuzz/`): manifest parser/validator, ballot decod
 - Flake policy: retries ≤ 1 and reported; a retry-needed test is flagged.
 
 ### 8.3 Security tests
-- SAST (Semgrep, CodeQL `[UNVERIFIED availability]`), dependency audit (`npm audit`, OSV scanner), license check, SBOM (CycloneDX/SPDX) generation and diff, secret scanning.
+- SAST (Semgrep, CodeQL `[VERIFIED: semgrep and codeql-action READMEs, 2026-10-21]`), dependency audit (`npm audit`, OSV scanner), license check, SBOM (CycloneDX/SPDX) generation and diff, secret scanning.
 - DAST: OWASP ZAP baseline against a test instance each release; custom tests for authZ matrix (organizer/trustee/voter/observer/anonymous × endpoint).
 - Headers/TLS: CSP strict (no inline, no remote), HSTS, `Referrer-Policy: no-referrer`, COOP/COEP as applicable, cache policy, `Permissions-Policy`; Tor onion profile (no TLS expectation; headers retained).
 - Annual (and pre-1.0) third-party penetration test of the web client + server (§9).

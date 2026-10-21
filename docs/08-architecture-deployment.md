@@ -480,7 +480,7 @@ Retention/deletion obligations (QV-06) apply to the operator's copy; the public 
 
 | Question | Owner | Target review | Resolution / proposed default |
 |---|---|---|---|
-| Is Node 22 or 24 the primary development line? | Architecture lead | Before 1.0 | Develop on 24 LTS, keep 22 supported until its EOL (2027-04 per Node schedule `[UNVERIFIED]`); see QV-ADR-P08-1. |
+| Is Node 22 or 24 the primary development line? | Architecture lead | Before 1.0 | Develop on 24 LTS, keep 22 supported until its EOL (2027-04 per Node schedule `[VERIFIED: nodejs/Release schedule.json, 2026-10-21]`); see QV-ADR-P08-1. |
 | `node:sqlite` stability (Node docs mark it release-candidate/experimental depending on version) | Architecture lead | M1 | Wrap behind `BoardStore`; contingency adapter on `better-sqlite3` is **not** pre-approved (ADR-003 minimal deps). Reassess at each LTS. |
 | Time zone display of windows | UX (QV-10) | M2 | Manifest stores UTC instants plus IANA zone label; client shows both. |
 | Seed nodes | — | — | None. No seed nodes exist or are required (no federation in MVP). |
@@ -499,7 +499,7 @@ Retention/deletion obligations (QV-06) apply to the operator's copy; the public 
 - RFC 9162, Certificate Transparency v2.0 — https://www.rfc-editor.org/rfc/rfc9162 (cited from memory; fetch blocked in authoring environment `[UNVERIFIED access]`).
 - Node.js release data — https://nodejs.org/dist/index.json (v22.23.3 "Jod", v24.22.0 "Krypton", v26.12.0 current).
 - npm registry (`npm view`): `@noble/curves` 2.4.0, `@noble/hashes` 2.4.0 (exports `./argon2.js`), `esbuild` 0.28.2, `typescript` 7.0.2, `@cyclonedx/cyclonedx-npm` 6.0.1.
-- Node.js Single Executable Applications — https://nodejs.org/api/single-executable-applications.html `[UNVERIFIED access]`.
+- Node.js Single Executable Applications — https://nodejs.org/api/single-executable-applications.html `[VERIFIED: nodejs.org SEA docs, 2026-10-21]`.
 - Tor Project, Onion Services — https://community.torproject.org/onion-services/ `[UNVERIFIED access]`.
 - C2SP tlog-witness / tlog-checkpoint — https://c2sp.org `[UNVERIFIED access]`.
 

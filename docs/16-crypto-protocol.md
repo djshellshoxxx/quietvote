@@ -598,7 +598,7 @@ Submission envelopes:
 
 The `reveal` object is optional. **Spoil modes (QV-ADR-020):** (a) `reveal` present: published reveal (voter opt-in); (b) `reveal` absent and `reveal_digest` ≠ 32 zero bytes: **private audit (default)** — the reveal is delivered only to the voter's second device/verifier, the log carries the signed `reveal_digest`; (c) `reveal` absent and `reveal_digest` = zeros: trustee-decryption mode (§5.13.4), valid only if the manifest enables it (off by default in suite v1). Cast and spoil signatures are over different labels so a spoil record can never be re-presented as a cast.
 
-**Verification of the signature shall be strict:** reject `S ≥ ℓ`, reject non-canonical or small-order `voter` keys, and use the cofactorless-equivalent strict RFC 8032 check (noble-curves `verify(sig, msg, pk, { zip215: false })` `[UNVERIFIED-OFFLINE: option name]`). Rationale: signature malleability and verifier disagreement (ZIP-215 vs RFC 8032 acceptance sets differ) would otherwise allow two verifiers to disagree on validity.
+**Verification of the signature shall be strict:** reject `S ≥ ℓ`, reject non-canonical or small-order `voter` keys, and use the cofactorless-equivalent strict RFC 8032 check (noble-curves `verify(sig, msg, pk, { zip215: false })` `[VERIFIED: noble-curves src/ed25519.ts zip215 option, 2026-10-21]`). Rationale: signature malleability and verifier disagreement (ZIP-215 vs RFC 8032 acceptance sets differ) would otherwise allow two verifiers to disagree on validity.
 
 ### 5.13 Benaloh cast-or-spoil (cast-as-intended)
 
