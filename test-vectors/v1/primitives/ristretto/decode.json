@@ -1,0 +1,388 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "primitives/ristretto",
+  "operation": "ristretto.decode",
+  "description": "Strict ristretto255 decoding (RFC 9496 §4.3.1): invalid, identity and wrong-length inputs",
+  "origin": "hybrid",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "decode-invalid-0",
+      "input": {
+        "point_hex": "00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-1",
+      "input": {
+        "point_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-2",
+      "input": {
+        "point_hex": "f3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-3",
+      "input": {
+        "point_hex": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-4",
+      "input": {
+        "point_hex": "0100000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-5",
+      "input": {
+        "point_hex": "01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-6",
+      "input": {
+        "point_hex": "26948d35ca62e643e26a83177332e6b6afeb9d08e4268b650f1f5bbd8d81d371"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-7",
+      "input": {
+        "point_hex": "4eac077a713c57b4f4397629a4145982c661f48044dd3f96427d40b147d9742f"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-8",
+      "input": {
+        "point_hex": "de6a7b00deadc788eb6b6c8d20c0ae96c2f2019078fa604fee5b87d6e989ad7b"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-9",
+      "input": {
+        "point_hex": "bcab477be20861e01e4a0e295284146a510150d9817763caf1a6f4b422d67042"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-10",
+      "input": {
+        "point_hex": "2a292df7e32cababbd9de088d1d1abec9fc0440f637ed2fba145094dc14bea08"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-11",
+      "input": {
+        "point_hex": "f4a9e534fc0d216c44b218fa0c42d99635a0127ee2e53c712f70609649fdff22"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-12",
+      "input": {
+        "point_hex": "8268436f8c4126196cf64b3c7ddbda90746a378625f9813dd9b8457077256731"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-13",
+      "input": {
+        "point_hex": "2810e5cbc2cc4d4eece54f61c6f69758e289aa7ab440b3cbeaa21995c2f4232b"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-14",
+      "input": {
+        "point_hex": "3eb858e78f5a7254d8c9731174a94f76755fd3941c0ac93735c07ba14579630e"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-15",
+      "input": {
+        "point_hex": "a45fdc55c76448c049a1ab33f17023edfb2be3581e9c7aade8a6125215e04220"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-16",
+      "input": {
+        "point_hex": "d483fe813c6ba647ebbfd3ec41adca1c6130c2beeee9d9bf065c8d151c5f396e"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-17",
+      "input": {
+        "point_hex": "8a2e1d30050198c65a54483123960ccc38aef6848e1ec8f5f780e8523769ba32"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-18",
+      "input": {
+        "point_hex": "32888462f8b486c68ad7dd9610be5192bbeaf3b443951ac1a8118419d9fa097b"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-19",
+      "input": {
+        "point_hex": "227142501b9d4355ccba290404bde41575b037693cef1f438c47f8fbf35d1165"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-20",
+      "input": {
+        "point_hex": "5c37cc491da847cfeb9281d407efc41e15144c876e0170b499a96a22ed31e01e"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-invalid-21",
+      "input": {
+        "point_hex": "445425117cb8c90edcbc7c1cc0e74f747f2c1efa5630a967c64f287792a48a4b"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative",
+        "attack:non-canonical"
+      ]
+    },
+    {
+      "id": "decode-identity-ok",
+      "input": {
+        "point_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "is_identity": true
+        }
+      },
+      "tags": [
+        "identity"
+      ]
+    },
+    {
+      "id": "decode-identity-forbidden",
+      "input": {
+        "point_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "non_identity": true
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_IDENTITY"
+      },
+      "tags": [
+        "negative",
+        "attack:identity"
+      ]
+    },
+    {
+      "id": "decode-31-bytes",
+      "input": {
+        "point_hex": "00000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "decode-33-bytes",
+      "input": {
+        "point_hex": "000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_POINT_DECODE"
+      },
+      "tags": [
+        "negative"
+      ]
+    }
+  ]
+}

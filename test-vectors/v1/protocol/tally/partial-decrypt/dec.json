@@ -1,0 +1,123 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "protocol/tally",
+  "operation": "tally.partial_verify",
+  "description": "Partial decryption proofs (QV-16 §5.16)",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "dec-valid",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "cid": "budget",
+        "oid": "yes",
+        "j": 2,
+        "Yj_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "A_hex": "f247c30bc6345a58dab5cd86ef8ff226e44e84d5d6b23f6fb7cc41a849efbe7b",
+        "B_hex": "1c1cbfbb0a6113c4a67cfef117a5b93ff836ff1fee08647af882e0cadecef210",
+        "M_hex": "18e0a4b5e5a4496b55922518161590c298e6534e786d855ef1117bdbfe8be072",
+        "proof": {
+          "c": "d73e8ced1933bf5d0336538498a47f4153360bb3ca22c482fa1f24743011ae09",
+          "s": "3befc0d2d73b8b155876138f53e34a607dbba33aa75526cf79d259f657bf5b03"
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "valid": true
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "dec-wrong-share",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "cid": "budget",
+        "oid": "yes",
+        "j": 2,
+        "Yj_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "A_hex": "f247c30bc6345a58dab5cd86ef8ff226e44e84d5d6b23f6fb7cc41a849efbe7b",
+        "B_hex": "1c1cbfbb0a6113c4a67cfef117a5b93ff836ff1fee08647af882e0cadecef210",
+        "M_hex": "1406f333551e04fef7783f62ea56193bba1edff46976ff029ee4a792eedfe90f",
+        "proof": {
+          "c": "d73e8ced1933bf5d0336538498a47f4153360bb3ca22c482fa1f24743011ae09",
+          "s": "3befc0d2d73b8b155876138f53e34a607dbba33aa75526cf79d259f657bf5b03"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DEC_PROOF"
+      },
+      "tags": [
+        "negative",
+        "attack:wrong-partial"
+      ]
+    },
+    {
+      "id": "dec-other-ciphertext",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "cid": "budget",
+        "oid": "yes",
+        "j": 2,
+        "Yj_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "A_hex": "f247c30bc6345a58dab5cd86ef8ff226e44e84d5d6b23f6fb7cc41a849efbe7b",
+        "B_hex": "32e26028336a7ae12234a9af0c13b8fd9b6105e4889374842fd79374c9d03e01",
+        "M_hex": "18e0a4b5e5a4496b55922518161590c298e6534e786d855ef1117bdbfe8be072",
+        "proof": {
+          "c": "d73e8ced1933bf5d0336538498a47f4153360bb3ca22c482fa1f24743011ae09",
+          "s": "3befc0d2d73b8b155876138f53e34a607dbba33aa75526cf79d259f657bf5b03"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DEC_PROOF"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "dec-index-mismatch",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "cid": "budget",
+        "oid": "yes",
+        "j": 3,
+        "Yj_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "A_hex": "f247c30bc6345a58dab5cd86ef8ff226e44e84d5d6b23f6fb7cc41a849efbe7b",
+        "B_hex": "1c1cbfbb0a6113c4a67cfef117a5b93ff836ff1fee08647af882e0cadecef210",
+        "M_hex": "18e0a4b5e5a4496b55922518161590c298e6534e786d855ef1117bdbfe8be072",
+        "proof": {
+          "c": "d73e8ced1933bf5d0336538498a47f4153360bb3ca22c482fa1f24743011ae09",
+          "s": "3befc0d2d73b8b155876138f53e34a607dbba33aa75526cf79d259f657bf5b03"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DEC_PROOF"
+      },
+      "tags": [
+        "negative"
+      ]
+    }
+  ]
+}
