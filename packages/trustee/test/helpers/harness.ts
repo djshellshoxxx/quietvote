@@ -237,14 +237,18 @@ export class Ceremony {
       await this.sync(i);
       this.post(await this.act(i, (t) => t.drill()));
     }
-    // QV-ADR-015: roll-commit, then an election-open that binds (manifest_hash, joint_key_seq, roll_commit_seq).
+    this.openElection();
+    await this.syncAll();
+    return outcome;
+  }
+
+  /** QV-ADR-015: roll-commit, then an election-open that binds (manifest_hash, joint_key_seq, roll_commit_seq). */
+  openElection(): void {
     const root = this.manifest.roll.root; // DKG-only ceremonies have an empty roll and never reach a tally
     const rc = { proto: PROTO_ID, type: 'roll-commit' as const, root: root ?? '00'.repeat(32), size: this.rollHex.length };
     const rcSeq = root === undefined ? 0 : this.push({ body: rc, sigs: [signRecordRaw(this.coord.secretKey, this.coord.publicKey, this.mh, 'roll-commit', rc)] });
     const body = electionOpenBody(PROTO_ID, H(this.mh), markerSeq(this.log, 'dkg-final')!, rcSeq);
     this.push({ body, sigs: [signRecordRaw(this.coord.secretKey, this.coord.publicKey, this.ctx!, 'marker', body)] });
-    await this.syncAll();
-    return outcome;
   }
 
   async adjudicate(): Promise<DkgOutcome> {

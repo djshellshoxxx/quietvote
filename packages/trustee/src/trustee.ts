@@ -694,7 +694,8 @@ export class Trustee {
    * ballot codes: the ciphertext is always taken from the trustee's own analysis of the log. Refused, atomically for the
    * whole request, unless every code is (a) a verified spoil record in trustee mode (`reveal_digest` = 0, manifest
    * `spoil_trustee_decrypt`), (b) never cast (no cast envelope anywhere in the log carries it, even an invalid one, and it
-   * is not in the counted set) and (c) not already released by this share (SPOIL_REPLAY).
+   * is not in the counted set), (c) shares no ciphertext A component with any cast envelope (CIPHERTEXT_WAS_CAST) and
+   * (d) not already released by this share (SPOIL_REPLAY).
    */
   async releaseSpoil(electionBundle: unknown, codes: readonly string[], opts: { override?: string } = {}): Promise<Packet> {
     this.mf();
@@ -708,10 +709,19 @@ export class Trustee {
     if (p.manifest.spoil_trustee_decrypt !== true) throw new TrusteeError('REFUSED', 'SPOIL_MODE_OFF', 'the manifest does not enable trustee spoil decryption');
     // `voter` is exactly the supplied log, which verifiedElection has proven entry-for-entry against the log-signed tree head.
     const castCodes = new Set<string>(an.counted.map((c) => c.code));
+    // TR-01: a partial decryption share depends only on the ciphertext's A component (M = s_j * A), so the code check alone
+    // is not enough: the holder of a voter key can re-wrap a cast ballot's ciphertexts (and their voter-bound proofs) under
+    // a new code (e.g. another `supersedes`). Every A component of every cast envelope in the log is therefore off limits.
+    const castA = new Set<string>();
+    const addA = (body: BallotBody): void => {
+      for (const ct of body.contests ?? []) for (const s of [...(ct.sel ?? []), ...(ct.ph ?? [])]) if (typeof s?.a === 'string') castA.add(s.a.toLowerCase());
+    };
+    for (const cb of an.counted) addA(cb.env.body);
     for (const { raw } of voter) {
       const e = raw as { intent?: unknown; body?: BallotBody };
       if (e.intent === 'cast' && e.body !== undefined) {
         try {
+          addA(e.body);
           castCodes.add(H(ballotCode(p.ctx, e.body)));
         } catch {
           // an undecodable cast cannot carry a requested code; the schema check in the verified analysis already flagged it
@@ -724,6 +734,11 @@ export class Trustee {
       if (castCodes.has(c)) throw new TrusteeError('REFUSED', 'BALLOT_WAS_CAST', `ballot ${c} was cast; a cast ballot is never decrypted`);
       const rec = an.spoiled.get(c);
       if (rec === undefined) throw new TrusteeError('REFUSED', 'NOT_SPOILED', `no verified spoil record with ballot code ${c}`);
+      for (const ct of rec.env.body.contests) {
+        for (const s of [...ct.sel, ...(ct.ph ?? [])]) {
+          if (castA.has(s.a.toLowerCase())) throw new TrusteeError('REFUSED', 'CIPHERTEXT_WAS_CAST', `ballot ${c} reuses a ciphertext of a cast ballot; never decrypted`);
+        }
+      }
       const res = trusteeDecryptSpoiled(p, key, rec, this.deps.rng);
       if (!res.ok) throw new TrusteeError('REFUSED', res.error === 'E_TRUSTEE_REFUSE' ? 'NOT_TRUSTEE_MODE' : res.error, res.detail);
       const shares: SpoilShareBody['shares'] = [];
