@@ -467,7 +467,7 @@ Design principle: **the trustee should never need to know the words "polynomial"
 
 - **QV-16**: DKG, `enc_share`, proofs, keys (`age` use for *bundles* is a local storage concern defined here; share transport uses QV-16's encryption, not age, unless QV-16 adopts age for it — flagged Q1).
 - **QV-18**: entry types, witness gating, `keycheck`, `key_destruction`, `audit_close`.
-- **QV-09**: endpoints `/elections/{id}/trustees`, `/trustee-invites/{code}/accept`, ceremony state view, `/log/entries` (QV-09 §6–§8).
+- **QV-09**: endpoints `POST /elections/{id}/trustee-invites`, `POST /elections/{id}/trustees/{trustee_id}/redeem`, `GET /elections/{id}/ceremony`, `/log/entries` (QV-09 §6–§8).
 - **QV-28**: tables `trustee`, `trustee_invite`, `ceremony_view` projection.
 - **QV-10/13**: screens and accessibility.
 - **Failure/retry**: client outbox with exponential backoff; idempotent posts; deadline awareness.
