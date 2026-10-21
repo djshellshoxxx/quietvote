@@ -23,14 +23,14 @@ Layout target: spec [30 Engineering standards](https://github.com/djshellshoxxx/
 
 | Package | Name | Current state (2026-10-21) |
 |---|---|---|
-| `crypto` | `@quietvote/crypto` | ristretto255 wrappers, exponential ElGamal, Schnorr and CDS-style proofs, Feldman sharing, share encryption, strict JSON parsing, Ed25519. 49 tests pass. |
-| `protocol` | `@quietvote/protocol` | Manifest and roll, distributed key generation, ballot build and verify, Benaloh spoil, ballot-log checks, tally and partial decryption, election verification. 163 tests pass. Spec errata in `NOTES.md`. |
-| `board` | `@quietvote/board` | Merkle log, entry encoding, checkpoints, inclusion and consistency checks, receipts, bundle export, equivocation checks. 46 tests pass. |
-| `server` | `@quietvote/server` | HTTP service (no third-party dependencies), SQLite-backed board and control store, admission checks, event stream, webhooks, rate limits. 65 of 70 tests pass; 5 webhook tests fail. |
+| `crypto` | `@quietvote/crypto` | ristretto255 wrappers, exponential ElGamal, Schnorr and CDS-style proofs, Feldman sharing, share encryption, strict JSON parsing, Ed25519. |
+| `protocol` | `@quietvote/protocol` | Manifest and roll, distributed key generation, ballot build and verify, Benaloh spoil, ballot-log checks, tally and partial decryption, election verification. Spec errata in `NOTES.md`. |
+| `board` | `@quietvote/board` | Merkle log, entry encoding, checkpoints, inclusion and consistency checks, receipts, bundle export, equivocation checks. |
+| `server` | `@quietvote/server` | HTTP service (no third-party dependencies), SQLite-backed board and control store, admission checks, event stream, webhooks, rate limits. |
 | `web` | `@quietvote/web` | Browser client (framework-free TypeScript), key handling, ballot flow, receipts, i18n catalogs, static build with CSP and SRI, offline verifier page. 74 unit tests pass. Playwright e2e is separate. |
-| `cli` | `@quietvote/cli` | `qv` command: keygen, election and ballot commands, verify, board commands. 17 tests pass. Imports the verifier in-process (layering issue, see `packages/cli/NOTES.md`). |
-| `trustee` | `@quietvote/trustee` | `qv-trustee`: key ceremony state machine, air-gapped log and packet files, sealed bundle. 40 tests pass, all with simulated parties. |
-| `verifier` | `@quietvote/verifier` | `qv-verify`: offline verification into a named-check report, canary self-test. 13 of 16 tests pass; 3 board-layer V4 tests fail. |
+| `cli` | `@quietvote/cli` | `qv` command: keygen, election and ballot commands, verify, board commands. Imports the verifier in-process (layering issue, see `packages/cli/NOTES.md`). |
+| `trustee` | `@quietvote/trustee` | `qv-trustee`: key ceremony state machine, air-gapped log and packet files, sealed bundle. |
+| `verifier` | `@quietvote/verifier` | `qv-verify`: offline verification into a named-check report, canary self-test. |
 
 Each package has a `README.md` that points to the specs. Conventions: ESM (`"type": "module"`), a single public `exports` entry, and `sideEffects: false` for crypto.
 

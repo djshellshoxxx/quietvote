@@ -155,6 +155,8 @@ export function parseTargetUrl(raw: string): { url: URL; host: string; port: num
   if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1);
   if (host === '') throw new TargetRejected('URL_INVALID', 'url has no host');
   if (host.endsWith('.')) host = host.slice(0, -1);
+  // empty labels ("localhost..", "a..b", ".a") are never a public DNS name; refuse them before suffix matching is fooled
+  if (host.split('.').some((l) => l === '')) throw new TargetRejected('TARGET_BLOCKED', 'host name has an empty label');
   const fam = isIP(host);
   if (fam !== 0) {
     if (!isPublicIp(host)) throw new TargetRejected('TARGET_BLOCKED', 'target address is not publicly routable');

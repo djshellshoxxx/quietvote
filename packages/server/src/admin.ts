@@ -167,12 +167,27 @@ export async function auditLog(rt: ElectionRuntime, ctl?: JobCtl): Promise<{ ok:
       await ctl.tick();
     }
   }
-  if (!bad && tree.size === n && Buffer.compare(Buffer.from(tree.root()), Buffer.from(rt.log.root())) !== 0) {
+  // The job yields (ctl.tick) while a live log keeps appending: compare against the in-memory tree AT THE AUDITED SIZE n, never
+  // its current root, or every busy election would be falsely quarantined (security review 2026-10-21, SR-3).
+  if (!bad && tree.size === n && Buffer.compare(Buffer.from(tree.root()), Buffer.from(rt.log.root(n))) !== 0) {
     fail('ROOT', 'recomputed root differs from the in-memory tree');
     bad = true;
   }
   let cps = 0;
   for (const cp of store.listCheckpoints()) {
+    if (cp.size > n && cp.size <= rt.log.size) {
+      // signed after the audit snapshot: not covered by the recomputation; check its signature and the in-memory tree only
+      cps++;
+      const p = parseCheckpoint(cp.note);
+      if (!p.ok || p.value.origin !== rt.origin || p.value.size !== cp.size || !verifyLogSignature(p.value, rt.logPk)) {
+        fail('CHECKPOINT_SIGNATURE', `checkpoint ${cp.size} is not a valid note signed by the log key`);
+        bad = true;
+      } else if (Buffer.compare(Buffer.from(rt.log.root(cp.size)), Buffer.from(cp.root)) !== 0) {
+        fail('CHECKPOINT_ROOT', `checkpoint ${cp.size} does not match the in-memory tree`);
+        bad = true;
+      }
+      continue;
+    }
     cps++;
     const p = parseCheckpoint(cp.note);
     if (!p.ok || p.value.origin !== rt.origin || p.value.size !== cp.size) {
