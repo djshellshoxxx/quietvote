@@ -134,7 +134,10 @@ export class Writer {
 /** Bounds-checked reader; every method throws RangeError on underrun (callers wrap). */
 export class Reader {
   private o = 0;
-  constructor(private readonly b: Uint8Array) {}
+  private readonly b: Uint8Array;
+  constructor(b: Uint8Array) {
+    this.b = b;
+  }
   private need(n: number): void {
     if (this.o + n > this.b.length) throw new RangeError('underrun');
   }

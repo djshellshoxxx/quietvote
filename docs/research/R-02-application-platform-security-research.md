@@ -14,7 +14,7 @@
 
 1. **The browser client is the trust root of voter secrecy, and the operator serves it.** ADR-010 is right that this is the weakest link. No web mitigation (SRI, CSP, service workers, Trusted Types) can stop an operator who serves the HTML itself from serving malicious JS to a *targeted* voter. The mitigations that actually change the trust model are: (a) *verifiability by independent clients* (CLI verifier, Benaloh audit with a second device, offline verifier page), (b) *transparency for the client code* (reproducible builds + signed release manifest + a public log of served bundle hashes that anyone can monitor), and (c) *optionally an installable, signed, non-operator-delivered client* (Isolated Web App / signed bundle, native/CLI voter). Everything else is defence-in-depth against third parties (XSS, MITM, extensions), not against the operator. Specs must say so.
 2. **Supply chain is the most probable real-world compromise path** for a 2026 Node/npm project: 2025 saw at least two large npm campaigns (chalk/debug account takeover, 8 Sep 2025; Shai-Hulud worm, Sep and Nov 2025) [V]. The crypto dependency set is deliberately tiny (`@noble/*`); the *build and dev toolchain* (esbuild, test runners, linters) is where the exposure is. Controls: lockfile + `npm ci`, scripts disabled, release-age cooldown, vendoring/pinning of the crypto packages by hash, trusted publishing/provenance for our own releases, reproducible builds, SBOM.
-3. **Runtime facts that change ADR-003 (see Proposed ADR QV-ADR-PR02-1):** Node.js 22 entered *Maintenance LTS* on 2025-10-21 and reaches EOL 2027-04-30; Node 24 is LTS (maintenance from 2026-10-20) and Node 26 becomes LTS on 2026-10-28 [V, nodejs/Release schedule.json]. `node:sqlite` is still **Stability 1.1 (Active development / release-candidate)** in the Node 22 docs [V]. A 2026 HTTP request-smuggling advisory (CVE-2026-58044) is reported as affecting Node ≤22.23.1 [V—secondary]; latest 22.x seen was v22.23.3 [V—single tool read]. The project should pin to a *specific* patched LTS and plan the 24/26 move before v1.
+3. **Runtime facts that change ADR-003 (see Proposed ADR QV-ADR-P-R02-1):** Node.js 22 entered *Maintenance LTS* on 2025-10-21 and reaches EOL 2027-04-30; Node 24 is LTS (maintenance from 2026-10-20) and Node 26 becomes LTS on 2026-10-28 [V, nodejs/Release schedule.json]. `node:sqlite` is still **Stability 1.1 (Active development / release-candidate)** in the Node 22 docs [V]. A 2026 HTTP request-smuggling advisory (CVE-2026-58044) is reported as affecting Node ≤22.23.1 [V—secondary]; latest 22.x seen was v22.23.3 [V—single tool read]. The project should pin to a *specific* patched LTS and plan the 24/26 move before v1.
 4. **JavaScript cannot give hard guarantees on constant time or zeroization.** `@noble/curves` itself says so: it targets algorithmic constant time, scalar-blinds some paths, but *does not blind non-base-point multiplication by a secret scalar on cofactored Edwards curves (ed25519/ed448)* — which includes ristretto255 decryption-share computation `x·C1` — and "BigInts and hex strings cannot be zeroized" [V]. Consequence for QuietVote: **trustee secret-key operations must not run in a browser tab or on the server**; they run in an offline, single-purpose trustee tool on a dedicated device (section 7), and voter-side encryption touches only *ephemeral randomness* and public keys (secrecy impact bounded).
 5. **ASVS 5.0.0 (May 2025) is the verification target**: Level 2 for the whole system, selected Level 3 items for the verifier, release pipeline, trustee tooling and crypto handling (section 10). OWASP Top 10:2025 now has **A03 Software Supply Chain Failures** and SSRF folded into A01 Broken Access Control [V—secondary summaries].
 6. **No claim of VVSG/CoE/OSCE compliance.** QuietVote targets voluntary-organisation decisions (README). These instruments are used as *benchmarks* to harvest requirements (software independence, E2E-verifiability, observer access, audit trails), not as certification targets (section 12).
@@ -160,7 +160,7 @@ Note: `style-src 'self'` forbids inline `style=` attributes; the client must use
 ## 4. Server hardening — self-hosted Node service with `node:sqlite`
 
 ### 4.1 Runtime and platform
-- **Pin Node to a patched LTS** and track security releases: Node 22 = Maintenance LTS (since 2025-10-21), EOL 2027-04-30; Node 24 = LTS, maintenance from 2026-10-20, EOL 2028-04-30; Node 26 LTS from 2026-10-28, EOL 2029-04-30 [V—schedule.json]. A July 2026 security release addressed an HTTP desync/request-smuggling issue (CVE-2026-58044) reportedly affecting ≤22.23.1/≤24.18.0/≤26.5.0 [V—secondary aggregator]; earlier undici duplicate Content-Length fix (CVE-2026-1525) [V—secondary]. → **QV-ADR-PR02-1**: use Node 24 LTS (or 26 once LTS) for new builds; keep 22 only if pinned to ≥ 22.23.2/latest with a documented upgrade date. CI matrix tests all supported majors.
+- **Pin Node to a patched LTS** and track security releases: Node 22 = Maintenance LTS (since 2025-10-21), EOL 2027-04-30; Node 24 = LTS, maintenance from 2026-10-20, EOL 2028-04-30; Node 26 LTS from 2026-10-28, EOL 2029-04-30 [V—schedule.json]. A July 2026 security release addressed an HTTP desync/request-smuggling issue (CVE-2026-58044) reportedly affecting ≤22.23.1/≤24.18.0/≤26.5.0 [V—secondary aggregator]; earlier undici duplicate Content-Length fix (CVE-2026-1525) [V—secondary]. → **QV-ADR-P-R02-1**: use Node 24 LTS (or 26 once LTS) for new builds; keep 22 only if pinned to ≥ 22.23.2/latest with a documented upgrade date. CI matrix tests all supported majors.
 - **Do not expose Node directly.** Terminate TLS in Node *or* in a minimal reverse proxy (Caddy/nginx) with request smuggling-safe configuration (ASVS V4.2.1 L2 [V]); if proxy used, only trusted `X-Forwarded-*` from the proxy (V4.1.3, V15.3.4).
 - **Node permission model (`--permission`, `--allow-fs-read`, `--allow-fs-write`, no `--allow-child-process`, no `--allow-addons`, no `--allow-worker`)** can sandbox the process inside the OS sandbox; Node docs caveat it is not a security boundary against malicious code and has gaps (e.g. pre-opened file descriptors) [V—nightly docs]; its exact stability status in 22/24 was **not confirmed** [UNVERIFIED]. Use as defence-in-depth against dependency compromise *in addition to* systemd/container confinement.
 
@@ -620,7 +620,7 @@ ID scheme `QV-R02-REQ-nnn` (research-derived; specs should adopt or re-ID). "Spe
 ## 15. Implementer checklist (condensed; tick before v0.1 / before v1.0)
 
 **Before first code**
-- [ ] Decide Node LTS target (QV-ADR-PR02-1); pin exact patch; add to CI matrix with advisory gate.
+- [ ] Decide Node LTS target (QV-ADR-P-R02-1); pin exact patch; add to CI matrix with advisory gate.
 - [ ] Create repo security baseline: SECURITY.md, CODEOWNERS (2 reviewers for `packages/crypto`, `packages/verifier`, `.github/`), branch/tag protection, signed commits/tags, secret scanning + push protection, Dependabot/Renovate with cooldown.
 - [ ] `.npmrc`: `ignore-scripts=true`, `save-exact=true`, `audit-level=high`, `min-release-age` (or tool equivalent) ≥ 7d, registry pinned; `npm ci` in CI.
 - [ ] Vendor/pin noble with `VENDOR.lock`; write `docs/audits/noble/INDEX.md` (audit, scope, version).
@@ -700,19 +700,19 @@ ID scheme `QV-R02-REQ-nnn` (research-derived; specs should adopt or re-ID). "Spe
 
 ## 17. Proposed ADRs
 
-### QV-ADR-PR02-1 — Runtime target: move baseline from Node 22 to the newest LTS before v1
+### QV-ADR-P-R02-1 — Runtime target: move baseline from Node 22 to the newest LTS before v1
 - **Status:** Proposed. **Context:** ADR-003 names Node 22 LTS. As of 2026-10-21 Node 22 is in Maintenance (since 2025-10-21; EOL 2027-04-30), Node 24 LTS enters maintenance 2026-10-20 (EOL 2028-04-30), Node 26 becomes LTS 2026-10-28 (EOL 2029-04-30) [V]. `node:sqlite` still labelled Stability 1.1 on 22.x [V]; Node 22 had 2026 HTTP smuggling/desync advisories [V—secondary]. **Decision:** develop on Node 24 LTS now, re-baseline to Node 26 LTS when its first security-patched LTS release exists; support matrix = current LTS + previous LTS; pin exact patch; CI fails on EOL or advisory-affected versions. **Alternatives:** stay on 22 (EOL within 6 months of expected v1); use `better-sqlite3` (supply-chain cost). **Consequences:** `node:sqlite` API must be wrapped behind a storage interface so a backend swap is possible. **Review trigger:** `node:sqlite` stability changes, or a critical advisory.
 
-### QV-ADR-PR02-2 — Vendor and hash-pin the cryptographic dependencies
+### QV-ADR-P-R02-2 — Vendor and hash-pin the cryptographic dependencies
 - **Status:** Proposed. **Decision:** `@noble/curves` and `@noble/hashes` are vendored in-repo (verbatim published tarball contents) with `VENDOR.lock`; updates via reviewed PRs with upstream diff and audit-coverage note. **Alternative:** rely on lockfile only (rejected for crypto core: npm account takeover class of attack, §5.1). **Consequence:** manual advisory tracking.
 
-### QV-ADR-PR02-3 — Trustees run offline CLI tooling only; browser-resident secret shares prohibited
+### QV-ADR-P-R02-3 — Trustees run offline CLI tooling only; browser-resident secret shares prohibited
 - **Status:** Proposed. **Rationale:** §2.5 (no CT/zeroization in JS; non-blinded Edwards secret-scalar mult. [V]), §7. Affects ADR-004 operational model, QV-16/QV-12.
 
-### QV-ADR-PR02-4 — Threshold-signed, expiring, transparency-logged release manifests
+### QV-ADR-P-R02-4 — Threshold-signed, expiring, transparency-logged release manifests
 - **Status:** Proposed. **Rationale:** §6; extends ADR-010 "signed release manifest" from a single key to k-of-n maintainers + expiry + log. **Alternative:** single release key (SPOF; rejected for crypto-libertarian "no single gatekeeper" stance, ADR-001).
 
-### QV-ADR-PR02-5 — ASVS 5.0.0 L2 baseline with named L3 items as the application-security acceptance standard
+### QV-ADR-P-R02-5 — ASVS 5.0.0 L2 baseline with named L3 items as the application-security acceptance standard
 - **Status:** Proposed. Cross-ref QV-11 acceptance criteria.
 
 ---
@@ -765,4 +765,4 @@ Verified primary or direct fetches **[V-primary]**; others are search-result sum
 
 | Reviewer | Decision | Date | Notes |
 |---|---|---|---|
-| Project owner | Pending | — | Draft research; Proposed ADRs QV-ADR-PR02-1..5 awaiting review |
+| Project owner | Pending | — | Draft research; Proposed ADRs QV-ADR-P-R02-1..5 awaiting review |

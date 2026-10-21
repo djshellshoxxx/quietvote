@@ -201,11 +201,11 @@ Evidence grading used below: **[V]** verified by page/paper retrieval in this se
 
 ## 9. Proposed ADRs
 
-- **QV-ADR-P04-1 — Position QuietVote as a secret-ballot companion to deliberation tools with documented export/import hooks (Loomio/Decidim/Discourse).** Affects QV-02, QV-09, QV-14.
-- **QV-ADR-P04-2 — Provide a clearly labelled demo instance earlier than the production hosted offering.** Refines ADR-002. Affects QV-08, QV-12, QV-14.
-- **QV-ADR-P04-3 — First pilots: co-ops and open-source foundations; mutual-aid as privacy beta cohort; unions only for non-statutory votes.** Affects QV-00 (target group), QV-02.
-- **QV-ADR-P04-4 — Commit to an organizer "paperwork pack" (notice, minutes, election record) as MVP-adjacent deliverable.** Affects QV-02, QV-10.
-- **QV-ADR-P04-5 — Assurance plan benchmarks Belenios's formal-analysis practice (symbolic/computational proofs of privacy and verifiability) as a Phase gate.** Affects QV-11.
+- **QV-ADR-P-R04-1 — Position QuietVote as a secret-ballot companion to deliberation tools with documented export/import hooks (Loomio/Decidim/Discourse).** Affects QV-02, QV-09, QV-14.
+- **QV-ADR-P-R04-2 — Provide a clearly labelled demo instance earlier than the production hosted offering.** Refines ADR-002. Affects QV-08, QV-12, QV-14.
+- **QV-ADR-P-R04-3 — First pilots: co-ops and open-source foundations; mutual-aid as privacy beta cohort; unions only for non-statutory votes.** Affects QV-00 (target group), QV-02.
+- **QV-ADR-P-R04-4 — Commit to an organizer "paperwork pack" (notice, minutes, election record) as MVP-adjacent deliverable.** Affects QV-02, QV-10.
+- **QV-ADR-P-R04-5 — Assurance plan benchmarks Belenios's formal-analysis practice (symbolic/computational proofs of privacy and verifiability) as a Phase gate.** Affects QV-11.
 
 ## 10. Open questions
 

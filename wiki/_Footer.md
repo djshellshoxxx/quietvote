@@ -1,0 +1,1 @@
+**Draft – unaudited software. Not for real elections.** QuietVote is in its specification and early-build stage. Nothing on this wiki is an approved guarantee. Full specifications live in the repository's `docs/` folder. Proposed licence for code: AGPL-3.0-or-later (no LICENSE file yet).

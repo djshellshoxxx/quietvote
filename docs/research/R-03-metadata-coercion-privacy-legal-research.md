@@ -362,14 +362,14 @@ A warrant canary is a periodically updated statement that no secret legal proces
 
 ## 8. Proposed ADRs
 
-- **QV-ADR-P03-1 — Result-disclosure policy is part of the signed manifest and enforced by trustees and verifier.** Rationale: §2. Affects QV-05, QV-07, QV-09.
-- **QV-ADR-P03-2 — No telemetry, no IP retention; test-enforced.** Extends ADR-009. Affects QV-06, QV-08, QV-11, QV-12.
-- **QV-ADR-P03-3 — Cast-ballot randomness is never retained or exportable by the client.** Affects QV-05, QV-10.
-- **QV-ADR-P03-4 — Legal-scope statement: not for statutory union/co-op/corporate/government elections; model-bylaw guidance provided.** Affects QV-00, QV-02, QV-03, QV-14.
-- **QV-ADR-P03-5 — Open-source export notification under EAR §740.13(e) at first public release (subject to counsel confirmation).** Affects QV-12, QV-14.
-- **QV-ADR-P03-6 — DCO-only, no CLA; consequence: no relicensing/dual-licensing without unanimous contributor consent.** Affects QV-14. (Alternative: CLA to preserve relicensing; rejected for values alignment but reopen if commercial licensing is wanted.)
-- **QV-ADR-P03-7 — No warrant canary as a control; publish legal-request policy and transparency report.** Affects QV-12, QV-14.
-- **QV-ADR-P03-8 — Onion profile defaults to vanguards-full for long-lived instances.** Affects QV-08, QV-12.
+- **QV-ADR-P-R03-1 — Result-disclosure policy is part of the signed manifest and enforced by trustees and verifier.** Rationale: §2. Affects QV-05, QV-07, QV-09.
+- **QV-ADR-P-R03-2 — No telemetry, no IP retention; test-enforced.** Extends ADR-009. Affects QV-06, QV-08, QV-11, QV-12.
+- **QV-ADR-P-R03-3 — Cast-ballot randomness is never retained or exportable by the client.** Affects QV-05, QV-10.
+- **QV-ADR-P-R03-4 — Legal-scope statement: not for statutory union/co-op/corporate/government elections; model-bylaw guidance provided.** Affects QV-00, QV-02, QV-03, QV-14.
+- **QV-ADR-P-R03-5 — Open-source export notification under EAR §740.13(e) at first public release (subject to counsel confirmation).** Affects QV-12, QV-14.
+- **QV-ADR-P-R03-6 — DCO-only, no CLA; consequence: no relicensing/dual-licensing without unanimous contributor consent.** Affects QV-14. (Alternative: CLA to preserve relicensing; rejected for values alignment but reopen if commercial licensing is wanted.)
+- **QV-ADR-P-R03-7 — No warrant canary as a control; publish legal-request policy and transparency report.** Affects QV-12, QV-14.
+- **QV-ADR-P-R03-8 — Onion profile defaults to vanguards-full for long-lived instances.** Affects QV-08, QV-12.
 
 ## 9. Open questions
 
