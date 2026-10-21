@@ -34,7 +34,14 @@ jobs:
           cache: npm
       - name: Check workflow actions are pinned to full commit SHAs
         run: node .github/scripts/check-action-pins.mjs
+      # Supply-chain gates run once, on ubuntu-24.04 with node 22 (docs/30-engineering-standards.md, R-02).
+      - name: Lint package-lock.json sources and integrity
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == 22
+        run: npm run lockfile:lint
       - run: npm ci --ignore-scripts
+      - name: Audit dependencies (blocking for high and critical advisories)
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == 22
+        run: npm audit --audit-level=high
       - run: npm run check
 
   # Non-blocking: reports banned or overstated public claims (docs/claims/banned-phrases.txt).
