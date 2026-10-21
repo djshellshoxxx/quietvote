@@ -79,10 +79,23 @@ export function authenticate(env: Env, method: string, target: string, header: s
   // Unknown keys take the same verification path (uniform failure; no key enumeration).
   const okSig = pk !== undefined && (selfPk === undefined || keyIdOf(selfPk) === p.keyid) ? ed25519Verify(pk, p.sig, msg) : (ed25519Verify(DUMMY.publicKey, p.sig, msg), false);
   if (!okSig) throw new ApiError(401, 'BAD_SIGNATURE', 'request signature invalid or key unknown');
-  // replay cache only after the signature verifies, so unauthenticated callers cannot fill it
-  if (!env.control.recordNonce(p.keyid, p.nonce, (nowSec + WINDOW_SEC + 5) * 1000)) {
+  // replay cache only after the signature verifies, so unauthenticated callers cannot fill it.
+  // The nonce must be remembered for as long as its timestamp is acceptable, i.e. until ts + WINDOW (a future-dated ts stays
+  // valid up to 2 x WINDOW after receipt). Keying expiry off `now` let a request signed with ts = now + 120 be replayed between
+  // now + 125 s and ts + 120 s (security review 2026-10-21, SR-1).
+  if (!env.control.recordNonce(p.keyid, p.nonce, (Math.max(nowSec, p.ts) + WINDOW_SEC + 5) * 1000)) {
     throw new ApiError(401, 'UNAUTHENTICATED', 'nonce already used', { reason: 'REPLAY' });
   }
   if (selfPk !== undefined) return { keyId: p.keyid, pk: selfPk, role: 'org_owner', orgId: null };
   return { keyId: key!.key_id, pk, role: key!.role, orgId: key!.org_id } as AuthInfo;
+}
+
+/**
+ * Cheap checks that run BEFORE a large upload body is read (the full signature covers a hash of the body, so it can only be
+ * verified afterwards): header shape, timestamp window and that the key is known and not revoked. Same errors as `authenticate`.
+ */
+export function preflightAuth(env: Env, header: string | undefined): void {
+  const p = parseAuthHeader(header);
+  if (Math.abs(env.nowSec() - p.ts) > WINDOW_SEC) throw new ApiError(401, 'UNAUTHENTICATED', 'request timestamp outside the +-120 s window', { reason: 'STALE_TIMESTAMP' });
+  if (env.control.keyById(p.keyid) === undefined) throw new ApiError(401, 'BAD_SIGNATURE', 'request signature invalid or key unknown');
 }

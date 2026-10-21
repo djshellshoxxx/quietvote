@@ -27,7 +27,7 @@ npm install
 
 Run `npm run check` before opening a pull request.
 
-**Current state:** on the current branch, `npm run typecheck` reports an error in `packages/board/src/bytes.ts` (line 137, TS1294, `erasableSyntaxOnly`). Fix or check the latest state before relying on `npm run check`. Only `packages/crypto` has a test file today.
+**Current state:** as of commit `c8348f4`, `npm run typecheck` passes and `npm test` has one failing test in `packages/cli` (see [[Testing and Conformance]]). Run `npm ci` first. Check the latest state before relying on `npm run check`.
 
 ## Next
 
