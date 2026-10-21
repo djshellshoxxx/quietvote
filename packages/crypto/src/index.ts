@@ -11,3 +11,4 @@ export * from './feldman.ts';
 export * from './dlog.ts';
 export * from './share-cipher.ts';
 export * from './json.ts';
+export * from './bundle-cipher.ts';
