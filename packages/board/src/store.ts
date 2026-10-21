@@ -1,6 +1,8 @@
 // BoardStore: persistence boundary (D3). Synchronous so SQLite (node:sqlite) can implement it
 // with a single transaction per call. Implementations MUST make appendEntry atomic.
 
+import { bytesEqual } from './bytes.ts';
+
 export interface StoredEntry {
   seq: number;
   headerBytes: Uint8Array;
@@ -10,6 +12,8 @@ export interface StoredEntry {
   sequencedAt: number;
   /** Idempotency key, see nonceKey(). Unique across the store. */
   nonceKey: string;
+  /** Manifest only: body declared `roll.root` (static-roll mode), persisted at append time so replay never re-derives it from a possibly-null body. */
+  staticRoll?: boolean;
 }
 
 export interface StoredCheckpoint {
@@ -45,6 +49,10 @@ export function nonceKey(authorHex: string, type: string, nonceHex: string): str
   return `${authorHex}|${type}|${nonceHex}`;
 }
 
+function copyEntry(e: StoredEntry): StoredEntry {
+  return { ...e, headerBytes: e.headerBytes.slice(), body: e.body === null ? null : e.body.slice(), leafHash: e.leafHash.slice() };
+}
+
 export class MemoryBoardStore implements BoardStore {
   private readonly entries: StoredEntry[] = [];
   private readonly nonces = new Map<string, number>();
@@ -58,12 +66,12 @@ export class MemoryBoardStore implements BoardStore {
     if (e.seq !== this.entries.length) throw new Error('non-gapless append');
     const key = e.nonceKey;
     if (this.nonces.has(key)) throw new Error('duplicate nonce key');
-    this.entries.push({ ...e });
+    this.entries.push(copyEntry(e));
     this.nonces.set(key, e.seq);
   }
   getEntry(seq: number): StoredEntry | undefined {
     const e = this.entries[seq];
-    return e ? { ...e } : undefined;
+    return e ? copyEntry(e) : undefined;
   }
   leafHashes(start: number, end: number): Uint8Array[] {
     return this.entries.slice(start, end).map((e) => e.leafHash.slice());
@@ -72,18 +80,20 @@ export class MemoryBoardStore implements BoardStore {
     return this.nonces.get(key);
   }
   putCheckpoint(cp: StoredCheckpoint): void {
+    if (cp.root.length !== 32) throw new Error('checkpoint root must be 32 bytes');
     const old = this.cps.get(cp.size);
-    if (old && old.root.some((b, i) => b !== cp.root[i])) throw new Error('conflicting checkpoint root');
-    this.cps.set(cp.size, { ...cp });
+    if (old && !bytesEqual(old.root, cp.root)) throw new Error('conflicting checkpoint root');
+    this.cps.set(cp.size, { ...cp, root: cp.root.slice() });
   }
   getCheckpoint(size: number): StoredCheckpoint | undefined {
-    return this.cps.get(size);
+    const c = this.cps.get(size);
+    return c ? { ...c, root: c.root.slice() } : undefined;
   }
   latestCheckpoint(): StoredCheckpoint | undefined {
     return this.listCheckpoints().at(-1);
   }
   listCheckpoints(): StoredCheckpoint[] {
-    return [...this.cps.values()].sort((a, b) => a.size - b.size);
+    return [...this.cps.values()].sort((a, b) => a.size - b.size).map((c) => ({ ...c, root: c.root.slice() }));
   }
   redactBody(seq: number): void {
     const e = this.entries[seq];

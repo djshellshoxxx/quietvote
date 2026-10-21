@@ -29,7 +29,7 @@ The design should favor user-controlled disclosure, minimal data collection, tra
 
 ## Cryptography and technology
 
-QuietVote uses **cryptography as a trust-reduction tool**, not necessarily cryptocurrency. Candidate design elements include encrypted ballots, zero-knowledge eligibility and ballot-validity proofs, decision-scoped nullifiers to prevent duplicate voting, threshold tally keys, digital signatures, and tamper-evident audit records. The proposed technical flow and the limits of these guarantees are documented in [Cryptography and Technical Design](docs/15-cryptography-and-technical-design.md).
+QuietVote uses **cryptography as a trust-reduction tool**, not necessarily cryptocurrency. Candidate design elements include encrypted ballots, zero-knowledge eligibility and ballot-validity proofs, decision-scoped nullifiers to prevent duplicate voting, threshold tally keys, digital signatures, and tamper-evident audit records. The byte-level draft is [Cryptographic protocol (QV-16)](docs/16-crypto-protocol.md). The older [Cryptography and Technical Design](docs/15-cryptography-and-technical-design.md) is a retained, non-authoritative draft.
 
 A token or public blockchain is not a core requirement. Existing voting protocols and standards are research starting points; the project has not selected or implemented a protocol. See the [Future Ideas backlog](IDEAS.md) for optional extensions such as portable credentials, federated group decisions, and forkable governance rules.
 
@@ -53,14 +53,14 @@ Start with the [specification index](docs/SPEC-INDEX.md), which tracks each spec
 ## Current status
 
 **Stage:** Specification drafted; early implementation  
-**Implementation:** Core crypto, protocol, and bulletin-board (`packages/crypto`, `packages/protocol`, `packages/board`) have initial implementations. They are **unaudited**. Other packages are not yet complete.  
+**Implementation:** Initial code exists in all eight packages (`crypto`, `protocol`, `board`, `server`, `trustee`, `verifier`, `cli`, `web`), plus a second-verifier skeleton in `verifier-py/`. All of it is **unaudited** and incomplete; the known gaps are listed in each `packages/*/NOTES.md`. The typecheck failed on the most recent re-run (2026-10-21).  
 **Specification status:** Drafted; decisions and acceptance criteria remain to be completed  
 **Use:** **Not for real elections.** Do not rely on this software for any real decision.  
 **Release status:** No release
 
 Do not treat placeholder requirements or proposed capability boundaries as approved product decisions.
 
-For the roadmap and open work, see [wiki/](wiki/) and [docs/plan/](docs/plan/).
+For the consolidated list of open work, see [docs/plan/TODO.md](docs/plan/TODO.md). The roadmap, backlog and decisions are in [docs/plan/](docs/plan/), and simple summaries are in [wiki/](wiki/).
 
 ## Guiding principles
 

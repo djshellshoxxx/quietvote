@@ -6,7 +6,7 @@ import {
   parseCheckpoint, verifyLogSignature, witnessStatus,
   type Checkpoint, type WitnessPolicy,
 } from './checkpoint.ts';
-import { checkEntry, grammarStep, newGrammar, type AuthorKeyResolver, type EntryHeader } from './entry.ts';
+import { checkEntry, grammarStep, manifestDeclaresRoll, newGrammar, type AuthorKeyResolver, type EntryHeader } from './entry.ts';
 import { err, ok, type Result } from './errors.ts';
 import { MerkleTree, hashLeaf } from './merkle.ts';
 import { verifyReceipt, type Receipt } from './receipt.ts';
@@ -290,10 +290,25 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
   }
 }
 
-/** Verify, then load into `target` and mark it read-only (REQ-033). Rejects with the exact failing seq. */
-export function importBundle(bundle: LogBundle, target: BoardStore, opts: VerifyOptions = {}): Result<Verdict> {
+export interface ImportOptions extends VerifyOptions {
+  /** Accept an integrity PARTIAL verdict (e.g. redacted bodies). Trust anchors are still required. Default false. */
+  allowPartial?: boolean;
+}
+
+/**
+ * Verify, then load into `target` and mark it read-only (REQ-033). Rejects with the exact failing seq.
+ * Requires caller-trusted `logPublicKey`, `witnessPolicy` and `resolveAuthorKey` (a bundle verified only against
+ * its own embedded keys proves nothing), and an integrity VERIFIED verdict unless `allowPartial` is true.
+ */
+export function importBundle(bundle: LogBundle, target: BoardStore, opts: ImportOptions = {}): Result<Verdict> {
   if (target.size() !== 0) return err('QV_BOARD_BAD_BUNDLE', 'import target must be empty');
+  if (!opts.logPublicKey) return err('QV_BOARD_BAD_BUNDLE', 'import requires a trusted logPublicKey');
+  if (!opts.witnessPolicy) return err('QV_BOARD_BAD_BUNDLE', 'import requires a trusted witnessPolicy');
+  if (!opts.resolveAuthorKey) return err('QV_BOARD_AUTHOR_UNRESOLVED', 'import requires resolveAuthorKey (author signatures must be verified)');
   const v = verifyLog(bundle, opts);
+  if (v.integrity === 'PARTIAL' && opts.allowPartial !== true) {
+    return err('QV_BOARD_BAD_BUNDLE', `integrity PARTIAL (redacted=${v.redacted}); pass allowPartial to import`);
+  }
   if (v.integrity === 'FAILED') {
     const f = v.failures[0];
     return err('QV_BOARD_BAD_BUNDLE', `seq=${f?.seq ?? 'n/a'} rule=${f?.rule ?? ''}: ${f?.detail ?? ''}`);
@@ -307,6 +322,7 @@ export function importBundle(bundle: LogBundle, target: BoardStore, opts: Verify
     target.appendEntry({
       seq: e.seq, headerBytes: e.headerBytes, body: e.body, leafHash, sequencedAt: 0,
       nonceKey: nonceKey(toHex(h.value.author), h.value.type, toHex(h.value.authorNonce)),
+      ...(h.value.type === 'manifest' ? { staticRoll: manifestDeclaresRoll(e.body) } : {}),
     });
   }
   for (const note of bundle.checkpoints) {

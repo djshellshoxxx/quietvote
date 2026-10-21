@@ -42,9 +42,13 @@ export function parseArgs(argv: readonly string[], spec: FlagSpec): Parsed {
     let v: string | undefined;
     if (eq !== -1) v = a.slice(eq + 1);
     else {
-      v = argv[++i];
-      if (v === undefined) throw new UsageError(`option --${name} needs a value`);
+      // A value flag never swallows the next option: `--out --json` is a missing value, not an output named "--json".
+      const next = argv[i + 1];
+      if (next === undefined || next.startsWith('--')) throw new UsageError(`option --${name} needs a value`);
+      v = next;
+      i++;
     }
+    if (v === '') throw new UsageError(`option --${name} needs a non-empty value`);
     const list = values.get(name) ?? [];
     if (kind === 'value' && list.length > 0) throw new UsageError(`option --${name} given twice`);
     list.push(v);
