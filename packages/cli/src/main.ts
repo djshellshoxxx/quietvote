@@ -2,6 +2,7 @@ import { FailError, InputError, UsageError } from './args.ts';
 import { cmdBallotAudit, cmdBallotEncrypt } from './cmd-ballot.ts';
 import { cmdBoardVerify } from './cmd-board.ts';
 import { cmdElectionInspect } from './cmd-election.ts';
+import { cmdElectionSpoilCollect } from './cmd-spoil.ts';
 import { cmdKeygen } from './cmd-keygen.ts';
 import { cmdSelftest, cmdVerify } from './cmd-verify.ts';
 import { cmdVectorsCheck } from './cmd-vectors.ts';
@@ -27,6 +28,10 @@ usage:
   qv board verify <board-bundle|election-bundle> [--log-key <hex>] [--manifest-hash <hex>] [--author-key <hex>]...
                     [--witness-policy <file>] [--pin-file <f>] [--json]
   qv election inspect <bundle> [--json]
+  qv election spoil-collect --election <bundle> --code <hex> --packet <file> [--packet <file>]... [--manifest-hash <hex>]
+                    [--post-body-out <dir>] [--json]
+                                   combine trustee spoil-share packets for one trustees-mode spoil and decode its selections;
+                                   exit 1 if fewer than t shares verify or the code is cast/re-wrapped/not a trustees-mode spoil
   qv vectors check [dir] [--strict] [--json]
 
 exit codes: 0 ok / PASS, 1 verification or conformance failure, 2 usage error, 3 INCOMPLETE or PARTIAL (nothing failed,
@@ -40,7 +45,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   keygen: cmdKeygen,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
-  election: { inspect: cmdElectionInspect },
+  election: { inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
   vectors: { check: cmdVectorsCheck },
 };
 
