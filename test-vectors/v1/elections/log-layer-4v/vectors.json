@@ -1,0 +1,1839 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "elections/log-layer",
+  "operation": "log.verify_election",
+  "description": "QV-18 log layer through the full verifier: checkpoint consistency, witness thresholds, receipts, equivocation/split view, notices (logcheck X-21..X-34)",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "log-honest-witnessed",
+      "comment": "Honest log: every head log-signed, every QV-18 §9.4 gate quorum-witnessed, two voter receipts, all heads re-observed",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 20,
+              "leaf_hash": "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
+              "sequenced_at": 1793000020,
+              "checkpoint_deadline": 1793000050,
+              "promise_sig": "ShYQ3/6iT05pprXV1LFHnysxHaCSWPyK8W33l8T9h2ZtMOTWD5lL6kXxzEuR8gC7RJWxSPEdNsZv6bDesev5AA==",
+              "inclusion": {
+                "tree_size": 23,
+                "path": [
+                  "4RE7MNRK85uZKZa4huP0cIBhA9jbBKQn26tIoifsk+8=",
+                  "alRoFqFV6Vx27soylubMdn6jW65YL3//nNPM6Uesk/o=",
+                  "z2sxpkiVQI2AksdcXU2mP7zfeCuMrZkFxez9gnwfbFM=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              }
+            },
+            "voter": "632ac970c55017ae415f2742fcdb3f6905df555df5ec29dbabe17059e493eb83"
+          },
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 18,
+              "leaf_hash": "sBQ03cKyD/54NTpzvQoVwRTk1rzXOtBa3EDxrQvQQ3I=",
+              "sequenced_at": 1793000018,
+              "checkpoint_deadline": 1793000048,
+              "promise_sig": "Ydngx9C9BZOyOU9M5x1EklQxtNs/qeLJR1zep9u6GrORoOw/XoACty66D2oh7EDN64dkzmWSwWj5DO4OQIj8Dw==",
+              "inclusion": {
+                "tree_size": 21,
+                "path": [
+                  "R8/qgFtNnW6vuZoIOlKVGoxPQghm7MQRqn0X+XEbPw4=",
+                  "p8kynRxqrXrG9ubymT/z6pCgcz2PFUEfVN1NjDtAa84=",
+                  "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+              }
+            },
+            "voter": "bf52c03edf2dcedd5c385ff125c5d6429e01bf14541ea5c68113acc15007a7f1"
+          }
+        ],
+        "observed": [
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "pass",
+            "chk.encoding.canonical": "pass",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "checkpoint",
+        "witness",
+        "receipt"
+      ]
+    },
+    {
+      "id": "log-heads-any-order",
+      "comment": "Tree heads listed in reverse order: order of notes in the export is irrelevant",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "not_run",
+            "chk.encoding.canonical": "pass",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "checkpoint"
+      ]
+    },
+    {
+      "id": "log-observed-older-head-consistent",
+      "comment": "An older log-signed head seen elsewhere (pin/gossip) that is a prefix of this log",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "observed": [
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "not_run",
+            "chk.encoding.canonical": "pass",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "checkpoint",
+        "split-view"
+      ]
+    },
+    {
+      "id": "log-observed-unsigned-ignored",
+      "comment": "An observed note without a valid log signature is not evidence (warning only, X-26)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "observed": [
+          "junk\n"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "not_run",
+            "chk.encoding.canonical": "pass",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "checkpoint"
+      ]
+    },
+    {
+      "id": "log-head-wrong-log-key",
+      "comment": "Every head signed by a key other than manifest bb.log_pk",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jYwYgP4TgmVr85pf8EP40sl2W5DJ1xKahF9XJio/ylyo2A4ZZWjQ59RoDefa5U6JiHWXYQxnaeshArMgZuuPLQQQ=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY9MrNlZpNePdPrMRtuL/txPFpDWpGDsPp79HVzp5rcKO/EWJ66P8fNcKrLNDlpswqbhcr9r3ELBjU+VdXqzYLAs=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jYx3+X3aptqk/VteR7OjXhaMt94yfBjAgV1gl33O8MXKqa+wYl5RyVo0IZT3FSOphcJ2gEYIiyiHaVsS+LMumxgk=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jYxhcKvN1HkBt4+Rb2C6Rr9oZUgS8LMLt28siAUmFY7NC2wnYHdaqHxSr8hk19os9n/VQUF+n1CSYXXVXdc+PAA4=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_CHECKPOINT",
+        "failed_checks": [
+          "chk.board.append_only",
+          "chk.board.witness",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "checkpoint",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "log-head-root-edited",
+      "comment": "A tree head root edited after signing",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nAAAARApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_CHECKPOINT",
+        "failed_checks": [
+          "chk.board.append_only"
+        ]
+      },
+      "tags": [
+        "negative",
+        "checkpoint",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "log-head-missing-full-size",
+      "comment": "No log-signed head covers the whole log",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_CHECKPOINT",
+        "failed_checks": [
+          "chk.board.append_only"
+        ]
+      },
+      "tags": [
+        "negative",
+        "checkpoint",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "log-export-other-log-key",
+      "comment": "The export names a log key other than bb.log_pk (self-attested key is never trusted)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "policy": {
+              "log_pk_b64": "8mVM92I5A9dnYDun3r+AcOqwUKGW41VWla8/QOVzZmo=",
+              "witness_policy": {
+                "quorum": 0,
+                "none_acknowledged": true,
+                "witnesses": []
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_BINDING",
+        "failed_checks": [
+          "chk.board.append_only"
+        ]
+      },
+      "tags": [
+        "negative",
+        "checkpoint",
+        "binding",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "log-export-other-origin",
+      "comment": "The export is for another log origin",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "origin": "quietvote/v1/aaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_BINDING",
+        "failed_checks": [
+          "chk.board.append_only",
+          "chk.board.witness",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "binding",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "equivocation-two-roots-same-size",
+      "comment": "The export carries two log-signed roots for one size (QV-18 §9.6 fork)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\n7MrFx6+S+nGSQordRw8NuW6FkOFsN0pxYAhm6XP38xI=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xKMMsl6f0JMrS4NaFK9ZWypdeXHRb7AZCZMRVo3500tNaqG+HGrdY6g2S9l8EC2zCxRXVbhhNk4Ps+wxYwWIAE=\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_FORK",
+        "failed_checks": [
+          "chk.board.append_only"
+        ]
+      },
+      "tags": [
+        "negative",
+        "equivocation",
+        "attack:split-view",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "split-view-observed-fork",
+      "comment": "A log-signed head from another view (gossip/witness monitoring) is not a prefix of this log",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "observed": [
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\n7MrFx6+S+nGSQordRw8NuW6FkOFsN0pxYAhm6XP38xI=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xKMMsl6f0JMrS4NaFK9ZWypdeXHRb7AZCZMRVo3500tNaqG+HGrdY6g2S9l8EC2zCxRXVbhhNk4Ps+wxYwWIAE=\n"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_FORK",
+        "failed_checks": [
+          "chk.board.append_only"
+        ]
+      },
+      "tags": [
+        "negative",
+        "equivocation",
+        "attack:split-view",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "split-view-adversarial-view-alone",
+      "comment": "The adversarial view (revote dropped, re-signed, cosigned by witnesses that never saw the honest view) verifies on its own: detection needs receipts or observed heads (QV-18 §2 non-claim)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/adv-bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/adv-board.json"
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "not_run",
+            "chk.encoding.canonical": "pass",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "split-view",
+        "limitation"
+      ]
+    },
+    {
+      "id": "split-view-observed-rollback",
+      "comment": "Adversarial view vs. the honest full-size head: log-signed size larger than the log (ROLLBACK_DETECTED)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/adv-bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/adv-board.json"
+        },
+        "observed": [
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_ROLLBACK",
+        "failed_checks": [
+          "chk.board.append_only"
+        ]
+      },
+      "tags": [
+        "negative",
+        "equivocation",
+        "rollback",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "split-view-observed-honest-head",
+      "comment": "Adversarial view vs. an honest head of a size it has: different prefix root (EQUIVOCATION)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/adv-bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/adv-board.json"
+        },
+        "observed": [
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_FORK",
+        "failed_checks": [
+          "chk.board.append_only"
+        ]
+      },
+      "tags": [
+        "negative",
+        "equivocation",
+        "attack:split-view",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "witness-all-three",
+      "comment": "Every head cosigned by all three manifest witnesses (k = 2)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n— w3 JoDrmQAAAABq5vGAZRNape7Pml22DIOzpRKirwRUGa47oHE5C5nVW32+/wOyESPGNBFOEZWMc9JtgUaT3kK91krKzitwwDSuSvbTCw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n— w3 JoDrmQAAAABq8OMMAVp0RI3NcPOpxot+ngqUc52Gb3glwHuvqxB1QxezlTQvcQavq4WcP8ycWOqjpx/NWThIyDkT/711BQ0QB79pBw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n— w3 JoDrmQAAAABq8ONI8MJkpiSyOYmdQGotJq5XZcpC0Cpy5aVLHhijyfvr/YnhuIqnEbWF6s8NUKcELhwUI7UTlW8BL0VhK0j4oWdaAA==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "not_run",
+            "chk.encoding.canonical": "pass",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "witness"
+      ]
+    },
+    {
+      "id": "witness-below-quorum-setup",
+      "comment": "One cosignature on the head before election-open (k = 2)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness"
+        ]
+      },
+      "tags": [
+        "negative",
+        "witness",
+        "threshold",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "witness-impostor-key",
+      "comment": "A cosignature under the name w2 made with another key does not count",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 2BB/dQAAAABq8OMMjuXa0fOQoQQZpyoh1nWssENnEw0pe6HCkifi9bT+4+ECdGPtF/DzDm0T04j3LHSgrwH3c4HQDpF0eyyqE64XCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness"
+        ]
+      },
+      "tags": [
+        "negative",
+        "witness",
+        "threshold",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "witness-duplicate-cosigner",
+      "comment": "The same witness twice on one head counts once",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w1 7y0PGQAAAABq5vGBNnY7UnVx5FOXUfpEZLCbgwQJNhWV7EaFRx6t8BWeMestcI6VKpsoz4lfyUgoARaSIpdLFa1UZooe3h3DN6TxAA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness"
+        ]
+      },
+      "tags": [
+        "negative",
+        "witness",
+        "threshold",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "witness-unknown-cosigner",
+      "comment": "A cosignature by a witness not in the manifest list does not count",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w9 Pf5efgAAAABq5vGAazVCwsRZmspHFt9tizeg0oUPTGfJhYmXI5Vl8sPF5xsffAeZuJMBYHbe+9F6N0RUB+CV28olmiLpD5YE32dIBA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness"
+        ]
+      },
+      "tags": [
+        "negative",
+        "witness",
+        "threshold",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "witness-cosig-from-other-head",
+      "comment": "A valid w2 cosignature line copied from another tree head (cosignature for a different size/root)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness"
+        ]
+      },
+      "tags": [
+        "negative",
+        "witness",
+        "threshold",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "witness-cosig-tampered",
+      "comment": "A cosignature timestamp edited after signing",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMNTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness"
+        ]
+      },
+      "tags": [
+        "negative",
+        "witness",
+        "threshold",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "witness-non-monotone-excluded",
+      "comment": "w1 timestamps decrease as the tree grows: w1 excluded (ALARM), quorum then fails (X-29)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq8Qnf9GPV4GxQOZmQaTIW43GohbNuGVYnvl7nfvHWNTAAq6FDkXrs0mpB/JI+Yg2g+H1iPL9T6F4r4ufOQxILTny8CQ==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "witness",
+        "witness-conflict",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "witness-close-to-tally-unwitnessed",
+      "comment": "No quorum-witnessed head of size in [seq(close), seq(tally)] (QV-18 §9.4)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w3 JoDrmQAAAABq8OMMAVp0RI3NcPOpxot+ngqUc52Gb3glwHuvqxB1QxezlTQvcQavq4WcP8ycWOqjpx/NWThIyDkT/711BQ0QB79pBw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness"
+        ]
+      },
+      "tags": [
+        "negative",
+        "witness",
+        "gate",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "time-late-cutoff",
+      "comment": "election-close first witnessed after voting_close + clock_skew_s",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OP9s9ESmS+Gchl9o1dkLZ04fECHebtTxVyVuKMQA9XJlktTLGxI/j2U0LfYbNOP0JZLNfinqiF8BLcxjSrQD9C0DA==\n— w2 a2FBQwAAAABq8OP9J9aIEFNo9iVTYn/dOH5zV9XISR8DI31BeM5Y5RL6g5Js9erZ1gPydJIZgTyjmdG+JsPKqN48mj9dcjYH1p7DDA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8QX49jSyBT8ok8/jeSedoZpmzn8RfVjd3VgD5yYLF8vxWuvEVrWtsIfRGNfmgL+yXp15UqT3BaGx4P7LdHAS40W9CA==\n— w2 a2FBQwAAAABq8QX4jzdKspZIhH7VG10dRbAv6KsGhAiGnLS8TyNPAGPaSX3qYkh2lL/kLD0cdQAdKEyXRMHnZPK1d8NrhmdCUmZbCA==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_TIME_WINDOW",
+        "failed_checks": [
+          "chk.board.witness",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "time",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "time-early-close",
+      "comment": "election-close witnessed a day before voting_close",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5v+a6FvQXCKw8CrE+MgQN6b4mOkEh+HsrgEwePWheNOhbJPHYPa1aXWF8jyPD8Ida7PlLmaPEz+wqvQOKepX4k3QCw==\n— w2 a2FBQwAAAABq5v+aIdyL5Ydsll+SUaUNfQBqiOsAF3ecom04wcEoY55OKpi/OVgA3sFHA4AnC8fymu2Yx7qE3r5XknL0BgLItkswCA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq75FQpUopzZzyN0kIR8XbADOraTZGCE7/9LeiJMqNT6w1s8G0hFRsuQ3x0ojL95W30llPob0lCreeeN8TtPMdhS0xAQ==\n— w2 a2FBQwAAAABq75FQHsSQ/UCfXfzbAIj8pKYdm1/g65M+aIet/nBc3P1t9vctrGHnGAQbEE25f8NeI9qcU9vKdLtporxp05HFkNFaDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_TIME_WINDOW",
+        "failed_checks": [
+          "chk.board.witness",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "time",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "time-early-open",
+      "comment": "election-open witnessed before voting_open - clock_skew_s",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5v5jx1HM0mh8SlgpZViCReg0P/3OY79tRc+RlWZrPevKEl9QVoA/6QfcknBg/Q4vreApsVdsoOvD4lGGTBrdIHOwBw==\n— w2 a2FBQwAAAABq5v5jYHCkQkmYm4xf1AHu54O4UUyQJCcVENR9MvE6S543XhgAdLWkG/wnq1PSNaA0k5DwUqX2gyoMf+i9QqDB3w43Dg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_TIME_WINDOW",
+        "failed_checks": [
+          "chk.board.witness",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "time",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "receipt-inclusion-older-head",
+      "comment": "Receipt with an inclusion proof against an older (close) head",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 18,
+              "leaf_hash": "sBQ03cKyD/54NTpzvQoVwRTk1rzXOtBa3EDxrQvQQ3I=",
+              "sequenced_at": 1793000018,
+              "checkpoint_deadline": 1793000048,
+              "promise_sig": "Ydngx9C9BZOyOU9M5x1EklQxtNs/qeLJR1zep9u6GrORoOw/XoACty66D2oh7EDN64dkzmWSwWj5DO4OQIj8Dw==",
+              "inclusion": {
+                "tree_size": 21,
+                "path": [
+                  "R8/qgFtNnW6vuZoIOlKVGoxPQghm7MQRqn0X+XEbPw4=",
+                  "p8kynRxqrXrG9ubymT/z6pCgcz2PFUEfVN1NjDtAa84=",
+                  "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+              }
+            },
+            "voter": "bf52c03edf2dcedd5c385ff125c5d6429e01bf14541ea5c68113acc15007a7f1"
+          }
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "pass",
+            "chk.encoding.canonical": "pass",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "receipt"
+      ]
+    },
+    {
+      "id": "receipt-forged-promise",
+      "comment": "Receipt promise not signed by the log key: not evidence (class I), check fails, verdict unaffected",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 17,
+              "leaf_hash": "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
+              "sequenced_at": 1793000017,
+              "checkpoint_deadline": 1793000047,
+              "promise_sig": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "inclusion": {
+                "tree_size": 23,
+                "path": [
+                  "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
+                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
+                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              }
+            },
+            "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_RECEIPT",
+        "failed_checks": [
+          "chk.receipts.sample"
+        ]
+      },
+      "tags": [
+        "negative",
+        "receipt",
+        "verdict:PASS"
+      ]
+    },
+    {
+      "id": "receipt-other-log-key",
+      "comment": "Receipt signed by another log key",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 18,
+              "leaf_hash": "sBQ03cKyD/54NTpzvQoVwRTk1rzXOtBa3EDxrQvQQ3I=",
+              "sequenced_at": 1793000018,
+              "checkpoint_deadline": 1793000048,
+              "promise_sig": "/eFBfDJqyfXLbdo5cMmhLX0ehiRwK7hgkT0B1VNapwSOzSmWvDsS6gu6xv//6n7nsvda+z3sAuEnlKWnmSEgDA==",
+              "inclusion": {
+                "tree_size": 21,
+                "path": [
+                  "R8/qgFtNnW6vuZoIOlKVGoxPQghm7MQRqn0X+XEbPw4=",
+                  "p8kynRxqrXrG9ubymT/z6pCgcz2PFUEfVN1NjDtAa84=",
+                  "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY9MrNlZpNePdPrMRtuL/txPFpDWpGDsPp79HVzp5rcKO/EWJ66P8fNcKrLNDlpswqbhcr9r3ELBjU+VdXqzYLAs=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+              }
+            },
+            "voter": "bf52c03edf2dcedd5c385ff125c5d6429e01bf14541ea5c68113acc15007a7f1"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_RECEIPT",
+        "failed_checks": [
+          "chk.receipts.sample"
+        ]
+      },
+      "tags": [
+        "negative",
+        "receipt",
+        "verdict:PASS"
+      ]
+    },
+    {
+      "id": "receipt-malformed",
+      "comment": "Malformed receipt",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "junk": true
+            },
+            "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_RECEIPT",
+        "failed_checks": [
+          "chk.receipts.sample"
+        ]
+      },
+      "tags": [
+        "negative",
+        "receipt",
+        "verdict:PASS"
+      ]
+    },
+    {
+      "id": "receipt-broken-promise-dropped-revote",
+      "comment": "Adversarial view vs. the voter's receipt for the dropped revote: another leaf at that seq (broken promise)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/adv-bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/adv-board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 20,
+              "leaf_hash": "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
+              "sequenced_at": 1793000020,
+              "checkpoint_deadline": 1793000050,
+              "promise_sig": "ShYQ3/6iT05pprXV1LFHnysxHaCSWPyK8W33l8T9h2ZtMOTWD5lL6kXxzEuR8gC7RJWxSPEdNsZv6bDesev5AA==",
+              "inclusion": {
+                "tree_size": 21,
+                "path": [
+                  "z2sxpkiVQI2AksdcXU2mP7zfeCuMrZkFxez9gnwfbFM=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+              }
+            },
+            "voter": "632ac970c55017ae415f2742fcdb3f6905df555df5ec29dbabe17059e493eb83"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_RECEIPT",
+        "failed_checks": [
+          "chk.receipts.sample"
+        ]
+      },
+      "tags": [
+        "negative",
+        "receipt",
+        "attack:drop",
+        "split-view",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "receipt-tail-dropped",
+      "comment": "Receipt for a seq beyond the end of the log (silent tail drop)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/adv-bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/adv-board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 22,
+              "leaf_hash": "alRoFqFV6Vx27soylubMdn6jW65YL3//nNPM6Uesk/o=",
+              "sequenced_at": 1793000022,
+              "checkpoint_deadline": 1793000052,
+              "promise_sig": "m0u/06J42EivCvQyggAJM5TRBOoLAuPxHbO5cPmZAIgOaBLo32a6nuGQ4WVlhp2OAp94oeK46YtlCTeZbQ8cDg==",
+              "inclusion": {
+                "tree_size": 23,
+                "path": [
+                  "3r6N0zLlfRhTGKxDkQMM59nu8dT/ZzWTxVrMf4Wr8WU=",
+                  "z2sxpkiVQI2AksdcXU2mP7zfeCuMrZkFxez9gnwfbFM=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              }
+            },
+            "voter": "632ac970c55017ae415f2742fcdb3f6905df555df5ec29dbabe17059e493eb83"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_RECEIPT",
+        "failed_checks": [
+          "chk.receipts.sample"
+        ]
+      },
+      "tags": [
+        "negative",
+        "receipt",
+        "attack:drop",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "receipt-clash-other-voter",
+      "comment": "v1 holds the receipt of v0's ballot (clash, ALARM: not provable to third parties)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 16,
+              "leaf_hash": "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
+              "sequenced_at": 1793000016,
+              "checkpoint_deadline": 1793000046,
+              "promise_sig": "57aLWRuN0uZYnAdwOxggb6vryIw7kST66oX590CBInVhBCZQ1Yk3+Bbm/YFHuiildBcUCgYV2f/TWyFEheEzAg==",
+              "inclusion": {
+                "tree_size": 23,
+                "path": [
+                  "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
+                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
+                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              }
+            },
+            "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_RECEIPT_CLASH",
+        "failed_checks": [
+          "chk.receipts.sample"
+        ]
+      },
+      "tags": [
+        "negative",
+        "receipt",
+        "attack:clash",
+        "verdict:PASS"
+      ]
+    },
+    {
+      "id": "receipt-two-claimants",
+      "comment": "Two voters claim the same entry",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 16,
+              "leaf_hash": "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
+              "sequenced_at": 1793000016,
+              "checkpoint_deadline": 1793000046,
+              "promise_sig": "57aLWRuN0uZYnAdwOxggb6vryIw7kST66oX590CBInVhBCZQ1Yk3+Bbm/YFHuiildBcUCgYV2f/TWyFEheEzAg==",
+              "inclusion": {
+                "tree_size": 23,
+                "path": [
+                  "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
+                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
+                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              }
+            },
+            "voter": "632ac970c55017ae415f2742fcdb3f6905df555df5ec29dbabe17059e493eb83"
+          },
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 16,
+              "leaf_hash": "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
+              "sequenced_at": 1793000016,
+              "checkpoint_deadline": 1793000046,
+              "promise_sig": "57aLWRuN0uZYnAdwOxggb6vryIw7kST66oX590CBInVhBCZQ1Yk3+Bbm/YFHuiildBcUCgYV2f/TWyFEheEzAg==",
+              "inclusion": {
+                "tree_size": 23,
+                "path": [
+                  "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
+                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
+                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              }
+            },
+            "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_RECEIPT_CLASH",
+        "failed_checks": [
+          "chk.receipts.sample"
+        ]
+      },
+      "tags": [
+        "negative",
+        "receipt",
+        "attack:clash",
+        "verdict:PASS"
+      ]
+    },
+    {
+      "id": "receipt-code-mismatch",
+      "comment": "Recorded ballot code differs from the logged ballot",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/board.json"
+        },
+        "receipts": [
+          {
+            "receipt": {
+              "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
+              "seq": 17,
+              "leaf_hash": "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
+              "sequenced_at": 1793000017,
+              "checkpoint_deadline": 1793000047,
+              "promise_sig": "o9vgoH5TmUXIjZ+NC98/Qd7S2NrQ0m9I4sT3amV6j9JQWFVjyo3gQ5/ad/6A7BghhjxiGJo05f+aAC2XulWvAw==",
+              "inclusion": {
+                "tree_size": 23,
+                "path": [
+                  "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
+                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
+                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
+                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                ],
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              }
+            },
+            "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246",
+            "code": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_RECEIPT_CLASH",
+        "failed_checks": [
+          "chk.receipts.sample"
+        ]
+      },
+      "tags": [
+        "negative",
+        "receipt",
+        "attack:clash",
+        "verdict:PASS"
+      ]
+    },
+    {
+      "id": "notice-waiver-reported",
+      "comment": "Coordinator-signed witness waiver before election-open; gates met anyway: PASS, waiver surfaced (QV-18 REQ-052). Notice records are not QV-16 suite v1 records, so the protocol layer reports them as unknown (class L, chk.encoding.canonical)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/waiver-before-open.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/waiver-before-open.board.json"
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "not_run",
+            "chk.encoding.canonical": "fail",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "notice",
+        "waiver",
+        "surfaces:WITNESS WAIVER"
+      ]
+    },
+    {
+      "id": "notice-waiver-does-not-unblock-open-gate",
+      "comment": "Waiver present, head before election-open has one cosignature: still E_LOG_WITNESS (a waiver never relaxes a gate)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/waiver-before-open.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/waiver-before-open.board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\n2xtc+bcanpsPLSHNvNycFCY+uZp5j7BgDL+24nenhUc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8y1LmHrPC2FYxde/L3JvzN8JFw7RzyX2w2foh1vYLYJQjC+O2segovweWT9/5NLMa/xXR+E3Xw74H/Ex0e6mogs=\n— w1 7y0PGQAAAABq5vGAWEhwGv4o+hnAN2P1mKWtx9sBDQNRg/jgdffobzXejzNAebZsFiRVlvgfZ2P+dlf46AHi6v6wFyhsa+98MJSaDA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\npkUnvotMOVo6MbWaNQGF5PcnnXhb4D83FEF6xTOL1u0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny80gzwvtZueloFuGSyxYXSSBVYdRnnWamI/z53vyw7I7+1of8nf7SCDRRgu/mebHSLrZwDysLRqNfJUNxuGIFtwU=\n— w1 7y0PGQAAAABq5w2g6Nt2EWKtpKAXyjG9lP6AYkgUvxjOnNkT06TCqnWK86D7tspLrw8faG0RD59nagVzXGSNWfZ4PmAxv5qi6qV1BA==\n— w2 a2FBQwAAAABq5w2g8x4KqVLI16n+4Nj0QS9iJP8vS6QuarySsU/kti0MDSC7lYmUsj9tQ/FO1gVMu04ggSqHvcfc6kgWdOMBqCaQAw==\n— w3 JoDrmQAAAABq5w2gAoHeC2yjqLqCrv/knpOmqjguRZb3htylh9kzrP11b9GbiITKO/ZGZaRarWlMKUEKoeXJu/SRqLOmG0TavbU1AA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nexes6e2GVekfuHwJt7NsI3uj6g7M5VHXs8568k1Dl8I=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81W53DmsmEE0UsK6P5udCHORaqD9EEWKE6QJE98EqWhul+Y9WcEmRr0lNHmB5wBSPGhKjEyAd3s+lV9GjsOH5Ac=\n— w1 7y0PGQAAAABq8OMMRablnU3QP9WPrgcYDClaHSqBcVYYHWvZjnYY8RJuK/VX/UYltChnMTvY/9ftN4PSwS6DcxKoHy0M6b6YFDkxCQ==\n— w2 a2FBQwAAAABq8OMM6oFcC3CfdoNKvgn07RoKEfCwZc/L75OQ2YWjl+31FpxtYgQ656czPxc7o5/uh5py7bJU7aItrp6XZFKkM2u+Aw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\n2UUSksYqAz8MW4cRIFxxuO/mxyk1NH1LlVm+Dyq8zt4=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82Y+vEgG7FmhsRTvfHGWn39uk0fdEMKdXDhwIpM7NO1WPzTvNE8syr/PE/TxJQdQ7wtQamPpdrVa8WdWgXAEJgY=\n— w1 7y0PGQAAAABq8ONI80YKRHXCugTcR9Xk3zCNZppPu7FXkLC9dk6twtJ5CqFAqIeJcAl57j84Psf7k7yK+FY6k2EXvyxGYI4X7+O2AA==\n— w2 a2FBQwAAAABq8ONIRAKGYnLBYNePSEQYDjFSg0BfBDJSUsjBfhO2gvRDCi4jkcsLz3n1gr5H/0g1yfJDPNeX+mOdun2qkO4uQ7owCw==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness",
+          "chk.encoding.canonical"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "waiver",
+        "attack:waiver",
+        "surfaces:WITNESS WAIVER",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-waiver-does-not-unblock-tally-gate",
+      "comment": "Waiver between close and tally, no quorum head in [close, tally]: still E_LOG_WITNESS",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/waiver-after-close.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/waiver-after-close.board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w3 JoDrmQAAAABq8OMMAVp0RI3NcPOpxot+ngqUc52Gb3glwHuvqxB1QxezlTQvcQavq4WcP8ycWOqjpx/NWThIyDkT/711BQ0QB79pBw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nwSLGc+nidIWubUse/fT0PegZ/1wO9ITgPSt3HMIcndc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xGWrXPc8JKGEQngwSzJOav5gZ7APaOpGsHtRDpmTmSKQs8vD977QElO3iP5p9hoTcIIeBz/5aR432NF253ywA4=\n— w1 7y0PGQAAAABq8ONIa7W+R4u0CDqK0wVbULIdNYOh/TIlA2jcpve0QQuTlEarImsI7bBL0HE/plurG3Qkhf/l1i6uUr0hq5X5HthfDg==\n— w2 a2FBQwAAAABq8ONIp8x13KXOzP/5Tt+DHWViyj9K5P42EnYNV77tRZnG3h3ZcyakPXdGnbpeVp3m58y6UjET3lIT2la447EzzyU4CA==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_WITNESS",
+        "failed_checks": [
+          "chk.board.witness",
+          "chk.encoding.canonical"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "waiver",
+        "attack:waiver",
+        "surfaces:WITNESS WAIVER",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-waiver-carries-quorum",
+      "comment": "Waiver body carrying a quorum field: closed schema, malformed (a notice cannot restate a threshold)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/waiver-with-quorum-field.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/waiver-with-quorum-field.board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\n37uGfAGRdJPOhusTIFeASx8HGCHs+gnpKbrNEwbeg7o=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+ru93n6N0MJGEZ5VKZLArl5/JAR1dgrKYTJDhAYDGEE3BfDsUt+kZK8xLmwoSvbm8QZcJp8wDhPVLK3IKtXCA4=\n— w1 7y0PGQAAAABq5vGAbiAfBdfGAFBzV8Y/aJSaQCZTqHdtt5FI8+VRKt255Ikf3lKHjJN2Lkv4rsRNZ1vw4I//4UUPSWhgQ1NfEXiQCw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nZh3AFbA+NJMjBJNSbsPGDoYLtjyMXWLlQR2FFxcU4yg=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny86JSGifjvRI3MbxAw53MnwSpscEkFNtTlQbftRjkaBSjUa3l5FRa3nOtG/s5o9ezYAPVcF/AMVHuo3ogX6yn1Aw=\n— w1 7y0PGQAAAABq5w2g5u7ghb1z/jauXxmcQ0FJRwT7nTjKhdUEpz6QsPXAnS7dbvojbmKJS7Uocrsvpl566MGlyp4tQ7m5LmM5Cs2JBA==\n— w2 a2FBQwAAAABq5w2gT2RrRQxviFD9i2atE7XqltzJ4IgiURYInTntuCR86XZRVWu4+mBLRCzxci3x1DTNJHGxwtHt/xIflpMe4XBzBg==\n— w3 JoDrmQAAAABq5w2g9zSwOQphuiLJ0XzI6bS28S1WPLbVW8rjBql6RdUHXELvi9rvYfE45nkd1X7xqRJvjihM7XMG96jCphc1HYe2Bg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nF2o4KGMjroRAdpl8xtFIu2PCQTEocHuhDMOh+EZK0eY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xOz2sqXRKqPqTLCgPymkAd5yVF59YUE2/nFMIRTflOAceRm1CEQvRlOydk0P+GCIlwmLvndQQeQupRqG0jQ9Qg=\n— w1 7y0PGQAAAABq8OMM19x91IoqQRjNGgBUXjWNBMlKug/iWkfTMhEz9z6w4DEOjQo2Fjd+eSG0FcTLJvjF2zIi8HrLbJeT2p8MeOQkCA==\n— w2 a2FBQwAAAABq8OMMTxXKUKMUAkzMd+on+0j2IN5XuLnHsOEOqzoVq76HyYpy3sVF614jHN0UIUmSfljrBAnRLX7or9kIzkT/JliMDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\ndIfq+bxjQSy0i/Rd0nf+u2zdPx0F1k2vA8b32LzRB5Y=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8z1Hg1PYspBpbFeSvURiTjlHSl1e/wCbs5Hn1ZPcxHocGsIBmALqHUpTei6YHNHyCju6qkfC68B2+fc3og8c+gk=\n— w1 7y0PGQAAAABq8ONIxe6HtB+rkKLpIOv+alSJEaodheSKKEd5FBUku/EzEIQtzNF1hBkizCtuibZj9qJ73RO+9PM5TlyF4k+mYVwDAw==\n— w2 a2FBQwAAAABq8ONIoruTKXGoVjyWrav496PII6WaShNb7/DLpkOdTg1ZjnNDSjhCQ3BcjuphUoK0w/BtDVMj5A6iO4ep0RbrIAeWCA==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_FORMAT",
+        "failed_checks": [
+          "chk.board.append_only",
+          "chk.board.witness",
+          "chk.encoding.canonical"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "waiver",
+        "attack:waiver",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-waiver-by-trustee",
+      "comment": "Waiver authored and signed by a trustee key, not a coordinator (QV-18 REQ-052)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/waiver-by-trustee.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/waiver-by-trustee.board.json"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_BINDING",
+        "failed_checks": [
+          "chk.board.append_only",
+          "chk.encoding.canonical"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "waiver",
+        "authority",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-waiver-record-not-coordinator-signed",
+      "comment": "Entry header by the coordinator but the record signature is a voter key: fewer than m coordinator signatures",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/waiver-record-sig-not-coordinator.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/waiver-record-sig-not-coordinator.board.json"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_BINDING",
+        "failed_checks": [
+          "chk.board.append_only",
+          "chk.encoding.canonical"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "waiver",
+        "authority",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-waiver-wrong-entry-type",
+      "comment": "Waiver record carried in an `anchor` entry",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/waiver-in-anchor-entry.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/waiver-in-anchor-entry.board.json"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_BINDING",
+        "failed_checks": [
+          "chk.board.append_only",
+          "chk.encoding.canonical"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "waiver",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-extension-reported",
+      "comment": "Coordinator extension notice before election-close, close witnessed on time: PASS, extension surfaced, not applied",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/extension-before-close.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/extension-before-close.board.json"
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "verdict": "PASS",
+          "checks": {
+            "chk.manifest.hash": "pass",
+            "chk.manifest.sig": "pass",
+            "chk.keys.trustees": "pass",
+            "chk.board.append_only": "pass",
+            "chk.board.witness": "pass",
+            "chk.ballots.valid": "pass",
+            "chk.ballots.latest": "pass",
+            "chk.tally.aggregate": "pass",
+            "chk.tally.decrypt": "pass",
+            "chk.result.rules": "pass",
+            "chk.benaloh.spoiled": "pass",
+            "chk.receipts.sample": "not_run",
+            "chk.encoding.canonical": "fail",
+            "chk.time.window": "pass"
+          }
+        }
+      },
+      "tags": [
+        "kat",
+        "notice",
+        "extension",
+        "surfaces:EXTENSION"
+      ]
+    },
+    {
+      "id": "notice-extension-does-not-move-close",
+      "comment": "Extension notice before close, close witnessed after voting_close + skew: still E_TIME_WINDOW (suite v1 has no extension record, QV-16 §5.14.3)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/extension-before-close.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/extension-before-close.board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nTKJVfke85PkoKU4kQriyr6Jgo3CXrPOO3HEHoIodGAM=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny869GVOryhqYRios+WrIDF8c8ZV1ixSCLesXLxboIDNCPkpdztxztKLNPIC1EoJkneCZrlrI2zlA11p9QC+RZ+wA=\n— w1 7y0PGQAAAABq5w2gP8eIJKMCdOSAi2m7hP1BcRu6qf8RwG8IfDBr/y4VKRTkEIEMmHxGMsQub2m+lRUJGfj/UmDmtbnX2XzqR3AjCw==\n— w2 a2FBQwAAAABq5w2gqGJt9+CkcB8Z0Iuu/+LKYWdCIDAvc1WExu55x3ueeYb5pc8FPCfTDxPIMln00coBElayx1RoA9zPUXJjxv1JCw==\n— w3 JoDrmQAAAABq5w2gu4dYOeXasg65amvpPom4/Ekg8j808oj9dOqh9TdGc02pZkRoZ5cbfqgUTftdd5IuJ0tGBIKtfFhqdLSWjFp4Aw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nT1g/OIyBh2pzZhCQmDmHjDwB9rTyNhLWvbQGwgjjFcA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny899ZMPMbyiLA3NQIa573WUHfyviZgyXX7APRiQKd7IgwTePitpYZsCnszsOq09XeOaN+eHgs5PJQM/hv6KLzxww=\n— w1 7y0PGQAAAABq8OP9EaG5ViaHw1Z2OZwm1UykdFFjrDe4wO7xxDS9ALuKY/UpGVe+3WGWBzbaE50vIubi4qpXYrqXUFriUaO5jnvdAA==\n— w2 a2FBQwAAAABq8OP9TtfbjYZDRvz7g/Qlb/6XQ8wXnSYasWhUuLK5EVoXkDGQBxXFvZT7oYdSLuKOzBcoB5Zz8RYjYMg4qhmAPJmqBw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nz2ztgBYcvLaxQ7vxDuB3pJYHpi7ZgYDHuwM0klBqKP8=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny80yJZweajAbKfACPENQIp4sngt2LGCphXXS5Wvpp2VjX9gHlz/WlvefOJAMnu0HHiCZfyVMWbxbKsNHm1FRdZwg=\n— w1 7y0PGQAAAABq8QX4M2vJUhlDA5I7ZuFmMe7AORD+2osnud8f+PQ0Jca0lgfkCWmZUJnrp3MujBGXIEJzvGMg4iptuLM2Hxksb1y7DA==\n— w2 a2FBQwAAAABq8QX4MeKpu0hZru/IrxVC8sxkO8Ks0pf9R1MiejyWsRlOCXCPGuEY9XvW5ZkUZT/gRHrqlu09cguh4v9GqqFFoNnOBw==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_TIME_WINDOW",
+        "failed_checks": [
+          "chk.board.witness",
+          "chk.encoding.canonical",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "extension",
+        "attack:extension",
+        "surfaces:EXTENSION",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-extension-retroactive",
+      "comment": "Extension notice sequenced after election-close (QV-03 §5.5: only before close)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/extension-after-close.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/extension-after-close.board.json"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_TIME_WINDOW",
+        "failed_checks": [
+          "chk.encoding.canonical",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "extension",
+        "attack:extension",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-pause-resume-do-not-move-close",
+      "comment": "Pause/resume during voting, close witnessed after voting_close + skew: still E_TIME_WINDOW (halt credit not applied)",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/pause-resume.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/pause-resume.board.json",
+          "replace": {
+            "checkpoints": [
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n6WmbO7LHDXgbonEPUC4R+E0n3d6w6wB5DGLAa04SDOs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xFs7sieMFFJY4h+UlBzTOIDoLDHhyDvfXYR3M0fhYOaSPo6jrpx7UEIsA2kR7h/l04fqGzfWDlZcJRByVJfegs=\n— w1 7y0PGQAAAABq5w2g6cSpcTL8soIVjyTOGDwOh9P5Wsip2jPa/H5qgY7QJa6cr+6eCUWcq+BZugsEFrs9byLrHQ9IecPu0NNnPj+PBg==\n— w2 a2FBQwAAAABq5w2g5ze4xlH7Ba9qYySyzcL/CywgNTTBDscyabEZF+CbkZH/bTe5dLYJ8jMgTjcHeaZmZcwiT6QzzujxARtZn5E5Bw==\n— w3 JoDrmQAAAABq5w2g9hn4bAxQbE3B0zcTpA9BxgQN5lCYGCO9/5oiZO67VITmwIZbNytJ4BUivZdiyTnOleRwOUXTubJ9ylwPavzJBw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzdEwWKh9Bpx6Pg/gM2gupMjtTKfkgXSB62qv71cDRGY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny85dHedDGxFUXp16fyjHvTteumuzRyOodSF6dkgWOdyYlvghiMPA8QSurQYvRTNWEWurDCM2Sr+Z+0XemVU/4zQo=\n— w1 7y0PGQAAAABq8OP9kStOit/imbDXB6h/BmatH5NVnS6+MF/Z3ArJKLVrwXdGqD9dqZdPmw4OfGHABeThCdZ+GnUGKCxQcJZUfiZyCw==\n— w2 a2FBQwAAAABq8OP9GFJ8coif4iqbyFyxp6VGmhNAFFLaT7TCp3iDV7UR27TGq6hgtkeO7TBNBw/S/oEsHN6/w6mTA6zCX2HKSOA9Dw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n25\nXePS7z5LjXbX8fTdfFL0C2LjfaLTTiVbEAktUcH1l6Q=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8wCQHwFZf1yKw+8cgFVZ5lwGydj3TvhQi4PK4Ut2gsCc1S+/S7+P0AGjKS+4yVCyhwz65WUy1RxwAsYnAf6YTwg=\n— w1 7y0PGQAAAABq8QX4BvpqSWUP5WmgB8yZB5Zp7qdaCVvoKzqWiKbLzOLCVs7iKTZKkZfMN7rLIRHnsgf4KfgXytYTRMABVHftnqi4AQ==\n— w2 a2FBQwAAAABq8QX4y8bkdmdxgqtPijir3yc/5bD3GrhJElH/S6ZPUBFln6aFCQvGjcsC1Acqwavg4A9m3B6IgSVNbHyxGNouAdEJDg==\n"
+            ]
+          }
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_TIME_WINDOW",
+        "failed_checks": [
+          "chk.board.witness",
+          "chk.encoding.canonical",
+          "chk.time.window"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "control",
+        "surfaces:PAUSE",
+        "surfaces:RESUME",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-unknown-kind",
+      "comment": "Coordinator-signed control record with an unknown action: fail closed",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/unknown-kind.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/unknown-kind.board.json"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_BINDING",
+        "failed_checks": [
+          "chk.board.append_only",
+          "chk.encoding.canonical"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "fail-closed",
+        "verdict:FAIL"
+      ]
+    },
+    {
+      "id": "notice-unrecognised-body",
+      "comment": "A `notice` entry whose body is neither a DKG marker nor a control record: fail closed",
+      "input": {
+        "bundle": {
+          "path": "elections/log-layer-4v/notices/unrecognised-body.bundle.json"
+        },
+        "board": {
+          "path": "elections/log-layer-4v/notices/unrecognised-body.board.json"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_LOG_BINDING",
+        "failed_checks": [
+          "chk.board.append_only",
+          "chk.encoding.canonical"
+        ]
+      },
+      "tags": [
+        "negative",
+        "notice",
+        "fail-closed",
+        "verdict:FAIL"
+      ]
+    }
+  ]
+}

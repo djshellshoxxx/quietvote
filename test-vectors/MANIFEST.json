@@ -2,7 +2,7 @@
   "protocol_version": "qv1",
   "generator": "vecgen@0.1.0",
   "signature": "unsigned (release job signs)",
-  "merkle_root_sha256_rfc9162": "f725dc9d458bf1a44b3fcbcc63173dcbffe60386d8ce006fb5ef512c97c65c5d",
+  "merkle_root_sha256_rfc9162": "924f376eeefc5646ce95f6ce9e6e9533017c17c8910b4369826468aadcce864e",
   "files": [
     {
       "path": "README.md",
@@ -23,6 +23,118 @@
     {
       "path": "v1/canary/expected-report.json",
       "sha256": "a1ec032b1bc636d062a10fd44bdd31ed28d7e260acbbb524cbe21bc5181541e0"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/adv-board.json",
+      "sha256": "9a10001630cf02ecd0d2044ab1e03989b5e61e798e669174687d3a45c54d0f7d"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/adv-bundle.json",
+      "sha256": "047588ba1baa9ed919a3d3bb3ad7cbfb5fc5ac511606ba6af0eb3f8f94bc5815"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/board.json",
+      "sha256": "40c9516189ffd6461733c85c44a5487b3a5cbf0c3b630a1c3c4ef9236e83a016"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/bundle.json",
+      "sha256": "6ced498e0472b6a8242bcac5df65a777e4fed4a5912689f6bd0d5e4a5dc561e7"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/expected-report.json",
+      "sha256": "44de1773c8818ba3e6db37927a1f49c8afd9f1248750fc5ed95853364abbfed7"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/extension-after-close.board.json",
+      "sha256": "90f12a492fcf6cde93d68f43fbadcef74f5c9358b7afdfc57a44bfb153aaa5fe"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/extension-after-close.bundle.json",
+      "sha256": "f7bf6e265e47b5ff130a874c6b55b2dd55a0ad813c4a5c012100bc1e15bd9718"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/extension-before-close.board.json",
+      "sha256": "5f6bacf3acb85ffc26d0dd99648e07f40421f5956520e88a0b9d5b72f85afd8f"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/extension-before-close.bundle.json",
+      "sha256": "eed4bc299b104278cc1bb00a24cbf5cc23c18bffbab2581760e1234ba82284c2"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/pause-resume.board.json",
+      "sha256": "69a03c480774798fd6e5fb755ea7942868286fb1d0ee0be6c9e21ddae057398b"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/pause-resume.bundle.json",
+      "sha256": "4f03289e0dbfcd33c3fd462ed2a9a090641bbd9d22f37355d32e7ccdeb93e348"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/unknown-kind.board.json",
+      "sha256": "7ca21e939e58fabd4a25a7568b5185d4f08472b7b4d57ee9d535c88e55e11452"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/unknown-kind.bundle.json",
+      "sha256": "12424895033603c344d3aa87ee1b2aa9614f41aee14ed0f97c2930f66ab7222f"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/unrecognised-body.board.json",
+      "sha256": "18a4695a5ba51113eb70b0522949c62abe53a0998e94d1784ee7f8ac03f516e9"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/unrecognised-body.bundle.json",
+      "sha256": "357d16379a973aa0405dc2834b418c963eea93bfaf70ca6bfb66b808e99e7968"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-after-close.board.json",
+      "sha256": "cfbcd735cb1f603d1325f2ad94106cf34b92067de7e1e5343ae505f180b3cea0"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-after-close.bundle.json",
+      "sha256": "709bfcf8389718f9f1f1a10ebb6b8829ea1fc324df0cfc402c2dd04ac672cd75"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-before-open.board.json",
+      "sha256": "ef5c0836217d78c3d0b1a894268160c748f640df698a0028efaa5e71c1b1b505"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-before-open.bundle.json",
+      "sha256": "3b7ad6028720217a4393cdb1b520d202d1bfa39a15a7c67735fe5474c027c50a"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-by-trustee.board.json",
+      "sha256": "79a08a2496b009f3150561f6bd62927990c49ad92bef12ac05052e78cbd6c66c"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-by-trustee.bundle.json",
+      "sha256": "aa41bb9eaf63e0e32dc05990a8be9dfc84f1645bc2080a283087afdf4f5d950c"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-in-anchor-entry.board.json",
+      "sha256": "e6abf9daf766d47c2faca034f3b6ae784519a5c585c540f71dd349ab506c9972"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-in-anchor-entry.bundle.json",
+      "sha256": "3b7ad6028720217a4393cdb1b520d202d1bfa39a15a7c67735fe5474c027c50a"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-record-sig-not-coordinator.board.json",
+      "sha256": "15f0428787bd984168f9bb27430c3db369d504c0f447770e43047233c8ec4e9b"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-record-sig-not-coordinator.bundle.json",
+      "sha256": "3d7e0a184cf84e69b647721cd9accd7e4646ded5f436370620c6d4d8ab169b15"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-with-quorum-field.board.json",
+      "sha256": "be55f29d34cd6ec111990fb5a9379c629da932b08fb9e4f2ebe6067f684c9b14"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/notices/waiver-with-quorum-field.bundle.json",
+      "sha256": "94100acd20be2d28ca9f1d32c2f5716e669d7979d0245c1b11d0916fab439752"
+    },
+    {
+      "path": "v1/elections/log-layer-4v/vectors.json",
+      "sha256": "fef01d3db8287ec6f33f1cb1c842daf0d9167dea5950248837dea4f3f78e851e"
     },
     {
       "path": "v1/elections/small-approval-20v/bundle.json",

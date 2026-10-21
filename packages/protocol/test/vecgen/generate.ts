@@ -14,6 +14,7 @@ import {
 import {
   bundleOf, buildManifest, castBallot, clone, closeElection, defaultContests, kp, publishTally, setup, spoilBallot, type Faults, type Sim,
 } from '../helpers/sim.ts';
+import { generateLogLayer } from './loglayer.ts';
 
 const H = bytesToHex;
 const J = (o: unknown): string => JSON.stringify(o, null, 2) + '\n';
@@ -496,6 +497,9 @@ export async function generateAll(): Promise<Map<string, string>> {
     assert(failed.join() === ['chk.ballots.valid', 'chk.tally.aggregate'].join(), `canary: ${failed.join()}`);
     put(f('canary', 'canary-election.json'), b);
     put(f('canary', 'expected-report.json'), expectedOf(r)); }
+
+  // ------------------------------------------------------------------ log layer (QV-18 / logcheck X-21..X-34), additions only
+  await generateLogLayer(put, (s, o, d, g, v) => envelope(s, o, d, g, v as Vec[]), assert, expectedOf);
 
   // ------------------------------------------------------------------ schema, registries, README
   put(f('..', 'schema', 'error-codes.json'), { $comment: 'Map from QV-16 §5.20 codes (used in vectors) to QV-34 §9.2 registry codes where one exists. Codes without a registry entry are used verbatim.', map: ERROR_MAP });
