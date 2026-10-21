@@ -53,8 +53,6 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
 * `max_per_voter`/`max_spoils` overruns answer 429 `REVOTE_LIMIT` with `retryable:false` (QV-09 table).
 
 ## Event stream and webhooks (QV-09 §9, §6.3; QV-09-REQ-010/014)
-* **Quarantine registry flag**: control.sqlite migration 4 adds `election_registry.quarantine` (nullable JSON/reason). `Election` mirrors
-  its forced or board quarantine there via `ControlDb.setQuarantineFlag`; the election DB stays authoritative. `imported` is read from `election.imported`.
 * **Outbox**: election DB migration 2 adds the QV-28 `event` table (types `entry|checkpoint|phase|witness|alert`, P0 data only, no entry bodies).
   `entry` + `checkpoint` rows are written in the SAME transaction as the append; `phase`/`alert` rows right after (a crash in between can lose a
   phase row, never an entry; clients can always resync from the log). `witness` rows are written when a valid new cosignature is attached.
