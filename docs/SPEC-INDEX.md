@@ -30,6 +30,25 @@ This is the entry point for product and engineering specifications. Specs are in
 | QV-12 | [Operations and administration](12-operations-administration.md) | Provisioning, support, incident response, upgrades | QV-08, QV-11 | Framework |
 | QV-13 | [Accessibility and localization](13-accessibility-localization.md) | Accessibility, language, device and network support | QV-10 | Framework |
 | QV-14 | [Business and sustainability](14-business-sustainability.md) | Funding model, pricing, governance, sustainability | QV-00, QV-08, QV-12 | Framework |
+| QV-16 | [Cryptographic protocol](16-crypto-protocol.md) | Byte-level ballot, DKG, proof, tally and verifier protocol | QV-04, QV-07 | Draft |
+| QV-17 | [Key ceremony and trustees](17-key-ceremony-trustees.md) | Trustee roles, DKG ceremony, share custody | QV-16 | Draft |
+| QV-18 | [Bulletin board and transparency](18-bulletin-board-transparency.md) | Merkle log, witnesses, receipts, mirrors | QV-16 | Draft |
+| QV-19 | [Client and supply chain](19-client-supply-chain.md) | Web client, reproducible builds, release integrity | QV-08, QV-16 | Draft |
+| QV-20 | [Voting methods](20-voting-methods.md) | Encodings, proofs and tallies per method | QV-16 | Draft |
+| QV-21 | [Research notes](research/) | Security, protocol, legal and landscape research (R-01…R-04) | — | Active |
+| QV-22 | [Roadmap](plan/ROADMAP.md) | Phases, milestones, work breakdown | All | Draft |
+| QV-23 | [Backlog / to-do](plan/BACKLOG.md) | Prioritised task list with spec traceability | QV-22 | Draft |
+| QV-24 | [Traceability matrix](24-traceability-matrix.md) | Requirement → design → test → evidence | All | Draft |
+| QV-25 | [Legal, compliance, licensing](25-legal-compliance-licensing.md) | Licences, GDPR roles, export, terms | QV-14 | Draft |
+| QV-26 | [Network and metadata privacy](26-network-metadata-privacy.md) | Transport, Tor, timing, anonymity sets | QV-07, QV-08 | Draft |
+| QV-27 | [Project governance and release](27-project-governance-release.md) | Maintainers, releases, deprecation | QV-14 | Draft |
+| QV-28 | [Data model and storage](28-data-model-storage.md) | Schema, retention, export | QV-09 | Draft |
+| QV-29 | [Abuse and DoS prevention](29-abuse-dos-prevention.md) | Spam, flooding, moderation | QV-07 | Draft |
+| QV-30 | [Engineering standards](30-engineering-standards.md) | Repo layout, CI, coding rules | QV-08 | Draft |
+| QV-31 | [Telemetry and observability](31-telemetry-observability.md) | Privacy-preserving metrics and logs | QV-12 | Draft |
+| QV-32 | [Federation and decentralization](32-federation-decentralization.md) | Relays, witnesses, P2P roadmap | QV-18 | Draft |
+| QV-33 | [Vulnerability disclosure](33-vulnerability-disclosure.md) | Coordinated disclosure, bounty, [SECURITY.md](../SECURITY.md) | QV-07 | Draft |
+| QV-34 | [Test vectors and conformance](34-test-vectors-conformance.md) | Known-answer vectors, cross-implementation suite | QV-16 | Draft |
 | QV-15 | [Decision log](decision-log.md) | Durable record of accepted decisions | All | Active |
 
 ## Proposed completion order
