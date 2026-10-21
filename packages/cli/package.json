@@ -19,5 +19,10 @@
   "files": [
     "bin",
     "src"
-  ]
+  ],
+  "dependencies": {
+    "@quietvote/board": "*",
+    "@quietvote/crypto": "*",
+    "@quietvote/protocol": "*"
+  }
 }

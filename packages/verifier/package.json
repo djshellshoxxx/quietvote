@@ -19,5 +19,10 @@
   "files": [
     "src",
     "canary"
-  ]
+  ],
+  "dependencies": {
+    "@quietvote/board": "*",
+    "@quietvote/crypto": "*",
+    "@quietvote/protocol": "*"
+  }
 }
