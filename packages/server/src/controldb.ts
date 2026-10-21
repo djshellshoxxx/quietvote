@@ -62,7 +62,38 @@ CREATE TABLE webhook (
 CREATE INDEX webhook_org ON webhook(org_id, election_id) WHERE disabled_at IS NULL;
 `,
   },
+  {
+    version: 3,
+    name: 'webhook_retry_state',
+    // Persisted delivery state (QV-09 §6.3): consecutive terminal failures per hook, and the pending outbox of deliveries that
+    // are queued, in flight or waiting for a retry. A row is removed when its delivery succeeds, fails for good, or is pruned.
+    // `body` is the public P0 event payload only (the same bytes the receiver gets); no URL or secret is stored here.
+    sql: `
+ALTER TABLE webhook ADD COLUMN failures INTEGER NOT NULL DEFAULT 0 CHECK (failures >= 0);
+CREATE TABLE webhook_outbox (
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  delivery_id TEXT NOT NULL UNIQUE,
+  webhook_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  body TEXT NOT NULL,
+  attempt INTEGER NOT NULL CHECK (attempt >= 1),
+  next_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL) STRICT;
+CREATE INDEX webhook_outbox_hook ON webhook_outbox(webhook_id);
+`,
+  },
 ];
+
+export interface OutboxRow {
+  seq: number;
+  delivery_id: string;
+  webhook_id: string;
+  event_type: string;
+  body: string;
+  attempt: number;
+  next_at: number;
+  created_at: number;
+}
 
 export interface WebhookRow {
   webhook_id: string;
@@ -73,6 +104,7 @@ export interface WebhookRow {
   events: string;
   created_at: number;
   disabled_at: number | null;
+  failures: number;
 }
 
 export interface AccountKey {
@@ -210,10 +242,54 @@ export class ControlDb {
     return all<WebhookRow>(this.db, 'SELECT * FROM webhook WHERE org_id=? AND disabled_at IS NULL AND (election_id IS NULL OR election_id=?)', orgId, electionId);
   }
   deleteWebhook(id: string): void {
-    run(this.db, 'DELETE FROM webhook WHERE webhook_id=?', id);
+    this.tx(() => {
+      run(this.db, 'DELETE FROM webhook_outbox WHERE webhook_id=?', id);
+      run(this.db, 'DELETE FROM webhook WHERE webhook_id=?', id);
+    });
   }
   disableWebhook(id: string): void {
-    run(this.db, 'UPDATE webhook SET disabled_at=? WHERE webhook_id=? AND disabled_at IS NULL', this.now(), id);
+    this.tx(() => {
+      run(this.db, 'DELETE FROM webhook_outbox WHERE webhook_id=?', id);
+      run(this.db, 'UPDATE webhook SET disabled_at=? WHERE webhook_id=? AND disabled_at IS NULL', this.now(), id);
+    });
+  }
+  /** Sets the consecutive terminal-failure count and returns the stored value. */
+  setWebhookFailures(id: string, n: number): number {
+    run(this.db, 'UPDATE webhook SET failures=? WHERE webhook_id=?', n, id);
+    return n;
+  }
+
+  // ---- webhook outbox (pending deliveries survive restarts; WebhookService is the only writer)
+  outboxCount(): number {
+    return get<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM webhook_outbox')?.n ?? 0;
+  }
+  outboxInsert(r: { delivery_id: string; webhook_id: string; event_type: string; body: string; attempt: number; next_at: number }): void {
+    run(this.db, 'INSERT INTO webhook_outbox(delivery_id,webhook_id,event_type,body,attempt,next_at,created_at) VALUES (?,?,?,?,?,?,?)',
+      r.delivery_id, r.webhook_id, r.event_type, r.body, r.attempt, r.next_at, this.now());
+  }
+  /**
+   * Removes the oldest rows (by insertion order) whose ids are not in `skip` until at most `keep` such rows remain.
+   * Returns the removed delivery ids. Rows are only scanned when the table is over `keep` in total.
+   */
+  outboxPruneTo(keep: number, skip: ReadonlySet<string> = new Set()): string[] {
+    const limit = Math.max(0, keep);
+    if (this.outboxCount() <= limit) return [];
+    const candidates = all<{ delivery_id: string }>(this.db, 'SELECT delivery_id FROM webhook_outbox ORDER BY seq')
+      .map((r) => r.delivery_id)
+      .filter((id) => !skip.has(id));
+    const ids = candidates.slice(0, Math.max(0, candidates.length - limit));
+    for (const id of ids) run(this.db, 'DELETE FROM webhook_outbox WHERE delivery_id=?', id);
+    return ids;
+  }
+  outboxAll(): OutboxRow[] {
+    return all<OutboxRow>(this.db, 'SELECT * FROM webhook_outbox ORDER BY seq');
+  }
+  outboxDelete(deliveryId: string): void {
+    run(this.db, 'DELETE FROM webhook_outbox WHERE delivery_id=?', deliveryId);
+  }
+  /** Schedules the next attempt. Returns false when the row is gone (pruned or its webhook was removed). */
+  outboxReschedule(deliveryId: string, attempt: number, nextAt: number): boolean {
+    return Number(run(this.db, 'UPDATE webhook_outbox SET attempt=?, next_at=? WHERE delivery_id=?', attempt, nextAt, deliveryId).changes) === 1;
   }
 
   // ---- idempotency (QV-09 §4.4)
