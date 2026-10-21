@@ -22,7 +22,7 @@ export const systemRng: Rng = {
 export function streamRng(seed: Uint8Array | string): Rng {
   const s = typeof seed === 'string' ? utf8(seed) : seed;
   let counter = 0n;
-  let buf = new Uint8Array(0);
+  let buf: Uint8Array = new Uint8Array(0);
   return {
     bytes(n: number): Uint8Array {
       while (buf.length < n) {

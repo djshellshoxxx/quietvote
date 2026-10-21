@@ -109,7 +109,7 @@ Lineage: Benaloh, "Simple Verifiable Elections" (EVT 2006), as used in Helios/El
 stateDiagram-v2
   [*] --> Selecting
   Selecting --> Encrypted: user confirms choices (client encrypts with fresh randomness)
-  Encrypted --> Committed: show ballot tracking code H = hash(ciphertexts) BEFORE any choice
+  Encrypted --> Committed: show ballot tracking code (QV-16 `ballot_code` over ctx and the canonical ballot body) BEFORE any choice
   Committed --> Cast: user selects CAST
   Committed --> Audit: user selects AUDIT
   Audit --> Spoiled: reveal plaintext + randomness, post spoiled ballot to board
@@ -121,7 +121,7 @@ stateDiagram-v2
 
 Normative UX/behaviour:
 - The tracking code (and QR) is displayed and the ciphertexts are **fixed in memory** before the CAST/AUDIT buttons are enabled; the choice buttons have equal visual weight; "AUDIT" is explained in one sentence.
-- AUDIT shows: tracking code, plaintext selections, randomness, and a `qv-audit:` link/QR. A **second device** (or the CLI / offline verifier page) loads the spoiled ballot by tracking code from the board (or accepts pasted/scanned data), re-encrypts with the revealed randomness and the election public key, and confirms ciphertext equality and the displayed choices.
+- AUDIT shows (to the voter and, by audit package, to the voter's second device; not published unless the voter opts in, QV-ADR-020): tracking code, plaintext selections, randomness, and a `qv-audit:` link/QR. A **second device** (or the CLI / offline verifier page) loads the spoiled ballot by tracking code from the board (or accepts pasted/scanned data), re-encrypts with the revealed randomness and the election public key, and confirms ciphertext equality and the displayed choices.
 - Spoiled ballots are published on the board and never tallied. The UI states that an audited ballot reveals its contents and must not be the voter's real vote, so the voter re-selects after auditing. Voters are encouraged to audit with arbitrary choices and then vote normally.
 - The default flow requires an explicit decision each time (no "remember my choice" to skip auditing). The manifest may set a *recommended* audit count (default 1); it is advisory, not enforced.
 - After CAST: the client signs, submits, verifies the inclusion proof and STH signature, stores the receipt in IndexedDB (and offers download), and checks consistency with the previously stored STH.

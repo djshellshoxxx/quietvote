@@ -78,7 +78,7 @@ All requirements are normative. "Verification" names the primary method; QV-34 v
 | QV-16-REQ-022 | Secret key material of the DKG (coefficients, shares, ElGamal randomness, voter nonce key) shall never be logged or transmitted unencrypted; trustee shares shall be destroyed after the audit window (ADR-013). | Must | Log-scrub test; ceremony checklist (QV-17). | Review |
 | QV-16-REQ-023 | The Phase 2/3 interface hooks of §5.21 shall be implemented as an `AuthScheme` abstraction in Phase 1 so that adding a scheme requires no change to ballot proofs, aggregation or tallying. | Should | Phase 1 code passes tests with a mock second scheme. | Unit |
 | QV-16-REQ-024 | Tie-break, quorum and threshold rules from the manifest shall be evaluated with exact integer arithmetic (no floating point). | Must | Vector tests including boundary equality cases. | Unit |
-| QV-16-REQ-025 | A spoiled ballot decryption mode by trustees (§5.13.4) should be supported in addition to the mandatory randomness-reveal mode. | Should | Spoiled ballot decrypted with valid CP proofs and matches reveal result. | Unit |
+| QV-16-REQ-025 | The trustee spoiled-ballot decryption mode (§5.13.4) may be supported but shall be disabled unless the manifest enables it (QV-ADR-020); the randomness-reveal mode (private by default, published on opt-in) is mandatory. | Should | Spoiled ballot decrypted with valid CP proofs and matches reveal result. | Unit |
 
 ---
 
@@ -258,7 +258,8 @@ Roll leaves (§5.6.2) and the counted-ballot root (§5.19) use plain RFC 9162 ha
 - `min_selections` shall be `0` in suite v1 (blank/abstain ballots are permitted; "exactly k" is enforced by presentation and counted as undervote otherwise). Non-zero values are reserved.
 - `rule` (outcome threshold) and `tie_break`: exact-integer semantics, §5.19.3. `tie_break.type` ∈ `status-quo` (named option wins ties), `declare-tie` (no winner), `lexicographic` (smallest `option_id` among tied wins; deterministic but arbitrary and shall be flagged as such in the UI), `beacon` (reserved: tie resolved by a pinned public randomness beacon round, parameters to be fixed by QV-20; verifiers shall reject `beacon` in suite v1 until QV-20 defines it).
 - `quorum`: `fraction` (`num/den` of `basis`) or `count` (absolute number of counted voters) or absent. Basis `roll` = `roll.size`. Participation is counted voters, i.e. voters with a counted cast ballot (abstaining ballots count as participation).
-- `roll.root`: RFC 9162 Merkle tree hash over leaves as in §5.6.2; `size` = number of leaves.
+- `roll.root`: RFC 9162 Merkle tree hash over leaves as in §5.6.2; `size` = number of leaves. Per QV-ADR-015, `root`/`size` are optional in the manifest (static-roll mode); when absent the authoritative root is that of the organizer-signed `roll_commit` entry bound by `election_open` (QV-18), and when present it shall equal it.
+- `min_counted_ballots` (QV-ADR-021): integer ≥ 3, default 5 (3 if roll < 8); with `privacy_ack: true` required when < 10. Trustees shall not release decryption shares, and verifiers shall mark the result INVALID, if `V` is below it (`E_BELOW_FLOOR`).
 - `trustees`: exactly `n` entries, `index` = 1…n in order; `sign_pk` distinct Ed25519 keys (long-lived trustee identity). `1 ≤ t ≤ n ≤ 32`. `t = 1` is allowed but the manifest validator shall mark the election "no threshold protection" for UI purposes.
 - `coordinator.keys`: `m`-of-`k` Ed25519 keys authorised to sign phase-control records (open/close markers, DKG deadlines). The coordinator has *no* secrecy or integrity power over tallies: the worst abuse is mis-timing a phase, which is detectable (witnessed tree-head times vs manifest times).
 - `bb.log_pk`: the log's signing key for tree heads (QV-18); `witness_quorum`: number of witness cosignatures required on tree heads for the verifier to treat timestamps as trusted.
@@ -592,10 +593,10 @@ Submission envelopes:
 
 ```json
 { "intent": "cast",  "body": { …ballot body… }, "sig": "<hex64>" }
-{ "intent": "spoil", "body": { … }, "reveal": { "xi": "<hex64>", "selections": { "budget": ["yes"] } }, "sig": "<hex64>" }
+{ "intent": "spoil", "body": { … }, "reveal_digest": "<hex32 or 64 zeros>", "reveal": { "xi": "<hex64>", "selections": { "budget": ["yes"] } }, "sig": "<hex64>" }
 ```
 
-The `reveal` object is optional (absent ⇒ trustee-decryption mode, §5.13.4). Cast and spoil signatures are over different labels so a spoil record can never be re-presented as a cast.
+The `reveal` object is optional. **Spoil modes (QV-ADR-020):** (a) `reveal` present: published reveal (voter opt-in); (b) `reveal` absent and `reveal_digest` ≠ 32 zero bytes: **private audit (default)** — the reveal is delivered only to the voter's second device/verifier, the log carries the signed `reveal_digest`; (c) `reveal` absent and `reveal_digest` = zeros: trustee-decryption mode (§5.13.4), valid only if the manifest enables it (off by default in suite v1). Cast and spoil signatures are over different labels so a spoil record can never be re-presented as a cast.
 
 **Verification of the signature shall be strict:** reject `S ≥ ℓ`, reject non-canonical or small-order `voter` keys, and use the cofactorless-equivalent strict RFC 8032 check (noble-curves `verify(sig, msg, pk, { zip215: false })` `[UNVERIFIED-OFFLINE: option name]`). Rationale: signature malleability and verifier disagreement (ZIP-215 vs RFC 8032 acceptance sets differ) would otherwise allow two verifiers to disagree on validity.
 
@@ -620,7 +621,7 @@ stateDiagram-v2
 1. Client builds the ballot (`§5.9–5.12`) and computes `ballot_code`. The ballot body is **frozen**; the client displays `ballot_code` (and a QR of it).
 2. Voter chooses **CAST** or **AUDIT (spoil)**. The choice is made after the code is displayed; the client cannot know in advance which will be chosen. A client that encrypts differently from the voter's intent would be caught with probability equal to the audit probability.
 3. **CAST:** client signs with the `sig-cast` label and submits. The server returns a receipt (QV-18). The voter, ideally from a different device, verifies the code appears in the log (recorded-as-cast).
-4. **AUDIT:** client signs with `sig-spoil`, attaches `reveal`, submits. The BB publishes the spoil record. Anyone — including the voter's second device running the independent verifier — recomputes the entire ballot from `reveal` and checks it equals `body` byte for byte (`JCS` equality) and that the revealed `selections` are what the voter intended.
+4. **AUDIT:** client signs with `sig-spoil` and submits the spoil record. By default (QV-ADR-020) the reveal goes only to the voter's second device and the log carries `reveal_digest`; if the voter opts in, `reveal` is attached and published. Whoever holds the reveal — at minimum the voter's second device running the independent verifier — recomputes the entire ballot from `reveal` and checks it equals `body` byte for byte (`JCS` equality) and that the revealed `selections` are what the voter intended.
 5. The voter may spoil any number of ballots (bounded by `max_spoils_per_voter` for abuse control, QV-29) and then casts a **freshly encrypted** ballot (new `ρ`, hence new `ξ`).
 
 The decision to audit or cast is a *human* decision; protocol security (statistical, cheating detected with prob. ≥ the audit rate per falsified ballot) is analysed in Benaloh 2006 `[UNVERIFIED-OFFLINE]` and Adida 2008 `[UNVERIFIED-OFFLINE]` and discussed in §7.
@@ -634,7 +635,7 @@ The decision to audit or cast is a *human* decision; protocol security (statisti
 
 #### 5.13.3 What spoiling reveals
 
-The spoil record publishes the voter's selections for that ballot attempt and links them to the voter key. That is acceptable: the voter chose it, the attempt does not count, and this does not provide a receipt for the *cast* ballot (the cast ballot has fresh randomness). The UI shall tell the voter plainly that audited ballots become public and are never counted (QV-10).
+In published-reveal mode (voter opt-in, QV-ADR-020) the spoil record publishes the voter's selections for that ballot attempt and links them to the voter key; in the default private-audit mode only the ciphertext, proofs and `reveal_digest` are public. Publication is acceptable when chosen: the voter chose it, the attempt does not count, and this does not provide a receipt for the *cast* ballot (the cast ballot has fresh randomness). The UI shall tell the voter plainly that audited ballots become public and are never counted (QV-10).
 
 #### 5.13.4 Spoiled-ballot decryption by trustees (optional mode, Should)
 
@@ -770,7 +771,7 @@ Manifest + coordinator signatures; roll; DKG records (commit, dealing, shares, c
 
 Let `V` = participants (counted voters), `N_roll = roll.size`.
 1. **Quorum.** `fraction`: met iff `V·den ≥ num·N_roll`. `count`: met iff `V ≥ n`. Absent: met. If not met, outcome `no-quorum` for every contest.
-2. **yes-no / threshold rule.** With `y = T_yes`, `n_ = T_no`, basis `yes+no`: pass iff `y·den > num·(y + n_)` if `strict`, else `≥`; basis `counted`: replace `(y+n_)` by `V`. Equality of `y` and `n_` is a *tie* only if the rule cannot decide (e.g. simple majority with `y = n_`): then `tie_break` applies.
+2. **yes-no / threshold rule.** With `y = T_yes`, `n_ = T_no`, basis `yes+no`: pass iff `y·den > num·(y + n_)` if `strict`, else `≥`; basis `counted`: replace `(y+n_)` by `V`; basis `roll`: replace `(y+n_)` by `N_roll` (conformance addition from QV-03/QV-20 `eligible` base). Equality of `y` and `n_` is a *tie* only if the rule cannot decide (e.g. simple majority with `y = n_`): then `tie_break` applies.
 3. **single-choice / k-of-n / approval:** select the `w` options (`w = 1` for single-choice, manifest `winners` for others — defined by QV-20) with greatest `T_o`; ties at the cut-off are resolved by `tie_break`; `declare-tie` ⇒ outcome `tie`.
 4. All comparisons use big-integer or 64-bit-safe integers; `T_o ≤ V ≤ N_roll ≤ 2^31` in suite v1, so `num·V` fits 64-bit. Floating point shall not be used (QV-16-REQ-024).
 
@@ -1128,12 +1129,12 @@ Inputs: the election record (§5.19.2) and the out-of-band `manifest_hash`. Outp
 14. Compute counted set `C` and `V`; recompute `counted_root`; compare.
 
 **C5. Spoiled ballots**
-15. For `reveal` mode: recompute ballot from `ξ`, compare byte-for-byte. For `trustees` mode: verify `cp-dec-spoil` proofs, Lagrange, recover bits, compare with published selections.
+15. For spoils whose `reveal` is published: recompute ballot from `ξ`, compare byte-for-byte and check `reveal_digest`; for private-audit spoils verify only the strict `sig-spoil` signature and that the code is in the spoiled set. For `trustees` mode: verify `cp-dec-spoil` proofs, Lagrange, recover bits, compare with published selections.
 
 **C6. Aggregation and decryption**
 16. Recompute `A_o, B_o` for every real option; compare with record; identity check if `V > 0`.
 17. For every published share: recompute `Y_j` from DKG; verify `cp-dec` proof; mark valid/invalid.
-18. Compute `T_valid`, canonical `S`; require `|T_valid| ≥ t`.
+18. Compute `T_valid`, canonical `S`; require `|T_valid| ≥ t` and `V ≥ min_counted_ballots` (QV-ADR-021).
 19. Compute `λ`, `M_o`, `D_o`; recover `T_o` by BSGS; check `T_o ≤ V`, `[T_o]G = D_o`, published `T` equals.
 20. Sanity: `Σ_o T_o ≤ L·V` when `L` present.
 

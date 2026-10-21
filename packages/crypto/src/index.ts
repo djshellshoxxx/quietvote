@@ -1,2 +1,13 @@
 export { sha256, sha512 } from './hash.ts';
-export { ed25519Keypair, ed25519Sign, ed25519Verify, type Ed25519Keypair } from './ed25519.ts';
+export { ed25519Keypair, ed25519Sign, ed25519Verify, ed25519IsStrictPoint, type Ed25519Keypair } from './ed25519.ts';
+export * from './errors.ts';
+export * from './bytes.ts';
+export * from './rng.ts';
+export * from './ristretto.ts';
+export * from './transcript.ts';
+export * from './elgamal.ts';
+export * from './proofs.ts';
+export * from './feldman.ts';
+export * from './dlog.ts';
+export * from './share-cipher.ts';
+export * from './json.ts';

@@ -110,7 +110,7 @@ Groups may only choose **shorter** retention for mutable C1/C3 items or **longer
 | `disclosure.roll_labels` | members / public / hidden | members | Who sees labels (keys always logged) |
 | `disclosure.log_read_during_open` | public / members | public | `members`: log readable only with a roll-key-signed request while OPEN; becomes public at CLOSED. Reduces outside inference about turnout; independent monitors lose live visibility (trade-off) |
 | `disclosure.result_detail` | full_counts (MVP) / outcome_and_turnout (Phase 2, needs comparison proofs) | full_counts | |
-| `elections.min_counted_ballots` | integer ≥ 1 | 5 if roll ≥ 8 else 1 with warning | If fewer counted voters at close, trustees do not decrypt (`FAILED(PRIVACY_MIN)`), preventing a one- or two-person tally from revealing individual votes |
+| `elections.min_counted_ballots` | integer ≥ 3 (QV-ADR-021) | 5 if roll ≥ 8 else 3 with warning | If fewer counted voters at close, trustees do not decrypt (`FAILED(PRIVACY_MIN)`), preventing a one- or two-person tally from revealing individual votes |
 | `elections.revoting` | allowed / single | allowed | `allowed` exposes revote counts (D13) |
 
 (Fields `elections.min_counted_ballots` and `disclosure.log_read_during_open` are proposed additions to QV-03 §3.2; see Proposed ADRs.)

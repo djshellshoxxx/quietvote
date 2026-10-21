@@ -178,7 +178,7 @@ stateDiagram-v2
   PUBLISHED --> ARCHIVED: audit window elapsed
 ```
 
-`PAUSED`, `STALLED`, `CHALLENGED`, `INVALIDATED` are states introduced or made explicit by this spec; QV-03 (lifecycle) and QV-09 (event schema) must adopt them (see Proposed ADR QV-ADR-P07-1).
+`PAUSED`, `STALLED`, `CHALLENGED`, `INVALIDATED` are states introduced or made explicit by this spec; QV-03 (lifecycle) and QV-09 (event schema) must adopt them (adopted by QV-ADR-022; aliases: `DRAFT`=QV-03 `SETUP`, `KEYGEN`=`CEREMONY`, `PUBLISHED`=QV-18 `TALLIED`; see Proposed ADR QV-ADR-P07-1).
 
 ## 4. Asset register
 
@@ -564,7 +564,7 @@ Conventions: "shall" = mandatory; Priority Must/Should/Could. Elsewhere in this 
 | ID | Requirement | Pri | Acceptance criteria | Ver. | 800-53 |
 |---|---|---|---|---|---|
 | QV-07-REQ-040 | The board **shall** be an append-only Merkle tree with RFC 9162 §2 hashing (distinct leaf/node prefixes), inclusion and consistency proofs, and Ed25519-signed tree heads containing (election ID, size, root, timestamp, version). | Must | RFC 9162 proof test vectors and cross-implementation checks pass | T | AU-9, SI-7 |
-| QV-07-REQ-041 | A new STH **shall** be issued at least every **60 s** while an election is OPEN or PAUSED, and every accepted ballot **shall** be covered by an STH within **MMD = 300 s**; during TALLYING at least every 5 min. | Must | Time-based simulation shows no ballot uncovered > 300 s; violation alarms | T | AU-8 |
+| QV-07-REQ-041 | A new STH **shall** be issued at least every **60 s** while an election is OPEN or PAUSED, and every accepted ballot **shall** be covered by an STH within **MMD = 30 s** (QV-18 §5.7 prevails); during TALLYING at least every 5 min. | Must | Time-based simulation shows no ballot uncovered > 30 s; violation alarms | T | AU-8 |
 | QV-07-REQ-042 | Clients and verifiers **shall** store the latest STH they have seen per election (receipts include the STH) and verify a consistency proof whenever a newer STH is obtained; a failure **shall** produce an equivocation/inconsistency alarm and a downloadable evidence package. | Must | Fork/shrink/rewrite fixtures detected | T | SI-7 |
 | QV-07-REQ-043 | The manifest **shall** support a witness list and cosigning threshold k-of-w; witnesses **shall** verify consistency before cosigning. Elections declare a **witness tier**: Tier 0 = none; Tier 1 = ≥1 independent witness; Tier 2 = ≥2 independent witnesses operated by unrelated parties plus a public mirror. Claims C-6/C-7 apply only at Tier 1/2 respectively. The project **should** run at least one public default witness. | Should | Witness protocol tests; tier computed and displayed (REQ-004); claim lint refers to tier | T | SC-8 |
 | QV-07-REQ-044 | Two validly signed STHs for the same election with the same size but different roots, or any pair failing consistency, **shall** constitute a transferable *equivocation proof*; a verifier **shall** emit it in a defined JSON format (spec in QV-09), and its detection **shall** cause the client to show `INTEGRITY ALERT` and the matrix of §15 row IR-6 to apply. | Must | Third-party verification of a generated proof; UI alert test | T | AU-10 |

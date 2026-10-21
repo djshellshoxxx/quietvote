@@ -86,7 +86,7 @@ Size budget: ≤ 64 KiB per ballot (10 contests × 10 selections fits well withi
 Any failure leaves **no state change** and returns a specific code (§9).
 
 ### 4.3 Receipts
-On success the server returns a signed receipt `{ballot_id, election_id, log_entry_hash, log_time, mmd}` (a promise to include the entry in an STH within the maximum merge delay `mmd`, default 60 s), analogous to a Certificate Transparency SCT. Within `mmd` the client fetches the **inclusion proof** to a signed tree head; later it fetches a **consistency proof** from that STH to the final one. A receipt without a matching inclusion proof by `mmd` is evidence of misbehaviour and is the basis of challenge G1. The client stores receipts locally and offers export; if the voter has no receipt, they cannot prove omission (documented).
+On success the server returns a signed receipt `{ballot_id, election_id, log_entry_hash, log_time, mmd}` (a promise to include the entry in an STH within the maximum merge delay `mmd`, default 30 s per QV-18 §5.7), analogous to a Certificate Transparency SCT. Within `mmd` the client fetches the **inclusion proof** to a signed tree head; later it fetches a **consistency proof** from that STH to the final one. A receipt without a matching inclusion proof by `mmd` is evidence of misbehaviour and is the basis of challenge G1. The client stores receipts locally and offers export; if the voter has no receipt, they cannot prove omission (documented).
 
 ### 4.4 Cast-or-audit (Benaloh)
 Before casting, the client displays the tracking code of the encrypted ballot *before* asking the voter to choose between **Cast** and **Audit**. On Audit the client reveals the randomness and plaintext of that ciphertext to a verifier (a second device or the standalone verifier page), the ciphertext is marked `ballot.spoiled`, and a **fresh** encryption is produced for the real ballot. Because the client must commit to the ciphertext before the voter chooses, it cannot tell an audit from a cast; if it alters *m* ballots and each is audited independently with probability *a*, the chance that none is caught is (1 − a)^m (derivation and caveats in QV-16); the UI shall say plainly that auditing protects everyone if enough voters do it and that audited ballots do **not** count. Audit instructions tell the voter to use test selections, never their real choice, because the spoiled opening is public.
@@ -186,6 +186,8 @@ The log offers: `append` (authenticated by entry type), `get`, `inclusionProof(e
 | V13 | Every steward/operator action authorised by the rules in force (QV-03 AC9, AC11) | INVALID |
 | V14 | Report hash; bundle completeness vs QV-02-REQ-054 | INVALID |
 
+**Mapping of V1–V14 to QV-16 Appendix C steps (QV-16-REQ-020 prevails; V-IDs remain the cross-spec vocabulary):** V1→C1 steps 1–3; V2→step 4 (+ QV-04 amendment chain, which Appendix C does not yet list); V3→steps 5–10; V4→step 11; V5→step 12 (§5.14.4 checks 1–9); V6→steps 13–14 (chain rule, revote limit, counted set); V7→steps 11 and 13 (window); V8→step 15 (full recompute only when the reveal is published, QV-ADR-020; otherwise the `reveal_digest` and signature are checked); V9→step 16; V10→steps 17–18; V11→steps 19–20; V12→step 21; V13→no Appendix C step (steward/operator authorisation and control entries, QV-ADR-022); V14→step 22.
+
 An `INVALID` verdict never shows a result as final; it triggers the dispute path G2 (QV-03 §5.4).
 
 ### 7.3 Individual verification paths
@@ -234,6 +236,8 @@ Invalid-ballot handling: the server rejects at submit time, so no *invalid count
 | `E_RATE_LIMIT` | 429 | Abuse control | Backoff |
 | `E_LOG_UNAVAILABLE` | 503 | Log append failed; state unchanged | Retry same `ballot_id` |
 
+**Mapping to QV-16 §5.20 verification codes (QV-16 prevails):** `E_PROTO`→`E_VERSION`/`E_SCHEMA`; `E_ENCODING`→`E_PARSE`/`E_SCHEMA`/`E_POINT_DECODE`/`E_SCALAR_RANGE`; `E_NOT_ELIGIBLE`→`E_VOTER_NOT_ELIGIBLE`; `E_SIG_INVALID`→`E_SIG`; `E_PROOF_INVALID`→`E_CDS`/`E_LIMIT_PROOF`; `E_MANIFEST_MISMATCH`→`E_CTX`; `E_ALREADY_VOTED`→`E_REVOTE_LIMIT`. The codes in this table are HTTP-level; the QV-16 code is returned in `details.reason`.
+
 Success includes the idempotent replay of an existing `ballot_id` (200 with original receipt).
 
 ## 10. Failure policy: stop vs. continue
@@ -256,7 +260,7 @@ Success includes the idempotent replay of an existing `ballot_id` (200 with orig
 | QV-05-REQ-001 | The protocol shall implement the lifecycle P0–P13 with the artifacts and visibility of §3.1. | Must | End-to-end test produces every artifact; visibility lint on API responses | T |
 | QV-05-REQ-002 | Ballot validation (§4.2) shall be a pure deterministic function shared by server and verifier. | Must | Same corpus gives identical verdicts on both | T |
 | QV-05-REQ-003 | Rejected ballots shall cause no state change, and accepted ballots shall be appended to the log before success is returned. | Must | Fault-injection | T |
-| QV-05-REQ-004 | Receipts shall be signed and an inclusion proof shall be retrievable within `mmd` (default 60 s). | Must | Latency test; verification of proof | T |
+| QV-05-REQ-004 | Receipts shall be signed and an inclusion proof shall be retrievable within `mmd` (default 30 s, QV-18). | Must | Latency test; verification of proof | T |
 | QV-05-REQ-005 | The client shall show the tracking code before the cast-or-audit choice and shall use a fresh encryption randomness after audit. | Must | Instrumented test shows distinct randomness; UI order test | T |
 | QV-05-REQ-006 | Spoiled ballots shall be openable and verified by an independent implementation (verifier page/CLI). | Must | Cross-implementation test; tampered client detected in test | T |
 | QV-05-REQ-007 | Revoting semantics shall be exactly as §4.5 and QV-04 §7. | Must | Property tests | T |
@@ -292,7 +296,7 @@ Success includes the idempotent replay of an existing `ballot_id` (200 with orig
 | Should tracking codes be shortened for readability while keeping collision resistance? | UX/crypto | v0.5 | Closed by QV-16 §5.12.1: display ≥ 26 base32 chars (130 bits), full code available |
 | Should aggregation be performed by trustees (signed) rather than "anyone"? | Protocol | v0.5 | Anyone; trustees sign what they decrypt, which names the aggregate hash |
 | Post witness cosigning in MVP? | Architecture | v0.9 | Hooks + one public witness volunteer |
-| Required `mmd` | Architecture | v0.5 | 60 s |
+| Required `mmd` | Architecture | v0.5 | 30 s (QV-18 prevails) |
 
 ## 14. Approval and change history
 
@@ -311,6 +315,6 @@ Success includes the idempotent replay of an existing `ballot_id` (200 with orig
 
 ## Proposed ADRs
 
-- **QV-ADR-P05-1 — Receipts are SCT-like signed promises with `mmd` = 60 s; inclusion proof is the evidence of recording.**
+- **QV-ADR-P05-1 — Receipts are SCT-like signed promises with `mmd` = 30 s (conformed to QV-18); inclusion proof is the evidence of recording.**
 - **QV-ADR-P05-2 — Verifier check IDs V1–V14 are the normative common vocabulary across specs and tests.**
-- **QV-ADR-P05-3 — Spoiled (audited) ballots are published openings; UI instructs test selections only.**
+- **QV-ADR-P05-3 — Spoiled (audited) ballots are posted; openings are delivered privately and published only on voter opt-in (conformed to QV-ADR-020); UI instructs test selections only.**

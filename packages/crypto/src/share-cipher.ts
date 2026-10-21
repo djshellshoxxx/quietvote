@@ -32,7 +32,7 @@ function aad(mh: Uint8Array, i: number, j: number, R: Uint8Array): Uint8Array {
 }
 
 async function aes(key: Uint8Array, usage: 'encrypt' | 'decrypt'): Promise<CryptoKey> {
-  return globalThis.crypto.subtle.importKey('raw', key, { name: 'AES-GCM' }, false, [usage]);
+  return globalThis.crypto.subtle.importKey('raw', new Uint8Array(key), { name: 'AES-GCM' }, false, [usage]);
 }
 
 /** §5.7.4: ephemeral-static DH to E_j, HKDF-SHA-256, AES-256-GCM with a single-use key and zero IV. */
@@ -50,9 +50,9 @@ export async function encryptShare(
   const key = await aes(deriveKey(mh, S, i, j, R), 'encrypt');
   const out = new Uint8Array(
     await globalThis.crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: ZERO_IV, additionalData: aad(mh, i, j, R), tagLength: 128 },
+      { name: 'AES-GCM', iv: new Uint8Array(ZERO_IV), additionalData: new Uint8Array(aad(mh, i, j, R)), tagLength: 128 },
       key,
-      scalarToBytes(y),
+      new Uint8Array(scalarToBytes(y)),
     ),
   );
   return { R, ct: out.slice(0, 32), tag: out.slice(32) };
@@ -69,9 +69,9 @@ export async function decryptShareWithDh(mh: Uint8Array, i: number, j: number, S
   try {
     pt = new Uint8Array(
       await globalThis.crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: ZERO_IV, additionalData: aad(mh, i, j, pkg.R), tagLength: 128 },
+        { name: 'AES-GCM', iv: new Uint8Array(ZERO_IV), additionalData: new Uint8Array(aad(mh, i, j, pkg.R)), tagLength: 128 },
         key,
-        concatBytes(pkg.ct, pkg.tag),
+        new Uint8Array(concatBytes(pkg.ct, pkg.tag)),
       ),
     );
   } catch {

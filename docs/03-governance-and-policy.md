@@ -89,7 +89,7 @@ Canonical JSON (RFC 8785 JCS) signed by ≥ `stewards.approval.k` steward keys; 
 | `tie_break` | §7.3 | | | |
 | `disputes.*` | §8 | | **window ≥ 72 h; arbiters ≥ 3 odd** | |
 | `halt.*` | §9 | | **max_hours_each ≤ 168; max_halts ≥ 1 if authority ≠ none** | |
-| `elections.min_counted_ballots` | int ≥ 1 | 5 if N ≥ 8 else 1 (+`W-SMALL-ROLL`) | | If fewer counted voters at close, trustees do not decrypt → `FAILED(PRIVACY_MIN)` (QV-06 §6) |
+| `elections.min_counted_ballots` | int ≥ 3 (QV-ADR-021; below 10 needs `privacy_ack`) | 5 if N ≥ 8 else 3 (+`W-SMALL-ROLL`) | | If fewer counted voters at close, trustees do not decrypt → `FAILED(PRIVACY_MIN)` (QV-06 §6) |
 | `disclosure.log_read_during_open` | `public`\|`members` | `public` | | QV-06 §6 |
 | `disclosure.roll_labels` | `members`\|`public`\|`hidden` | `members` | voter *keys* are always in the public log (needed to verify) | See QV-06 §9 |
 | `retention_profile` | id | `default-v1` | must exist in QV-06 §5 | |
@@ -166,6 +166,8 @@ stateDiagram-v2
   CANCELLED --> ARCHIVED
   FAILED --> ARCHIVED
 ```
+
+**Conformance note (QV-ADR-022, QV-ADR-021).** The state machine above is extended by the board-level states `PAUSED` (= `HALTED` here), `STALLED` (from `TALLYING`, fewer than t trustees), and `INVALIDATED` (= `ANNULLED` via signed `INVALIDATE` entry); QV-09/QV-18 name `SCHEDULED` as `READY`, `PUBLISHED` as `TALLIED`, and pre-open `FAILED` as `ABORTED`. Control entries `pause`/`resume`/`invalidate` are signed by stewards (never the operator). `blank_allowed` is presentation-only: in QV-16 suite v1 an all-zero (blank) ballot is always valid and counts as participation. Threshold `base` values map to QV-16 `basis`: `yes_no`→`yes+no`, `all_cast`→`counted`, `eligible`→`roll`; `quorum_bp` is expressed in the manifest as `quorum {type:fraction, num:quorum_bp, den:10000, basis:roll}`.
 
 ### 5.3 Transition table
 
