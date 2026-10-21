@@ -9,8 +9,15 @@ export function formatReport(r: VerifierReport): string {
   L.push(`VERDICT: ${r.verdict}`);
   if (r.ctxPrefix !== undefined) L.push(`election ctx: ${r.ctxPrefix}...`);
   const flagged = V_IDS.filter((id) => r.checks[id].status === 'fail');
-  if (r.verdict === 'PASS' && flagged.length > 0) L.push(`FLAGGED: ${flagged.join(', ')} failed without changing the verdict (ignored ballots or alarms, QV-16 App. C); read the notes below`);
+  if (r.verdict !== 'FAIL' && flagged.length > 0) L.push(`FLAGGED: ${flagged.join(', ')} failed without changing the verdict (ignored ballots or alarms, QV-16 App. C); read the notes below`);
   L.push(`ballots: cast ${r.counts.cast}, spoiled ${r.counts.spoiled}, counted ${r.counts.counted}`);
+  if (r.log !== undefined) {
+    const s = (x: VStatus): string => (x === 'not_run' ? 'not run' : x);
+    const c = r.log.checks;
+    L.push(`log layer (QV-16 C3): append-only ${s(c.append_only)}, witness ${s(c.witness)}, receipts ${s(c.receipts)}, `
+      + `witnessed times ${s(c.time_window)}; witness keys from ${r.log.witness_keys}; `
+      + `${r.log.receipt_claims} receipt claim(s), ${r.log.observed_heads} observed head(s)`);
+  }
   L.push('');
   for (const id of V_IDS) {
     const c = r.checks[id];

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bytesToHex, ed25519Keypair, sha256 } from '@quietvote/crypto';
+import { ed25519Keypair, sha256 } from '@quietvote/crypto';
 import {
   BoardLog, MemoryBoardStore, buildEntry, bundleToJson, cosignLine, exportBundle, type EntryType, type WitnessPolicy,
 } from '@quietvote/board';
@@ -181,43 +181,7 @@ function makeBoard(opts: { witnessed: boolean; badAuthor?: boolean }): unknown {
   return JSON.parse(JSON.stringify(bundleToJson(b)));
 }
 
-test('board layer: unwitnessed log verifies structurally but V4 stays not_run; verdict unaffected', async () => {
-  const r = await verifyBundle({ ...tiny(), board: makeBoard({ witnessed: false }) });
-  assert.equal(r.board?.integrity, 'VERIFIED');
-  assert.deepEqual(r.board?.failures, []);
-  assert.equal(r.chk['chk.board.append_only'], 'pass');
-  assert.equal(r.chk['chk.board.witness'], 'not_run');
-  assert.equal(r.checks.V4.status, 'not_run');
-  assert.ok(r.checks.V4.notes.some((n) => n.includes('NOT WITNESSED')));
-  assert.equal(r.verdict, 'PASS');
-});
-
-test('board layer: witnessed log gives V4 pass', async () => {
-  const r = await verifyBundle({ ...tiny(), board: makeBoard({ witnessed: true }) });
-  assert.deepEqual(r.board?.failures, []);
-  assert.equal(r.checks.V4.status, 'pass');
-  assert.equal(r.verdict, 'PASS');
-  assert.ok(!r.caveats.some((c) => c.startsWith('V4 not run')));
-});
-
-test('board layer: unknown author, tampered body and dropped entry all FAIL V4 and the verdict', async () => {
-  const stranger = await verifyBundle({ ...tiny(), board: makeBoard({ witnessed: false, badAuthor: true }) });
-  assert.equal(stranger.verdict, 'FAIL');
-  assert.equal(stranger.checks.V4.status, 'fail');
-  const extra = await verifyBundle({ ...tiny(), board: makeBoard({ witnessed: false, badAuthor: true }) }, { extraAuthorKeys: [bytesToHex(ed25519Keypair(sha256(utf8('stranger'))).publicKey)] });
-  assert.equal(extra.verdict, 'PASS');
-
-  const b: any = makeBoard({ witnessed: true });
-  b.entries[5].body_b64u = Buffer.from('forged').toString('base64url');
-  const tampered = await verifyBundle({ ...tiny(), board: b });
-  assert.equal(tampered.verdict, 'FAIL');
-  assert.equal(tampered.checks.V4.status, 'fail');
-  assert.ok(tampered.findings.some((f) => f.detail.startsWith('board:')));
-
-  const b2: any = makeBoard({ witnessed: true });
-  b2.entries.pop();
-  assert.equal((await verifyBundle({ ...tiny(), board: b2 })).checks.V4.status, 'fail');
-});
+// Board export with protocol-conformant log checks: see logcheck.test.ts (log layer through the verifier).
 
 test('board layer is skipped (not trusted) when the manifest does not verify', async () => {
   const t = tiny();
