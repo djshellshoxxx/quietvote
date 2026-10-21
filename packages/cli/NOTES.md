@@ -73,3 +73,11 @@ Regression tests: `test/audit-regressions.test.ts` (one test per finding, 12 tes
 `selftest command`), the same two known base failures as before the change (vectors/verifier simulation against QV-ADR-015 election-open
 binding; not touched here). `node --test packages/cli/test/audit-regressions.test.ts`: 12/12 pass. Typecheck: no errors in `packages/cli`.
 
+
+## Dependency declaration (DEP-01, 2026-10-21)
+
+`packages/cli/src` imports `@quietvote/verifier` (`cmd-board.ts`, `cmd-vectors.ts`, `cmd-verify.ts`, `common.ts`), but the
+package did not declare it. `packages/cli/package.json` now lists `"@quietvote/verifier": "*"` in `dependencies`, the same form as
+the other workspace dependencies. `package-lock.json` changed by one line only (the `packages/cli` entry), from
+`npm install --package-lock-only --ignore-scripts`. This is a declaration fix; it does not change the D1 layering question above.
+Tests after the change: `npm test -w @quietvote/cli` 29/29 pass.
