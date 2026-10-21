@@ -20,17 +20,22 @@ This is the entry point for product and engineering specifications. Specs are in
 | QV-02 | [Product requirements](02-product-requirements.md) | User journeys, MVP boundary, functional requirements | QV-00, QV-01 | Framework |
 | QV-03 | [Governance and policy](03-governance-and-policy.md) | Group rules, decision lifecycle, dispute policy | QV-02 | Framework |
 | QV-04 | [Identity and eligibility](04-identity-eligibility.md) | Membership, eligibility proofs, duplicate prevention, recovery | QV-03 | Framework |
-| QV-05 | [Ballot protocol](05-ballot-protocol.md) | Ballot secrecy, vote methods, tally and verification | QV-03, QV-04, QV-07 | Framework |
-| QV-06 | [Privacy and data lifecycle](06-privacy-data-lifecycle.md) | Data inventory, minimization, retention, deletion | QV-04, QV-05, QV-07 | Framework |
+| QV-05 | [Ballot protocol](05-ballot-protocol.md) | Ballot secrecy, vote methods, tally and verification | QV-03, QV-04, QV-07, QV-16 | Framework |
+| QV-06 | [Privacy and data lifecycle](06-privacy-data-lifecycle.md) | Data minimization, visibility, retention, deletion | QV-04, QV-05, QV-07 | Framework |
 | QV-07 | [Threat model and security](07-threat-model-security.md) | Adversaries, assets, abuse cases, security controls | QV-00 | Framework |
-| QV-08 | [Architecture and deployment](08-architecture-deployment.md) | System components, hosting, self-hosting, trust boundaries | QV-01–QV-07 | Framework |
+| QV-08 | [Architecture and deployment](08-architecture-deployment.md) | System components, hosting, self-hosting, trust boundaries | QV-01–QV-07, QV-16 | Framework |
 | QV-09 | [API and data contracts](09-api-data-contracts.md) | Interfaces, schemas, events, versioning | QV-03–QV-08 | Framework |
 | QV-10 | [User experience](10-user-experience.md) | Member, organizer, auditor flows and content | QV-02–QV-06 | Framework |
-| QV-11 | [Testing and assurance](11-testing-assurance.md) | Verification strategy, protocol review, release gates | QV-03–QV-09 | Framework |
+| QV-11 | [Testing and assurance](11-testing-assurance.md) | Verification strategy, protocol review, release gates | QV-03–QV-09, QV-16 | Framework |
 | QV-12 | [Operations and administration](12-operations-administration.md) | Provisioning, support, incident response, upgrades | QV-08, QV-11 | Framework |
 | QV-13 | [Accessibility and localization](13-accessibility-localization.md) | Accessibility, language, device and network support | QV-10 | Framework |
 | QV-14 | [Business and sustainability](14-business-sustainability.md) | Funding model, pricing, governance, sustainability | QV-00, QV-08, QV-12 | Framework |
 | QV-15 | [Decision log](decision-log.md) | Durable record of accepted decisions | All | Active |
+| QV-16 | [Cryptography and technical design](15-cryptography-and-technical-design.md) | Candidate protocol flow, cryptographic components, tech roles, assumptions, and open decisions | QV-03–QV-09 | Draft |
+
+## Exploratory ideas
+
+[IDEAS.md](../IDEAS.md) holds non-binding concepts for future consideration. Ideas are not part of the MVP until they are selected, specified, threat-modeled, and recorded in the decision log.
 
 ## Proposed completion order
 
