@@ -15,7 +15,6 @@ export interface LoadedBundle {
 export type LoadResult = { ok: true; value: LoadedBundle } | { ok: false; errors: string[] };
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
-const HEX64 = /^[0-9a-f]{64}$/;
 
 /**
  * Accepts text/bytes (strict QV-JSON: duplicate keys, floats, lone surrogates rejected) or an already-parsed value.
@@ -40,7 +39,7 @@ export function loadBundle(input: string | Uint8Array | object): LoadResult {
     if (!['manifest', 'manifest_hash', 'roll', 'log', 'board'].includes(k)) errors.push(`unknown top-level member "${k}"`);
   }
   if (!isObj(v['manifest']) || !isObj(v['manifest']['body'])) errors.push('manifest must be {body, sigs}');
-  if (typeof v['manifest_hash'] !== 'string' || !HEX64.test(v['manifest_hash'])) errors.push('manifest_hash must be 64 lower-case hex digits');
+  if (typeof v['manifest_hash'] !== 'string') errors.push('manifest_hash must be a string');
   if (!Array.isArray(v['roll'])) errors.push('roll must be an array');
   if (!Array.isArray(v['log'])) errors.push('log must be an array');
   let board: LogBundle | undefined;
