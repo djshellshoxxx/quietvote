@@ -44,7 +44,7 @@ test('TR-02: tally release from CONFIRMED/DRILLED (election-open never imported)
   await c.setup();
   try {
     const o = await c.runDkg({ drill: false }); // trustees stay in CONFIRMED, never see election-open
-    c.marker('election-open');
+    c.openElection();
     ['yes', 'no', 'yes', 'yes', 'no', 'yes'].forEach((v, k) => c.cast(o, k, { budget: [v] }));
     c.marker('election-close');
     const before = await Trustee.open(c.path(1), PASS, c.deps.get(1)!);
