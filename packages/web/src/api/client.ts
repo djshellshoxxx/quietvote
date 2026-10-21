@@ -51,7 +51,7 @@ export class ApiClient {
     this.token = t;
   }
 
-  private async req(method: string, path: string, opts: { body?: unknown; bearer?: boolean; signed?: boolean; headers?: Record<string, string>; accept?: string; query?: Record<string, string | number | undefined> } = {}): Promise<Response> {
+  private async req(method: string, path: string, opts: { body?: unknown; bearer?: boolean; signed?: boolean; headers?: Record<string, string>; accept?: string; signal?: AbortSignal; query?: Record<string, string | number | undefined> } = {}): Promise<Response> {
     let target = path;
     if (opts.query) {
       const q = Object.entries(opts.query).filter(([, v]) => v !== undefined).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
@@ -76,15 +76,25 @@ export class ApiClient {
     const ctl = new AbortController();
     init.signal = ctl.signal;
     const timer = setTimeout(() => ctl.abort(), this.timeoutMs);
+    const outer = opts.signal;
+    const relay = (): void => ctl.abort();
+    if (outer !== undefined) {
+      if (outer.aborted) ctl.abort();
+      else outer.addEventListener('abort', relay, { once: true });
+    }
     let res: Response;
     try {
       res = await this.f(url, init);
     } catch (e) {
+      outer?.removeEventListener('abort', relay);
       throw new ApiError({ status: 0, code: ctl.signal.aborted ? TIMEOUT : NETWORK, message: e instanceof Error ? e.message : 'network error', retryable: true });
     } finally {
-      clearTimeout(timer);
+      clearTimeout(timer); // the timeout covers connecting and headers only; a stream body may live for hours
     }
-    if (!res.ok) throw await problem(res);
+    if (!res.ok) {
+      outer?.removeEventListener('abort', relay);
+      throw await problem(res);
+    }
     return res;
   }
 
@@ -144,6 +154,18 @@ export class ApiClient {
   /** Public bundle (JSON form) for the verifier; `application/x-tar` is the server format, JSON is the web alias. */
   async exportJson(id: string): Promise<unknown> {
     return this.json(await this.req('GET', `${API}/elections/${enc(id)}/export.json`));
+  }
+
+  /**
+   * Opens the live event stream (QV-09 §9). The resume cursor goes in the Last-Event-ID header and the read key in QV-Read-Key,
+   * so the URL carries nothing but the election id. The caller owns the body and aborts it through `signal`.
+   */
+  events(id: string, o: { lastEventId?: number | undefined; signal?: AbortSignal | undefined } = {}): Promise<Response> {
+    return this.req('GET', `${API}/elections/${enc(id)}/events`, {
+      accept: 'text/event-stream',
+      ...(o.lastEventId === undefined ? {} : { headers: { 'Last-Event-ID': String(o.lastEventId) } }),
+      ...(o.signal === undefined ? {} : { signal: o.signal }),
+    });
   }
 
   // ---- voter

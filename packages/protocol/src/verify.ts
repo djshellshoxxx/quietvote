@@ -272,6 +272,10 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
       case 'marker': {
         if (bad(S.multiSigned(S.marker))) break;
         const rec = entry as MultiSignedRecord<MarkerBody>;
+        if (rec.body.name !== 'election-open' && (rec.body.manifest_hash !== undefined || rec.body.joint_key_seq !== undefined || rec.body.roll_commit_seq !== undefined)) {
+          noteBad('E_SCHEMA', seq, `marker ${rec.body.name} must not carry election-open binding fields`);
+          break;
+        }
         if (rec.body.name === 'election-open' || rec.body.name === 'election-close') {
           pendingCtxMarkers.push({ seq, rec });
         } else if (verifyMultiSig(mhb, rec, m.coordinator.keys, m.coordinator.m)) {
@@ -417,6 +421,25 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   if (!(mk['dkg-final'] < open.seq && open.seq < close.seq)) {
     F('E_MARKERS', 'marker order violated (dkg-final < election-open < election-close)');
     return done();
+  }
+  // ---- QV-ADR-015: election-open binds (manifest_hash, joint_key_seq, roll_commit_seq); every reference must point at the right EARLIER record (fail closed)
+  {
+    const ob = open.body;
+    const bindErr = ((): string | undefined => {
+      if (ob.manifest_hash === undefined || ob.joint_key_seq === undefined || ob.roll_commit_seq === undefined) return 'election-open lacks manifest_hash/joint_key_seq/roll_commit_seq';
+      if (ob.manifest_hash !== H(mhb)) return 'election-open manifest_hash differs from the manifest hash';
+      if (ob.joint_key_seq >= open.seq || ob.roll_commit_seq >= open.seq) return 'election-open references a record that is not earlier in the log';
+      if (ob.joint_key_seq !== mk['dkg-final']) return 'election-open joint_key_seq does not point at the dkg-final marker';
+      const rc = rollCommits.find((c) => c.seq === ob.roll_commit_seq);
+      if (rc === undefined) return 'election-open roll_commit_seq does not point at a valid roll-commit record';
+      if (rc.body.root !== rootHex || rc.body.size !== rollHex.length) return 'the roll-commit bound by election-open does not match the supplied roll';
+      return undefined;
+    })();
+    if (bindErr !== undefined) {
+      F('E_MARKERS', bindErr, open.seq);
+      R.checks['chk.time.window'] = 'fail';
+      return done();
+    }
   }
   R.caveats.push('election times are unwitnessed (no witness cosignatures checked)');
   phaseSeqs = {
