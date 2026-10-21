@@ -335,7 +335,7 @@ Unit: encode/decode, each proof (honest + 100% mutation set), threshold arithmet
 | QV-OQ-5 Multi-winner Schulze (STV-like) | Researcher | Phase 3 | Out of scope |
 
 ## 24. Proposed ADRs
-- **QV-ADR-P20-1 — Slack-selection encoding for min/max limits.** Use BIT + constant-sum P02 over real+slack bits instead of range proofs. Rationale: reuses audited primitives, mirrors ElectionGuard's selection-limit approach [R6]. Consequence: aggregates of slack reveal total undervote count only.
+- **QV-ADR-P20-1 — Slack-selection encoding for min/max limits.** Use BIT + constant-sum P02 over real+slack bits instead of range proofs. Rationale: reuses existing primitives, mirrors ElectionGuard's selection-limit approach [R6]. Consequence: aggregates of slack reveal total undervote count only.
 - **QV-ADR-P20-2 — Ranked ballots via encrypted pairwise bits with per-triple weak-order pattern proofs.** Strict-order shortcut via 3-cycle test. Gated by independent review (adopted as QV-ADR-023, n ≤ 12). Alternatives: mixnet (ADR-004), decrypting rankings per ballot (violates secrecy).
 - **QV-ADR-P20-3 — Delegation is public, static, Phase 1 only.**
 - **QV-ADR-P20-4 — Verifiers check `M·G` instead of solving dlog.**

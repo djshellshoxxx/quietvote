@@ -51,7 +51,7 @@ ADRs 001–013 below are the **baseline engineering decisions** made so specific
 - **Alternatives:** SaaS-first (rejected: concentrates trust/legal exposure); P2P-first (deferred: consistency, abuse and UX cost; see QV-32).
 
 ### QV-ADR-003 — Stack
-- **Decision:** TypeScript (strict) on Node.js 22 LTS; npm workspaces monorepo; `@noble/curves` and `@noble/hashes` (independently audited, zero-dep) for all primitives; `node:sqlite` for server storage; esbuild for client bundling; `node:test` for tests. No cryptographic primitive is hand-implemented. Minimal dependency count is a release criterion.
+- **Decision:** TypeScript (strict) on Node.js 22 LTS; npm workspaces monorepo; `@noble/curves` and `@noble/hashes` (zero-dep; their maintainers publish third-party audit reports, which this project has not independently verified) for all primitives; `node:sqlite` for server storage; esbuild for client bundling; `node:test` for tests. No cryptographic primitive is hand-implemented. Minimal dependency count is a release criterion.
 
 ### QV-ADR-004 — Group and ballot cryptography
 - **Decision:** Prime-order **ristretto255** group. Ballots: **exponential ElGamal** with per-selection encryption; **Chaum–Pedersen / Cramer–Damgård–Schoenmakers (CDS) disjunctive proofs** that each selection encrypts 0 or 1, plus a proof that selection count satisfies the contest limit; **homomorphic aggregation**; **t-of-n threshold decryption** with a **Pedersen/Feldman verifiable DKG** (trustees); **Chaum–Pedersen decryption proofs**; Fiat–Shamir with domain-separated, length-prefixed hashing of the *full statement*; **Benaloh challenge** (cast-or-audit) for cast-as-intended. Lineage: Helios / ElectionGuard. Final byte-level protocol: QV-16.

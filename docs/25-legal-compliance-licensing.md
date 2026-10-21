@@ -46,7 +46,7 @@ AGPL-3.0 includes an express contributor patent licence (§11) [to be confirmed 
 
 ## 4. Disclaimers (must appear in README, UI footer, results page, ToU)
 1. **No warranty:** software provided "as is" under AGPL §15–16.
-2. **Not a certified election system:** QuietVote is intended for internal decisions of voluntary organisations. It is not certified for public/governmental elections, statutory union ballots, company shareholder votes, or any context where law prescribes a voting method, supervisor, or certified system. Using it in such contexts is the organisation's responsibility.
+2. **Not a certified election system:** QuietVote is intended for internal decisions of voluntary organisations. It is not certified for public/governmental elections, statutory union ballots, company shareholder votes, or any context where law prescribes a voting method, supervisor, or certified system. Using it in such contexts is the organisation's responsibility. <!-- claims-lint-ignore -->
 3. **Experimental status until independent review:** "No security audit has yet been completed" banner until QV-11 gates are passed. No claim of anonymity or coercion resistance beyond the specifications (ADR-008).
 4. **Residual risks:** compromised devices, coerced voters, small-group inference, metadata (list from ADR-008 and QV-26).
 5. **Results are group decisions:** the maintainers/operators are not responsible for outcomes or disputes.
@@ -105,7 +105,7 @@ QuietVote contains and implements strong cryptography (ristretto255 / Ed25519 / 
 ## 9. Terms-of-use template (hosted offering and project website)
 1. **Acceptance and scope.** The service lets organisations conduct internal votes. By creating an organisation you accept these terms.
 2. **Eligibility and no identity requirement.** We do not require identity verification; organisations are solely responsible for deciding who may vote.
-3. **Your responsibilities.** Comply with law and your governing documents; do not use the service for unlawful purposes, harassment, impersonation, or governmental/statutory elections requiring certified systems; protect keys — **we cannot recover lost keys** (QV-12 §5).
+3. **Your responsibilities.** Comply with law and your governing documents; do not use the service for unlawful purposes, harassment, impersonation, or governmental/statutory elections requiring certified systems; protect keys — **we cannot recover lost keys** (QV-12 §5). <!-- claims-lint-ignore -->
 4. **Data and export.** You own your content. You may export all election data at any time and free of charge; we will not hold data hostage (QV-14 REQ-001).
 5. **Privacy.** See Privacy Notice; the DPA is incorporated for organisations in scope of GDPR.
 6. **No guarantee of secrecy beyond documented model.** Secrecy depends on honest trustees and uncompromised devices; see "Guarantees and non-claims".

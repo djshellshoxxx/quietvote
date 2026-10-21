@@ -82,7 +82,7 @@ files under `v1/` matched their SHA-256. **The vector tree and the specs were ch
 development** (the `elections/log-layer-4v/` set appeared at about 11:23 and gained an
 `expected-report.json` at about 11:30), so re-run before relying on these numbers.
 
-**Summary: 269 vectors: 220 PASS, 1 FAIL, 48 NOT-IMPLEMENTED (exit status 1).** 25 non-vector
+**Summary: 277 vectors: 228 PASS, 1 FAIL, 48 NOT-IMPLEMENTED (exit status 1).** 25 non-vector
 input files (log exports, `adv-bundle.json`, `notices/*`) were skipped.
 
 | Vector file | Operation | PASS | FAIL | NOT-IMPL |
@@ -111,11 +111,11 @@ input files (log exports, `adv-bundle.json`, `notices/*`) were skipped.
 | `elections/tiny-yesno-3v/bundle.json` | full election vs `expected-report.json` | 1 | 0 | 0 |
 | `elections/small-approval-20v/bundle.json` | full election vs `expected-report.json` | 1 | 0 | 0 |
 | `elections/log-layer-4v/bundle.json` | full election vs `expected-report.json` | 1 | 0 | 0 |
-| `mutations/*.json` (15 mutants) | full election vs `expect` | 15 | 0 | 0 |
+| `mutations/*.json` (23 mutants, incl. 8 `open-*`) | full election vs `expect` | 23 | 0 | 0 |
 | `canary/canary-election.json` | full election vs `expected-report.json` | 0 | **1** | 0 |
 | `elections/log-layer-4v/vectors.json` | `log.verify_election` (QV-18 log layer) | 0 | 0 | 48 |
 
-All 202 per-operation vectors pass, as do all 15 mutants (each named individually in the run
+All 202 per-operation vectors pass, as do all 23 mutants (15 original + 8 `open-*` for QV-ADR-015) (each named individually in the run
 output). For elections, the verdict, the full 14-check map, the counts, the ctx prefix and the
 results are compared exactly. For mutants, the verdict and the set of failing checks are compared
 exactly, and every expected code must be among the codes emitted (QV-ERR-PY-004).

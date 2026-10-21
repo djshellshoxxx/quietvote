@@ -82,4 +82,4 @@ Suggested GitHub description: **Private, verifiable decision-making for cooperat
 
 ## License
 
-**To be decided.** No license has been selected yet. Until a license file is added, reuse permissions are not granted by this repository.
+QuietVote is licensed under the **GNU Affero General Public License v3.0 or later** (AGPL-3.0-or-later). See [`LICENSE`](LICENSE). The software is unaudited and not for real elections.

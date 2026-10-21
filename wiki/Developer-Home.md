@@ -13,7 +13,7 @@ Welcome. Start here:
 
 ## Ground rules
 
-- **No hand-rolled cryptography.** Use the audited `@noble` libraries (decision log QV-ADR-003).
+- **No hand-rolled cryptography.** Use the `@noble` libraries (they have published third-party audit reports, not re-verified here) (decision log QV-ADR-003).
 - **Specs first.** Changes to protocol, encodings, domain strings or test vectors are protocol changes and need extra review.
 - **Claims follow evidence.** Do not claim anonymity or integrity beyond the threat model. See [[Privacy and Guarantees]].
 - **Architecture decisions** go in the [decision log](https://github.com/djshellshoxxx/quietvote/blob/main/docs/decision-log.md).

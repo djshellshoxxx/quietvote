@@ -146,8 +146,8 @@ Ballot secrecy in any tallying system is conditional on the *result* not reveali
 
 ### 3.1 Definitions
 
-- **Receipt-freeness:** voter cannot construct a proof of how they voted (Benaloh–Tuinstra 1994).
-- **Coercion-resistance:** stronger; a coercer who can interact with the voter during voting (demand a key, demand abstention, demand a specific vote) learns nothing useful (Juels–Catalano–Jakobsson, "Coercion-Resistant Electronic Elections", 2005; JCJ).
+- **Receipt-freeness:** voter cannot construct a proof of how they voted (Benaloh–Tuinstra 1994). <!-- claims-lint-ignore -->
+- **Coercion-resistance:** stronger; a coercer who can interact with the voter during voting (demand a key, demand abstention, demand a specific vote) learns nothing useful (Juels–Catalano–Jakobsson, "Coercion-Resistant Electronic Elections", 2005; JCJ). <!-- claims-lint-ignore -->
 - **Vote-buying** is the voluntary variant. Both are bounded by what the voter can prove.
 
 QuietVote's stated position (ADR-008): **neither is claimed.** This section catalogues why and what is feasible.
@@ -233,7 +233,7 @@ Candidate requirement: `QV-R03-U-001` — the verifier shall print/display which
 
 ### 6.0 Framing
 
-QuietVote is open-source software for *internal decisions in voluntary organizations* (README; charter excludes government elections and "legally certified corporate elections"). Legal exposure depends mainly on **who operates an instance**, **what data they hold**, and **how the project describes its guarantees**. The project itself (maintainers/foundation) is a software publisher unless and until it runs a hosted service.
+QuietVote is open-source software for *internal decisions in voluntary organizations* (README; charter excludes government elections and "legally certified corporate elections"). Legal exposure depends mainly on **who operates an instance**, **what data they hold**, and **how the project describes its guarantees**. The project itself (maintainers/foundation) is a software publisher unless and until it runs a hosted service. <!-- claims-lint-ignore -->
 
 ### 6.1 GDPR and UK GDPR: roles
 
@@ -285,7 +285,7 @@ QuietVote has no custody or transfer of funds (charter), no token, no chain (ADR
 
 ### 6.6 Union-election law and cooperative law (where binding ballots are required) `[COUNSEL]`
 
-QuietVote's charter excludes legally certified elections. This section documents *why* and *what to say* when unions or co-ops ask.
+QuietVote's charter excludes legally certified elections. This section documents *why* and *what to say* when unions or co-ops ask. <!-- claims-lint-ignore -->
 
 **US — LMRDA (Labor-Management Reporting and Disclosure Act of 1959), Title IV, 29 U.S.C. §481:** requires local unions to elect officers by secret ballot; national/intermediate bodies by secret ballot of members or delegates. "Secret ballot" is defined in 29 U.S.C. §402(k) as voting by ballot, machine or otherwise, such that the voter cannot be identified with the choice. OLMS (DOL) guidance says the Act doesn't mandate a specific method but expects safeguards (candidate observers at the polls and count, record retention one year) and has litigated an electronic-voting case (APFA, 2016) alleging that the system allowed voters to be linked to votes and that observers could not verify recording and tally (see References). **Implication:** a union using QuietVote for *officer elections* risks non-compliance unless the implementation provides observer rights and demonstrable secrecy; P1 "public participation" is acceptable for secrecy of *content*, but the trustee-collusion model and the "operator untrusted" posture are not what the statute tests; the safest posture is: QuietVote may be used for *non-officer* advisory/ratification votes, and union counsel must decide for officer elections or contract ratification under the union's constitution/bylaws and NLRA/LMRDA rules `[COUNSEL]`. Note also NLRB representation elections are run by the NLRB, not by a union tool.
 
@@ -396,4 +396,4 @@ Verified by retrieval in this session:
 - TULRCA 1992 s.51 — https://www.legislation.gov.uk/ukpga/1992/52/section/51 ; s.49 — https://www.legislation.gov.uk/cy/ukpga/1992/52/section/49 ; s.51A summary via Harvey (LexisNexis) https://www.lexisnexis.co.uk/legal/commentary/harvey-on-industrial-relations-and-employment-law/division-m-trade-unions/a-summary-17
 - OLMS remote electronic voting guidance — https://www.dol.gov/agencies/olms/compliance-assistance/tips/remote-electronic-voting-systems ; OLMS compliance tip PDF https://dol.gov/sites/dolgov/files/olms/regs/compliance/catips/2016/comptip_electronicvotingsystems_oct2016.pdf ; APFA litigation brief https://apfa.org/wp-content/uploads/2017/12/170915-Perez-Brief-in-Response.pdf (search-result summaries; case outcome not verified).
 
-From background knowledge, not retrieved (treat as `[UNVERIFIED]` until checked): Benaloh–Tuinstra 1994 (receipt-freeness); Juels–Catalano–Jakobsson 2005 (JCJ); RFC 9474 (RSA blind signatures); RFC 9496 (ristretto255); RFC 8032 (EdDSA); ICCPR Art. 25(b); CoE CM/Rec(2017)5; GDPR Arts. 4, 6, 9, 17, 25, 26, 28, 30, 32, 33; AGPL-3.0 text (https://www.gnu.org/licenses/agpl-3.0.html); Developer Certificate of Origin v1.1 (https://developercertificate.org); 29 U.S.C. §§402(k), 481; Regulation (EU) 2021/821.
+From background knowledge, not retrieved (treat as `[UNVERIFIED]` until checked): Benaloh–Tuinstra 1994 (receipt-freeness); Juels–Catalano–Jakobsson 2005 (JCJ); RFC 9474 (RSA blind signatures); RFC 9496 (ristretto255); RFC 8032 (EdDSA); ICCPR Art. 25(b); CoE CM/Rec(2017)5; GDPR Arts. 4, 6, 9, 17, 25, 26, 28, 30, 32, 33; AGPL-3.0 text (https://www.gnu.org/licenses/agpl-3.0.html); Developer Certificate of Origin v1.1 (https://developercertificate.org); 29 U.S.C. §§402(k), 481; Regulation (EU) 2021/821. <!-- claims-lint-ignore -->
