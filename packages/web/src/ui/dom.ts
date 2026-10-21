@@ -24,7 +24,12 @@ export const nextId = (p: string): string => `${p}-${++uid}`;
 
 /** One polite and one assertive live region per page (QV-13-REQ-021), messages <= 140 chars. */
 export class Announcer {
-  constructor(private readonly polite: HTMLElement, private readonly assertive: HTMLElement) {}
+  private readonly polite: HTMLElement;
+  private readonly assertive: HTMLElement;
+  constructor(polite: HTMLElement, assertive: HTMLElement) {
+    this.polite = polite;
+    this.assertive = assertive;
+  }
   say(msg: string, urgent = false): void {
     const r = urgent ? this.assertive : this.polite;
     r.textContent = '';
