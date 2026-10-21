@@ -186,3 +186,51 @@ re-run.
 | CP-06, CP-07, CP-08 (info) | Open (selective-abort bias of K is a known property; scrypt header work factor; mutation gaps listed in §4). |
 
 AI-assisted review, not an independent professional audit. Unaudited; not for real elections.
+
+## Second-wave triage
+
+Date 2026-10-21. AI-assisted review, not an independent professional audit. Input: unverified findings from secondary (haiku) audits of
+`packages/protocol` and `packages/crypto`. Method: a failing test or PoC was written first for each finding. Findings that reproduced and
+needed no spec-owner decision got a minimal fix plus a regression test. Design questions are documented only. Tests:
+`packages/protocol/test/second-wave.test.ts` (7) and `packages/crypto/test/second-wave.test.ts` (7). All 14 failed before the fixes and
+pass after them.
+
+| ID | Sev | Evidence (after fix) | Disposition | Status |
+|----|-----|----------------------|-------------|--------|
+| P1 / TSV-05 | medium (design) | `protocol/src/verify.ts:136,208`: the verdict ignores `chk.board.*`. Without `opts.log` the board checks stay `not_run` and only a caveat is added, so a cast the operator removed from the log can still yield PASS | Spec-owner decision (verdict semantics; the verifier package composes the log layer itself). No code change | open (design) |
+| P2 | low | `protocol/src/tally.ts:41`: `trusteeDecryptTally([b,b,b])` passed the floor and decrypted one ballot | Refuse a repeated voter or code (`E_TRUSTEE_REFUSE`). Differencing over two different ≥floor subsets cannot be stopped without the log. The trustee package recomputes `counted` from the log (`trustee.ts` `verifiedElection`) and releases once, so it is not exposed. `decryptAggregates`/`buildTally` handle only public data | fixed (dup guard), test `P2`; differencing: open (API contract) |
+| P3 | medium | `verify.ts:472`: a second signed tally with a different `T` gave PASS | A later differing body is F `E_RESULT`. An identical repeat stays L | fixed, test `P3` |
+| P4 | medium | `ballotlog.ts:66`: a spoil with a bad attached reveal was dropped, so the same body cast later was counted (REQ-015) | Re-verify without `reveal`. If the voter signature holds, register the spoil, raise ALARM `E_SPOIL_MISMATCH` and fail benaloh. The later cast becomes `E_SPOILED_CODE_CAST` | fixed, test `P4/REQ-015` |
+| P6 | low | `manifest.ts:65`: trustee and witness names skipped the NFC/bidi check | Check is extended to those names | fixed, test `P6` |
+| P7 / TSV-03 | low | `verify.ts:478,558`: below the floor, `chk.tally.decrypt` read `pass` without any decryption (so verifier V10/V11 showed PASS) and the rules `fail` was overwritten to `not_run`. The verdict was already FAIL | `decrypt` is set to `pass` only after verification and combination. The rules failure is kept. Vectors regenerated | fixed, test `P7/TSV-03` |
+| P8 | info | `types.ts:10` `E_TALLY_MISSING` is never emitted (a missing tally gives INCOMPLETE with no finding). `E_AEAD` is a crypto-layer code that `dkg.ts:114` maps to a complaint reason. Neither code is in the QV-16 §5.20 table | No defect reproduced. No change (adding a finding would alter every INCOMPLETE vector) | not reproducible (as a defect) |
+| P9 | low | `verify.ts:391`: an invalid keyconf signed by trustee j shadowed j's later valid keyconf, so `\|T\|<t` gave FAIL | Only a valid keyconf settles j (§5.7.8) | fixed, test `P9` |
+| P10 | info | `verify.ts:282,413`: duplicate `election-open/close` markers (m-of-n coordinator signed) are L, and the first one wins deterministically | Whether coordinator marker equivocation should be F is for the spec owner (QV-18) | open (design) |
+| P11 | low | `verify.ts:537`: `tally.decrypters` was never compared, and `buildTally` listed every trustee that sent shares | Must equal the recomputed `T_valid` (F `E_DEC_PROOF`). `buildTally` emits `T_valid` | fixed, test `P11` |
+| C1 | low | `crypto/src/share-cipher.ts:47`: identity `E_j` was accepted, so the key could be derived from public data | `E_IDENTITY` | fixed, test `C1` |
+| C2 / CP-02 | low | see CP-02 | Spec deviation. Report only | open (spec) |
+| C3 | info | `proofs.ts:50,67,85`: PoK, share-key and DH-reveal nonces come from the plain CSPRNG | Matches QV-16 §5.7.2 ("CSPRNG (or hedged)") and is listed as OQ-7. Hedging needs registry labels | open (design, OQ-7) |
+| C4 | low | `elgamal.ts:21`: `r = l` passed, giving `A = O` | Require `0 < r < l` | fixed, test `C4` |
+| C5 | low | `json.ts:193,209`: `canonicalize` serialised Map/Uint8Array/Date and NFD strings or lone-surrogate keys that `parseQvJson` rejects | Plain objects only, with NFC and surrogate checks on strings and keys | fixed, test `C5` |
+| C6 | low | `proofs.ts:189`: a non-integer `L` threw `RangeError` out of `limitVerify` | Return false | fixed, test `C6` |
+| C7 | low | `feldman.ts:44,56`: `lagrangeAtZero([0],0)` returned 1, and `feldmanVerifyShare(f(0),A,0)` returned true | Reject index < 1 | fixed, test `C7` |
+| C8 | info | `proofs.ts:94,231`: `dhVerify` accepted `Ej = S = O` | Reject identity `Ej/R/S` (dh) and `Yj` (dec). Callers already decode these as non-identity, so this is defence in depth | fixed, test `C8` |
+| C10 | low | `bundle-cipher.ts:19,74`: header `logN` up to 22 (~4 GiB scrypt) before authentication | `BUNDLE_MAX_LOGN` lowered from 22 to 20 (~1 GiB), plus an optional `maxLogN` on open. The floor stays 18 (QV-17-REQ-021). Behaviour change: bundles sealed at 21 or 22 are refused; none exist in the repo | fixed, test `C10`; trustee could pass `maxLogN` (follow-up, out of scope) |
+| C11 | info | `crypto/src/index.ts:4` (`rng.ts`): `streamRng`, `constantRng` and `vecrng` are exported from the main entry | Moving them to a `/testing` subpath would break tests in cli, server, trustee, verifier and web (out of scope). Not changed | open |
+
+Commands run:
+
+* `npm test -w @quietvote/crypto`: 57 pass, 0 fail.
+* `node packages/protocol/test/vecgen/write.ts`, then `npm test -w @quietvote/protocol`: 187 pass, 0 fail (including `vectors.test.ts`,
+  28 pass).
+* `npx tsc -p tsconfig.json --noEmit`: clean.
+* Other packages were run but not edited: board 48/0, trustee 53/0, web 105/0, server 136/0 (`e2e.test.ts` hit ECONNRESET once while run
+  concurrently and passed when re-run alone).
+* cli has 2 failures and verifier has 9. Cause: `packages/verifier/canary/corpus.json` is stale. It predates the QV-ADR-015 election-open
+  binding fields, so its control bundle fails `E_MARKERS`. This was already the case before this triage.
+* Five verifier log-layer tests fail for the same reason: `verifier/test/helpers/sim.ts:221` emits an unbound election-open. That is
+  unrelated to this triage.
+* A corpus built in memory from the regenerated vectors (`buildCorpus()` + `runSelfTest`) passes: 36/36 rejected, control accepted. Fix
+  (verifier scope): `node packages/verifier/scripts/build-corpus.ts`.
+* The vector regeneration rewrote `test-vectors/`. Only the `chk.tally.decrypt` statuses of affected reports are expected to differ. This
+  review did not run git, so the coordinator should review that diff.

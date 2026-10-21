@@ -91,6 +91,8 @@ export function dhProve(mh: Uint8Array, i: number, j: number, Ej: Point, R: Poin
 
 export function dhVerify(mh: Uint8Array, i: number, j: number, Ej: Point, R: Point, S: Point, proof: CompactProof): boolean {
   return guard(() => {
+    // C8: defence in depth (callers decode Ej/R non-identity); an identity statement proves nothing about e_j.
+    if (isIdentity(Ej) || isIdentity(R) || isIdentity(S)) return false;
     if (!inRange(proof.c) || !inRange(proof.s)) return false;
     const a1 = commit(G, Ej, proof.c, proof.s);
     const a2 = commit(R, S, proof.c, proof.s);
@@ -184,6 +186,7 @@ export function limitProve(st: LimitStatement, R: Scalar, xi: Uint8Array): Compa
 
 export function limitVerify(st: LimitStatement, p: CompactProof): boolean {
   return guard(() => {
+    if (!Number.isInteger(st.L) || st.L < 0 || st.L > 0xffffffff) return false; // C6: u32 would throw RangeError
     if (!inRange(p.c) || !inRange(p.s) || isIdentity(st.K)) return false;
     const a = commit(G, st.Asum, p.c, p.s);
     const b = commit(st.K, pointSub(st.Bsum, baseMul(BigInt(st.L))), p.c, p.s);
@@ -225,6 +228,7 @@ export function decProve(
 
 export function decVerify(st: DecStatement, p: CompactProof): boolean {
   return guard(() => {
+    if (isIdentity(st.Yj)) return false; // C8: a key share is never the identity (Y_j decode is non-identity)
     if (!inRange(p.c) || !inRange(p.s)) return false;
     const a = commit(G, st.Yj, p.c, p.s);
     const b = commit(st.A, st.M, p.c, p.s);

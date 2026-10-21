@@ -38,6 +38,10 @@ export function trusteeDecryptTally(
   rollSize: number,
   rng: Rng,
 ): Result<ShareSet> {
+  // P2: the floor counts distinct voters. A repeated voter or ballot code would let a caller pad the floor with copies of one ballot.
+  if (new Set(counted.map((c) => c.voter)).size !== counted.length || new Set(counted.map((c) => c.code)).size !== counted.length) {
+    return err('E_TRUSTEE_REFUSE', 'counted set repeats a voter or ballot code');
+  }
   if (counted.length < effectiveMinCounted(p.manifest, rollSize)) return err('E_BELOW_FLOOR', 'refusing: fewer counted voters than the privacy floor');
   const aggs = aggregate(p, counted);
   if (claimed !== undefined) {
@@ -258,7 +262,7 @@ export function buildTally(p: ElectionParams, inp: TallyInputs): Result<{ body: 
     ctx: H(p.ctx),
     n_counted: V,
     counted_root: H(countedRoot(counted)),
-    decrypters: [...inp.shares.keys()].sort((a, b) => a - b),
+    decrypters: dec.value.validSet, // §5.19: T_valid (P11), not every trustee that sent something
     contests,
     spoiled,
     results: evaluateAll(p.manifest, dec.value.counts, V, inp.rollSize),
