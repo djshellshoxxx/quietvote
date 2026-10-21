@@ -57,6 +57,14 @@ This is the entry point for product and engineering specifications. Specs are in
 
 **Authority order for conflicts:** QV-16 (cryptographic bytes) and the reconciliation ADRs (QV-ADR-014–024 in the decision log) outrank other specs; QV-18 outranks others on log mechanics; baseline ADR-001–013 are binding unless amended. Statuses were updated on 2026-10-21: every written spec is **Draft**; none is Review or Approved.
 
+## Exploratory ideas
+
+[IDEAS.md](../IDEAS.md) holds non-binding concepts for future consideration. Ideas are not part of the MVP until selected, specified, threat-modeled, and recorded in the decision log.
+
+### Retained pre-renumbering drafts
+
+The following files were added on `main` before the current specification map was established: `15-cryptography-and-technical-design.md`, `17-portable-membership-credentials.md`, `18-federated-governance.md`, and `19-delegation-exit-fork.md`. They are retained as source material, but their former QV numbers overlap with the current index. Treat them as non-authoritative until their useful content is reconciled into the current specifications or `IDEAS.md`; do not cite their old QV IDs as active requirements.
+
 ## Proposed completion order
 
 1. Review the project charter and capability boundaries.
@@ -66,6 +74,7 @@ This is the entry point for product and engineering specifications. Specs are in
 5. Specify architecture, interfaces, data contracts, and user journeys.
 6. Define testing and assurance gates before implementation.
 7. Complete operational, accessibility, and sustainability requirements before launch.
+8. Review optional credential, federation, delegation, and fork modules after the core model is agreed.
 
 This is a proposed sequence, not approval to implement. Security and privacy review must recur as designs change.
 

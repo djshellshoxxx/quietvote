@@ -18,6 +18,12 @@ QuietVote aims to support voluntary governance where:
 
 The design should favor user-controlled disclosure, minimal data collection, transparent rules, accessible interfaces, and verifiable outcomes. The exact trust model and cryptographic protocol remain open.
 
+## Cryptography and technology
+
+QuietVote uses **cryptography as a trust-reduction tool**, not necessarily cryptocurrency. Candidate design elements include encrypted ballots, zero-knowledge eligibility and ballot-validity proofs, decision-scoped nullifiers to prevent duplicate voting, threshold tally keys, digital signatures, and tamper-evident audit records. The proposed technical flow and the limits of these guarantees are documented in [Cryptography and Technical Design](docs/15-cryptography-and-technical-design.md).
+
+A token or public blockchain is not a core requirement. Existing voting protocols and standards are research starting points; the project has not selected or implemented a protocol. See the [Future Ideas backlog](IDEAS.md) for optional extensions such as portable credentials, federated group decisions, and forkable governance rules.
+
 ## Intended users
 
 - Cooperatives and member associations
