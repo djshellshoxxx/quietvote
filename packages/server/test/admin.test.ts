@@ -74,7 +74,7 @@ test('status: shape, counts, backup time, disk, migrations; no secrets', async (
   assert.ok(s.disk.free_bytes === null || s.disk.free_bytes > 0);
   assert.equal(s.migrations.control, 4);
   const txt = JSON.stringify(s);
-  assert.ok(!/dek|secret|kek|read_key|log_sk/i.test(txt));
+  assert.ok(!/dek|secret|kek|read_key|log_sk/i.test(txt), `status leaked a secret-looking token: ${txt.match(/dek|secret|kek|read_key|log_sk/i)?.[0]} in ${txt}`);
 });
 
 test('election listing: pagination, state filter, strict parameters, registry columns only', async () => {
