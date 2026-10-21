@@ -348,7 +348,10 @@ test('board verify: election bundle with board export uses manifest anchors; wit
   assert.equal(none.code, 3);
   assert.match(none.err, /no usable board export/);
   // and the whole-bundle verdict agrees
-  assert.equal((await qv(['verify', f, '--skip-selftest'])).code, 0);
+  // the fixture board holds non-record bodies; the log layer (C3) now refuses to bind it => not a pass
+  const wholeBundle = await qv(['verify', f, '--skip-selftest']);
+  assert.equal(wholeBundle.code, 1, wholeBundle.out + wholeBundle.err);
+  assert.match(wholeBundle.out + wholeBundle.err, /E_LOG_BINDING/);
   assert.equal((await qv(['verify', writeJson(dir, 'with-bad-board.json', withBoard), '--skip-selftest'])).code, 1);
 });
 
