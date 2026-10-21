@@ -221,3 +221,4 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   as `spoiled[].shares`. Consequence: a draft fetched before the t-th share of some spoil arrives will be refused by `vTally` (byte-exact recomputation); re-fetch the draft.
   A trustees-mode spoil with < t shares is silently omitted from the tally (verifier then sees fewer `spoiled` entries; decide operationally whether to wait).
 * Tests: `test/spoil-shares.test.ts`; `World` gained `spoilTrustees`, `analysis()`, `spoilShareRecord()`, `postSpoilShare()`.
+- Backup directory/file mode assertions (0700/0600) run on POSIX only; Windows ACLs are not asserted (no ACL check implemented).

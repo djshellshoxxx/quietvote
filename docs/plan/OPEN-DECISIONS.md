@@ -108,3 +108,17 @@ Entries added by the consistency pass in [CONSISTENCY-REPORT](CONSISTENCY-REPORT
 | ID | Decision | Source | Recommended default | Deadline |
 |---|---|---|---|---|
 | D-84 | **Organizer/admin request authentication: QV-08 signed requests (`Authorization: QV-Sig`, implemented in `packages/server`) vs QV-09 challenge/session bearer (`/auth/challenge`, `/auth/session`, `Bearer qvs_…`, specified in QV-09 §3.2, REQ-006; still called by `packages/web`).** | QV-08 §7 (REQ-019, QV-ADR-P08-4) vs QV-09 §3.2 (REQ-005/006, QV-ADR-P09-2); CONSISTENCY-REPORT row 20 | **QV-08 signed requests.** Already implemented and negative-tested; no server session store, token rotation or revocation to get wrong; no bearer to leak; ±120 s window plus nonce cache bounds replay; audience binding is kept in the signed message. QV-09 §3.2 and REQ-006 to be rewritten to the signed-request form, and `packages/web` auth client moved to match, once accepted. | **M1** (before the QV-09 freeze); needed before any organizer UI is tested end to end |
+
+## H. [Added 2026-10-21 by the docs pass] Conflicts found in NOTES, errata and specs
+
+Each row is an owner decision that the TODO list ([TODO](TODO.md), N-items in brackets) cannot close. "Recommended default" is the proposal; the owner accepts or overrides as in sections A–G.
+
+| ID | Decision | Source | Recommended default | Deadline |
+|---|---|---|---|---|
+| D-85 | Dependency rule D1: allow the single edge `cli -> verifier`, or extend `qv-verify` so `cli` does not import the verifier library [N-11] | CONSISTENCY-REPORT row 19; `packages/cli/NOTES.md` | Amend D1 to allow `cli -> verifier`; D5 (verifier never imports cli) still protects verifier independence | M1 |
+| D-86 | Node engine floor: `package.json` says `>=22.18`, QV-ADR-014 says `>=22.16` [N-02] | `package.json`; decision-log QV-ADR-014 | Use `>=22.18` (the value enforced at install) and amend QV-ADR-014 to match, unless the owner objects | M1 |
+| D-87 | Control-entry record shape and signature scope (`pause`, `resume`, `invalidate`, `security-notice`, witness waiver, extension); verifier and server disagree on scope [N-12] | protocol NOTES X-31, X-33; server NOTES; QV-ADR-022 | Keep the verifier's reading (closed schema `{body:{proto,type:"control",action,reason?}}`, co-signed under the manifest hash) and make the server match | M1 |
+| D-88 | Trustee spoil mode (`spoil_trustee_decrypt`, QV-ADR-020) enabled in suite v1? [N-14] | decision-log QV-ADR-020; protocol X-14, X-19; QV-35-REQ-012 | Off in suite v1 (the ADR's own default); the trustee code stays behind the manifest flag | M1 |
+| D-89 | Tracking-code alphabet (errata E-001): Crockford base32 for display, RFC 4648 lowercase for log origin, or one alphabet [N-15] | errata E-001; QV-16 §5.12.1 | Two named alphabets, one per use, both written into QV-16; owner to confirm | M1 |
+| D-90 | Rate-limit header names (errata E-002): keep early draft names or move to the current IETF draft names when final [N-16] | errata E-002; QV-09 | Keep current names until the IETF draft is final; then move | M2 |
+| D-91 | Automatic open and close scheduler on the server (no closer key in the manifest) [N-21] | `packages/server/NOTES.md` "Time" | Not in MVP; coordinator posts `election_open` and `election_close` manually | M2 |

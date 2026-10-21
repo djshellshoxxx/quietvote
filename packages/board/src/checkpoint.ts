@@ -121,6 +121,7 @@ export interface WitnessStatus {
 /** Counts valid cosignatures from distinct policy witnesses. `maxTimestamp` rejects future-dated cosigs (online use). */
 export function witnessStatus(cp: Checkpoint, policy: WitnessPolicy, maxTimestamp?: number): WitnessStatus {
   const valid = new Map<string, number>();
+  const usedKeys = new Set<string>(); // distinct *keys*: one key listed under two names counts once
   const nonPolicy: string[] = [];
   const unsupported: string[] = [];
   for (const l of cp.lines) {
@@ -145,6 +146,12 @@ export function witnessStatus(cp: Checkpoint, policy: WitnessPolicy, maxTimestam
       nonPolicy.push(l.name);
       continue;
     }
+    const kid = `${w.alg}:${Array.from(w.publicKey, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+    if (usedKeys.has(kid)) {
+      nonPolicy.push(l.name);
+      continue;
+    }
+    usedKeys.add(kid);
     valid.set(w.name, ts);
   }
   const witnessed = policy.quorum >= 1 && valid.size >= policy.quorum;

@@ -7,3 +7,4 @@ export * from './ceremonylog.ts';
 export * from './transcript.ts';
 export * from './trustee.ts';
 export { main as trusteeMain, type CliIo, type CliDeps } from './cli.ts';
+export * from './ledger.ts';
