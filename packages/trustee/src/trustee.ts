@@ -12,12 +12,12 @@ import {
 } from '@quietvote/protocol';
 import { witnessStatus, type WitnessPolicy } from '@quietvote/board';
 import {
-  encodeBundle, readBundle, tombstonePath, writeBundle,
+  encodeBundle, readBundle, readBundleSealed, tombstonePath, writeBundle,
   type BundleData, type CompromiseBody, type KeyDestructionBody, type KeycheckBody, type SpoilShareBody, type TallyShareBody, type VaultDeps,
 } from './bundle.ts';
 import { computeR1, markerBody, markerSeq, mergeEntries, takeDkg, uniqueBy, type ImportReport } from './ceremonylog.ts';
 import { TrusteeError } from './errors.ts';
-import { exists, atomicWrite, shred } from './fsutil.ts';
+import { exists, atomicWrite, lockPath, readFile, shred, withLock } from './fsutil.ts';
 import { ledgerPath, readLedger, writeLedger } from './ledger.ts';
 import { realpath } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -130,12 +130,15 @@ export class Trustee {
   private readonly pass: string;
   private d: BundleData;
   private readonly deps: Dep;
+  /** SHA-256 of the sealed file as this object last read or wrote it; undefined = the file must not exist yet (audit TR-03). */
+  private sealedHash: string | undefined;
 
-  private constructor(path: string, pass: string, d: BundleData, deps: Dep) {
+  private constructor(path: string, pass: string, d: BundleData, deps: Dep, sealed?: Uint8Array) {
     this.path = path;
     this.pass = pass;
     this.d = d;
     this.deps = deps;
+    this.sealedHash = sealed === undefined ? undefined : H(sha256(sealed));
   }
 
   // ------------------------------------------------------------------ lifecycle
@@ -162,8 +165,8 @@ export class Trustee {
    * already released from this path (a backup copied over the live bundle), the earlier releases are carried forward.
    */
   static async open(path: string, pass: string, deps: Dep): Promise<Trustee> {
-    const d = await readBundle(path, pass, deps);
-    const t = new Trustee(path, pass, d, deps);
+    const { data: d, sealed } = await readBundleSealed(path, pass, deps);
+    const t = new Trustee(path, pass, d, deps, sealed);
     const led = await readLedger(ledgerPath(path));
     if (led !== undefined && t.adoptReleases(led, 'release ledger')) await t.save();
     return t;
@@ -193,8 +196,7 @@ export class Trustee {
     }
     d.home = resolve(to);
     d.events.push({ t: deps.now().toISOString(), note: `restored from backup epoch ${d.backup_epoch}` });
-    await t.syncLedger();
-    await t.save();
+    await t.save({ ledger: true });
     return t;
   }
 
@@ -245,8 +247,18 @@ export class Trustee {
     return this.d.sign_pk;
   }
 
-  private async save(): Promise<void> {
-    await writeBundle(this.path, this.d, this.pass, this.deps);
+  /**
+   * Compare-and-write under the bundle lock (audit TR-03): refuses with BUNDLE_CHANGED when the file on disk is not the one this
+   * object opened or last wrote (another process or Trustee object wrote it meanwhile), so two holders of one bundle can never both
+   * persist (and so never both emit) a one-shot output. `ledger`: also sync the public release ledger, inside the same lock, first.
+   */
+  private async save(opts: { ledger?: boolean } = {}): Promise<void> {
+    await withLock(this.path, async () => {
+      const cur = (await exists(this.path)) ? H(sha256(new Uint8Array(await readFile(this.path)))) : undefined;
+      if (cur !== this.sealedHash) throw new TrusteeError('STATE', 'BUNDLE_CHANGED', 'the bundle file changed on disk since it was opened (another qv-trustee process?); nothing was written. Re-run the command');
+      if (opts.ledger === true) await this.syncLedger();
+      this.sealedHash = H(sha256(await writeBundle(this.path, this.d, this.pass, this.deps)));
+    });
   }
   private note(s: string): void {
     this.d.events.push({ t: this.deps.now().toISOString(), note: s });
@@ -588,6 +600,7 @@ export class Trustee {
     const b = electionBundle as { manifest?: MultiSignedRecord<Manifest>; manifest_hash?: string; roll?: string[]; log?: { seq: number; entry: unknown }[]; log_evidence?: unknown } | null;
     if (typeof b !== 'object' || b === null || b.manifest === undefined || !Array.isArray(b.roll) || !Array.isArray(b.log)) throw new TrusteeError('VERIFY', 'BUNDLE_FORMAT', 'election bundle must be {manifest, manifest_hash, roll, log}');
     if (b.manifest_hash !== this.d.manifest_hash || H(jcs(b.manifest.body)) !== H(jcs(m))) throw new TrusteeError('REFUSED', 'WRONG_ELECTION', 'bundle manifest differs from the one this share belongs to');
+    this.assertNoFork(b.log);
 
     // 1. full log verification (tally records are stripped: a bogus coordinator tally must not block honest trustees)
     const stripped = { ...b, log: b.log.filter((e) => (e.entry as { body?: { type?: string } } | null)?.body?.type !== 'tally') };
@@ -647,6 +660,36 @@ export class Trustee {
   }
 
   /**
+   * Audit TR-04: the presented election log must extend the log this trustee imported. A different entry at a seq we know, or a
+   * known seq missing while later entries are present, is equivocation by the log operator: LOG_FORK (exit 20), before anything else.
+   */
+  private assertNoFork(presented: readonly unknown[]): void {
+    const got = new Map<number, unknown>();
+    let max = -1;
+    for (const e of presented) {
+      const seq = (e as { seq?: unknown } | null)?.seq;
+      if (typeof seq !== 'number') continue; // malformed shapes are left to verifyElection
+      if (got.has(seq)) throw new TrusteeError('VERIFY', 'LOG_FORK', `seq ${seq} appears twice in the presented log`);
+      got.set(seq, (e as { entry?: unknown }).entry);
+      max = Math.max(max, seq);
+    }
+    const enc = (x: unknown): string | undefined => {
+      try {
+        return H(jcs(x as never));
+      } catch {
+        return undefined;
+      }
+    };
+    for (const k of this.d.log) {
+      if (!got.has(k.seq)) {
+        if (k.seq < max) throw new TrusteeError('VERIFY', 'LOG_FORK', `seq ${k.seq} (imported earlier) is missing from the presented log`);
+        continue;
+      }
+      if (enc(got.get(k.seq)) !== H(jcs(k.entry))) throw new TrusteeError('VERIFY', 'LOG_FORK', `seq ${k.seq} differs from the entry imported earlier`);
+    }
+  }
+
+  /**
    * QV-17-REQ-040: verifies the election log, recomputes the aggregate ciphertexts itself and releases a signed partial
    * decryption of exactly those. There is no parameter through which a ciphertext can be supplied.
    */
@@ -681,8 +724,7 @@ export class Trustee {
     const body: TallyShareBody = { proto: PROTO_ID, type: 'tally-share', ctx: dv.ctx, j: i, n_counted: an.counted.length, counted_root, shares };
     this.d.out.release = this.sign(ctx, body);
     this.go('RELEASED');
-    await this.syncLedger(); // public ledger first: a restore of an older bundle must not forget this release
-    await this.save();
+    await this.save({ ledger: true }); // public ledger first (same lock): a restore of an older bundle must not forget this release
     return this.packet('tally-share', [this.d.out.release]);
   }
 
@@ -753,8 +795,7 @@ export class Trustee {
     const out = (this.d.out.spoil ??= {});
     for (const r of records) out[r.body.code] = r;
     this.note(`released spoil shares for ${codes.length} ballot(s)`);
-    await this.syncLedger();
-    await this.save();
+    await this.save({ ledger: true });
     return this.packet('spoil-share', records);
   }
 
@@ -765,7 +806,7 @@ export class Trustee {
     this.need(...(['KEYS_READY', ...PRE_STANDBY, 'STANDBY', 'TALLYING', 'RELEASED', 'AUDIT_WAIT', 'DISQUALIFIED', 'ABORTED'] as TrusteeState[]));
     assertPassphraseStrength(backupPass, this.deps.allowWeak === true);
     // Never overwrite anything (T5): not an existing file, and not a path that resolves to one of this share's own files, even if it does not exist yet.
-    const own = [this.path, tombstonePath(this.path), `${this.path}.attestation.json`, ledgerPath(this.path), ...this.d.backups.map((x) => x.path)];
+    const own = [this.path, tombstonePath(this.path), `${this.path}.attestation.json`, ledgerPath(this.path), lockPath(this.path), ...this.d.backups.map((x) => x.path)];
     const target = await realTarget(dest);
     for (const o of own) if ((await realTarget(o)) === target) throw new TrusteeError('USAGE', 'BACKUP_SAME_FILE', 'the backup would overwrite one of this share\'s own files');
     if (await exists(dest)) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'backup destination already exists; refusing to overwrite');

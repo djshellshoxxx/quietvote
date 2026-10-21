@@ -106,3 +106,70 @@ test('malicious coordinator: a bundle sealed under another passphrase/file swapp
     g.c.cleanup();
   }
 });
+
+/**
+ * Two election bundles that each pass every release gate but count different ballot sets: the trustee imported the log up to the
+ * last cast ballot; A closes at seq S, B posts one more cast at S and closes at S+1. Used by TR-03 (concurrency) and TR-04 (fork).
+ */
+async function forkedElection(seed: string) {
+  const c = new Ceremony({ n: 3, t: 2, seed, voters: 7 });
+  await c.setup();
+  const o = await c.runDkg();
+  ['yes', 'yes', 'no', 'yes', 'no', 'yes'].forEach((v, k) => c.cast(o, k, { budget: [v] }));
+  await c.syncAll();
+  const base = { log: [...c.log], seq: c.seq };
+  c.marker('election-close');
+  const a = c.bundle();
+  const aLog = [...c.log];
+  c.log = [...base.log];
+  c.seq = base.seq;
+  c.cast(o, 6, { budget: ['no'] });
+  c.marker('election-close');
+  const b = c.bundle();
+  return { c, a, b, aLog, closeSeq: base.seq + 1 };
+}
+
+test('TR-03: a second Trustee (second process) on the same bundle cannot release a tally share over a different counted set', async () => {
+  const { c, a, b } = await forkedElection('audit-tr03');
+  try {
+    const t1 = await c.act(1, async (x) => x);
+    const t2 = await c.act(1, async (x) => x); // opened before t1 released: stale in-memory copy
+    await t1.releaseTally(a);
+    await rejects(t2.releaseTally(b), 'BUNDLE_CHANGED');
+    // nothing about b was written: only the first release is on disk and in the public ledger
+    const live = await c.act(1, async (x) => x);
+    assert.equal(live.state, 'RELEASED');
+    await rejects(live.releaseTally(b), 'RELEASE_CONFLICT');
+    const ledger = JSON.parse(readFileSync(`${c.path(1)}.releases`, 'utf8')) as { records: unknown[] };
+    assert.equal(ledger.records.length, 1);
+    // a held lock (another process inside its write section) blocks every write; the operation leaves no trace
+    const t3 = await c.act(2, async (x) => x);
+    writeFileSync(`${c.path(2)}.lock`, '12345\n', { flag: 'wx' });
+    await rejects(t3.releaseTally(a), 'BUNDLE_LOCKED');
+    (await import('node:fs')).unlinkSync(`${c.path(2)}.lock`);
+    assert.equal((await c.act(2, async (x) => x)).data.out.release, undefined);
+    // racing in one event loop: exactly one of two concurrent releases succeeds
+    const [x, y] = await Promise.allSettled([(await c.act(2, async (q) => q)).releaseTally(a), (await c.act(2, async (q) => q)).releaseTally(b)]);
+    assert.equal([x, y].filter((r) => r.status === 'fulfilled').length, 1);
+  } finally {
+    c.cleanup();
+  }
+});
+
+test('TR-04: an election bundle whose log differs from the trustee\'s imported log at a known seq is refused (LOG_FORK)', async () => {
+  const { c, a, b, aLog, closeSeq } = await forkedElection('audit-tr04');
+  try {
+    c.log = aLog; // the trustee imports the honest close at closeSeq
+    await c.sync(1);
+    assert.ok((await c.act(1, async (x) => x)).data.log.some((e) => e.seq === closeSeq));
+    await rejects(c.act(1, (t) => t.releaseTally(b)), 'LOG_FORK');
+    await rejects(c.act(1, (t) => t.releaseSpoil(b, ['00'.repeat(32)])), 'LOG_FORK');
+    // an entry the trustee knows is missing from the presented log (with later entries present) is a fork too
+    const known = (await c.act(1, async (x) => x)).data.log.filter((e) => e.seq < closeSeq).at(-1)!.seq; // e.g. election-open
+    await rejects(c.act(1, (t) => t.releaseTally({ ...a, log: a.log.filter((e) => e.seq !== known) })), 'LOG_FORK');
+    assert.equal((await c.act(1, async (x) => x)).data.out.release, undefined, 'refusal does not consume the release');
+    assert.equal((await c.act(1, (t) => t.releaseTally(a))).round, 'tally-share');
+  } finally {
+    c.cleanup();
+  }
+});

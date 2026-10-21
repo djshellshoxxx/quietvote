@@ -66,4 +66,30 @@ export async function shred(path: string, randomBytes: (n: number) => Uint8Array
   return true;
 }
 
+/** Lock file guarding a bundle's read-check-write section (audit TR-03). */
+export const lockPath = (bundle: string): string => `${bundle}.lock`;
+
+/**
+ * Runs `fn` while holding `<bundle>.lock`, created atomically with O_EXCL (`wx`). A second holder (another process, or another
+ * Trustee object in this process) gets BUNDLE_LOCKED instead of waiting. The lock is removed in `finally`; only a hard kill inside
+ * the (milliseconds-long) write section leaves it behind, and then the operator deletes it after checking no qv-trustee runs.
+ */
+export async function withLock<T>(bundle: string, fn: () => Promise<T>): Promise<T> {
+  const lp = lockPath(bundle);
+  let fh;
+  try {
+    fh = await open(lp, 'wx', 0o600);
+  } catch (e) {
+    if ((e as { code?: string }).code === 'EEXIST') throw new TrusteeError('STATE', 'BUNDLE_LOCKED', `${lp} exists: another qv-trustee process is writing this bundle. If none is running (crash), delete the lock file and re-run`);
+    throw e;
+  }
+  try {
+    await fh.writeFile(`${process.pid}\n`);
+    await fh.close();
+    return await fn();
+  } finally {
+    await unlink(lp).catch(() => {});
+  }
+}
+
 export { readFile, writeFile };

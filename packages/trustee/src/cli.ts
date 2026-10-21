@@ -6,7 +6,7 @@ import type { Aggregate, Manifest, MultiSignedRecord } from '@quietvote/protocol
 import { TrusteeError } from './errors.ts';
 import { assertPassphraseStrength, generatePassphrase } from './passphrase.ts';
 import { OVERRIDE_NO_LEDGER, OVERRIDE_UNWITNESSED, Trustee, realTarget, type Packet } from './trustee.ts';
-import { atomicWrite, exists, readSecretFile } from './fsutil.ts';
+import { atomicWrite, exists, lockPath, readSecretFile } from './fsutil.ts';
 import { ledgerPath } from './ledger.ts';
 import { tombstonePath } from './bundle.ts';
 import { verifyTranscript, type Transcript } from './transcript.ts';
@@ -123,7 +123,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       const out = o.get('out');
       if (out === undefined) return;
       const b = t.path;
-      const prot = [b, tombstonePath(b), `${b}.attestation.json`, ledgerPath(b), ...t.data.backups.map((x) => x.path)];
+      const prot = [b, tombstonePath(b), `${b}.attestation.json`, ledgerPath(b), lockPath(b), ...t.data.backups.map((x) => x.path)];
       const target = await realTarget(out);
       for (const x of prot) if ((await realTarget(x)) === target) throw new TrusteeError('REFUSED', 'OUT_PATH_PROTECTED', `--out ${out} is a sealed bundle, backup or record of this share`);
       if (await exists(out)) throw new TrusteeError('REFUSED', 'OUT_EXISTS', `--out ${out} already exists; remove it first (never overwritten)`);
