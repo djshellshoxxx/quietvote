@@ -197,3 +197,5 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   when the client vanishes before attach, pre-auth upload reservation, duplicate witness keys in `cfg.witnesses`).
 * **Webhook receivers** should reject deliveries whose `QV-Webhook-Timestamp` is outside their own window (e.g. +-5 min), compare the `v1=` signature in
   constant time, dedupe on `QV-Webhook-Id`, and take the event type from the signed body (the `QV-Webhook-Event` header is not signed).
+
+- Backup directory/file mode assertions (0700/0600) run on POSIX only; Windows ACLs are not asserted (no ACL check implemented).

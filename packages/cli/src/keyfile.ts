@@ -41,7 +41,8 @@ async function kek(passphrase: string, salt: Uint8Array, prm: KdfParams): Promis
 
 export async function wrapSeed(seed: Uint8Array, passphrase: string, rng: Rng, prm: KdfParams = DEFAULT_PARAMS): Promise<QvKey1> {
   validateParams(prm);
-  if ([...passphrase].length < MIN_PASSPHRASE_CHARS) throw new UsageError(`passphrase must have at least ${MIN_PASSPHRASE_CHARS} characters`);
+  // Measured on the NFKC form the key is derived from: a decomposed passphrase must not pass on its raw length.
+  if ([...canon(passphrase)].length < MIN_PASSPHRASE_CHARS) throw new UsageError(`passphrase must have at least ${MIN_PASSPHRASE_CHARS} characters`);
   const publicKey = ed25519Keypair(seed).publicKey;
   const keyId = keyIdOf(publicKey);
   const salt = rng.bytes(16);

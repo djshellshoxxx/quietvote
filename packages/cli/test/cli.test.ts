@@ -375,7 +375,7 @@ test('election inspect: summary, JSON, mismatching hash, invalid manifest, bad i
   const t = tinyBundle();
   t.manifest_hash = '00'.repeat(32);
   const mm = await qv(['election', 'inspect', writeJson(dir, 'mm.json', t)]);
-  assert.equal(mm.code, 0);
+  assert.equal(mm.code, 1, 'a manifest hash that differs from the bundle is a failure (audit F12)');
   assert.match(mm.out, /DIFFERS from/);
   const bad = tinyBundle();
   bad.manifest.body.n = 'many';
