@@ -30,7 +30,7 @@ Not by default. The group picks the identity mode. See spec 04 section 3.
 No. There is no token, and it does not need a chain. Linking the log to a public timestamp service is optional (QV-ADR-012).
 
 **Is the code open source?**
-The proposed licence is AGPL-3.0-or-later, but no LICENSE file has been added yet (QV-ADR-011). Until one is added, no reuse permission is granted.
+The code is licensed under AGPL-3.0-or-later (the `LICENSE` file is in the repository). Documentation is proposed under CC BY-SA 4.0 (QV-ADR-011). The licences of third-party dependencies are listed in the [dependency licence snapshot](https://github.com/djshellshoxxx/quietvote/blob/main/docs/reports/dependency-licence-snapshot.md), which is not legal advice.
 
 **How do I report a security problem?**
 Follow [SECURITY.md](https://github.com/djshellshoxxx/quietvote/blob/main/SECURITY.md) and spec 33. Do not open a public issue.

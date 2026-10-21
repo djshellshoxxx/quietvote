@@ -78,6 +78,12 @@ export interface MarkerBody {
   name: MarkerName;
   qmask?: number;
   K?: Hex;
+  /** `election-open` only (QV-ADR-015): the open entry binds (manifest_hash, joint_key_seq, roll_commit_seq). Required there, forbidden on every other marker. */
+  manifest_hash?: Hex;
+  /** Log seq of the `dkg-final` marker (QV-18 `joint_key`). */
+  joint_key_seq?: number;
+  /** Log seq of the organizer-signed `roll-commit` record. */
+  roll_commit_seq?: number;
 }
 export interface RollCommitBody {
   proto: string;

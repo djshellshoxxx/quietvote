@@ -246,6 +246,12 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.receipt.none`: No receipts are saved on this device.
 - `qv.receipt.remember`: Remember receipts on this device
 - `qv.receipt.qrMissing`: A QR code is not available in this version. Use the Save button.
+- `qv.receipt.standing.title`: Status of this ballot
+- `qv.receipt.standing.current`: Latest. No newer ballot from you is in the public record.
+- `qv.receipt.standing.superseded`: Replaced. Your newer ballot at entry #{seq} counts instead of this one.
+- `qv.receipt.standing.supersededNote`: This receipt still shows that the earlier ballot was recorded. Only your newest ballot is counted.
+- `qv.receipt.standing.unknown`: Not checked yet. This ballot is not in the record loaded on this page.
+- `qv.receipt.standing.mismatch`: This receipt does not match the public record. Check it again, or ask the organizer.
 
 ## Results
 
@@ -263,6 +269,19 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.results.how`: How do I know this is correct?
 - `qv.results.howBody`: Download the election bundle and run it through the standalone verifier or the command-line verifier. Do not rely on this page alone.
 - `qv.results.summary`: Summary: {text}
+- `qv.results.chartLabel`: Bar chart: votes for each option in {title}. The same numbers are in the table.
+- `qv.results.barValue`: {count, plural, one {# vote} other {# votes}} ({share, number, percent})
+- `qv.results.barCount`: {count, plural, one {# vote} other {# votes}}
+- `qv.results.winnerTag`: Winner
+
+## Live updates
+
+- `qv.live.connecting`: Connecting to live updates…
+- `qv.live.live`: Live updates are on.
+- `qv.live.reconnecting`: Live updates paused. Trying again in {seconds, plural, one {# second} other {# seconds}}.
+- `qv.live.failed`: Live updates are off. Reload the page to see new activity.
+- `qv.live.updated`: The public record changed. This page is up to date.
+- `qv.live.alert`: The record reported a problem and may be paused. Do not rely on live updates.
 
 ## Errors
 
@@ -311,6 +330,10 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.err.E-ORG-LANG.body`: Add the {lang} text for every option, or remove that language.
 - `qv.err.E-ORG-MANIFEST.title`: The election setup isn't valid
 - `qv.err.E-ORG-MANIFEST.body`: {detail}
+- `qv.err.E-ORG-STATE.title`: Publishing lost its place
+- `qv.err.E-ORG-STATE.body`: Reload this page. If an election ID was shown, keep it and ask your administrator before you publish again.
+- `qv.err.E-ORG-INVITE-REPLAY.title`: Some invitation links can't be shown again
+- `qv.err.E-ORG-INVITE-REPLAY.body`: The server shows each code only once. Publish again to issue new invitations. The earlier ones stay valid.
 - `qv.err.E-VER-FAIL.title` **[normative]**: Check {id} failed
 - `qv.err.E-VER-FAIL.body` **[normative]**: The result is not established. Export the evidence and report it.
 - `qv.err.E-VER-ANCHOR.title` **[normative]**: This doesn't match the Election ID you entered
@@ -480,6 +503,16 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.org.dstFold`: That local time happens twice in {zone}. Choose the offset: {offsets, list}.
 - `qv.org.instant`: This is {utc} in UTC.
 - `qv.org.translateWarn`: Don't paste confidential text into online translators.
+- `qv.org.publish`: Publish election
+- `qv.org.publishHelp`: Publishing creates the election on the server and posts its signed setup. It does not open voting.
+- `qv.org.orgId`: Organization ID
+- `qv.org.orgIdHint`: The organization ID your server gave you.
+- `qv.org.orgRequired`: Enter the organization ID first.
+- `qv.org.publishNoKey`: There is no organizer key on this device. Create one first.
+- `qv.org.publishing`: Publishing… keep this page open.
+- `qv.org.publishResume`: Publishing stopped before it finished. Press Publish election again to continue from the same point.
+- `qv.org.published`: Election published. Its ID is {id}.
+- `qv.org.publishInvites`: Invitation links are shown once. Save them before you leave this page.
 
 ## Help
 

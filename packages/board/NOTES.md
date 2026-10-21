@@ -53,3 +53,6 @@ Where QV-18 is ambiguous or depends on QV-16 (not yet written), the safest readi
     - `checkBrokenPromise` and `verifyLog` are total on hostile receipts / a null bundle (return a Result / FAILED) (BC-09, BC-10).
     - Known property, not changed: `verifyInclusion` does not bind the claimed `size` beyond tree shape; size and root are bound by the signed
       checkpoint, so always verify against a checkpoint's (size, root) pair.
+    Update after QV-ADR-015 landed in protocol: the protocol log now always emits a `roll-commit` and its `election-open` binds
+    `(manifest_hash, joint_key_seq, roll_commit_seq)`. The static-roll waiver above stays accepted by the board (spec-permitted) but is
+    unused by the protocol sim; `tally_aggregate` remains optional.

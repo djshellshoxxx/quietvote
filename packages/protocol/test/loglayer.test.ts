@@ -2,13 +2,19 @@
 // witnessed times, receipts; R-01 §11.2 attacks #4 (clash), #5 (silent tail drop via receipts), #6 (split views).
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { bytesToHex, ed25519Keypair, sha256, utf8 } from '@quietvote/crypto';
 import { b64, bundleFromJson, bundleToJson, hashLeaf, type ReceiptJson } from '@quietvote/board';
 import {
-  validateManifest, verifyElection, verifyReceiptChain, type ElectionBundle, type LogEvidence, type ReceiptClaim, type VerificationReport,
+  manifestHash, signRecordRaw, validateManifest, verifyElection, verifyMultiSig, verifyReceiptChain, type ElectionBundle, type LogEvidence,
+  type ReceiptClaim, type VerificationReport,
 } from '../src/index.ts';
 import { buildBoard, isoSec, witnessKeys, type BoardView, type Cosig, type Head } from './helpers/board.ts';
 import { bundleOf, castBallot, clone, closeElection, defaultContests, kp, publishTally, setup, type Sim } from './helpers/sim.ts';
+import { buildLogView, controlRecord, insertAt, markerSeq, type EntryOverride, type LogView } from './vecgen/logboard.ts';
+import { LOG_DIR, LOG_OPERATION, failedChecks, resolveLogVector, type LogVectorInput } from './vecgen/loglayer.ts';
 
 const H = bytesToHex;
 const SEED = 'log-layer';
@@ -367,4 +373,151 @@ test('manifest witness list: validated strictly; log_id must bind the origin', a
   // round trip of the export JSON form is stable
   const rt = bundleFromJson(hv.json);
   assert.ok(rt.ok && JSON.stringify(bundleToJson(rt.value)) === JSON.stringify(hv.json));
+});
+
+// ---------------------------------------------------------------- notices / control entries (NOTES X-31..X-34)
+
+const NSIM = (): Sim => honest.sim;
+const nheads = (b: ElectionBundle, tweak: Partial<Record<'setup' | 'ballots' | 'close' | 'final', Cosig[]>> = {}): Head[] => {
+  const vo = isoSec(b.manifest.body.voting_open);
+  const vc = isoSec(b.manifest.body.voting_close);
+  const open = markerSeq(b, 'election-open');
+  const close = markerSeq(b, 'election-close');
+  const n = b.log.at(-1)!.seq + 1;
+  const hs: Head[] = [
+    { size: open, cosigs: tweak.setup ?? cos(vo - 3600, 'w1', 'w2') },
+    { size: close, cosigs: tweak.ballots ?? cos(vo + 3600, 'w1', 'w2', 'w3') },
+    { size: close + 1, cosigs: tweak.close ?? cos(vc + 60, 'w1', 'w2') },
+  ];
+  if (n > close + 1) hs.push({ size: n, cosigs: tweak.final ?? cos(vc + 120, 'w1', 'w2') });
+  return hs;
+};
+const nview = (b: ElectionBundle, tweak = {}, over?: ReadonlyMap<number, EntryOverride>): LogView => buildLogView(NSIM(), b, nheads(b, tweak), kp(SEED, 'log'), over);
+const logCodes = (r: VerificationReport): string[] => r.findings.filter((f) => f.cls !== 'L').map((f) => f.code);
+const gateFindings = (r: VerificationReport): string[] => r.findings.filter((f) => f.code === 'E_LOG_WITNESS' || f.code === 'E_TIME_WINDOW').map((f) => `${f.code}@${f.seq ?? '-'}`).sort();
+
+test('notices: a valid coordinator waiver is surfaced but never relaxes a gate (no cosignatures at all still FAILs)', async () => {
+  await init();
+  const vo = isoSec(honest.bundle.manifest.body.voting_open);
+  const vc = isoSec(honest.bundle.manifest.body.voting_close);
+  const open = markerSeq(honest.bundle, 'election-open');
+  const close = markerSeq(honest.bundle, 'election-close');
+  // waivers before open, after close, and after the tally: every gate unwitnessed
+  let b = insertAt(honest.bundle, open, controlRecord(NSIM(), 'witness-waiver'));
+  b = insertAt(b, close + 2, controlRecord(NSIM(), 'witness-waiver', { reason: 'tally gate' }));
+  b = insertAt(b, b.log.at(-1)!.seq + 1, controlRecord(NSIM(), 'witness-waiver', { reason: 'late' }));
+  const none = { setup: [], ballots: [], close: [], final: [] };
+  const r = await verify(b, { board: nview(b, none).json });
+  assert.equal(r.verdict, 'FAIL');
+  assert.ok(r.findings.filter((f) => f.code === 'E_LOG_WITNESS' && f.cls === 'F').length >= 2, JSON.stringify(r.findings));
+  assert.ok(r.findings.some((f) => f.code === 'E_LOG_WITNESS' && /never relaxes/.test(f.detail)));
+  assert.equal(r.caveats.filter((c) => c.startsWith('WITNESS WAIVER')).length, 3);
+  // same gate outcome as the identical log without waivers (the waiver is inert)
+  const bare = await verify(honest.bundle, { board: view(honest, stdHeads(honest, none)).json });
+  assert.equal(gateFindings(r).length, gateFindings(bare).length);
+  // with the gates met the waiver changes nothing either
+  const ok = await verify(b, { board: nview(b).json });
+  assert.equal(ok.verdict, 'PASS', JSON.stringify(ok.findings));
+  assert.ok(ok.checks['chk.board.witness'] === 'pass' && !logCodes(ok).some((c) => c.startsWith('E_LOG')));
+  void vo; void vc;
+});
+
+test('notices: authority (operator/extra key, trustee, replay from another election, m-of-k record signatures)', async () => {
+  await init();
+  const open = markerSeq(honest.bundle, 'election-open');
+  const op = ed25519Keypair(sha256(utf8('operator')));
+  // an operator key the caller trusts for unrecognised bodies cannot author a waiver (QV-ADR-022: operator never extends/waives)
+  const rec = controlRecord(NSIM(), 'witness-waiver', { signer: op });
+  const b = insertAt(honest.bundle, open, rec);
+  let r = await verify(b, { board: nview(b, {}, new Map([[open, { author: op }]])).json, extraAuthorKeys: [H(op.publicKey)] });
+  assert.ok(has(r, 'E_LOG_BINDING', 'F') && r.verdict === 'FAIL', JSON.stringify(codes(r)));
+  // coordinator-authored entry whose record signature is over another election's manifest hash (replayed waiver)
+  const body = { proto: 'qv1-r255-sha2', type: 'control', action: 'witness-waiver' };
+  const c = NSIM().coord[0]!;
+  const replay = { body, sigs: [signRecordRaw(c.secretKey, c.publicKey, sha256(utf8('another manifest')), 'control', body)] };
+  const b2 = insertAt(honest.bundle, open, replay);
+  r = await verify(b2, { board: nview(b2).json });
+  assert.ok(r.findings.some((f) => f.code === 'E_LOG_BINDING' && /coordinator record signature/.test(f.detail)), JSON.stringify(r.findings));
+  assert.ok(!r.caveats.some((x) => x.startsWith('WITNESS WAIVER')), 'an unauthenticated waiver is not reported as a waiver');
+  // a duplicated coordinator signature does not count twice towards m (m = 2 would need two distinct keys)
+  const dup = { body, sigs: [...controlRecord(NSIM(), 'witness-waiver').sigs, ...controlRecord(NSIM(), 'witness-waiver').sigs] };
+  const m2 = clone(honest.bundle.manifest.body);
+  m2.coordinator.m = 2;
+  assert.equal(verifyMultiSig(manifestHash(m2), dup as never, m2.coordinator.keys, 2), false);
+});
+
+test('notices: unknown kinds fail closed (including prototype names), malformed bodies, unrecognised notice bodies', async () => {
+  await init();
+  const close = markerSeq(honest.bundle, 'election-close');
+  for (const action of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'WITNESS-WAIVER', 'witness_waiver', '']) {
+    const b = insertAt(honest.bundle, close, controlRecord(NSIM(), action));
+    const r = await verify(b, { board: nview(b).json });
+    assert.ok(r.verdict === 'FAIL' && (has(r, 'E_LOG_BINDING', 'F') || has(r, 'E_LOG_FORMAT', 'F')), `${action}: ${JSON.stringify(codes(r))}`);
+  }
+  // extra fields of any kind (a new close time, a witness list) are malformed: no notice can restate a gate
+  for (const extra of [{ close: '2026-11-09T21:00:00Z' }, { witnesses: [] }, { quorum: 0 }]) {
+    const b = insertAt(honest.bundle, close, controlRecord(NSIM(), 'extension', { extra }));
+    const r = await verify(b, { board: nview(b).json });
+    assert.ok(has(r, 'E_LOG_FORMAT', 'F') && r.verdict === 'FAIL', JSON.stringify(extra));
+  }
+  // a notice entry carrying an arbitrary (even otherwise authorised) body
+  const b = insertAt(honest.bundle, close, { body: { proto: 'qv1-r255-sha2', type: 'note', text: 'hi' }, sigs: [] });
+  const r = await verify(b, { board: nview(b).json });
+  assert.ok(r.findings.some((f) => f.code === 'E_LOG_BINDING' && /no recognised notice/.test(f.detail)));
+});
+
+test('notices: extensions never move the close bound; a retroactive one fails even with witness_quorum 0', async () => {
+  await init();
+  const close = markerSeq(honest.bundle, 'election-close');
+  const vc = isoSec(honest.bundle.manifest.body.voting_close);
+  const skew = honest.bundle.manifest.body.clock_skew_s;
+  // extension well before close + late cutoff: still E_TIME_WINDOW, with the X-32 note
+  const b = insertAt(honest.bundle, markerSeq(honest.bundle, 'election-open') + 1, controlRecord(NSIM(), 'extension'));
+  let r = await verify(b, { board: nview(b, { close: cos(vc + skew + 1, 'w1', 'w2'), final: cos(vc + 9000, 'w1', 'w2') }).json });
+  assert.ok(r.findings.some((f) => f.code === 'E_TIME_WINDOW' && /never move voting_close/.test(f.detail)), JSON.stringify(r.findings));
+  assert.equal(r.checks['chk.time.window'], 'fail');
+  // retroactive extension, quorum 0 election (no witness gates at all)
+  const w = await election({ revote: false, tally: true, witnessQuorum: 0, listWitnesses: false });
+  const wc = markerSeq(w.bundle, 'election-close');
+  const b0 = insertAt(w.bundle, wc + 1, controlRecord(w.sim, 'extension'));
+  const v0 = buildLogView(w.sim, b0, [{ size: b0.log.at(-1)!.seq + 1 }], kp(SEED, 'log'));
+  r = await verify(b0, { board: v0.json });
+  assert.ok(has(r, 'E_TIME_WINDOW', 'F') && r.verdict === 'FAIL' && r.checks['chk.time.window'] === 'fail', JSON.stringify(r.findings));
+  assert.equal(r.checks['chk.board.witness'], 'not_run');
+  void close;
+});
+
+test('notices: pause/resume/invalidate/security-notice are authenticated and reported, never applied', async () => {
+  await init();
+  const open = markerSeq(honest.bundle, 'election-open');
+  let b = insertAt(honest.bundle, open + 1, controlRecord(NSIM(), 'pause', { reason: 'outage' }));
+  b = insertAt(b, open + 2, controlRecord(NSIM(), 'resume'));
+  b = insertAt(b, b.log.at(-1)!.seq + 1, controlRecord(NSIM(), 'security-notice', { reason: 'key rotation' }));
+  b = insertAt(b, b.log.at(-1)!.seq + 1, controlRecord(NSIM(), 'invalidate'));
+  const r = await verify(b, { board: nview(b).json });
+  assert.equal(r.verdict, 'PASS', JSON.stringify(r.findings));
+  for (const c of ['PAUSE', 'RESUME', 'SECURITY NOTICE', 'INVALIDATE']) assert.ok(r.caveats.some((x) => x.startsWith(c)), c);
+  // the QV-16 layer does not know control records (not suite v1 records): class L, chk.encoding.canonical
+  assert.ok(r.findings.some((f) => f.code === 'E_VERSION' && f.cls === 'L'));
+});
+
+test('vectors: log.verify_election (QV-34 log-layer set) reproduces verdicts, failing checks and codes', async () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'test-vectors', 'v1');
+  const read = (p: string): unknown => JSON.parse(readFileSync(join(root, p), 'utf8'));
+  const file = read(`${LOG_DIR}/vectors.json`) as { operation: string; vectors: { id: string; input: LogVectorInput; expect: any; tags: string[] }[] };
+  assert.equal(file.operation, LOG_OPERATION);
+  assert.ok(file.vectors.length >= 40);
+  for (const v of file.vectors) {
+    const { bundle, log } = resolveLogVector(v.input, read);
+    const r = await verifyElection(bundle, { log });
+    if (v.expect.ok) {
+      assert.equal(r.verdict, v.expect.output.verdict, v.id);
+      assert.deepEqual(r.checks, v.expect.output.checks, v.id);
+    } else {
+      assert.ok(r.findings.some((f) => f.code === v.expect.error && f.cls !== 'L'), `${v.id}: ${v.expect.error}`);
+      assert.deepEqual(failedChecks(r), v.expect.failed_checks, v.id);
+      assert.ok(v.tags.includes(`verdict:${r.verdict}`), `${v.id}: verdict ${r.verdict}`);
+    }
+    for (const t of v.tags.filter((x) => x.startsWith('surfaces:'))) assert.ok(r.caveats.some((c) => c.includes(t.slice(9))), `${v.id}: ${t}`);
+  }
 });

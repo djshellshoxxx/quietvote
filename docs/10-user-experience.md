@@ -376,7 +376,7 @@ Replaces `qv.privacy.public` and `qv.privacy.nc4`:
 | `qv.verify.scope` | `Passing these checks means the public record is internally consistent and the count follows from the locked ballots. It does not prove that your own device locked your choice correctly unless you tested a ballot, and it does not protect against anything listed under "What this does not protect".` |
 | `qv.verify.itemized` | `{passed} of {total} checks passed.` (never shown without the list) |
 
-Do-not-use phrases (copy audit): "secure", "guaranteed", "tamper-proof", "unhackable", "anonymous" (Phase 1), "verified!" alone, "your vote is safe", "end-to-end encrypted" without definition, "100%".
+Do-not-use phrases (copy audit): "secure", "guaranteed", "tamper-proof", "unhackable", "anonymous" (Phase 1), "verified!" alone, "your vote is safe", "end-to-end encrypted" without definition, "100%". <!-- claims-lint-ignore -->
 
 ### 7.6 Glossary (tooltips, ≤ 20 words each)
 

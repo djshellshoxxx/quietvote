@@ -33,7 +33,7 @@ QuietVote targets the gap: *recurring internal decisions in voluntary groups tha
 | Technical capability to self-host (ADR-002) | High | Low–medium | Low | MVP is self-host only; needs a sysadmin |
 | Tolerance for key-based identity, CLI verifier | High | Low | Low | Phase 1 uses voter keypairs |
 | Existing demand for verifiable/secret ballots | High (board/steering elections, Helios/Condorcet-style tools already used) | Medium (often run by paper or a vendor) | High but legally constrained | |
-| Legal/regulatory friction | Low (bylaws permit electronic votes; no statutory form) | Medium–high (statutes may prescribe ballot form, proxy rules) | High | Out-of-scope: legally certified votes |
+| Legal/regulatory friction | Low (bylaws permit electronic votes; no statutory form) | Medium–high (statutes may prescribe ballot form, proxy rules) | High | Out-of-scope: legally certified votes | <!-- claims-lint-ignore -->
 | Pseudonymity acceptable | Yes, often desired | Rarely (members are named) | Sometimes | Matches ADR-001 no-KYC |
 | Willingness to be early/critical adopters, file issues, review code | High | Low | Low | Feeds QV-11 review |
 | Typical electorate size | 30–2,000 | 50–5,000 | 100–50,000 | Fits MVP performance targets |
@@ -53,7 +53,7 @@ Member (voter), Steward (group administrator holding the group signing key), Pro
 - Identity and ballot content are separated as far as each phase allows; no identity beyond a group-chosen credential.
 - Every claim is stated as "who can learn what / who can do what, assuming what" — see QV-05 §5, QV-06 §10.
 - Full export and operator exit at any time; the data a verifier needs is the data a member can download.
-- Boring, audited primitives only (ADR-003/004); no invented cryptography.
+- Boring, widely used primitives only (libraries with published third-party audit reports) (ADR-003/004); no invented cryptography.
 - Plain-language explanation of limits is part of the product, not fine print.
 
 ## 5. Mandatory, optional, and unsupported privacy properties (resolves open decision #5)
@@ -93,7 +93,7 @@ Group + manifest creation; invitation and key enrollment; proposals with amendme
 ## 7. Boundaries
 
 ### Out of scope (until reconsidered by ADR)
-- Government/public elections; legally certified corporate/shareholder or statutory union elections.
+- Government/public elections; legally certified corporate/shareholder or statutory union elections. <!-- claims-lint-ignore -->
 - On-chain voting, tokens, DAOs-as-default, custody of funds (ADR-012).
 - Mandatory identity-document verification / KYC.
 - Claims of coercion resistance, endpoint-compromise protection, or protection against every administrator threat.

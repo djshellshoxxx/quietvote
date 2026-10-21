@@ -155,6 +155,8 @@ export function parseTargetUrl(raw: string): { url: URL; host: string; port: num
   if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1);
   if (host === '') throw new TargetRejected('URL_INVALID', 'url has no host');
   if (host.endsWith('.')) host = host.slice(0, -1);
+  // empty labels ("localhost..", "a..b", ".a") are never a public DNS name; refuse them before suffix matching is fooled
+  if (host.split('.').some((l) => l === '')) throw new TargetRejected('TARGET_BLOCKED', 'host name has an empty label');
   const fam = isIP(host);
   if (fam !== 0) {
     if (!isPublicIp(host)) throw new TargetRejected('TARGET_BLOCKED', 'target address is not publicly routable');
@@ -196,11 +198,15 @@ export interface WebhookRequest {
   body: Buffer;
   timeoutMs: number;
   maxResponseBytes: number;
+  /** Return the (bounded) response body; used by gossip, which needs the peer's answer. */
+  captureBody?: boolean;
 }
 export interface WebhookResponse {
   status: number;
   /** The response body exceeded maxResponseBytes and the connection was dropped. */
   truncated: boolean;
+  /** Only with `captureBody`: at most maxResponseBytes. */
+  body?: Buffer;
 }
 export type WebhookTransport = (r: WebhookRequest) => Promise<WebhookResponse>;
 
@@ -239,7 +245,9 @@ export function httpsTransport(tls: { ca?: string | Buffer } = {}): WebhookTrans
       req.on('error', (e) => finish(() => reject(e)));
       req.on('response', (res) => {
         let n = 0;
+        const chunks: Buffer[] = [];
         const status = res.statusCode ?? 0;
+        const done = (truncated: boolean): void => finish(() => resolve(r.captureBody === true && !truncated ? { status, truncated, body: Buffer.concat(chunks) } : { status, truncated }));
         if (r.maxResponseBytes === 0) {
           finish(() => resolve({ status, truncated: false }));
           res.destroy();
@@ -248,14 +256,16 @@ export function httpsTransport(tls: { ca?: string | Buffer } = {}): WebhookTrans
         res.on('data', (ch: Buffer) => {
           n += ch.length;
           if (n > r.maxResponseBytes) {
-            finish(() => resolve({ status, truncated: true }));
+            done(true);
             res.destroy();
             req.destroy();
+            return;
           }
+          if (r.captureBody === true) chunks.push(ch);
         });
-        res.on('end', () => finish(() => resolve({ status, truncated: false })));
-        res.on('error', () => finish(() => resolve({ status, truncated: false })));
-        res.on('close', () => finish(() => resolve({ status, truncated: false })));
+        res.on('end', () => done(false));
+        res.on('error', () => done(false));
+        res.on('close', () => done(false));
       });
       req.end(r.body);
     });
