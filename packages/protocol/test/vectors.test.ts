@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   QvCryptoError, baseMul, bytesToHex, canonicalize, cdsVerify, decVerify, dhVerify, ed25519Sign, ed25519Verify, framedPreimage, h256,
@@ -19,7 +19,7 @@ const H = bytesToHex;
 const hb = (h: string): Uint8Array => hexToBytes(h);
 
 function walk(dir: string): string[] {
-  return readdirSync(dir).flatMap((n) => {
+  return readdirSync(dir).sort().flatMap((n) => {
     const p = join(dir, n);
     return statSync(p).isDirectory() ? walk(p) : [p];
   });
@@ -28,7 +28,7 @@ function walk(dir: string): string[] {
 test('vectors:regen-check - regenerating produces zero diff (QV-34-REQ-004)', async () => {
   const gen = await generateAll();
   const onDisk = new Map<string, string>();
-  for (const f of walk(ROOT)) onDisk.set(f.slice(ROOT.length + 1).replace(/^(?!v1\/|README|MANIFEST|schema)/, ''), readFileSync(f, 'utf8'));
+  for (const f of walk(ROOT)) onDisk.set(relative(ROOT, f).replaceAll('\\', '/'), readFileSync(f, 'utf8'));
   const norm = new Map<string, string>();
   for (const [k, v] of gen) norm.set(k.startsWith('../') ? k.slice(3) : `v1/${k}`, v);
   assert.deepEqual([...norm.keys()].sort(), [...onDisk.keys()].sort());
