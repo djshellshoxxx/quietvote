@@ -94,6 +94,9 @@ export class World {
   async start(): Promise<void> {
     this.server = buildServer({
       dataDir: this.dir, now: () => this.clock, logSink: (l) => this.logs.push(l), minFreeBytes: 0, minBallotIntervalSec: 2, auditWindowSec: 0,
+      // The e2e flow does seconds of client-side proof work between requests (slow on CI runners); with the 5 s default the server
+      // may close the idle keep-alive socket just as undici reuses it (ECONNRESET). Test-only; production default is unchanged.
+      keepAliveTimeoutMs: 30_000,
       witnesses: [{ name: 'w1', publicKey: H(this.witnesses[0]!.publicKey) }],
       rate: {
         read: { limit: 100000, windowSec: 60 }, proof: { limit: 100000, windowSec: 60 }, writeKey: { limit: 100000, windowSec: 60 },
