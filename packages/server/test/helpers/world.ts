@@ -94,6 +94,8 @@ export class World {
   async start(): Promise<void> {
     this.server = buildServer({
       dataDir: this.dir, now: () => this.clock, logSink: (l) => this.logs.push(l), minFreeBytes: 0, minBallotIntervalSec: 2, auditWindowSec: 0,
+      // the test client does seconds of crypto between requests; the 5 s default keep-alive would close an idle socket the client then reuses (ECONNRESET on slow runners)
+      keepAliveTimeoutMs: 30_000,
       witnesses: [{ name: 'w1', publicKey: H(this.witnesses[0]!.publicKey) }],
       rate: {
         read: { limit: 100000, windowSec: 60 }, proof: { limit: 100000, windowSec: 60 }, writeKey: { limit: 100000, windowSec: 60 },
