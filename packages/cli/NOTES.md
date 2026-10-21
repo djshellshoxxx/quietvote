@@ -81,3 +81,16 @@ binding; not touched here). `node --test packages/cli/test/audit-regressions.tes
   a malformed or missing file is an input error (exit 4), never a pass.
 - `ballot encrypt` / `ballot audit` accept `--manifest-hash` (mismatch: exit 1, nothing written; bad hex: exit 2) and always print the
   manifest hash (`manifest hash:` line, `manifest_hash` in JSON).
+
+## `qv election spoil-collect` (added 2026-10-21)
+
+`src/cmd-spoil.ts`. Offline. Uses `electionContext` (full `verifyElection`, optional `--manifest-hash` pin) for the manifest, K and ctx,
+then re-derives what the report does not expose (Y_j, the key-confirmed decrypter set, election-open/close) with the protocol's own
+`adjudicateDkg`/`verifyKeyconf`/`verifyMultiSig` over the same record filters as `verifyElection`; it fails if the re-derived K/ctx differ.
+`analyzeBallotLog` must list the code as a spoil; refused (exit 1) if the code is cast (counted or any cast envelope's code), the manifest
+lacks `spoil_trustee_decrypt`, the spoil has a reveal digest, or its ciphertexts' alphas also appear in a cast envelope (TR-01), the same
+gate the trustees apply. Packets must be `qv-ceremony-packet/v1` (else exit 4); non-`spoil-share` rounds and other codes are ignored.
+`collectSpoilShares` then `decryptSpoiled`. Per-trustee validity is decided by running `decryptSpoiled` on that trustee's set alone with
+t=1 (anything other than `E_DEC_PROOF` means every proof verified); this is a heuristic on the error code, not separate crypto. The
+POST body is the signed record as JSON; the server endpoint is not in this tree, so that body shape is an assumption. Files are created
+with `wx` (never overwritten). Tests: `test/spoil-collect.test.ts` (8; uses `packages/protocol/test/helpers/sim.ts`).
