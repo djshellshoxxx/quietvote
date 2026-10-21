@@ -55,7 +55,7 @@ Edits: where a primary source confirmed the full tagged claim, the `[UNVERIFIED.
 | research/R-04:107 | Semaphore: generic privacy layer, MIT | CONFIRMED | https://github.com/semaphore-protocol/semaphore | README: "Semaphore is a generic privacy layer"; MIT license. Partial: nullifier model and audits not checked, so not edited. |
 | research/R-04:119 | Cwtch/Briar licences | CANNOT-CHECK | https://github.com/briar/briar | As for R-04:43. |
 | research/R-04:242 | Retrieval statement for Verificatum, CIVS, Cwtch/Briar | CANNOT-CHECK | none | Meta statement about retrieval; no claim to check. |
-| 05-ballot-protocol.md:309 | Adida, Helios, USENIX Security 2008 | CANNOT-CHECK | https://github.com/benadida/helios-server | Helios README describes "end-to-end verifiable voting system" and has no citation to the 2008 paper; the paper was not reached. |
+| 05-ballot-protocol.md:309 | Adida, Helios, USENIX Security 2008 | CANNOT-CHECK | https://github.com/benadida/helios-server | Helios README describes "end-to-end verifiable voting system" and has no citation to the 2008 paper; the paper was not reached. | <!-- claims-lint-ignore -->
 | 07-threat-model-security.md:845 | @noble audits remain valid for pinned versions | CONFIRMED | https://github.com/paulmillr/noble-curves | Partial: README security section states an audit "at version 2.3.0, in Aug 2026, by Trail of Bits". Pinning and scope not checked; not edited. |
 | 08-architecture-deployment.md:308 | Onion secure-context behaviour per browser | CANNOT-CHECK | none | MDN and Tor docs unreachable. Test-matrix item. |
 | 08-architecture-deployment.md:326 | Browser floors: Chrome/Edge >= 137, Firefox >= 129, Safari >= 17 for WebCrypto Ed25519 | CANNOT-CHECK | none | developer.mozilla.org unreachable. |

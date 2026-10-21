@@ -101,7 +101,7 @@ export const S = {
   marker: rec(
     'marker',
     { name: oneOf('dkg-open', 'dkg-r1-open', 'dkg-r1-close', 'dkg-r2-close', 'dkg-r3-close', 'dkg-final', 'election-open', 'election-close') },
-    { qmask: int(1, 0xffffffff), K: hex(32) },
+    { qmask: int(1, 0xffffffff), K: hex(32), manifest_hash: hex(32), joint_key_seq: int(0, 0xffffffff), roll_commit_seq: int(0, 0xffffffff) },
   ),
   rollCommit: rec('roll-commit', { root: hex(32), size: int(1, 1 << 20) }),
   dkgCommit: rec('dkg-commit', { i: int(1, 32), h: hex(32) }),

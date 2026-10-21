@@ -27,4 +27,4 @@ Detection is the goal, not prevention. Monitors, witnesses, mirrors and receipt 
 
 ## Code status
 
-`packages/board` has the Merkle tree, entry encoding and inclusion verification. Storage and server integration are not built. See [[Repository and Packages]].
+`packages/board` has the Merkle tree, entry encoding, checkpoints, inclusion and consistency checks, receipts and equivocation checks. `packages/server` has a SQLite-backed board store and admission checks. Witnesses are not run anywhere, and five server webhook tests fail (see [[Roadmap and Status]]). See [[Repository and Packages]].

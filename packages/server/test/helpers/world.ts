@@ -301,9 +301,21 @@ export class World {
     await this.ok('roll_commit', c0, this.multi(this.mh, { proto: PROTO_ID, type: 'roll-commit', root: H(rr.value), size: this.rollHex.length } as { type: string }));
   }
 
-  async open(): Promise<Resp> {
+  async open(override?: Record<string, unknown>): Promise<Resp> {
     this.clock = T_VOTING;
-    return this.post('election_open', this.coord[0]!, this.marker('election-open', this.params.ctx));
+    return this.post('election_open', this.coord[0]!, this.openMarker({ ...(await this.openBinding()), ...override }));
+  }
+  /** QV-ADR-015: election-open binds (manifest_hash, joint_key_seq, roll_commit_seq); override fields to craft bad refs. */
+  async openBinding(): Promise<{ manifest_hash: string; joint_key_seq: number; roll_commit_seq: number }> {
+    const log = await this.fetchLog();
+    return {
+      manifest_hash: H(this.mh),
+      joint_key_seq: log.find((e) => e.rec?.body?.name === 'dkg-final')!.seq,
+      roll_commit_seq: log.find((e) => e.rec?.body?.type === 'roll-commit')!.seq,
+    };
+  }
+  openMarker(binding?: Record<string, unknown>) {
+    return this.marker('election-open', this.params.ctx, Object.fromEntries(Object.entries(binding ?? {}).filter(([, v]) => v !== undefined)));
   }
   async close(): Promise<Resp> {
     this.tick();

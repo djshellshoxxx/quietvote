@@ -22,6 +22,7 @@ Read [CONTRIBUTING.md](https://github.com/djshellshoxxx/quietvote/blob/main/CONT
 - **Reviews:** the author cannot approve their own pull request. Crypto or protocol changes need at least two approvals, one from the security reviewers.
 - **Never commit secrets** or large generated binaries.
 - Run [[Getting Started Dev]] checks before opening a pull request.
+- Public text (README, docs, wiki) must match the [claims register](https://github.com/djshellshoxxx/quietvote/blob/main/docs/claims/claims-register-v0.md). Run `node scripts/lint-claims.mjs` and fix what it reports in files you change.
 
 ## Review checklist highlights
 
@@ -29,4 +30,4 @@ Threat-model impact considered, tests added, no new dependency without a decisio
 
 ## Licence
 
-Proposed AGPL-3.0-or-later for code and CC BY-SA 4.0 for docs (QV-ADR-011). No LICENSE file yet.
+AGPL-3.0-or-later for code (`LICENSE` file present). CC BY-SA 4.0 is proposed for docs (QV-ADR-011).
