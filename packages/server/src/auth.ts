@@ -86,3 +86,13 @@ export function authenticate(env: Env, method: string, target: string, header: s
   if (selfPk !== undefined) return { keyId: p.keyid, pk: selfPk, role: 'org_owner', orgId: null };
   return { keyId: key!.key_id, pk, role: key!.role, orgId: key!.org_id } as AuthInfo;
 }
+
+/**
+ * Cheap checks that run BEFORE a large upload body is read (the full signature covers a hash of the body, so it can only be
+ * verified afterwards): header shape, timestamp window and that the key is known and not revoked. Same errors as `authenticate`.
+ */
+export function preflightAuth(env: Env, header: string | undefined): void {
+  const p = parseAuthHeader(header);
+  if (Math.abs(env.nowSec() - p.ts) > WINDOW_SEC) throw new ApiError(401, 'UNAUTHENTICATED', 'request timestamp outside the +-120 s window', { reason: 'STALE_TIMESTAMP' });
+  if (env.control.keyById(p.keyid) === undefined) throw new ApiError(401, 'BAD_SIGNATURE', 'request signature invalid or key unknown');
+}
