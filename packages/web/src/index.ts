@@ -12,3 +12,5 @@ export * from './flow/seal.ts';
 export * from './key/keystore.ts';
 export * from './key/passphrase.ts';
 export * from './i18n/index.ts';
+export { LOCALES } from './i18n/locales.ts';
+export { loadLocaleDefs } from './i18n/runtime.ts';

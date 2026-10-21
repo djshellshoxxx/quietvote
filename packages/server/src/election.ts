@@ -114,6 +114,10 @@ export class ElectionRuntime {
   readonly srvPk: Uint8Array;
   private readonly srvKeys: Ed25519Keypair | undefined;
   poisoned = false;
+  /** Set by gossip / admin integrity checks (QV-18 REQ-053/054): JSON `{code, incident, min_size}`. Persisted in election.quarantine. */
+  forcedQuarantine: string | undefined;
+  /** Read-only mirror of a verified bundle (QV-18-REQ-033); no signing keys. */
+  readonly imported: boolean;
   inUse = 0;
   private readonly subscribers = new Set<EventSubscriber>();
   private alertedQuarantine = false;
@@ -128,6 +132,8 @@ export class ElectionRuntime {
     this.id = row.election_id;
     this.origin = row.origin;
     this.orgId = row.org_id;
+    this.imported = row.imported === 1;
+    this.forcedQuarantine = typeof row.quarantine === 'string' && row.quarantine.startsWith('{"code":') ? row.quarantine : undefined;
     this.edb = edb;
     this.logPk = new Uint8Array(row.log_pk);
     this.srvPk = new Uint8Array(row.srv_pk);
@@ -238,10 +244,11 @@ export class ElectionRuntime {
     return this.st.manifest;
   }
   get state(): ElectionStateName {
+    if (this.imported) return 'IMPORTED';
     return effectiveState(this.st.state, this.st.tallyingSince, this.env.nowSec(), this.env.cfg.stalledMaxSec);
   }
   get terminal(): boolean {
-    return TERMINAL.has(this.st.state);
+    return this.imported || TERMINAL.has(this.st.state);
   }
 
   witnessPolicy() {
@@ -328,14 +335,55 @@ export class ElectionRuntime {
       if (!page.more) break;
       from = (page.rows.at(-1)?.seq ?? from) + 1;
     }
-    if (this.log.status.state === 'quarantine') this.edb.setQuarantine(this.log.status.reason);
+    this.syncQuarantineFlags();
     this.syncState();
   }
 
   private syncState(): void {
-    this.edb.setState(this.st.state, this.st.phaseSeq, this.log.size);
+    const shown: ElectionStateName = this.imported ? 'IMPORTED' : this.st.state;
+    this.edb.setState(shown, this.st.phaseSeq, this.log.size);
     const reg = this.env.control.election(this.id);
-    if (reg && reg.state !== this.st.state) this.env.control.setState(this.id, this.st.state, this.st.manifest?.title);
+    if (reg && reg.state !== shown) this.env.control.setState(this.id, shown, this.st.manifest?.title);
+  }
+
+  /** Mirrors the board's own quarantine and the forced one into election.quarantine and the registry flag (admin status). */
+  private syncQuarantineFlags(): void {
+    const board = this.log.status.state === 'quarantine' ? this.log.status.reason : undefined;
+    const stored = this.edb.row().quarantine;
+    if (this.forcedQuarantine === undefined) {
+      if (board !== undefined) this.edb.setQuarantine(board);
+      else if (stored !== null) this.edb.setQuarantine(null);
+    }
+    this.env.control.setQuarantineFlag(this.id, this.forcedQuarantine ?? board ?? null);
+  }
+
+  /**
+   * Fail-closed integrity stop (QV-18 REQ-053/054, §9.6): no more appends or signing, reads continue. Persisted, so it survives
+   * restarts and can be lifted only through the admin clear endpoint. Returns the incident id.
+   */
+  markQuarantine(code: string, minSize: number, alertKind: string): string {
+    const prev = this.forcedQuarantine === undefined ? undefined : (JSON.parse(this.forcedQuarantine) as { incident: string; min_size: number });
+    const incident = prev?.incident ?? `inc_${b64u(randomBytes(9))}`;
+    const min = Math.max(prev?.min_size ?? 0, minSize);
+    const first = this.forcedQuarantine === undefined;
+    this.forcedQuarantine = JSON.stringify({ code, incident, min_size: min });
+    this.edb.setQuarantine(this.forcedQuarantine);
+    this.env.control.setQuarantineFlag(this.id, this.forcedQuarantine);
+    if (first) this.emitNow((out) => this.record(out, 'alert', null, { kind: alertKind, detail_code: code }));
+    return incident;
+  }
+
+  /** Public `alert` event (SSE / webhooks) that leaves the log's state unchanged. */
+  raiseAlert(kind: string, code: string): void {
+    this.emitNow((out) => this.record(out, 'alert', null, { kind, detail_code: code }));
+  }
+
+  /** Lifts a forced quarantine (admin endpoint only). */
+  clearForcedQuarantine(): void {
+    this.forcedQuarantine = undefined;
+    this.edb.setQuarantine(null);
+    this.env.control.setQuarantineFlag(this.id, null);
+    this.emitNow((out) => this.record(out, 'alert', null, { kind: 'quarantine_cleared', detail_code: 'ADMIN_CLEARED' }));
   }
 
   private fire(e: LifecycleEvent['t'], seq: number, at: number): void {
@@ -556,7 +604,7 @@ export class ElectionRuntime {
   }
 
   private checkPhase(type: EntryType): void {
-    if (this.log.status.state === 'quarantine') throw new ApiError(503, 'QUARANTINED', 'log is quarantined; reads still work');
+    if (this.quarantineReason() !== undefined) throw new ApiError(503, 'QUARANTINED', 'log is quarantined; reads still work');
     const s = this.state;
     if (!typeAllowed(s, type)) throw wrongPhase(`${type} is not accepted while the election is ${s}`);
   }
@@ -772,6 +820,17 @@ export class ElectionRuntime {
         const r = rec as MultiSignedRecord<MarkerBody>;
         if (r.body.name !== 'election-open') throw invalid('E_MARKERS', 'election_open must carry the election-open marker');
         this.multi(r, st.params!.ctx, h);
+        // QV-ADR-015: election-open binds (manifest_hash, joint_key_seq, roll_commit_seq); reject absent/forward/mismatched refs (fail closed)
+        {
+          const jk = st.markers.get('dkg-final');
+          const rc = st.phaseSeq['roll_commit'];
+          const b = r.body;
+          if (b.manifest_hash === undefined || b.joint_key_seq === undefined || b.roll_commit_seq === undefined) throw invalid('E_MARKERS', 'election-open must carry manifest_hash, joint_key_seq and roll_commit_seq');
+          if (b.manifest_hash !== bytesToHex(st.mh!)) throw invalid('E_MARKERS', 'election-open manifest_hash differs from the manifest hash');
+          if (jk === undefined || b.joint_key_seq !== jk) throw invalid('E_MARKERS', 'election-open joint_key_seq does not point at the joint_key (dkg-final) entry');
+          if (rc === undefined || b.roll_commit_seq !== rc) throw invalid('E_MARKERS', 'election-open roll_commit_seq does not point at the roll_commit entry');
+          if (b.joint_key_seq >= this.log.size || b.roll_commit_seq >= this.log.size) throw invalid('E_MARKERS', 'election-open references a record that is not earlier in the log');
+        }
         if (this.env.nowSec() < sec(m.voting_open) - m.clock_skew_s) throw wrongPhase('voting_open has not been reached');
         return { rec };
       }
@@ -1132,7 +1191,7 @@ export class ElectionRuntime {
   }
 
   quarantineReason(): string | undefined {
-    return this.log.status.state === 'quarantine' ? this.log.status.reason : undefined;
+    return this.forcedQuarantine ?? (this.log.status.state === 'quarantine' ? this.log.status.reason : undefined);
   }
 
   get registry(): RegistryRow {

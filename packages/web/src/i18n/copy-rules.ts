@@ -2,7 +2,7 @@
 import { EN, MESSAGE_KEYS, type MessageKey } from './en.ts';
 
 /** Key prefixes shown to voters. Organizer (qv.org), observer (qv.verify) and help/about text are outside the 20-word rule. */
-export const VOTER_PREFIXES = ['qv.home', 'qv.how', 'qv.step', 'qv.election', 'qv.key', 'qv.ballot', 'qv.vote', 'qv.audit', 'qv.receipt', 'qv.err', 'qv.status', 'qv.shell', 'qv.device', 'qv.results'];
+export const VOTER_PREFIXES = ['qv.home', 'qv.how', 'qv.step', 'qv.election', 'qv.key', 'qv.ballot', 'qv.vote', 'qv.audit', 'qv.receipt', 'qv.err', 'qv.status', 'qv.shell', 'qv.device', 'qv.results', 'qv.live'];
 export const BANNED_WORDS = [
   'ciphertext', 'ciphertexts', 'nonce', 'benaloh', 'dkg', 'cryptographic', 'cryptography', 'homomorphic', 'zero-knowledge', 'argon2', 'argon2id',
   'elgamal', 'ristretto', 'merkle', 'ed25519', 'hash', 'kdf', 'aead', 'sth', 'checkpoint', 'spoil', 'spoiled', 'randomness', 'entropy', 'payload', 'api',
@@ -35,7 +35,7 @@ export function violations(): string[] {
 const SCREENS: [string, string][] = [
   ['Shell and navigation', 'qv.shell'], ['Banners and status', 'qv.banner'], ['Home and "How this works"', 'qv.how'], ['Home', 'qv.home'],
   ['Election page (step 1)', 'qv.election'], ['Privacy panel (More details)', 'qv.privacy'], ['Voting key (step 2)', 'qv.key'], ['Ballot', 'qv.ballot'],
-  ['Vote screen', 'qv.vote'], ['Double-check step (optional)', 'qv.audit'], ['Receipt', 'qv.receipt'], ['Results', 'qv.results'], ['Errors', 'qv.err'],
+  ['Vote screen', 'qv.vote'], ['Double-check step (optional)', 'qv.audit'], ['Receipt', 'qv.receipt'], ['Results', 'qv.results'], ['Live updates', 'qv.live'], ['Errors', 'qv.err'],
   ['Anti-phishing', 'qv.phish'], ['Glossary', 'qv.glossary'], ['Step indicator', 'qv.step'], ['Device', 'qv.device'], ['Status chips', 'qv.status'],
   ['Verify an election', 'qv.verify'], ['Organizer', 'qv.org'], ['Help', 'qv.help'], ['Navigation', 'qv.nav'], ['Accessibility names', 'qv.a11y'],
 ];

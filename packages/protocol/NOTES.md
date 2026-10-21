@@ -111,17 +111,100 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
   (QV-16 §8 `E_LOG_*`). `verifyReceiptChain` (QV-05 §4.3): promise + inclusion + own header/voter + consistency to a later log-signed head;
   when `witness_quorum > 0` the later head must carry the quorum, else `E_LOG_WITNESS`.
 
+### Notices and control entries (QV-18 §5.2 `notice`, §9.4 waiver, QV-ADR-022): `src/logcheck.ts`
+
+* **[X-31] Record shape.** No spec defines the body of a waiver or extension in suite v1 (QV-18 §5.2 gives only `{code, text}` with codes
+  `witness_waiver`, `extension`, `info`; QV-16 §5.14.3 says the extension record is "not defined in suite v1", OQ-9 "none in v1").
+  The verifier therefore uses the record `packages/server` already writes for control entries: `{body: {proto, type: "control",
+  action, reason?}, sigs}` (closed schema), coordinator multi-signed over `sig-record(manifest_hash, "control", body)` (X-3 convention,
+  same scope as the server). Recognised actions and their entry type: `pause`, `resume`, `invalidate`, `security-notice`,
+  `witness-waiver`, `extension` -> `notice`; `audit-close` -> `audit_close`; `cancel` -> `election_cancel`; `abort` -> `ceremony_abort`.
+  `witness-waiver`/`extension` are the QV-18 codes spelled like the server's actions (`security-notice` for QV-ADR-022
+  `security_notice`); the server does not emit them today (its `CONTROL_ACTIONS` rejects them). QV-18 `info`/`redaction` notices
+  have no record shape anywhere and are therefore unknown kinds (fail closed, X-33). **Owner decision needed** on the record shape,
+  the naming and the signature scope (manifest hash vs ctx); vectors use the reading above.
+* **[X-32] Notices never relax a gate.** Every witness gate (QV-18 §9.4, §13 step 6; X-25) and the QV-16 §5.14.3 time window read only
+  the hash-pinned manifest (`witness_quorum`, `bb.witnesses`, `voting_open/close`, `clock_skew_s`) and the tree heads; nothing reads a
+  notice. A waiver cannot lower `k`, replace the witness set or unblock a gate (QV-18 REQ-020: witnessed status from the manifest
+  only). QV-18 §9.4 / REQ-051 let an organizer waiver unblock the *server's* phase transition and QV-18 REQ-052 asks verifiers to
+  "surface it prominently": done as a `WITNESS WAIVER` caveat; the gate finding stays F (with a "never relaxes" note). This is
+  stricter than `board.verifyLog`, which downgrades a waived gate to a warning via `isWitnessWaiver`. Extensions, pause and resume
+  never move `voting_close` (QV-16 §5.14.3 has no such input; QV-03 §9 halt credit and QV-03 §5.5 extensions are not applied);
+  they are reported as caveats. Because the closed schema admits only `action` and `reason`, a notice cannot even carry a quorum,
+  witness list or time (`E_LOG_FORMAT`).
+* **[X-33] Authority and fail-closed rules** (all F, `chk.board.append_only`): the entry header author must be a manifest coordinator
+  key (QV-18 REQ-052 "signed by the organizer"; QV-ADR-022 / P12-2: the operator may only hold or notify, so caller
+  `extraAuthorKeys` never authorise a control entry) **and** the record needs >= `coordinator.m` distinct valid coordinator
+  signatures over this election's manifest hash (so a waiver replayed from another election fails) -> `E_LOG_BINDING`; a control
+  record in the wrong entry type -> `E_LOG_BINDING`; malformed record (unknown/extra fields) -> `E_LOG_FORMAT`; unknown action (incl.
+  prototype names, case variants, QV-18's underscore spelling) -> `E_LOG_BINDING`; a `notice` entry whose body is neither a DKG
+  round marker (X-22) nor a control record -> `E_LOG_BINDING`. QV-03 §5.5 / QV-ADR-022 give extension authority to k stewards;
+  stewards are not in the QV-16 manifest, so the coordinator m-of-k stands in (ambiguity, owner to confirm).
+* **[X-34] Retroactive extension.** An authenticated `extension` sequenced after `election-close` is `E_TIME_WINDOW` (F,
+  `chk.time.window` fail): QV-03 §5.5 allows extensions only before close, and the close seq is the cutoff (QV-ADR-P18-3). It is F
+  even with `witness_quorum = 0`. Wall-clock "before close_at" is not checked (no witnessed time for the notice itself); QV-03
+  `max_times`/`max_hours`/`allowed_if` caps are not checked because no extension is ever applied. Not interpreted: the effect of
+  `invalidate`, `cancel`, `abort` on the verdict (reported as caveats only; QV-05 V13 is still not implemented).
+* **Protocol-layer view of control records.** They are not QV-16 suite v1 records, so `verify.ts` reports them as `E_VERSION
+  unknown record type` (class L) and fails `chk.encoding.canonical`; the log-layer vectors with notices record that (expected check
+  maps include `chk.encoding.canonical: fail`). If `verify.ts` later dispatches `control` records, those vector expectations change
+  (regenerate; set is `candidate`).
+
+### Log-layer test vectors (QV-34): `test-vectors/v1/elections/log-layer-4v/`
+
+* One vector set, operation `log.verify_election` (the full verifier with QV-18 log evidence; QV-34 §10.2 file-based inputs): 48 vectors
+  over an honest 4-voter election (revote, tally; witnesses w1..w3, k = 2), an adversarial view of it (revote dropped and re-signed),
+  and 11 notice scenarios derived by inserting a control record. Input: `{bundle: {path}, board: {path, replace?}, receipts?, observed?,
+  witnesses?}`; `replace` shallow-replaces top-level fields of the export (mostly `checkpoints`). Expect: positive
+  `{ok: true, output: {verdict, checks}}` (no log-layer finding, verdict PASS); negative `{ok: false, error, failed_checks}` (QV-34 §6.3
+  form) with the verdict as a `verdict:` tag (ALARM / class I receipt cases keep PASS). `surfaces:` tags name caveats that must appear.
+* They live under `elections/` because they are election-level verifier vectors; the generic per-operation runners
+  (`vectors.test.ts`, `qv vectors check`) skip `elections/`, and `loglayer.test.ts` runs this set. The directory follows the
+  `elections/<name>/` convention (`bundle.json` + `expected-report.json` for the honest bundle verified without log evidence), which
+  `qv vectors check` relies on. Adding them changed only `MANIFEST.json` (new entries +
+  root); every existing vector file is byte-identical.
+
 ## Mismatches the consistency editor asked to list
 
 * `KeyId` (QV-09) is undefined in QV-16/QV-30; this code identifies keys by 32-byte Ed25519 public key hex everywhere.
 * QV-05 mapping says V13 (steward/operator authorisation, control entries of QV-ADR-022) has no Appendix C step: not implemented
   or verified here (no `pause/resume/invalidate` entries are parsed; they would be reported as unknown record types, class L).
-* QV-ADR-015 says roll binding is enforced "by `election_open` and verifier checks V2/V5"; `election_open` is only a marker here
-  (it does not carry `(manifest_hash, joint_key_seq, roll_commit_seq)`).
+* ~~`election_open` is only a marker~~ RESOLVED, see **[X-40]** below.
 * QV-ADR-019 (log entries as exact canonical bytes with base64url transport) is a `board`/`server` concern; the verifier takes
   parsed JSON (strict parse available via `verifyElectionText`) and re-canonicalises bodies.
 * QV-ADR-024 vendoring of `@noble/*` not done (dependency pinned by lockfile only); `packages/protocol/package.json` does not list
   `@quietvote/crypto` (workspace symlink resolves it; adding it needs a lockfile refresh).
+
+## !! VERSION-IMPACTING CHANGE: election-open binding (QV-ADR-015), X-40
+
+* **[X-40] `election-open` now carries `(manifest_hash, joint_key_seq, roll_commit_seq)`** and a `roll-commit` record is mandatory
+  before it (docs/18 §5 sequence: `... joint_key, roll_commit, election_open`). The marker body gains three fields
+  (`manifest_hash` hex32, `joint_key_seq`, `roll_commit_seq` = log `seq` values), signed under scope `ctx` as before; builder
+  `electionOpenBody()` in `records.ts`. Schema: optional on `marker`, but **required on `election-open`, forbidden on every other
+  marker** (`E_SCHEMA`, class L). Verifier (`verify.ts`), fail closed with `E_MARKERS` (F), `chk.time.window` = fail:
+  missing field; `manifest_hash` != manifest hash; either ref >= the open's own seq (forward/self); `joint_key_seq` != seq of the
+  accepted `dkg-final` marker; `roll_commit_seq` not a validly coordinator-signed `roll-commit` record; or the referenced
+  roll-commit root/size differs from the supplied roll. (No new error code invented: reuses `E_MARKERS`; `E_ROLL` would also be defensible for the last case.)
+  An election with no `roll-commit` record can no longer reach PASS even if the manifest embeds `roll.root` (static-roll mode
+  still allowed for the manifest, but the log must carry the commit that the open binds).
+* **Vector impact (deliberate, existing bytes changed):** the sim (`test/helpers/sim.ts`) now emits `roll-commit` then the bound
+  `election-open`, so every election bundle changed (`elections/tiny-yesno-3v`, `small-approval-20v`, `log-layer-4v`), every
+  mutation derived from them, and the canary; all seq numbers after `dkg-final` shifted by one. Primitive vectors are
+  byte-identical. Added by addition: 8 mutants `mutations/open-*` (roll ref forward/absent/wrong-record/nonexistent, joint-key
+  ref forward/mismatch, all fields absent, manifest_hash mismatch). Regenerated with
+  `node --experimental-strip-types packages/protocol/test/vecgen/write.ts`; the zero-diff regen test is green against the new bytes.
+* **Downstream consumers must update:** `packages/{trustee,board,cli}` and `packages/verifier` and `verifier-py` (all outside this
+  task) build/parse `election-open` without these fields; they will be rejected (`E_MARKERS`) by this verifier until updated.
+  `verifier-py` (not edited) rejects the new open marker with `E_SCHEMA`.
+* **Server** (`election.ts`): `election_open` is rejected (422 `E_MARKERS`) unless all three refs are present and equal the server's
+  own `manifest_hash`, `dkg-final` entry seq and `roll_commit` entry seq (so absent/forward/mismatched refs never enter the log).
+  The server does not author the open (the coordinator signs it); `World.open()` in the server tests builds the bound marker.
+* **Record sequence (docs/16 vs docs/18) and `tally_aggregate`:** docs/18 lists `roll_commit` before `election_open` (now emitted
+  and required). docs/18 also lists a `tally_aggregate` entry before `tally_result`, but QV-16 defines **no** such record: the
+  verifier recomputes the aggregate from the counted ballots, and the `tally` record carries `counted_root` and the aggregate
+  proof inputs. AMBIGUOUS, so protocol deliberately does NOT emit a `tally-aggregate` record (it would be an unknown type, class L,
+  in every verifier, and QV-16 has no body for it). The server's own `tally-aggregate` record (`server/src/records.ts`) stays a
+  board-level derived record; if QV-16 later defines it, add it between `election-close` and `tally`.
 
 ## R-01 §11.2 attacks-to-test coverage
 
@@ -132,7 +215,7 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 | 3 replay / copy | `ballot.test.ts` (copy re-signed, re-randomised copy, cross-election, ctx rewrite) |
 | 4 clash | `loglayer.test.ts` (identical choices give distinct leaves/receipts; receipt for another voter's entry, double claim, code mismatch: X-28) |
 | 5 drop/reorder | `attacks.test.ts`, `verify.test.ts` (reorder, drop); `loglayer.test.ts`: dropped revote and silent tail drop caught by the voter receipt, reordered entries break signed heads |
-| 6 split views | `loglayer.test.ts`: forked head in export, observed head from another view, receipt chain across views |
+| 6 split views | `loglayer.test.ts`: forked head in export, observed head from another view, receipt chain across views; vectors `equivocation-*`, `split-view-*` |
 | 7 invalid ballots | `ballot.test.ts` forged plaintext 2, overvote, undervote, zero sum |
 | 8 encodings/identity | `crypto/test/ristretto.test.ts`, ballot tamper matrix, DKG identity commitments, roll small-order keys |
 | 9, 10 rogue key, DKG replay | `dkg.test.ts` |
@@ -148,8 +231,8 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 ## Known gaps
 
 * Log layer (X-21..X-30) runs only when the caller passes `{log}`; `packages/verifier` still composes `board.verifyLog` itself and does
-  not pass log evidence to `verifyElection` yet (not changed here). QV-18 control entries (`pause/resume/invalidate`, `notice/witness_waiver`,
-  `extension`) are not interpreted, so a waiver never relaxes a gate. No log-layer test vectors (QV-34 set) were added.
+  not pass log evidence to `verifyElection` yet (not changed here). Control/notice entries are authenticated and reported but never
+  applied (X-31..X-34); their governance effect (QV-05 V13: pause/resume windows, invalidate/cancel verdicts) is not implemented.
 * Secret types (`SecretScalar` etc., QV-30 S2), wiping, and lint rules (QV-30 §5.2) not done; scalars are plain `bigint`.
 * Constant-time claims are those of `@noble/*` only.
 * Test vectors: `status: candidate`; no independent second implementation; MANIFEST unsigned; external-standard sets contain only
@@ -169,3 +252,7 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
   `reveal_digest` commits to the reveal (zero digest = trustee mode, commits to nothing). New vector set
   `protocol/benaloh/private-audit.json` (operation `benaloh.private_audit`, QV-10/QV-34), runners in `vectors.test.ts` and `qv vectors check`.
 * Unaudited; not for real elections.
+* **TR-01 (trustee audit)**: `analyzeBallotLog` now returns `castAlphas` (every `a` of every cast envelope in the log, valid or not;
+  `collectAlphas`). `verifyElection` fails `chk.benaloh.spoiled` with ALARM `E_SPOILED_CODE_CAST` when a trustees-mode spoil in the tally shares
+  any `a` with a cast envelope: spoils are not chain-checked and proofs bind only (ctx, voter), so a voter could re-wrap a cast ballot's
+  ciphertexts under a new code (`supersedes`) and have trustees decrypt it. Test: `tally.test.ts` (fails without the check).

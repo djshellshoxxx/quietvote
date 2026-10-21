@@ -39,7 +39,7 @@ QuietVote does **not** promise any of these:
 - **Hidden network use.** Your network traffic may show that you used QuietVote. Only Tor helps, and even Tor does not hide you from someone who can see the whole internet.
 - **A guaranteed service.** The operator can delay or block a vote.
 - **Proof of who you are.** The system checks that a registered key signed a ballot. It does not check who the person is. Stewards must keep the roll correct.
-- **Bug-free software.** No known bugs is not proof of safety.
+- **Bug-free software.** No known bugs is not proof of safety. <!-- claims-lint-ignore -->
 - **Legal or official e-voting approval.**
 
 Sources: spec [07 section 11](https://github.com/djshellshoxxx/quietvote/blob/main/docs/07-threat-model-security.md) (N-1 to N-14) and [decision log](https://github.com/djshellshoxxx/quietvote/blob/main/docs/decision-log.md) QV-ADR-008.

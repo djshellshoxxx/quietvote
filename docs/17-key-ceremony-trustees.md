@@ -263,7 +263,7 @@ Time: 90 min for n=5 including hash checks; 20 min active per trustee.
 
 ### 8.3 Out-of-band fingerprint comparison (SAS)
 
-- Fingerprint = first 66 bits of `F`, rendered as 6 words from a 2048-word list (PGP-style / BIP39-sized list `[UNVERIFIED: wordlist choice not fixed; use a published 2048-word list with unique 4-letter prefixes]`) plus the first 8 hex bytes for technical users.
+- Fingerprint = first 66 bits of `F`, rendered as 6 words from a 2048-word list (BIP39-sized list; note the PGP word list is two 256-word lists, one word per byte, and cannot give 66 bits in 6 words `[UNVERIFIED: wordlist choice not fixed; use a published 2048-word list with unique 4-letter prefixes]`) plus the first 8 hex bytes for technical users.
 - Comparison protocol: trustees A and B on a call (voice recognition is a weak check; video preferred): A reads words 1–3, B reads 4–6, each checks the other half against their own screen. Any mismatch ⇒ **stop**; report; do not confirm.
 - At least one other **trustee** must be compared with (not only the organizer) and the client records `compared_with: [trustee_ids]` locally for the transcript (self-attested; non-claim).
 - 66 bits ≈ resistant to second-preimage in an interactive human setting (attacker must find a colliding joint key in advance; ceremony state is public beforehand so precomputation is limited); a mismatch protects against operator substitution of the `joint_pk` presented to a specific trustee, which the log would otherwise have to catch by the trustee verifying their own computation — the client does verify its own computation, so the SAS is defence in depth against a modified client/UI.
@@ -504,7 +504,7 @@ Design principle: **the trustee should never need to know the words "polynomial"
 | # | Question | Owner | Proposed default | Resolution |
 |---|---|---|---|---|
 | Q1 | Does QV-16 use `age` or ECIES (ristretto255/X25519) for `enc_share`? | QV-16 author | QV-16's own ECIES with domain separation; `age` only for local bundles | Pending (QV-16) |
-| Q2 | Which `age` implementation to depend on (JS port, `rage` WASM, shelling to `age` binary)? Adds dependency vs ADR-003 | Protocol lead | Use a small audited JS implementation if available; else CLI interop via spawning `age` for hardware plugins | Pending; `[UNVERIFIED]` ecosystem status |
+| Q2 | Which `age` implementation to depend on (JS port, `rage` WASM, shelling to `age` binary)? Adds dependency vs ADR-003 | Protocol lead | Use a small JS implementation with published third-party audit reports if available; else CLI interop via spawning `age` for hardware plugins | Pending; `[UNVERIFIED]` ecosystem status |
 | Q3 | Proactive resharing / trustee replacement after open | Research (QV-21) | Out of v1; document limitation | Deferred |
 | Q4 | Word list for SAS | UX | Published 2048-word list | Pending |
 | Q5 | Mandatory air-gap for elections above some size/stake? | Governance (QV-03) | Recommend, not require | Pending |

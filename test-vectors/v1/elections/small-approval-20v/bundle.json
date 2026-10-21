@@ -756,19 +756,39 @@
       "entry": {
         "body": {
           "proto": "qv1-r255-sha2",
-          "type": "marker",
-          "name": "election-open"
+          "type": "roll-commit",
+          "root": "a7c1a3615a9dced1905241c6e79a95ae253c4f4d6234b944463f7fc7ce4fa9a0",
+          "size": 20
         },
         "sigs": [
           {
             "key": "16a477727d064ec94d746acb717b3d4d6c1b826da0aaea11fe0495532e494466",
-            "sig": "adbaef8b7b11c4a2b3354098749d2f611de4e6124803d1d7f7532d7cae3f8a436407ef5d926bd9040615589833fc73c59b6d0551b9cb8c99717df2726e92ed06"
+            "sig": "4c3b61601125261f30fcbf7fdd76f2dc03145d13145b8770f0bcdd3cb076afb248fa98c16650807bcf280aa00ef8939a4dec5d96860cce0c09fe6316e40e4e08"
           }
         ]
       }
     },
     {
       "seq": 28,
+      "entry": {
+        "body": {
+          "proto": "qv1-r255-sha2",
+          "type": "marker",
+          "name": "election-open",
+          "manifest_hash": "edb399f7960671ae7739a695cf6b7b84fec20b221112fe28ad80e69c942addcc",
+          "joint_key_seq": 26,
+          "roll_commit_seq": 27
+        },
+        "sigs": [
+          {
+            "key": "16a477727d064ec94d746acb717b3d4d6c1b826da0aaea11fe0495532e494466",
+            "sig": "f56aef5c52442047494f2b223f66a1f556f5b44145ee81d1c5a6e4d875209b69e7d21b07b50117d2ed9fa23aa9c92d4a858ec5c33b554dbe670e20c9cd8ff508"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 29,
       "entry": {
         "intent": "cast",
         "body": {
@@ -816,7 +836,7 @@
       }
     },
     {
-      "seq": 29,
+      "seq": 30,
       "entry": {
         "intent": "cast",
         "body": {
@@ -864,7 +884,7 @@
       }
     },
     {
-      "seq": 30,
+      "seq": 31,
       "entry": {
         "intent": "cast",
         "body": {
@@ -912,7 +932,7 @@
       }
     },
     {
-      "seq": 31,
+      "seq": 32,
       "entry": {
         "intent": "cast",
         "body": {
@@ -960,7 +980,7 @@
       }
     },
     {
-      "seq": 32,
+      "seq": 33,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1008,7 +1028,7 @@
       }
     },
     {
-      "seq": 33,
+      "seq": 34,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1056,7 +1076,7 @@
       }
     },
     {
-      "seq": 34,
+      "seq": 35,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1104,7 +1124,7 @@
       }
     },
     {
-      "seq": 35,
+      "seq": 36,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1152,7 +1172,7 @@
       }
     },
     {
-      "seq": 36,
+      "seq": 37,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1200,7 +1220,7 @@
       }
     },
     {
-      "seq": 37,
+      "seq": 38,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1248,7 +1268,7 @@
       }
     },
     {
-      "seq": 38,
+      "seq": 39,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1296,7 +1316,7 @@
       }
     },
     {
-      "seq": 39,
+      "seq": 40,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1344,7 +1364,7 @@
       }
     },
     {
-      "seq": 40,
+      "seq": 41,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1392,7 +1412,7 @@
       }
     },
     {
-      "seq": 41,
+      "seq": 42,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1440,7 +1460,7 @@
       }
     },
     {
-      "seq": 42,
+      "seq": 43,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1488,7 +1508,7 @@
       }
     },
     {
-      "seq": 43,
+      "seq": 44,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1536,7 +1556,7 @@
       }
     },
     {
-      "seq": 44,
+      "seq": 45,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1584,7 +1604,7 @@
       }
     },
     {
-      "seq": 45,
+      "seq": 46,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1632,7 +1652,7 @@
       }
     },
     {
-      "seq": 46,
+      "seq": 47,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1680,7 +1700,7 @@
       }
     },
     {
-      "seq": 47,
+      "seq": 48,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1728,7 +1748,7 @@
       }
     },
     {
-      "seq": 48,
+      "seq": 49,
       "entry": {
         "intent": "cast",
         "body": {
@@ -1776,7 +1796,7 @@
       }
     },
     {
-      "seq": 49,
+      "seq": 50,
       "entry": {
         "intent": "spoil",
         "body": {
@@ -1833,7 +1853,7 @@
       }
     },
     {
-      "seq": 50,
+      "seq": 51,
       "entry": {
         "intent": "spoil",
         "body": {
@@ -1882,7 +1902,7 @@
       }
     },
     {
-      "seq": 51,
+      "seq": 52,
       "entry": {
         "body": {
           "proto": "qv1-r255-sha2",
@@ -1898,7 +1918,7 @@
       }
     },
     {
-      "seq": 52,
+      "seq": 53,
       "entry": {
         "body": {
           "proto": "qv1-r255-sha2",

@@ -30,6 +30,8 @@ export interface BallotAnalysis {
   findings: Finding[];
   castSeen: number;
   spoilSeen: number;
+  /** Every ElGamal `a` (alpha) hex appearing in ANY cast envelope of the log, valid or not (TR-01: spoil relays must never decrypt these). */
+  castAlphas: Set<string>;
   checkFailures: { ballotsValid: boolean; ballotsLatest: boolean; window: boolean; benaloh: boolean; encoding: boolean };
 }
 
@@ -53,11 +55,15 @@ export function analyzeBallotLog(
   const spoilsPerVoter = new Map<string, number>();
   let castSeen = 0;
   let spoilSeen = 0;
+  const castAlphas = new Set<string>();
 
   for (const { seq, raw } of entries) {
     const r = verifyEnvelope(p, roll, raw);
     const intent = (raw as { intent?: string } | null)?.intent;
-    if (intent === 'cast') castSeen++;
+    if (intent === 'cast') {
+      castSeen++;
+      collectAlphas((raw as { body?: unknown }).body, castAlphas);
+    }
     else if (intent === 'spoil') spoilSeen++;
     if (!r.ok) {
       if (r.error === 'E_SCHEMA' || r.error === 'E_PARSE' || r.error === 'E_VERSION') cf.encoding = false;
@@ -125,7 +131,21 @@ export function analyzeBallotLog(
     last.set(v.voter, { seq, voter: v.voter, code, env: v.env });
   }
   const counted = [...last.values()].sort((a, b) => (a.voter < b.voter ? -1 : 1));
-  return { counted, spoiled, findings, castSeen, spoilSeen, checkFailures: cf };
+  return { counted, spoiled, findings, castSeen, spoilSeen, castAlphas, checkFailures: cf };
+}
+
+/** Best-effort, schema-agnostic: the `a` of every selection ciphertext in a ballot body. */
+export function collectAlphas(body: unknown, into: Set<string>): void {
+  const contests = (body as { contests?: unknown } | null)?.contests;
+  if (!Array.isArray(contests)) return;
+  for (const c of contests) {
+    const sel = (c as { sel?: unknown } | null)?.sel;
+    if (!Array.isArray(sel)) continue;
+    for (const x of sel) {
+      const a = (x as { a?: unknown } | null)?.a;
+      if (typeof a === 'string') into.add(a);
+    }
+  }
 }
 
 /** counted_root: RFC 9162 root over ballot_code(32) || voter_pk(32), sorted by voter_pk. */

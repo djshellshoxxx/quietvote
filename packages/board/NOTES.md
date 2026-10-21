@@ -43,3 +43,6 @@ Where QV-18 is ambiguous or depends on QV-16 (not yet written), the safest readi
     `tally_result` is refused. Witness gates: `election_open` lower bound is `roll_commit` else `joint_key`; `election_close` is now a hard
     gate up to `tally_aggregate`, or up to `tally_result` when no aggregate exists. `grammarStep` has a third optional `body` argument.
     Server (not edited here) should pass nothing new: `BoardLog.append` supplies the body itself.
+    Update after QV-ADR-015 landed in protocol: the protocol log now always emits a `roll-commit` and its `election-open` binds
+    `(manifest_hash, joint_key_seq, roll_commit_seq)`. The static-roll waiver above stays accepted by the board (spec-permitted) but is
+    unused by the protocol sim; `tally_aggregate` remains optional.

@@ -1,5 +1,10 @@
 import { bytesToHex, ed25519Sign, ed25519Verify, h256, hexToBytes, jcs, utf8 } from '@quietvote/crypto';
-import type { MultiSignedRecord, Sig, SignedRecord } from './types.ts';
+import type { Hex, MarkerBody, MultiSignedRecord, Sig, SignedRecord } from './types.ts';
+
+/** Body of the `election-open` marker (QV-ADR-015): binds (manifest_hash, joint_key_seq, roll_commit_seq). Sign with scope = ctx. */
+export function electionOpenBody(proto: string, manifestHash: Hex, jointKeySeq: number, rollCommitSeq: number): MarkerBody {
+  return { proto, type: 'marker', name: 'election-open', manifest_hash: manifestHash, joint_key_seq: jointKeySeq, roll_commit_seq: rollCommitSeq };
+}
 
 /** sig-record digest (QV-16 §5.4): H256("sig-record"; scope_hash, record_type, JCS(body)). */
 export function recordDigest(scope: Uint8Array, type: string, body: unknown): Uint8Array {

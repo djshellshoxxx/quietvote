@@ -83,3 +83,6 @@ POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"g
 * TR-02 fixed: `releaseTally` from CONFIRMED/DRILLED (election-open never imported) passes through STANDBY instead of failing
   `ILLEGAL_TRANSITION`; the full log gate still runs first.
 * Tests: `test/audit.test.ts`.
+## QV-ADR-015 election-open binding
+Test harness now posts a `roll-commit` and an `election-open` built with `electionOpenBody()` (binds manifest hash, `dkg-final` seq, roll-commit seq).
+Trustee code needed no change: it ignores `roll-commit` entries and relies on the full-log `verifyElection` gate.
