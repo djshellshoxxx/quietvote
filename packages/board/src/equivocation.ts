@@ -15,8 +15,18 @@ function signedNote(note: string, logPk: Uint8Array): Result<Checkpoint> {
   return p;
 }
 
+const isU = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
+const TOTAL_ERR = (): Result<EquivocationKind> => err('QV_BOARD_BAD_PROOF', 'malformed evidence');
+
 /** fork: two log-signed notes, same origin and size, different roots. Conclusive. */
 export function checkFork(noteA: string, noteB: string, logPk: Uint8Array): Result<EquivocationKind> {
+  try {
+    return checkForkUnsafe(noteA, noteB, logPk);
+  } catch {
+    return TOTAL_ERR();
+  }
+}
+function checkForkUnsafe(noteA: string, noteB: string, logPk: Uint8Array): Result<EquivocationKind> {
   const a = signedNote(noteA, logPk);
   const b = signedNote(noteB, logPk);
   if (!a.ok) return a;
@@ -27,6 +37,13 @@ export function checkFork(noteA: string, noteB: string, logPk: Uint8Array): Resu
 
 /** inconsistent: sizes a<b, both log-signed, and the supplied (server-furnished) proof does not verify. Conclusive. */
 export function checkInconsistent(noteA: string, noteB: string, proof: readonly Uint8Array[], logPk: Uint8Array): Result<EquivocationKind> {
+  try {
+    return checkInconsistentUnsafe(noteA, noteB, proof, logPk);
+  } catch {
+    return TOTAL_ERR();
+  }
+}
+function checkInconsistentUnsafe(noteA: string, noteB: string, proof: readonly Uint8Array[], logPk: Uint8Array): Result<EquivocationKind> {
   const a = signedNote(noteA, logPk);
   const b = signedNote(noteB, logPk);
   if (!a.ok) return a;
@@ -47,12 +64,21 @@ export function checkBrokenPromise(
   path: readonly Uint8Array[],
   logPk: Uint8Array,
 ): Result<EquivocationKind> {
-  let msg: Uint8Array;
   try {
-    msg = promiseMessage(receipt.origin, receipt.seq, receipt.leafHash, receipt.sequencedAt, receipt.checkpointDeadline);
+    if (!isU(receipt.seq) || !isU(receipt.sequencedAt) || !isU(receipt.checkpointDeadline)) return err('QV_BOARD_BAD_RECEIPT', 'receipt numbers out of range');
+    return checkBrokenPromiseUnsafe(receipt, note, otherLeafHash, path, logPk);
   } catch {
-    return err('QV_BOARD_BAD_RECEIPT', 'malformed receipt'); // checkers are total: out-of-range integers etc. are a Result, not a throw
+    return TOTAL_ERR();
   }
+}
+function checkBrokenPromiseUnsafe(
+  receipt: Receipt,
+  note: string,
+  otherLeafHash: Uint8Array,
+  path: readonly Uint8Array[],
+  logPk: Uint8Array,
+): Result<EquivocationKind> {
+  const msg = promiseMessage(receipt.origin, receipt.seq, receipt.leafHash, receipt.sequencedAt, receipt.checkpointDeadline);
   if (!ed25519Verify(logPk, receipt.promiseSig, msg)) return err('QV_BOARD_BAD_RECEIPT', 'promise signature invalid');
   const cp = signedNote(note, logPk);
   if (!cp.ok) return cp;

@@ -63,6 +63,8 @@ export interface BundleData {
   state: TrusteeState;
   sk_sign: string;
   sign_pk: string;
+  /** Absolute path this bundle was created (or restored) at; locates its public release ledger on restore. */
+  home?: string;
   election_id?: string;
   trustee_id?: number;
   ceremony_id?: string;
