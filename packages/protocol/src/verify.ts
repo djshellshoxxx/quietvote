@@ -26,6 +26,9 @@ export interface VerificationReport {
   caveats: string[];
   counts: { cast: number; spoiled: number; counted: number; ignored: Record<string, number> };
   ctxPrefix?: string;
+  /** Joint election public key K and full ctx (hex), once the DKG verified. Lets a voter client build ballots (QV-ADR-020 audit device). */
+  jointKey?: string;
+  ctx?: string;
   /** Public (voter key, ballot code) pairs counted: lets a voter check that their final receipt code was counted. */
   countedBallots?: { voter: string; code: string }[];
   results?: TallyBody['results'];
@@ -342,6 +345,8 @@ async function run(input: unknown): Promise<VerificationReport> {
   }
   if (R.checks['chk.keys.trustees'] !== 'fail') R.checks['chk.keys.trustees'] = 'pass';
   R.ctxPrefix = H(dkg.ctx).slice(0, 16);
+  R.ctx = H(dkg.ctx);
+  R.jointKey = H(pointToBytes(dkg.K));
   const p: ElectionParams = { manifest: m, mh: mhb, K: dkg.K, ctx: dkg.ctx };
 
   // ---- election markers (scope = ctx)

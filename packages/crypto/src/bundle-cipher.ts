@@ -32,7 +32,7 @@ async function aesKey(raw: Uint8Array, usage: 'encrypt' | 'decrypt'): Promise<Cr
 }
 
 async function kdf(passphrase: Uint8Array, salt: Uint8Array, logN: number): Promise<Uint8Array> {
-  return scryptAsync(passphrase, concatBytes(utf8('qv-bundle-v1'), salt), { N: 2 ** logN, r: 8, p: 1, dkLen: 32, maxmem: 2 ** logN * 8 * 8 * 2 + 4096 });
+  return scryptAsync(passphrase, concatBytes(utf8('qv-bundle-v1'), salt), { N: 2 ** logN, r: 8, p: 1, dkLen: 32, maxmem: 128 * 8 * (2 ** logN + 2) + 65536 });
 }
 
 function payloadKey(fileKey: Uint8Array, nonce: Uint8Array): Uint8Array {
