@@ -29,4 +29,4 @@ Scope: docs/00–34 and docs/research/R-01–R-04. Method: grep of headings, IDs
 - QV-16 App. C needs steps for control entries, roll amendments and the `min_counted_ballots` floor as a first-class check.
 - QV-09 request/response schemas were not diffed field by field against QV-16 bodies (only IDs, phases, encodings).
 - QV-12/QV-26/QV-29/QV-31/QV-33/QV-34 were checked by grep only; no conflicts were found on the listed topics.
-- `docs/plan/ROADMAP.md` and `BACKLOG.md` (QV-22, QV-23) do not exist; SPEC-INDEX marks them "Framework (file not yet written)".
+- ~~`docs/plan/ROADMAP.md` and `BACKLOG.md` (QV-22, QV-23) do not exist~~ Superseded 2026-10-21 (docs pass): both files now exist; see [TODO](TODO.md).

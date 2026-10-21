@@ -212,12 +212,25 @@ const NEEDS: Partial<Record<EntryType, EntryType>> = {
   audit_close: 'election_close', key_destruction: 'audit_close',
 };
 
+/**
+ * Types valid only while the election is not yet open (docs/18 §5.2 Phase column "S"). Ceremony types are
+ * deliberately not tied to a finer sub-phase than "before election_open" (key_confirm/keycheck follow joint_key).
+ */
+const SETUP_ONLY: ReadonlySet<EntryType> = new Set<EntryType>([
+  'trustee_accept', 'trustee_decline', 'ceremony_start', 'dkg_round1', 'dkg_round2', 'dkg_complaint',
+  'dkg_justification', 'key_confirm', 'joint_key', 'keycheck', 'roll_commit',
+]);
+
 /** Validates and applies the next entry type. Returns an error string or undefined. */
 export function grammarStep(g: GrammarState, type: EntryType, body: Uint8Array | null = null): string | undefined {
   if (g.terminal) return 'log is terminated';
   if (g.count === 0 && type !== 'manifest') return 'first entry must be manifest';
   if (g.count > 0 && type === 'manifest') return 'manifest only allowed at seq 0';
   if (ONCE.has(type) && g.seen.has(type)) return `${type} already present`;
+  if (SETUP_ONLY.has(type) && g.opened) return `${type} not allowed after election_open`;
+  // §5.4: ceremony_abort only from CEREMONY (ceremony_start seen, no joint_key yet); election_cancel only SETUP/READY/OPEN.
+  if (type === 'ceremony_abort' && !(g.seen.has('ceremony_start') && !g.seen.has('joint_key'))) return 'ceremony_abort only during the key ceremony';
+  if (type === 'election_cancel' && g.closed) return 'election_cancel not allowed after election_close';
   const need = NEEDS[type];
   const waived = type === 'election_open' && g.staticRoll; // QV-ADR-015: manifest roll.root replaces roll_commit
   if (need && !waived && !g.seen.has(need)) return `${type} requires prior ${need}`;

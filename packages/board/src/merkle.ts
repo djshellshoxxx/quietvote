@@ -29,8 +29,12 @@ function split(n: number): number {
   return k;
 }
 
-function isPow2(n: number): boolean {
-  return n >= 1 && Number.isInteger(Math.log2(n));
+/** Exact power-of-two test (Math.log2 rounds: log2(2^52+1) === 52). */
+export function isPow2(n: number): boolean {
+  if (!Number.isSafeInteger(n) || n < 1) return false;
+  let m = n;
+  while (m % 2 === 0) m /= 2;
+  return m === 1;
 }
 
 const odd = (n: number): boolean => n % 2 === 1;
