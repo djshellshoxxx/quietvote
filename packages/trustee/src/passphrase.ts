@@ -33,6 +33,7 @@ export function estimateEntropyBits(p: string): number {
   if (/[^a-zA-Z0-9]/.test(p)) pool += 33;
   const seen = new Set<string>();
   let eff = 0;
+  let repeats = 0;
   let prev = -2;
   let run = 0;
   for (const ch of p) {
@@ -40,12 +41,14 @@ export function estimateEntropyBits(p: string): number {
     const step = c - prev;
     run = step === 1 || step === -1 || step === 0 ? run + 1 : 0;
     prev = c;
-    if (seen.has(ch)) eff += 0.25;
+    if (seen.has(ch)) repeats += 1;
     else {
       seen.add(ch);
       eff += run >= 2 ? 0.25 : 1;
     }
   }
+  // Repeats are worth a quarter bit-unit each, but never more than the distinct characters already counted: 'a'x50 or 'ab'x30 are not strong.
+  eff += Math.min(0.25 * repeats, seen.size);
   let bits = eff * Math.log2(Math.max(pool, 2));
   if (/^[a-z\s]+$/.test(p)) bits = Math.min(bits, p.length * 2);
   return Math.floor(bits);

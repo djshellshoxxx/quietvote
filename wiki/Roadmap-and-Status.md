@@ -6,20 +6,22 @@
 
 | Item | State |
 |---|---|
-| Stage | Early implementation; specs are drafts |
-| Specifications | Written but unresolved in places. Acceptance criteria are not complete. |
-| Code | Workspaces with code and tests: `board`, `cli`, `crypto`, `protocol`, `server`, `trustee`, `verifier`, `web`. Unaudited and incomplete. |
-| Tests | Counts change per commit; see CI (`npm run check`). Test vectors exist under `test-vectors/` (see [[Testing and Conformance]]). |
-| Typecheck | As of commit `c8348f4`: `npm run typecheck` passes. Other sessions are changing the code; rerun to confirm (see [[Getting Started Dev]]). |
-| Audit | None. Planned in spec 11 section 9. |
+| Stage | Pre-release. Specifications are drafts; implementation code exists in all eight packages |
+| Specifications | All QV-00 to QV-35 are Draft. No spec is in Review or Approved. Owner review is not recorded |
+| Code | Eight packages with implementation code and a `test/` folder each. Known gaps are in each `packages/*/NOTES.md` |
+| Tests | Test folders exist in every package. Results are not restated here; re-run `npm test` |
+| Typecheck | Failed on the 2026-10-21 re-run of the working tree (errors in `packages/server` and `packages/board` tests). Tracked as TODO N-01; a note on commit `c8348f4` records a pass, so confirm the current state |
+| Test vectors | `test-vectors/v1` exists with status `candidate`; the manifest is unsigned |
+| CI | One workflow: typecheck and test matrix. Claims lint runs but does not block. No lint, SAST, SBOM or reproducible-build step yet |
+| Audit | None. Planned in spec 11 section 9 |
 | Release | None |
-| Licence | AGPL-3.0-or-later (see `LICENSE`) |
+| Licence | AGPL-3.0-or-later (`LICENSE`; decision QV-ADR-011). The documentation licence still needs counsel review (D-74) |
 
-Read the [README](https://github.com/djshellshoxxx/quietvote/blob/main/README.md) for the project's own status statement.
+Read the [README](https://github.com/djshellshoxxx/quietvote/blob/main/README.md) for the project's own status statement. The consolidated open-work list is [docs/plan/TODO.md](https://github.com/djshellshoxxx/quietvote/blob/main/docs/plan/TODO.md).
 
 ## Indicative phases (from the roadmap)
 
-The project roadmap ([docs/plan/ROADMAP.md](/plan/ROADMAP.md)) is a draft with indicative dates and effort estimates. Summary:
+The project roadmap ([docs/plan/ROADMAP.md](https://github.com/djshellshoxxx/quietvote/blob/main/docs/plan/ROADMAP.md)) is a draft with indicative dates and effort estimates. Summary:
 
 | Phase | Goal |
 |---|---|
@@ -49,7 +51,9 @@ Dates are not commitments.
 
 ## Known gaps in the repo
 
-- No ESLint config yet. A CI workflow (`.github/workflows/ci.yml`), `DCO` and `LICENSE` files exist.
-- One failing test at the commit above (see Tests).
+- The typecheck is failing on the last re-run (see above).
+- No ESLint configuration yet.
+- No release signing, reproducible-build check or SBOM.
+- The claims lint is non-blocking in CI.
 
 Full list: [[Specification Index]].
