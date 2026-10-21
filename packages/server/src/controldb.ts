@@ -82,6 +82,13 @@ CREATE TABLE webhook_outbox (
 CREATE INDEX webhook_outbox_hook ON webhook_outbox(webhook_id);
 `,
   },
+  {
+    version: 4,
+    name: 'registry_quarantine',
+    // Admin-visible mirror of the election's quarantine (QV-18 REQ-053/054): the JSON reason, or NULL when not quarantined.
+    // The authoritative copy stays in the election database (election.quarantine); this column only feeds registry status.
+    sql: `ALTER TABLE election_registry ADD COLUMN quarantine TEXT;`,
+  },
 ];
 
 export interface OutboxRow {
@@ -137,6 +144,8 @@ export interface RegistryRow {
   audit_close_at: number | null;
   archived_at: number | null;
   bytes_used: number;
+  imported: number;
+  quarantine: string | null;
 }
 
 export class ControlDb {
@@ -215,6 +224,10 @@ export class ControlDb {
     if (title !== undefined) run(this.db, 'UPDATE election_registry SET title=? WHERE election_id=?', title, id);
     const col = state === 'OPEN' ? 'opened_at' : state === 'CLOSED' ? 'closed_at' : state === 'ARCHIVED' ? 'archived_at' : undefined;
     if (col) run(this.db, `UPDATE election_registry SET ${col}=? WHERE election_id=? AND ${col} IS NULL`, t, id);
+  }
+  /** Mirrors the election's quarantine reason (JSON or board reason) into the registry; `null` clears it. */
+  setQuarantineFlag(id: string, reason: string | null): void {
+    run(this.db, 'UPDATE election_registry SET quarantine=? WHERE election_id=?', reason, id);
   }
   setBytes(id: string, bytes: number): void {
     run(this.db, 'UPDATE election_registry SET bytes_used=? WHERE election_id=?', bytes, id);

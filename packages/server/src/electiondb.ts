@@ -99,6 +99,7 @@ export interface ElectionRow {
   draft: string | null;
   org_id: string;
   quarantine: string | null;
+  imported: number;
   created_at: number;
 }
 
@@ -207,7 +208,7 @@ export class ElectionDb {
     return tx(this.db, fn);
   }
 
-  init(row: Omit<ElectionRow, 'quarantine' | 'draft'>): void {
+  init(row: Omit<ElectionRow, 'quarantine' | 'draft' | 'imported'>): void {
     this.tx(() => {
       run(this.db, `INSERT INTO election(election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,org_id,created_at)
         VALUES (?,?, 'DRAFT', ?,?,?,?,?,?,?,?,?)`, row.election_id, row.origin, row.log_pk, row.log_sk_enc, row.srv_pk, row.srv_sk_enc, row.access, row.read_key_hash, row.title, row.org_id, row.created_at);
@@ -215,7 +216,7 @@ export class ElectionDb {
     });
   }
   row(): ElectionRow {
-    const r = get<ElectionRow>(this.db, 'SELECT election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,draft,org_id,quarantine,created_at FROM election');
+    const r = get<ElectionRow>(this.db, 'SELECT election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,draft,org_id,quarantine,imported,created_at FROM election');
     if (!r) throw new Error('election row missing');
     return r;
   }
