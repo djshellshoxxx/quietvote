@@ -646,7 +646,7 @@ Capacity planning: assume ≤ 100 k entries/election, ≈ 10 KiB average ballot 
 - Downstream: QV-09 handlers use `Store` port (`appendEntry`, `getEntries(from,limit)`, `getProof`, `getCheckpoint`, `registerVoter`, …).
 - Engine: `node:sqlite` is **Stability 1.1 (active development)** in Node v22 docs (checked 2026-10-21); API may change between minors → pin Node version, wrap in `Store` adapter (REQ-018), CI matrix on Node 22 LTS latest and pinned minimum (22.16).
 - Dependencies: `node:crypto` (ChaCha20-Poly1305), `age` implementation for backups (QV-17 Q2).
-- Compatibility: SQLite bundled by Node; `STRICT` tables require SQLite ≥ 3.37 `[UNVERIFIED: bundled version in Node 22.16 not checked]` — startup asserts `sqlite_version()`.
+- Compatibility: SQLite bundled by Node; `STRICT` tables require SQLite ≥ 3.37 `[VERIFIED: node v22.16.0 deps/sqlite/sqlite3.h = 3.49.1, 2026-10-21]` — startup asserts `sqlite_version()`.
 
 ## 18. UX / ops notes
 
@@ -695,6 +695,6 @@ Capacity planning: assume ≤ 100 k entries/election, ≈ 10 KiB average ballot 
 
 - Node.js v22 `node:sqlite` documentation — https://nodejs.org/docs/latest-v22.x/api/sqlite.html (fetched: Stability 1.1; `--experimental-sqlite` flag removed v22.13.0; module-level `backup()` added v22.16.0; `DatabaseSync` options `readOnly`, `enableForeignKeyConstraints`; no encryption option).
 - SQLite documentation (STRICT tables, WAL, `secure_delete`, `VACUUM INTO`, online backup) — https://sqlite.org `[UNVERIFIED: pages not fetched in this session]`.
-- RFC 8439 ChaCha20-Poly1305 `[UNVERIFIED: not fetched]`.
+- RFC 8439 ChaCha20-Poly1305.
 - age format — https://github.com/C2SP/C2SP/blob/main/age.md (fetched).
 - QV-18 §§5, 11, 12 for log semantics (this repository).

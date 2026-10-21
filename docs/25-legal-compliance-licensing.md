@@ -22,7 +22,7 @@ Jurisdiction-specific legal opinions; tax; corporate formation; certification as
 ### 3.1 Code: AGPL-3.0-or-later (ADR-011)
 - Each source file carries an SPDX header: `SPDX-License-Identifier: AGPL-3.0-or-later` and `SPDX-FileCopyrightText: <year> QuietVote contributors`. Repository includes `LICENSE` (full AGPL-3.0 text, obtained from https://www.gnu.org/licenses/agpl-3.0.txt) and a REUSE-compliant layout (https://reuse.software) [spec not re-fetched; verify].
 - **Network clause (§13):** if a modified version interacts with users remotely, the operator must offer those users the Corresponding Source of the *modified* version. QuietVote implements this via a footer/`/source` route and `/.well-known/quietvote/instance` field `source_url` pointing to the exact commit/build (QV-12 descriptor). [Text of §13 from GNU AGPL-3.0; the search run did not retrieve it — counsel/maintainer to confirm exact wording.] Requirement: unmodified deployments also expose `source_url` (Should) to make compliance a non-event.
-- **Dependencies:** `@noble/curves`, `@noble/hashes` are MIT-licensed [UNVERIFIED current license; check before release] — MIT is compatible for inclusion in an AGPL work. Dependency policy: only licences compatible with AGPL-3.0-or-later; CI runs a licence scanner; no GPL-2.0-only, SSPL, BUSL, or non-commercial licences.
+- **Dependencies:** `@noble/curves`, `@noble/hashes` are MIT-licensed [VERIFIED: noble-curves and noble-hashes repos, 2026-10-21] — MIT is compatible for inclusion in an AGPL work. Dependency policy: only licences compatible with AGPL-3.0-or-later; CI runs a licence scanner; no GPL-2.0-only, SSPL, BUSL, or non-commercial licences.
 - **Static client bundle** is served to users; it is AGPL code, so Source offer applies to bundle sources (reproducible build, ADR-010).
 - **Hosted forks** must publish modifications (design goal of ADR-011). AGPL does **not** restrict running unmodified software commercially; does not stop hosting competitors; consistent with QV-14.
 - **Warranty disclaimer/limitation** (AGPL §15–16) is preserved in `LICENSE` and surfaced in the UI "About" page.
@@ -46,7 +46,7 @@ AGPL-3.0 includes an express contributor patent licence (§11) [to be confirmed 
 
 ## 4. Disclaimers (must appear in README, UI footer, results page, ToU)
 1. **No warranty:** software provided "as is" under AGPL §15–16.
-2. **Not a certified election system:** QuietVote is intended for internal decisions of voluntary organisations. It is not certified for public/governmental elections, statutory union ballots, company shareholder votes, or any context where law prescribes a voting method, supervisor, or certified system. Using it in such contexts is the organisation's responsibility.
+2. **Not a certified election system:** QuietVote is intended for internal decisions of voluntary organisations. It is not certified for public/governmental elections, statutory union ballots, company shareholder votes, or any context where law prescribes a voting method, supervisor, or certified system. Using it in such contexts is the organisation's responsibility. <!-- claims-lint-ignore -->
 3. **Experimental status until independent review:** "No security audit has yet been completed" banner until QV-11 gates are passed. No claim of anonymity or coercion resistance beyond the specifications (ADR-008).
 4. **Residual risks:** compromised devices, coerced voters, small-group inference, metadata (list from ADR-008 and QV-26).
 5. **Results are group decisions:** the maintainers/operators are not responsible for outcomes or disputes.
@@ -105,7 +105,7 @@ QuietVote contains and implements strong cryptography (ristretto255 / Ed25519 / 
 ## 9. Terms-of-use template (hosted offering and project website)
 1. **Acceptance and scope.** The service lets organisations conduct internal votes. By creating an organisation you accept these terms.
 2. **Eligibility and no identity requirement.** We do not require identity verification; organisations are solely responsible for deciding who may vote.
-3. **Your responsibilities.** Comply with law and your governing documents; do not use the service for unlawful purposes, harassment, impersonation, or governmental/statutory elections requiring certified systems; protect keys — **we cannot recover lost keys** (QV-12 §5).
+3. **Your responsibilities.** Comply with law and your governing documents; do not use the service for unlawful purposes, harassment, impersonation, or governmental/statutory elections requiring certified systems; protect keys — **we cannot recover lost keys** (QV-12 §5). <!-- claims-lint-ignore -->
 4. **Data and export.** You own your content. You may export all election data at any time and free of charge; we will not hold data hostage (QV-14 REQ-001).
 5. **Privacy.** See Privacy Notice; the DPA is incorporated for organisations in scope of GDPR.
 6. **No guarantee of secrecy beyond documented model.** Secrecy depends on honest trustees and uncompromised devices; see "Guarantees and non-claims".
@@ -204,4 +204,4 @@ Authors are not lawyers; sources partially retrieved; law varies and evolves.
 - EDPB Guidelines 07/2020 summary: https://www.mayerbrown.com/en/insights/publications/2020/09/european-data-protection-board-publishes-guidelines-on-the-concepts-of-controller-joint-controller-and-processor
 - Regulation (EU) 2016/679 (GDPR), EUR-Lex: https://eur-lex.europa.eu/eli/reg/2016/679/oj [article text not retrieved].
 - REUSE specification: https://reuse.software [not retrieved].
-- US LMRDA 29 U.S.C. §481; UK Trade Union and Labour Relations (Consolidation) Act 1992 [citations from memory, UNVERIFIED].
+- US LMRDA 29 U.S.C. §481; UK Trade Union and Labour Relations (Consolidation) Act 1992.

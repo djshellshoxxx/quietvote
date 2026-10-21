@@ -1,6 +1,6 @@
 import { bytesToHex, concatBytes, jcs, lp, pointToBytes, sha256, utf8 } from '@quietvote/crypto';
 import {
-  PROTO_ID, S, adjudicateDkg, check, manifestHash, signRecord, verifyKeyconf, verifyMultiSig, verifySig,
+  PROTO_ID, S, adjudicateDkg, check, logOrigin, manifestHash, signRecord, verifyKeyconf, verifyMultiSig, verifySig,
   type DkgOutcome, type LogEntry, type Manifest, type MarkerSeqs, type MultiSignedRecord, type SignedRecord,
 } from '@quietvote/protocol';
 import { obj, str, lit, hex as hexS, oneOf, arr, int } from '@quietvote/protocol';
@@ -92,7 +92,8 @@ export async function buildCore(mrec: MultiSignedRecord<Manifest>, log: readonly
   const core: TranscriptCore = {
     format: TRANSCRIPT_FORMAT,
     election_id: m.election_id,
-    origin: `quietvote/v1/${m.bb.log_id}`,
+    // Same derivation as the board, server and protocol log check (protocol X-21): quietvote/v1/ + base32(election_id).
+    origin: logOrigin(m),
     ceremony_id: ceremonyId,
     mode,
     manifest_hash: H(mhb),

@@ -5,18 +5,22 @@ import {
 } from '@quietvote/crypto';
 import {
   PROTO_ID, S, adjudicateDkg, analyzeBallotLog, check, dkgDeal, dkgFinalShare, dkgKeyconf, dkgMakeComplaint, dkgMakeShares,
-  dkgReceiveShare, manifestHash, rollRoot, shareToHex, signRecord, trusteeDecryptTally, validateManifest, verifyElection,
-  verifyMultiSig, verifySig, countedRoot, obj, hex as hexS, int, lit, str, arr,
-  type Aggregate, type ComplaintBody, type DealerSecret, type KeyconfBody, type LogEntry,
+  dkgReceiveShare, ballotCode, manifestHash, rollRoot, shareToHex, signRecord, trusteeDecryptSpoiled, trusteeDecryptTally, validateManifest, verifyElection,
+  verifyMultiSig, verifySig, countedRoot, obj, hex as hexS, int, lit, str, arr, verifyLogStructure, witnessAnchors,
+  type LogEvidence, type Aggregate, type BallotBody, type ComplaintBody, type DealerSecret, type KeyconfBody, type LogEntry,
   type Manifest, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type SignedRecord,
 } from '@quietvote/protocol';
+import { witnessStatus, type WitnessPolicy } from '@quietvote/board';
 import {
   encodeBundle, readBundle, tombstonePath, writeBundle,
-  type BundleData, type CompromiseBody, type KeyDestructionBody, type KeycheckBody, type TallyShareBody, type VaultDeps,
+  type BundleData, type CompromiseBody, type KeyDestructionBody, type KeycheckBody, type SpoilShareBody, type TallyShareBody, type VaultDeps,
 } from './bundle.ts';
 import { computeR1, markerBody, markerSeq, mergeEntries, takeDkg, uniqueBy, type ImportReport } from './ceremonylog.ts';
 import { TrusteeError } from './errors.ts';
 import { exists, atomicWrite, shred } from './fsutil.ts';
+import { ledgerPath, readLedger, writeLedger } from './ledger.ts';
+import { realpath } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fingerprintOf } from './fingerprint.ts';
 import { assertTransition, PRE_STANDBY, type TrusteeState } from './machine.ts';
 import { assertPassphraseStrength } from './passphrase.ts';
@@ -27,11 +31,15 @@ const sc = (h: string): Scalar => scalarFromBytes(hexToBytes(h, 32));
 const hx = (s: Scalar): string => H(scalarToBytes(s));
 const PT = (h: string): Point => pointFromBytes(hexToBytes(h, 32), { nonIdentity: true });
 
+/** Upper bound on ballot codes per spoil request (bounds the work a requester can force per call). */
+export const MAX_SPOIL_REQUEST = 64;
 export const PACKET_FORMAT = 'qv-ceremony-packet/v1';
 export const LOG_FORMAT = 'qv-ceremony-log/v1';
 export const OVERRIDE_UNWITNESSED = 'RELEASE-WITHOUT-WITNESSED-CHECKPOINT';
+/** Typed confirmation to restore a share with no release ledger to consult (earlier releases cannot be ruled out). */
+export const OVERRIDE_NO_LEDGER = 'RESTORE-WITHOUT-RELEASE-LEDGER';
 
-export type PacketRound = 'r1-commit' | 'r1-dealing' | 'r2-shares' | 'r3-complaints' | 'r4-keyconf' | 'drill-keycheck' | 'tally-share' | 'compromise-report';
+export type PacketRound = 'r1-commit' | 'r1-dealing' | 'r2-shares' | 'r3-complaints' | 'r4-keyconf' | 'drill-keycheck' | 'tally-share' | 'spoil-share' | 'compromise-report';
 export interface Packet {
   round: PacketRound;
   /** Canonical bytes (QV-JSON) ready to write as a `.qvp` file. */
@@ -82,8 +90,40 @@ const tallyShareSchema = obj({
   shares: arr(obj({ contest: str(64), opt: str(66), M: hexS(32), c: hexS(32), s: hexS(32) }), 1, 4096),
 });
 export const tallyShareRecordSchema = S.signed(tallyShareSchema);
+const spoilShareSchema = obj({
+  proto: lit(PROTO_ID), type: lit('spoil-share'), ctx: hexS(32), j: int(1, 32), code: hexS(32), spoil_seq: int(0, 1 << 30),
+  shares: arr(obj({ contest: str(64), opt: str(66), M: hexS(32), c: hexS(32), s: hexS(32) }), 1, 4096),
+});
+export const spoilShareRecordSchema = S.signed(spoilShareSchema);
 
 type Dep = VaultDeps;
+
+/** Real path of a file that may not exist yet: realpath of the nearest existing ancestor plus the remaining names. */
+export async function realTarget(path: string): Promise<string> {
+  const abs = resolve(path);
+  const rest: string[] = [];
+  let cur = abs;
+  for (;;) {
+    try {
+      return join(await realpath(cur), ...rest.reverse());
+    } catch {
+      const up = dirname(cur);
+      if (up === cur) return abs;
+      rest.push(basename(cur));
+      cur = up;
+    }
+  }
+}
+
+/** States in which a cached output of an earlier step may be re-served (idempotent re-run). Everywhere else the step's own state check applies. */
+const AT_OR_AFTER = {
+  commit: ['COMMITTED', 'R1_DONE', 'R2_DONE', 'COMPLAINING', 'VERIFIED', 'KEY_DERIVED', 'CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING', 'RELEASED'],
+  reveal: ['R1_DONE', 'R2_DONE', 'COMPLAINING', 'VERIFIED', 'KEY_DERIVED', 'CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING', 'RELEASED'],
+  shares: ['R2_DONE', 'COMPLAINING', 'VERIFIED', 'KEY_DERIVED', 'CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING', 'RELEASED'],
+  finalize: ['KEY_DERIVED', 'CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING', 'RELEASED'],
+  confirm: ['CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING', 'RELEASED'],
+  drill: ['DRILLED', 'STANDBY', 'TALLYING', 'RELEASED'],
+} as const satisfies Record<string, readonly TrusteeState[]>;
 
 export class Trustee {
   readonly path: string;
@@ -103,9 +143,9 @@ export class Trustee {
   /** Creates a fresh per-election Ed25519 identity (QV-17-REQ-031) in a sealed bundle (state KEYS_READY). */
   static async keygen(path: string, pass: string, deps: Dep): Promise<Trustee> {
     assertPassphraseStrength(pass, deps.allowWeak === true);
-    if ((await exists(path)) || (await exists(tombstonePath(path)))) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'refusing to overwrite an existing bundle or tombstone');
+    if ((await exists(path)) || (await exists(tombstonePath(path))) || (await exists(ledgerPath(path)))) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'refusing to overwrite an existing bundle, tombstone or release ledger');
     const kp = ed25519Keypair(deps.rng.bytes(32));
-    const t = new Trustee(path, pass, Trustee.blank(kp.secretKey, kp.publicKey, deps), deps);
+    const t = new Trustee(path, pass, { ...Trustee.blank(kp.secretKey, kp.publicKey, deps), home: resolve(path) }, deps);
     await t.save();
     return t;
   }
@@ -117,22 +157,82 @@ export class Trustee {
     };
   }
 
+  /**
+   * Opens a bundle. The public release ledger next to it (T2) is merged in first: if this file is an older copy than what was
+   * already released from this path (a backup copied over the live bundle), the earlier releases are carried forward.
+   */
   static async open(path: string, pass: string, deps: Dep): Promise<Trustee> {
     const d = await readBundle(path, pass, deps);
-    return new Trustee(path, pass, d, deps);
+    const t = new Trustee(path, pass, d, deps);
+    const led = await readLedger(ledgerPath(path));
+    if (led !== undefined && t.adoptReleases(led, 'release ledger')) await t.save();
+    return t;
   }
 
-  /** Re-seals a backup file as a working bundle at `to` (QV-17 §6.4). Refuses to resurrect a destroyed share. */
-  static async restore(from: string, fromPass: string, to: string, toPass: string, deps: Dep): Promise<Trustee> {
+  /**
+   * Re-seals a backup file as a working bundle at `to` (QV-17 §6.4). Refuses to resurrect a destroyed share. Releases made after
+   * the backup are carried forward from the public release ledger of the original bundle path (`opts.ledger`, default
+   * `<original bundle>.releases`), so a restore cannot reset the one-shot guards. If no ledger can be found the restore of a
+   * key-holding backup needs the typed `OVERRIDE_NO_LEDGER` phrase, which is recorded. Limit: whoever controls the filesystem can
+   * delete the ledger and the live bundle and restore anything; this guards against mistakes and stale backups, not an operator.
+   */
+  static async restore(from: string, fromPass: string, to: string, toPass: string, deps: Dep, opts: { ledger?: string; override?: string } = {}): Promise<Trustee> {
     if (await exists(tombstonePath(to))) throw new TrusteeError('STATE', 'DESTROYED', 'a destruction tombstone exists for the target');
     if (await exists(to)) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'target exists');
     assertPassphraseStrength(toPass, deps.allowWeak === true);
     const d = await readBundle(from, fromPass, deps);
     if (d.state === 'DESTROYED' || d.state === 'DESTROYING') throw new TrusteeError('STATE', 'DESTROYED', 'backup is of a destroyed share');
-    d.events.push({ t: deps.now().toISOString(), note: `restored from backup epoch ${d.backup_epoch}` });
+    if (d.home !== undefined && (await exists(tombstonePath(d.home)))) throw new TrusteeError('STATE', 'DESTROYED', 'a destruction tombstone exists for the original bundle');
     const t = new Trustee(to, toPass, d, deps);
+    const src = opts.ledger ?? (d.home === undefined ? undefined : ledgerPath(d.home));
+    const led = src === undefined ? undefined : await readLedger(src);
+    if (led !== undefined) t.adoptReleases(led, 'release ledger');
+    else if (d.derived !== undefined) {
+      if (opts.override !== OVERRIDE_NO_LEDGER) throw new TrusteeError('REFUSED', 'NO_RELEASE_LEDGER', 'no release ledger found for the original bundle; earlier releases cannot be ruled out. Pass the ledger, or confirm with the typed override');
+      d.overrides.push({ what: 'restored without release ledger', at: deps.now().toISOString() });
+    }
+    d.home = resolve(to);
+    d.events.push({ t: deps.now().toISOString(), note: `restored from backup epoch ${d.backup_epoch}` });
+    await t.syncLedger();
     await t.save();
     return t;
+  }
+
+  /** Adopts valid, own, same-election tally/spoil share records (public ledger) that this bundle does not know yet. */
+  private adoptReleases(records: readonly unknown[], source: string): boolean {
+    const dv = this.d.derived;
+    const j = this.d.trustee_id;
+    if (dv === undefined || j === undefined) return false;
+    const ctx = hexToBytes(dv.ctx, 32);
+    let changed = false;
+    for (const raw of records) {
+      if (check(tallyShareRecordSchema, raw) === null) {
+        const r = raw as SignedRecord<TallyShareBody>;
+        if (r.body.ctx !== dv.ctx || r.body.j !== j || !verifySig(ctx, 'tally-share', r.body, r.sig, this.d.sign_pk) || this.d.out.release !== undefined) continue;
+        this.d.out.release = r;
+        changed = true;
+      } else if (check(spoilShareRecordSchema, raw) === null) {
+        const r = raw as SignedRecord<SpoilShareBody>;
+        if (r.body.ctx !== dv.ctx || r.body.j !== j || !verifySig(ctx, 'spoil-share', r.body, r.sig, this.d.sign_pk) || this.d.out.spoil?.[r.body.code] !== undefined) continue;
+        (this.d.out.spoil ??= {})[r.body.code] = r;
+        changed = true;
+      }
+    }
+    if (changed) {
+      if (this.d.out.release !== undefined && ['CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING'].includes(this.d.state)) this.d.state = 'RELEASED';
+      this.note(`carried forward earlier releases from the ${source}`);
+    }
+    return changed;
+  }
+
+  /** Writes every release this bundle knows to the public ledger next to it (merged with what is already there). Called BEFORE the shares are returned. */
+  private async syncLedger(): Promise<void> {
+    const p = ledgerPath(this.path);
+    const have = (await readLedger(p)) ?? [];
+    const sigs = new Set(have.map((r) => (r as { sig?: { sig?: string } })?.sig?.sig));
+    const mine: unknown[] = [...(this.d.out.release === undefined ? [] : [this.d.out.release]), ...Object.values(this.d.out.spoil ?? {})];
+    const add = mine.filter((r) => !sigs.has((r as { sig: { sig: string } }).sig.sig));
+    if (add.length > 0 || have.length === 0) await writeLedger(p, [...have, ...add]);
   }
 
   get data(): Readonly<BundleData> {
@@ -192,7 +292,9 @@ export class Trustee {
    */
   async join(manifest: MultiSignedRecord<Manifest>, manifestHashHex: string, ceremonyId: string): Promise<void> {
     if (this.d.state !== 'KEYS_READY') throw new TrusteeError('STATE', 'WRONG_STATE', `state ${this.d.state}`);
-    const v = validateManifest(manifest.body, manifest.body.roll.size ?? 0);
+    const body = (manifest as { body?: { roll?: { size?: unknown } } } | null)?.body;
+    if (typeof body !== 'object' || body === null || typeof body.roll !== 'object' || body.roll === null) throw new TrusteeError('VERIFY', 'MANIFEST_INVALID', 'not a signed manifest record (body.roll missing)');
+    const v = validateManifest(manifest.body, typeof body.roll.size === 'number' ? body.roll.size : 0);
     if (!v.ok) throw new TrusteeError('VERIFY', 'MANIFEST_INVALID', `${v.error} ${v.detail ?? ''}`);
     const mh = manifestHash(v.value.manifest);
     if (H(mh) !== manifestHashHex) throw new TrusteeError('VERIFY', 'MANIFEST_HASH', 'manifest does not match the out-of-band hash');
@@ -257,7 +359,7 @@ export class Trustee {
   /** R1a: commit. Persists the polynomial before any output exists (crash-safe, never re-randomised after this point). */
   async commit(): Promise<Packet> {
     const { m, mh, i } = this.mf();
-    if (this.d.out.commit !== undefined) return this.packet('r1-commit', [this.d.out.commit]);
+    if (this.d.out.commit !== undefined && (AT_OR_AFTER.commit as readonly string[]).includes(this.d.state)) return this.packet('r1-commit', [this.d.out.commit]);
     this.need('ACCEPTED');
     if (markerSeq(this.d.log, 'dkg-open') === undefined) throw new TrusteeError('STATE', 'NOT_OPEN', 'no dkg-open marker imported yet');
     if (markerSeq(this.d.log, 'dkg-r1-open') !== undefined) {
@@ -278,7 +380,7 @@ export class Trustee {
   async reveal(): Promise<Packet> {
     const { i } = this.mf();
     if (this.d.state !== 'COMMITTED') {
-      if (this.d.out.dealing !== undefined && this.d.state !== 'ACCEPTED' && this.d.state !== 'DISQUALIFIED' && this.d.state !== 'ABORTED') return this.packet('r1-dealing', [this.d.out.dealing]);
+      if (this.d.out.dealing !== undefined && (AT_OR_AFTER.reveal as readonly string[]).includes(this.d.state)) return this.packet('r1-dealing', [this.d.out.dealing]);
       this.need('COMMITTED');
     }
     const open = markerSeq(this.d.log, 'dkg-r1-open');
@@ -299,7 +401,7 @@ export class Trustee {
   /** R2: encrypted shares for every other R1 survivor. Drops the polynomial once the package is persisted. */
   async shares(): Promise<Packet> {
     const { m, mh, i } = this.mf();
-    if (this.d.out.shares !== undefined) return this.packet('r2-shares', [this.d.out.shares]);
+    if (this.d.out.shares !== undefined && (AT_OR_AFTER.shares as readonly string[]).includes(this.d.state)) return this.packet('r2-shares', [this.d.out.shares]);
     this.need('R1_DONE');
     const r1c = markerSeq(this.d.log, 'dkg-r1-close');
     const r2c = markerSeq(this.d.log, 'dkg-r2-close');
@@ -383,7 +485,7 @@ export class Trustee {
    */
   async finalize(): Promise<{ fingerprint: { words: string[]; hex: string }; qualified: number[]; events: { who: number; detail: string }[] }> {
     const { m, mh, i } = this.mf();
-    if (this.d.derived !== undefined && this.d.state !== 'ABORTED') {
+    if (this.d.derived !== undefined && (AT_OR_AFTER.finalize as readonly string[]).includes(this.d.state)) {
       return { fingerprint: { words: this.d.derived.fp_words, hex: this.d.derived.fp_hex }, qualified: this.d.derived.Q, events: [] };
     }
     this.need('VERIFIED', 'COMPLAINING');
@@ -431,7 +533,7 @@ export class Trustee {
   /** The trustee attests that they compared the check words with other trustees, then the key confirmation is signed. */
   async confirm(comparedWith: number[], words?: string[]): Promise<Packet> {
     const { mh, i } = this.mf();
-    if (this.d.out.keyconf !== undefined) return this.packet('r4-keyconf', [this.d.out.keyconf]);
+    if (this.d.out.keyconf !== undefined && (AT_OR_AFTER.confirm as readonly string[]).includes(this.d.state)) return this.packet('r4-keyconf', [this.d.out.keyconf]);
     this.need('KEY_DERIVED');
     const dv = this.d.derived!;
     const uniq = [...new Set(comparedWith)];
@@ -454,7 +556,7 @@ export class Trustee {
   /** Fire drill (QV-17-REQ-016): partial decryption of the locally recomputed public test ciphertext, nothing else. */
   async drill(): Promise<Packet> {
     const { i } = this.mf();
-    if (this.d.out.keycheck !== undefined) return this.packet('drill-keycheck', [this.d.out.keycheck]);
+    if (this.d.out.keycheck !== undefined && (AT_OR_AFTER.drill as readonly string[]).includes(this.d.state)) return this.packet('drill-keycheck', [this.d.out.keycheck]);
     this.need('CONFIRMED');
     const dv = this.d.derived!;
     const fin = markerBody(this.d.log, 'dkg-final');
@@ -473,17 +575,17 @@ export class Trustee {
   // ------------------------------------------------------------------ tally
 
   /**
-   * QV-17-REQ-040: verifies the election log, recomputes the aggregate ciphertexts itself and releases a signed partial
-   * decryption of exactly those. There is no parameter through which a ciphertext can be supplied.
+   * Shared gate for every release (tally and spoil): full log verification, key binding, election window, QV-18 log evidence
+   * (every entry of the supplied log proven against a log-signed tree head that covers the whole log) and witnessed checkpoint
+   * computed from the cosignatures in that evidence, then the trustee's own recomputation of the ballot analysis. Nothing
+   * supplied by the caller is decrypted, and no caller boolean can stand in for evidence.
    */
-  async releaseTally(electionBundle: unknown, opts: { claimed?: ReadonlyMap<string, ReadonlyMap<string, Aggregate>>; witnessed?: boolean; override?: string } = {}): Promise<Packet> {
+  private async verifiedElection(electionBundle: unknown, opts: { override?: string }, what: string) {
     const { m, mh, i } = this.mf();
-    if (this.d.out.release !== undefined) return this.packet('tally-share', [this.d.out.release]);
-    this.need('CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING');
     const dv = this.d.derived;
     if (dv === undefined || this.d.sk_i === undefined) throw new TrusteeError('STATE', 'NO_KEY', 'no election share in this bundle');
     const ctx = this.ctxBytes()!;
-    const b = electionBundle as { manifest?: MultiSignedRecord<Manifest>; manifest_hash?: string; roll?: string[]; log?: { seq: number; entry: unknown }[] } | null;
+    const b = electionBundle as { manifest?: MultiSignedRecord<Manifest>; manifest_hash?: string; roll?: string[]; log?: { seq: number; entry: unknown }[]; log_evidence?: unknown } | null;
     if (typeof b !== 'object' || b === null || b.manifest === undefined || !Array.isArray(b.roll) || !Array.isArray(b.log)) throw new TrusteeError('VERIFY', 'BUNDLE_FORMAT', 'election bundle must be {manifest, manifest_hash, roll, log}');
     if (b.manifest_hash !== this.d.manifest_hash || H(jcs(b.manifest.body)) !== H(jcs(m))) throw new TrusteeError('REFUSED', 'WRONG_ELECTION', 'bundle manifest differs from the one this share belongs to');
 
@@ -516,22 +618,54 @@ export class Trustee {
     const open = markerSeq(log, 'election-open');
     const close = markerSeq(log, 'election-close');
     if (open === undefined || close === undefined || !(mk['dkg-final']! < open && open < close)) throw new TrusteeError('REFUSED', 'ELECTION_NOT_CLOSED', 'no valid election-open < election-close in the log');
-    // 4. witnessed checkpoint (QV-17-REQ-041)
-    if (m.bb.witness_quorum > 0 && opts.witnessed !== true) {
-      if (opts.override !== OVERRIDE_UNWITNESSED) throw new TrusteeError('REFUSED', 'NOT_WITNESSED', `the checkpoint is not witnessed to quorum ${m.bb.witness_quorum}`);
-      this.d.overrides.push({ what: 'released tally share without witnessed checkpoint', at: this.deps.now().toISOString() });
+    // 4. log evidence (T1): without it the supplied log is only the operator's word (a cast envelope could simply be left out).
+    const ev = b.log_evidence as LogEvidence | undefined | null;
+    if (typeof ev !== 'object' || ev === null || ev.board === undefined) throw new TrusteeError('REFUSED', 'LOG_EVIDENCE_REQUIRED', 'the election bundle must carry log_evidence ({board: QV-18 log export}); an unproven log is never released against');
+    const ls = verifyLogStructure(m, b.manifest, b.roll, b.log, ev);
+    if (!ls.ok) {
+      const f = ls.findings.find((x) => x.cls === 'F');
+      throw new TrusteeError('VERIFY', 'LOG_EVIDENCE_INVALID', f === undefined ? undefined : `${f.code}: ${f.detail}`);
     }
-    // 5. recompute the counted set and the aggregates ourselves
+    // 5. witnessed checkpoint (QV-17-REQ-041, T3): a head that covers election-close and carries >= quorum valid cosignatures by the manifest's witnesses.
+    const k = m.bb.witness_quorum;
+    if (k > 0) {
+      const { anchors } = witnessAnchors(m, ev.witnesses);
+      const pol: WitnessPolicy = { witnesses: anchors, quorum: k, noneAcknowledged: false };
+      const witnessed = anchors.length >= k && ls.checkpoints.some((cp) => cp.size >= close + 1 && witnessStatus(cp, pol).witnessed);
+      if (!witnessed) {
+        if (opts.override !== OVERRIDE_UNWITNESSED) throw new TrusteeError('REFUSED', 'NOT_WITNESSED', `no tree head covering election-close carries ${k} valid witness cosignature(s)`);
+        this.d.overrides.push({ what: `${what} without witnessed checkpoint`, at: this.deps.now().toISOString() });
+      }
+    }
+    // 6. recompute the counted set and the aggregates ourselves
     const p = { manifest: m, mh, K: adj.value.K, ctx };
     const rollSet = new Set(b.roll);
     if (!rollRoot(b.roll).ok) throw new TrusteeError('VERIFY', 'LOG_VERIFICATION_FAILED', 'roll invalid');
     const voter = b.log.filter((e) => typeof e.entry === 'object' && e.entry !== null && 'intent' in e.entry).map((e) => ({ seq: e.seq, raw: e.entry }));
     const an = analyzeBallotLog(p, rollSet, voter, open, close);
+    return { p, an, dv, i, ctx, sk: sc(this.d.sk_i), rollSize: b.roll.length, voter };
+  }
+
+  /**
+   * QV-17-REQ-040: verifies the election log, recomputes the aggregate ciphertexts itself and releases a signed partial
+   * decryption of exactly those. There is no parameter through which a ciphertext can be supplied.
+   */
+  async releaseTally(electionBundle: unknown, opts: { claimed?: ReadonlyMap<string, ReadonlyMap<string, Aggregate>>; override?: string } = {}): Promise<Packet> {
+    const { i } = this.mf();
+    this.need('STANDBY', 'TALLYING', 'RELEASED');
+    const { p, an, dv, ctx, sk, rollSize } = await this.verifiedElection(electionBundle, opts, 'released tally share');
+    const counted_root = H(countedRoot(an.counted));
+    const prior = this.d.out.release;
+    if (prior !== undefined) {
+      // Idempotent only for the same election data: the cached share must cover exactly the counted set recomputed from this bundle.
+      if (prior.body.counted_root !== counted_root || prior.body.n_counted !== an.counted.length) throw new TrusteeError('REFUSED', 'RELEASE_CONFLICT', 'this share already released a tally share for a different counted set');
+      return this.packet('tally-share', [prior]);
+    }
     if (this.d.state !== 'TALLYING') {
       this.go('TALLYING');
       await this.save();
     }
-    const res = trusteeDecryptTally(p, { j: i, sj: sc(this.d.sk_i), Yj: PT(dv.Yj) }, an.counted, opts.claimed, b.roll.length, this.deps.rng);
+    const res = trusteeDecryptTally(p, { j: i, sj: sk, Yj: PT(dv.Yj) }, an.counted, opts.claimed, rollSize, this.deps.rng);
     if (!res.ok) {
       this.go('STANDBY');
       await this.save();
@@ -544,25 +678,97 @@ export class Trustee {
       const x = shareToHex(i, sp);
       shares.push({ contest, opt, M: x.M, c: x.c, s: x.s });
     }
-    const body: TallyShareBody = { proto: PROTO_ID, type: 'tally-share', ctx: dv.ctx, j: i, n_counted: an.counted.length, counted_root: H(countedRoot(an.counted)), shares };
+    const body: TallyShareBody = { proto: PROTO_ID, type: 'tally-share', ctx: dv.ctx, j: i, n_counted: an.counted.length, counted_root, shares };
     this.d.out.release = this.sign(ctx, body);
     this.go('RELEASED');
+    await this.syncLedger(); // public ledger first: a restore of an older bundle must not forget this release
     await this.save();
     return this.packet('tally-share', [this.d.out.release]);
+  }
+
+  // ------------------------------------------------------------------ spoil decryption (QV-ADR-020 "trustees" mode)
+
+  /**
+   * QV-16 §5.13.4 / QV-ADR-020: releases a signed, proof-carrying partial decryption of spoiled ballots named by code.
+   * Same gate as the tally (verified log, key binding, closed election, witnessed checkpoint). The caller supplies only
+   * ballot codes: the ciphertext is always taken from the trustee's own analysis of the log. Refused, atomically for the
+   * whole request, unless every code is (a) a verified spoil record in trustee mode (`reveal_digest` = 0, manifest
+   * `spoil_trustee_decrypt`), (b) never cast (no cast envelope anywhere in the log carries it, even an invalid one, and it
+   * is not in the counted set) and (c) not already released by this share (SPOIL_REPLAY).
+   */
+  async releaseSpoil(electionBundle: unknown, codes: readonly string[], opts: { override?: string } = {}): Promise<Packet> {
+    this.mf();
+    this.need('CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING', 'RELEASED');
+    if (codes.length === 0 || codes.length > MAX_SPOIL_REQUEST || new Set(codes).size !== codes.length) throw new TrusteeError('USAGE', 'BAD_SPOIL_REQUEST', `1..${MAX_SPOIL_REQUEST} distinct ballot codes required`);
+    for (const c of codes) if (!/^[0-9a-f]{64}$/.test(c)) throw new TrusteeError('USAGE', 'BAD_SPOIL_REQUEST', 'ballot code must be 64 lowercase hex characters');
+    const done = this.d.out.spoil ?? {};
+    // Replay is rejected before any log work: a code is released at most once per share.
+    for (const c of codes) if (done[c] !== undefined) throw new TrusteeError('REFUSED', 'SPOIL_REPLAY', `ballot ${c} was already released by this share`);
+    const { p, an, dv, i, ctx, sk, voter } = await this.verifiedElection(electionBundle, opts, 'released spoil share');
+    if (p.manifest.spoil_trustee_decrypt !== true) throw new TrusteeError('REFUSED', 'SPOIL_MODE_OFF', 'the manifest does not enable trustee spoil decryption');
+    // `voter` is exactly the supplied log, which verifiedElection has proven entry-for-entry against the log-signed tree head.
+    const castCodes = new Set<string>(an.counted.map((c) => c.code));
+    for (const { raw } of voter) {
+      const e = raw as { intent?: unknown; body?: BallotBody };
+      if (e.intent === 'cast' && e.body !== undefined) {
+        try {
+          castCodes.add(H(ballotCode(p.ctx, e.body)));
+        } catch {
+          // an undecodable cast cannot carry a requested code; the schema check in the verified analysis already flagged it
+        }
+      }
+    }
+    const key = { j: i, sj: sk, Yj: PT(dv.Yj) };
+    const records: SignedRecord<SpoilShareBody>[] = [];
+    for (const c of codes) {
+      if (castCodes.has(c)) throw new TrusteeError('REFUSED', 'BALLOT_WAS_CAST', `ballot ${c} was cast; a cast ballot is never decrypted`);
+      const rec = an.spoiled.get(c);
+      if (rec === undefined) throw new TrusteeError('REFUSED', 'NOT_SPOILED', `no verified spoil record with ballot code ${c}`);
+      const res = trusteeDecryptSpoiled(p, key, rec, this.deps.rng);
+      if (!res.ok) throw new TrusteeError('REFUSED', res.error === 'E_TRUSTEE_REFUSE' ? 'NOT_TRUSTEE_MODE' : res.error, res.detail);
+      const shares: SpoilShareBody['shares'] = [];
+      for (const [k, sp] of res.value) {
+        const [contest, opt] = k.split('/') as [string, string];
+        const x = shareToHex(key.j, sp);
+        shares.push({ contest, opt, M: x.M, c: x.c, s: x.s });
+      }
+      records.push(this.sign(ctx, { proto: PROTO_ID, type: 'spoil-share', ctx: dv.ctx, j: key.j, code: c, spoil_seq: rec.seq, shares }));
+    }
+    // Persist the replay guard before the shares leave this function.
+    const out = (this.d.out.spoil ??= {});
+    for (const r of records) out[r.body.code] = r;
+    this.note(`released spoil shares for ${codes.length} ballot(s)`);
+    await this.syncLedger();
+    await this.save();
+    return this.packet('spoil-share', records);
   }
 
   // ------------------------------------------------------------------ backup / destroy / misc
 
   /** Writes a second encrypted copy of the bundle under `backupPass` (QV-17 §6.4). Opt-in, local only, counted in the transcript. */
   async backup(dest: string, backupPass: string): Promise<{ epoch: number }> {
-    if (dest === this.path) throw new TrusteeError('USAGE', 'BACKUP_SAME_FILE');
     this.need(...(['KEYS_READY', ...PRE_STANDBY, 'STANDBY', 'TALLYING', 'RELEASED', 'AUDIT_WAIT', 'DISQUALIFIED', 'ABORTED'] as TrusteeState[]));
     assertPassphraseStrength(backupPass, this.deps.allowWeak === true);
+    // Never overwrite anything (T5): not an existing file, and not a path that resolves to one of this share's own files, even if it does not exist yet.
+    const own = [this.path, tombstonePath(this.path), `${this.path}.attestation.json`, ledgerPath(this.path), ...this.d.backups.map((x) => x.path)];
+    const target = await realTarget(dest);
+    for (const o of own) if ((await realTarget(o)) === target) throw new TrusteeError('USAGE', 'BACKUP_SAME_FILE', 'the backup would overwrite one of this share\'s own files');
+    if (await exists(dest)) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'backup destination already exists; refusing to overwrite');
+    const prev = { epoch: this.d.backup_epoch, backups: this.d.backups.length, events: this.d.events.length };
     this.d.backup_epoch += 1;
     this.d.backups.push({ path: dest, at: this.deps.now().toISOString(), epoch: this.d.backup_epoch });
     this.note(`backup made (epoch ${this.d.backup_epoch})`);
     await writeBundle(dest, this.d, backupPass, this.deps);
-    await this.save();
+    try {
+      await this.save();
+    } catch (e) {
+      // T9: the live bundle does not know about this backup, so destroy could never erase it: do not leave it behind.
+      this.d.backup_epoch = prev.epoch;
+      this.d.backups.length = prev.backups;
+      this.d.events.length = prev.events;
+      await shred(dest, (n) => this.deps.rng.bytes(n)).catch(() => false);
+      throw e;
+    }
     return { epoch: this.d.backup_epoch };
   }
 
@@ -583,7 +789,15 @@ export class Trustee {
         const ac = auditClose as MultiSignedRecord<AuditCloseBody>;
         const m = mfm!.body;
         if (ac.body.ctx !== dv.ctx || !verifyMultiSig(this.ctxBytes()!, ac, m.coordinator.keys, m.coordinator.m)) throw new TrusteeError('REFUSED', 'NO_AUDIT_CLOSE', 'audit-close lacks m valid coordinator signatures for this election');
-        if (Date.parse(ac.body.closed_at) > this.deps.now().getTime()) throw new TrusteeError('REFUSED', 'AUDIT_WINDOW_OPEN', 'audit-close is dated in the future');
+        // Strict instant: an unparsable closed_at must not slip past a `> now` comparison (NaN is never greater than anything).
+        const closedAt = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z$/.test(ac.body.closed_at) ? Date.parse(ac.body.closed_at) : Number.NaN;
+        if (!Number.isFinite(closedAt)) throw new TrusteeError('REFUSED', 'NO_AUDIT_CLOSE', 'audit-close closed_at is not a valid UTC instant (YYYY-MM-DDThh:mm:ssZ)');
+        if (closedAt > this.deps.now().getTime()) throw new TrusteeError('REFUSED', 'AUDIT_WINDOW_OPEN', 'audit-close is dated in the future');
+        // The audit window opens at election-close: the log must show it and the audit-close must not predate the scheduled close
+        // (voting_close minus clock_skew_s, QV-16 §5.14.3). A minimum audit window length (audit_window_days) is NOT in the protocol: TBD.
+        if (markerSeq(this.d.log, 'election-close') === undefined) throw new TrusteeError('REFUSED', 'NO_ELECTION_CLOSE', 'election-close is not on the imported log; import the latest log before destroying');
+        const closeAt = Date.parse(m.voting_close);
+        if (!Number.isFinite(closeAt) || closedAt < closeAt - m.clock_skew_s * 1000) throw new TrusteeError('REFUSED', 'AUDIT_BEFORE_CLOSE', 'audit-close predates the election close');
       } else if (!['KEYS_READY', 'ABORTED', 'DISQUALIFIED'].includes(this.d.state)) {
         throw new TrusteeError('REFUSED', 'NO_AUDIT_CLOSE', 'destroy a ceremony in progress only after abort');
       }
@@ -635,6 +849,12 @@ export class Trustee {
   async abort(reason: string): Promise<void> {
     if (!PRE_STANDBY.includes(this.d.state)) throw new TrusteeError('STATE', 'WRONG_STATE', `cannot abort from ${this.d.state}`);
     this.wipeCeremony();
+    // the ceremony's own outputs and derived key material belong to the aborted run; nothing may be re-served from them
+    const o = this.d.out;
+    delete o.commit; delete o.dealing; delete o.shares; delete o.keyconf; delete o.keycheck;
+    o.complaints = [];
+    delete this.d.derived;
+    delete this.d.transcript_hash;
     this.go('ABORTED');
     this.note(`aborted: ${reason}`);
     await this.save();
@@ -674,6 +894,8 @@ export class Trustee {
   /** Verifies that the given transcript equals our own view, then adds our signature (trustee, with self-reported environment). */
   async cosignTranscript(t: Transcript, env: { network: 'online' | 'offline' } = { network: 'offline' }): Promise<Transcript> {
     const { mh, i } = this.mf();
+    const tt = t as Partial<Transcript> | null;
+    if (typeof tt !== 'object' || tt === null || !Array.isArray(tt.log) || typeof tt.mode !== 'string' || typeof tt.summary_hash !== 'string') throw new TrusteeError('VERIFY', 'TRANSCRIPT_FORMAT', 'not a ceremony transcript');
     const mine = await buildCore(this.d.manifest!, t.log, this.d.ceremony_id!, t.mode);
     if (!mine.ok || mine.hash !== t.summary_hash) throw new TrusteeError('REFUSED', 'TRANSCRIPT_MISMATCH', 'transcript does not match what this device derived');
     if (this.d.derived !== undefined && (mine.core.ctx !== this.d.derived.ctx || mine.core.joint_key !== this.d.derived.K)) throw new TrusteeError('REFUSED', 'TRANSCRIPT_MISMATCH', 'transcript key differs from our share');

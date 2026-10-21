@@ -36,5 +36,40 @@ pick option 1 with the verifier package extended to the needed flags, which is a
 
 **Until decided.** The import stays. It is a known, recorded violation of D1. Do not treat `packages/cli` as D1-compliant.
 
-**Test status at time of writing.** `npm run typecheck` exit 0; `npm test -w @quietvote/cli` 17/17 pass (after `npm ci --ignore-scripts`;
+**Test status at time of writing (D1 section).** `npm run typecheck` exit 0; `npm test -w @quietvote/cli` 17/17 pass (after `npm ci --ignore-scripts`;
 the first run without installed workspace links failed to resolve `@quietvote/crypto`, which is an environment issue, not this finding).
+Superseded by the status under "Audit fixes" below.
+
+## Audit fixes (2026-10-21, F1..F12)
+
+Regression tests: `test/audit-regressions.test.ts` (one test per finding, 12 tests). Changes to existing assertions: `test/cli.test.ts`
+`election inspect` mismatch case now expects exit 1 (F12). Nothing else in the existing tests was changed.
+
+- **F1 `board verify` election bundle.** All hex flags are validated before choosing a bundle kind (bad hex: exit 2). `--manifest-hash`
+  is passed to `verifyBundle` as `pinnedManifestHash`; a pin the manifest does not meet (V1 not pass) is exit 1. `--log-key` is not an
+  option of `verifyBundle`, so it is compared with the manifest's `bb.log_pk` and a different value is exit 1.
+- **F2 `keygen --force`.** The old entry is `lstat`ed; a symlink is refused (exit 4). Otherwise it is unlinked and recreated with mode
+  0600, so the old permissions are not kept.
+- **F3 `ballot audit`.** JSON that is not an object (`null`, numbers, arrays) is an input error (exit 4).
+- **F4 `vectors check`.** Unreadable or non-JSON corpus files throw `InputError` naming the path (exit 4). Shapes of the manifest, vector
+  files, mutants and reports are checked; a missing `v1/elections`, `v1/mutations` or canary is exit 4. A missing `elections/*/bundle.json`
+  is exit 4. `Object.hasOwn` guards the runner lookup, so an operation named `constructor` is not run.
+- **F5 `vectors check`.** `walk` uses `lstat` and never follows symlinks, so a cycle terminates. Symlinks are reported as failing rows
+  (`... not a symlink`) rather than skipped silently. Manifest paths that resolve outside the corpus (lexically or via realpath) are
+  failing rows and are not read.
+- **F6 `ballot encrypt`.** The audit file is written first and removed if the envelope write fails, so a failure leaves neither file.
+  A failed run produces no ballot, so there is no ballot code to print; the printed code appears only on success.
+- **F7 `ballot encrypt`.** `--audit-out` with `--intent cast` is a usage error (exit 2) and writes nothing.
+- **F8 keyfile.** The passphrase minimum (12 characters) is measured on `canon()` (NFKC), the form the key is derived from.
+- **F9 `args`.** A value flag never consumes a following `--flag` (`--out --json` is "needs a value"); empty values (`--out=`, `--out ''`)
+  are usage errors. A single-dash value such as `-` is still accepted.
+- **F10 `main`.** A group command without a subcommand prints usage to stderr (exit 2). `--help` on a group still prints to stdout (exit 0).
+- **F11 `board verify --json`.** With an election bundle that has no usable board export, JSON `{integrity, reason}` is printed to stdout.
+  `integrity` is `FAILED` when the verdict is FAIL and `INCOMPLETE` otherwise, so it always agrees with the exit code.
+- **F12 `election inspect`.** A manifest hash that differs from the bundle's exits 1 (the description is still printed). `qv --version`
+  is listed in HELP.
+
+**Test status after these fixes.** `node --test packages/cli/test/cli.test.ts`: 15 pass, 2 fail (`verify: --json is structured...`,
+`selftest command`), the same two known base failures as before the change (vectors/verifier simulation against QV-ADR-015 election-open
+binding; not touched here). `node --test packages/cli/test/audit-regressions.test.ts`: 12/12 pass. Typecheck: no errors in `packages/cli`.
+

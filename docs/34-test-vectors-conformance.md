@@ -103,6 +103,7 @@ test-vectors/
       small-approval-20v/         # 20 voters, 5 trustees (t=3), revotes, spoiled ballots
       kofn-multi-contest-12v/
       edge-ties-quorum/           # tie and quorum boundary cases
+      log-layer-4v/               # QV-18 log-layer verifier vectors (§9.5): bundle.json + expected-report.json, log exports, notices/, vectors.json
       scale/                      # params + seed + expected digests only (1000, 10000 voters)
     mutations/                    # derived from elections/small-approval-20v (see §9.3)
     canary/                       # the verifier "known-bad" sample (§9.4)
@@ -354,6 +355,18 @@ Property: **no mutant passes all checks** (CI asserts for every mutant at least 
 ### 9.4 Canary (QV-10-REQ-014)
 `test-vectors/v1/canary/` contains a small bundle (`canary-election.bundle`) built from `tiny-yesno-3v` with two documented defects (wrong aggregate and a forged CDS proof). Expected report: `chk.ballots.valid` fail, `chk.tally.aggregate` fail, others pass; Election ID of the canary is fixed and printed in QV-10 verifier help. The verifier UI "self-test" runs it and compares to `canary/expected-report.json`; a verifier that returns all-pass on the canary is by definition broken. The canary is distributed with every verifier build and is part of the signed manifest.
 
+### 9.5 Log-layer vectors (`elections/log-layer-4v/`)
+48 election-level verifier vectors for the QV-18 log layer (QV-16 App. C step 11; reference `packages/protocol/src/logcheck.ts`, NOTES X-21..X-34), operation `log.verify_election`, `status: candidate`. Inputs are file-based (§10.2): `{bundle: {path}, board: {path, replace?}, receipts?, observed?, witnesses?}`, where `board` is the QV-18 §12 log export in JSON form and `replace` shallow-replaces top-level export fields (normally `checkpoints`). Positive vectors expect `{ok: true, output: {verdict, checks}}` (exact check map); negative vectors expect `{ok: false, error, failed_checks}` with the verdict carried as tag `verdict:PASS|FAIL` (receipt clashes are ALARM and unprovable receipts class I, so the verdict stays PASS) and `surfaces:<text>` tags for caveats that must be reported. Error codes are the QV-16 `E_LOG_*` / `E_TIME_WINDOW` codes verbatim (no §9.2 registry entry yet).
+
+| Group | Vector ids | Expected |
+|---|---|---|
+| Checkpoint consistency | `log-honest-witnessed`, `log-heads-any-order`, `log-observed-older-head-consistent`, `log-observed-unsigned-ignored`; `log-head-wrong-log-key`, `log-head-root-edited`, `log-head-missing-full-size`, `log-export-other-log-key`, `log-export-other-origin` | 4 pass; `E_LOG_CHECKPOINT` / `E_LOG_BINDING`, `chk.board.append_only` |
+| Equivocation / split view | `split-view-adversarial-view-alone` (passes: documents the QV-18 §2 non-claim); `equivocation-two-roots-same-size`, `split-view-observed-fork`, `split-view-observed-honest-head`, `split-view-observed-rollback` | `E_LOG_FORK` / `E_LOG_ROLLBACK`, `chk.board.append_only` |
+| Witness thresholds | `witness-all-three`; `witness-below-quorum-setup`, `witness-impostor-key`, `witness-duplicate-cosigner`, `witness-unknown-cosigner`, `witness-cosig-from-other-head`, `witness-cosig-tampered`, `witness-non-monotone-excluded`, `witness-close-to-tally-unwitnessed` | `E_LOG_WITNESS`, `chk.board.witness` |
+| Witnessed times | `time-late-cutoff`, `time-early-close`, `time-early-open` | `E_TIME_WINDOW`, `chk.time.window` |
+| Receipt inclusion | `receipt-inclusion-older-head`; `receipt-forged-promise`, `receipt-other-log-key`, `receipt-malformed` (class I); `receipt-broken-promise-dropped-revote`, `receipt-tail-dropped` (F); `receipt-clash-other-voter`, `receipt-two-claimants`, `receipt-code-mismatch` (ALARM) | `E_LOG_RECEIPT` / `E_LOG_RECEIPT_CLASH`, `chk.receipts.sample` |
+| Notices (waiver, extension, control) | `notice-waiver-reported`, `notice-extension-reported`; `notice-waiver-does-not-unblock-open-gate`, `notice-waiver-does-not-unblock-tally-gate`, `notice-waiver-carries-quorum`, `notice-waiver-by-trustee`, `notice-waiver-record-not-coordinator-signed`, `notice-waiver-wrong-entry-type`, `notice-extension-does-not-move-close`, `notice-extension-retroactive`, `notice-pause-resume-do-not-move-close`, `notice-unknown-kind`, `notice-unrecognised-body` | Notices are reported, never applied: gates still fail (`E_LOG_WITNESS`, `E_TIME_WINDOW`); unauthorised, malformed or unknown notices fail closed (`E_LOG_BINDING`, `E_LOG_FORMAT`). Record shape is a reference-implementation reading (NOTES X-31), pending a QV-16/QV-18 definition |
+
 ## 10. Cross-implementation conformance suite
 
 ### 10.1 Profiles
@@ -452,13 +465,15 @@ Constraints: JSON only (no CBOR in v1) for reviewability; vectors reflect QV-16 
 
 ## 18. Approval and change history
 
+**VERSION-IMPACTING CHANGE (QV-ADR-015, 2026-10-21): `election-open` binding.** The `election-open` marker now carries `(manifest_hash, joint_key_seq, roll_commit_seq)` and a `roll-commit` record precedes it in every election log. All election bundles (`elections/tiny-yesno-3v`, `small-approval-20v`, `log-layer-4v`), all derived mutations and the canary changed bytes (log seqs after `dkg-final` shift by one); primitive vectors are unchanged. Eight mutants were added (`mutations/open-*`: forward, absent, wrong-record, nonexistent and mismatched refs, missing fields, manifest_hash mismatch), each expecting `chk.time.window` fail and `E_MARKERS`, verdict FAIL. Independent verifiers that predate this change reject the new open marker and must be updated (see `packages/protocol/NOTES.md` X-40). QV-34's `v1` tag should not be treated as frozen until the owner decides whether this is v1 or v1.1.
+
 | Reviewer | Decision | Date | Notes |
 |---|---|---|---|
 | Project owner | Pending | — | Draft authored 2026-10-21 |
 
 ## References (accessed 2026-10-21 unless noted)
-- RFC 8032 (EdDSA), RFC 9496 (ristretto255/decaf448), RFC 9474 (RSA Blind Signatures), RFC 9162 (Certificate Transparency v2.0 Merkle trees), RFC 6962, RFC 5869 (HKDF), RFC 3339, RFC 8785 (JCS) — from author knowledge; searches did not return RFC text `[UNVERIFIED in session]`.
-- NIST FIPS 180-4 and CAVP SHA vectors `[UNVERIFIED in session]`.
+- RFC 8032 (EdDSA), RFC 9496 (ristretto255/decaf448), RFC 9474 (RSA Blind Signatures), RFC 9162 (Certificate Transparency v2.0 Merkle trees), RFC 6962, RFC 5869 (HKDF), RFC 3339, RFC 8785 (JCS) — from author knowledge; searches did not return RFC text.
+- NIST FIPS 180-4 and CAVP SHA vectors.
 - Project Wycheproof (Google/C2SP) `[UNVERIFIED in session]`.
 - Trail of Bits, "The Frozen Heart vulnerability in Girault's proof of knowledge" https://blog.trailofbits.com/2022/04/14/the-frozen-heart-vulnerability-in-giraults-proof-of-knowledge/ (accessed 2026-10-21) — Fiat–Shamir challenge must hash all public statement values and prover commitments.
 - Bernhard, Pereira, Warinschi, "How not to Prove Yourself: Pitfalls of the Fiat-Shamir Heuristic and Applications to Helios", ASIACRYPT 2012 — via https://eprint.iacr.org/2016/771 search listing and summary (accessed 2026-10-21).

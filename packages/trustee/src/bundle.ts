@@ -25,6 +25,17 @@ export interface TallyShareBody {
   counted_root: string;
   shares: { contest: string; opt: string; M: string; c: string; s: string }[];
 }
+/** Trustee-mode spoil decryption share (QV-ADR-020): partial decryption of one spoiled ballot, `cp-dec-spoil` proofs. */
+export interface SpoilShareBody {
+  proto: string;
+  type: 'spoil-share';
+  ctx: string;
+  j: number;
+  code: string;
+  /** Log position of the spoil record the trustee decrypted. */
+  spoil_seq: number;
+  shares: { contest: string; opt: string; M: string; c: string; s: string }[];
+}
 export interface KeyDestructionBody {
   proto: string;
   type: 'key-destruction';
@@ -52,6 +63,8 @@ export interface BundleData {
   state: TrusteeState;
   sk_sign: string;
   sign_pk: string;
+  /** Absolute path this bundle was created (or restored) at; locates its public release ledger on restore. */
+  home?: string;
   election_id?: string;
   trustee_id?: number;
   ceremony_id?: string;
@@ -74,6 +87,8 @@ export interface BundleData {
     keyconf?: SignedRecord<KeyconfBody>;
     keycheck?: SignedRecord<KeycheckBody>;
     release?: SignedRecord<TallyShareBody>;
+    /** Replay guard + audit trail: one entry per ballot code already released (hex code -> signed share). */
+    spoil?: Record<string, SignedRecord<SpoilShareBody>>;
     attestation?: SignedRecord<KeyDestructionBody>;
     compromise: SignedRecord<CompromiseBody>[];
   };

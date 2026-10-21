@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import { pathToFileURL } from 'node:url';
-import { readFile, writeFile } from 'node:fs/promises';
-import { parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, type Rng } from '@quietvote/crypto';
+import { readFile } from 'node:fs/promises';
+import { parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, utf8, type Rng } from '@quietvote/crypto';
 import type { Aggregate, Manifest, MultiSignedRecord } from '@quietvote/protocol';
 import { TrusteeError } from './errors.ts';
 import { assertPassphraseStrength, generatePassphrase } from './passphrase.ts';
-import { OVERRIDE_UNWITNESSED, Trustee, type Packet } from './trustee.ts';
+import { OVERRIDE_NO_LEDGER, OVERRIDE_UNWITNESSED, Trustee, realTarget, type Packet } from './trustee.ts';
+import { atomicWrite, exists, readSecretFile } from './fsutil.ts';
+import { ledgerPath } from './ledger.ts';
+import { tombstonePath } from './bundle.ts';
 import { verifyTranscript, type Transcript } from './transcript.ts';
 import type { VaultDeps } from './bundle.ts';
 
@@ -29,9 +32,10 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   import --bundle F --log F.qvl
   commit|reveal|shares|verify|finalize|drill --bundle F [--out F.qvp]
   confirm --bundle F --compared-with 2,3 [--words "w1 .. w6"] [--out F]
-  tally-release --bundle F --election F.json [--claimed F] [--override-unwitnessed PHRASE] [--out F]
+  tally-release --bundle F --election F.json [--claimed F] [--override-unwitnessed PHRASE] [--out F]   (election.json carries log_evidence)
+  spoil-release --bundle F --election F.json --codes HEX[,HEX...] [--override-unwitnessed PHRASE] [--out F]
   status --bundle F | abort --bundle F --reason T | restart --bundle F
-  backup --bundle F --to F2 [--backup-passphrase-file F] | restore --from F2 --bundle F [--backup-passphrase-file F]
+  backup --bundle F --to F2 [--backup-passphrase-file F] | restore --from F2 --bundle F [--backup-passphrase-file F] [--ledger F.releases] [--override-no-ledger PHRASE]
   destroy --bundle F --audit-close F --confirm "<election title>"
   report-compromise --bundle F --severity suspected|confirmed [--out F]
   export-transcript --bundle F --out F [--mode airgap-dkg] | cosign-transcript --bundle F --in F --out F | verify-transcript --in F [--witness-key NAME=HEX]
@@ -57,8 +61,39 @@ function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags
   return { cmd, o, flags };
 }
 
-const bytesOf = async (p: string): Promise<Uint8Array> => new Uint8Array(await readFile(p));
-const jsonOf = async (p: string): Promise<unknown> => parseQvJson(await bytesOf(p));
+const bytesOf = async (p: string): Promise<Uint8Array> => {
+  try {
+    return new Uint8Array(await readFile(p));
+  } catch {
+    throw new TrusteeError('USAGE', 'NO_SUCH_FILE', p);
+  }
+};
+const jsonOf = async (p: string): Promise<unknown> => {
+  const b = await bytesOf(p);
+  try {
+    return parseQvJson(b);
+  } catch {
+    throw new TrusteeError('VERIFY', 'BAD_JSON', `${p} is not valid QV-JSON`);
+  }
+};
+
+/** Parses `--claimed`: {contests:[{id, options:[{id, A, B}]}]} with 32-byte hex points. Any malformation is BAD_CLAIMED, never a raw exception. */
+function parseClaimed(c: unknown): Map<string, Map<string, Aggregate>> {
+  const bad = (): never => {
+    throw new TrusteeError('VERIFY', 'BAD_CLAIMED', '--claimed must be {contests:[{id, options:[{id, A, B}]}]} with 32-byte hex points');
+  };
+  const cs = (c as { contests?: unknown } | null)?.contests;
+  if (!Array.isArray(cs)) return bad();
+  try {
+    return new Map(cs.map((x: { id: string; options: { id: string; A: string; B: string }[] }) => {
+      if (typeof x.id !== 'string' || !Array.isArray(x.options)) return bad();
+      return [x.id, new Map(x.options.map((y) => [y.id, { A: pointFromBytes(hexToBytes(y.A, 32)), B: pointFromBytes(hexToBytes(y.B, 32)) }] as const))] as const;
+    }));
+  } catch (e) {
+    if (e instanceof TrusteeError) throw e;
+    return bad();
+  }
+}
 
 /** Runs one command; returns the process exit code. */
 export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record<string, string | undefined> = {}): Promise<number> {
@@ -74,13 +109,33 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
     const vd: VaultDeps = { rng: deps.rng, now: deps.now, ...(deps.logN !== undefined ? { logN: deps.logN } : {}), ...(deps.allowWeak === true ? { allowWeak: true } : {}) };
     const pass = async (fileOpt: string, envKey: string, q: string): Promise<string> => {
       const f = o.get(fileOpt) ?? env[envKey];
-      return f !== undefined ? (await readFile(f, 'utf8')).replace(/\r?\n$/, '') : io.promptSecret(q);
+      if (f === undefined) return io.promptSecret(q);
+      const raw = await readSecretFile(f); // refuses group/other-readable passphrase files (QV-17 §6.5)
+      try {
+        return new TextDecoder().decode(raw).replace(/\r?\n$/, '');
+      } finally {
+        raw.fill(0);
+      }
     };
     const mainPass = (): Promise<string> => pass('passphrase-file', 'QV_TRUSTEE_PASSPHRASE_FILE', 'Bundle passphrase: ');
-    const open = async (): Promise<Trustee> => Trustee.open(need('bundle'), await mainPass(), vd);
+    /** T6: an output file may never be (or resolve to) the sealed bundle, a registered backup, the tombstone/attestation/ledger, nor any existing file. */
+    const guardOut = async (t: Trustee): Promise<void> => {
+      const out = o.get('out');
+      if (out === undefined) return;
+      const b = t.path;
+      const prot = [b, tombstonePath(b), `${b}.attestation.json`, ledgerPath(b), ...t.data.backups.map((x) => x.path)];
+      const target = await realTarget(out);
+      for (const x of prot) if ((await realTarget(x)) === target) throw new TrusteeError('REFUSED', 'OUT_PATH_PROTECTED', `--out ${out} is a sealed bundle, backup or record of this share`);
+      if (await exists(out)) throw new TrusteeError('REFUSED', 'OUT_EXISTS', `--out ${out} already exists; remove it first (never overwritten)`);
+    };
+    const open = async (): Promise<Trustee> => {
+      const t = await Trustee.open(need('bundle'), await mainPass(), vd);
+      await guardOut(t); // before the command changes any state
+      return t;
+    };
     const emit = async (p: Packet, extra: Record<string, unknown> = {}): Promise<void> => {
       const out = o.get('out');
-      if (out !== undefined) await writeFile(out, p.bytes, { mode: 0o644 });
+      if (out !== undefined) await atomicWrite(out, p.bytes, 0o644);
       report({ round: p.round, ...(out === undefined ? {} : { out }), ...extra });
     };
     const report = (x: Record<string, unknown>): void => io.out(json ? JSON.stringify({ ok: true, ...x }) : Object.entries(x).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join('\n'));
@@ -135,11 +190,16 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
         const t = await open();
         let claimed: Map<string, Map<string, Aggregate>> | undefined;
         if (o.has('claimed')) {
-          const c = (await jsonOf(need('claimed'))) as { contests: { id: string; options: { id: string; A: string; B: string }[] }[] };
-          claimed = new Map(c.contests.map((x) => [x.id, new Map(x.options.map((y) => [y.id, { A: pointFromBytes(hexToBytes(y.A, 32)), B: pointFromBytes(hexToBytes(y.B, 32)) }]))]));
+          claimed = parseClaimed(await jsonOf(need('claimed')));
         }
         const ov = o.get('override-unwitnessed');
         await emit(await t.releaseTally(await jsonOf(need('election')), { ...(claimed === undefined ? {} : { claimed }), ...(ov === undefined ? {} : { override: ov }) }), { state: t.state });
+        return 0;
+      }
+      case 'spoil-release': {
+        const t = await open();
+        const ov = o.get('override-unwitnessed');
+        await emit(await t.releaseSpoil(await jsonOf(need('election')), need('codes').split(',').map((c) => c.trim()), ov === undefined ? {} : { override: ov }), { state: t.state });
         return 0;
       }
       case 'status': {
@@ -165,7 +225,9 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       case 'restore': {
         const bp = await pass('backup-passphrase-file', 'QV_TRUSTEE_BACKUP_PASSPHRASE_FILE', 'Backup passphrase: ');
         const np = await pass('passphrase-file', 'QV_TRUSTEE_PASSPHRASE_FILE', 'New bundle passphrase: ');
-        const t = await Trustee.restore(need('from'), bp, need('bundle'), np, vd);
+        const lg = o.get('ledger');
+        const ro = o.get('override-no-ledger');
+        const t = await Trustee.restore(need('from'), bp, need('bundle'), np, vd, { ...(lg === undefined ? {} : { ledger: lg }), ...(ro === undefined ? {} : { override: ro }) });
         report({ state: t.state });
         return 0;
       }
@@ -185,14 +247,14 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       case 'export-transcript': {
         const t = await open();
         const tr = await t.exportTranscript((o.get('mode') ?? 'airgap-dkg') as 'airgap-dkg', { network: 'offline' });
-        await writeFile(need('out'), JSON.stringify(tr));
+        await atomicWrite(need('out'), utf8(JSON.stringify(tr)), 0o644);
         report({ summary_hash: tr.summary_hash, out: need('out') });
         return 0;
       }
       case 'cosign-transcript': {
         const t = await open();
         const tr = await t.cosignTranscript((await jsonOf(need('in'))) as Transcript);
-        await writeFile(need('out'), JSON.stringify(tr));
+        await atomicWrite(need('out'), utf8(JSON.stringify(tr)), 0o644);
         report({ signatures: tr.signatures.length });
         return 0;
       }
@@ -217,7 +279,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
   }
 }
 
-void OVERRIDE_UNWITNESSED; void bytesToHex;
+void OVERRIDE_UNWITNESSED; void OVERRIDE_NO_LEDGER; void bytesToHex;
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { createInterface } = await import('node:readline');

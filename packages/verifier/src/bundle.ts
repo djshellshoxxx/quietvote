@@ -10,6 +10,8 @@ export interface LoadedBundle {
   election: ElectionBundle;
   /** Present when the bundle carries a board log export (`board`, the JSON form of board.LogBundle). */
   board?: LogBundle;
+  /** The same export as received (JSON form): what protocol.verifyElection's log evidence consumes (C3 entry binding). */
+  boardJson?: unknown;
 }
 
 export type LoadResult = { ok: true; value: LoadedBundle } | { ok: false; errors: string[] };
@@ -51,5 +53,6 @@ export function loadBundle(input: string | Uint8Array | object): LoadResult {
   if (errors.length > 0) return { ok: false, errors };
   const { board: _drop, ...rest } = v;
   void _drop;
-  return { ok: true, value: board === undefined ? { election: rest as unknown as ElectionBundle } : { election: rest as unknown as ElectionBundle, board } };
+  const election = rest as unknown as ElectionBundle;
+  return { ok: true, value: board === undefined ? { election } : { election, board, boardJson: v['board'] } };
 }

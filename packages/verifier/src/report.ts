@@ -44,6 +44,19 @@ export interface BoardSummary {
   warnings: string[];
 }
 
+/**
+ * Protocol C3 log-layer results (protocol.verifyElection with `log` evidence, QV-16 App. C step 11): entry/record binding and
+ * tree heads (`append_only`), witness gating (`witness`), voter receipts (`receipts`), witnessed election times
+ * (`time_window`). Present only when the bundle carries a board export. The same statuses are folded into V4/V7.
+ */
+export interface LogLayerSummary {
+  checks: { append_only: VStatus; witness: VStatus; receipts: VStatus; time_window: VStatus };
+  /** Where the witness keys used by the log check came from: the signature-verified manifest, the caller, or none (QV-18 X-23). */
+  witness_keys: 'manifest' | 'caller' | 'none';
+  receipt_claims: number;
+  observed_heads: number;
+}
+
 export interface SelfTestSummary {
   ok: boolean;
   control: boolean;
@@ -66,6 +79,7 @@ export interface VerifierReport {
   ctxPrefix?: string;
   results?: unknown;
   board?: BoardSummary;
+  log?: LogLayerSummary;
   /** SHA-256 over the RFC 8785 canonical form of this report minus `reportHash` and `selfTest`. */
   reportHash: string;
   selfTest?: SelfTestSummary;

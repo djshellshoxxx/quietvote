@@ -6,7 +6,7 @@ import {
   parseCheckpoint, verifyLogSignature, witnessStatus,
   type Checkpoint, type WitnessPolicy,
 } from './checkpoint.ts';
-import { checkEntry, grammarStep, newGrammar, type AuthorKeyResolver, type EntryHeader } from './entry.ts';
+import { checkEntry, grammarStep, manifestDeclaresRoll, newGrammar, type AuthorKeyResolver, type EntryHeader } from './entry.ts';
 import { err, ok, type Result } from './errors.ts';
 import { MerkleTree, hashLeaf } from './merkle.ts';
 import { verifyReceipt, type Receipt } from './receipt.ts';
@@ -148,7 +148,7 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
       const h = c.value;
       headers.push(h);
       if (e.body === null && !redactedSeqs.has(i)) fail('QV_BOARD_BODY_DIGEST', 'body missing but redaction not recorded', i);
-      const ge = grammarStep(g, h.type);
+      const ge = grammarStep(g, h.type, e.body);
       if (ge !== undefined) fail('QV_BOARD_GRAMMAR', ge, i);
       const nk = nonceKey(toHex(h.author), h.type, toHex(h.authorNonce));
       if (seenNonce.has(nk)) fail('QV_BOARD_NONCE_REUSE', 'duplicate (author,type,nonce)', i);
@@ -236,13 +236,14 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
         }
       };
       const first = (t: string): number | undefined => seqOf.get(t)?.[0];
-      const roll = first('roll_commit');
+      const roll = first('roll_commit') ?? first('joint_key'); // static-roll mode (QV-ADR-015) has no roll_commit
       const open = first('election_open');
       const close = first('election_close');
       const agg = first('tally_aggregate');
       const res = first('tally_result');
       if (open !== undefined && roll !== undefined) gate('election_open', open, roll + 1, open, true);
-      if (close !== undefined) gate('election_close', agg ?? close, close, agg ?? Number.MAX_SAFE_INTEGER, agg !== undefined);
+      const end = agg ?? res; // the aggregate is recomputed, not posted, when tally_aggregate is absent
+      if (close !== undefined) gate('election_close', end ?? close, close, end ?? Number.MAX_SAFE_INTEGER, end !== undefined);
       if (res !== undefined) gate('tally_result', res, res + 1, Number.MAX_SAFE_INTEGER, false);
     }
 
@@ -289,10 +290,25 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
   }
 }
 
-/** Verify, then load into `target` and mark it read-only (REQ-033). Rejects with the exact failing seq. */
-export function importBundle(bundle: LogBundle, target: BoardStore, opts: VerifyOptions = {}): Result<Verdict> {
+export interface ImportOptions extends VerifyOptions {
+  /** Accept an integrity PARTIAL verdict (e.g. redacted bodies). Trust anchors are still required. Default false. */
+  allowPartial?: boolean;
+}
+
+/**
+ * Verify, then load into `target` and mark it read-only (REQ-033). Rejects with the exact failing seq.
+ * Requires caller-trusted `logPublicKey`, `witnessPolicy` and `resolveAuthorKey` (a bundle verified only against
+ * its own embedded keys proves nothing), and an integrity VERIFIED verdict unless `allowPartial` is true.
+ */
+export function importBundle(bundle: LogBundle, target: BoardStore, opts: ImportOptions = {}): Result<Verdict> {
   if (target.size() !== 0) return err('QV_BOARD_BAD_BUNDLE', 'import target must be empty');
+  if (!opts.logPublicKey) return err('QV_BOARD_BAD_BUNDLE', 'import requires a trusted logPublicKey');
+  if (!opts.witnessPolicy) return err('QV_BOARD_BAD_BUNDLE', 'import requires a trusted witnessPolicy');
+  if (!opts.resolveAuthorKey) return err('QV_BOARD_AUTHOR_UNRESOLVED', 'import requires resolveAuthorKey (author signatures must be verified)');
   const v = verifyLog(bundle, opts);
+  if (v.integrity === 'PARTIAL' && opts.allowPartial !== true) {
+    return err('QV_BOARD_BAD_BUNDLE', `integrity PARTIAL (redacted=${v.redacted}); pass allowPartial to import`);
+  }
   if (v.integrity === 'FAILED') {
     const f = v.failures[0];
     return err('QV_BOARD_BAD_BUNDLE', `seq=${f?.seq ?? 'n/a'} rule=${f?.rule ?? ''}: ${f?.detail ?? ''}`);
@@ -306,6 +322,7 @@ export function importBundle(bundle: LogBundle, target: BoardStore, opts: Verify
     target.appendEntry({
       seq: e.seq, headerBytes: e.headerBytes, body: e.body, leafHash, sequencedAt: 0,
       nonceKey: nonceKey(toHex(h.value.author), h.value.type, toHex(h.value.authorNonce)),
+      ...(h.value.type === 'manifest' ? { staticRoll: manifestDeclaresRoll(e.body) } : {}),
     });
   }
   for (const note of bundle.checkpoints) {

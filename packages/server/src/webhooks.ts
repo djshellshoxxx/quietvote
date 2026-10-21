@@ -6,8 +6,15 @@
 //   QV-Webhook-Timestamp  unix seconds at signing (fresh on every attempt)
 //   QV-Webhook-Signature  "v1=" + hex(HMAC-SHA256(secret, `${timestamp}.${id}.${body}`))
 // Targets are validated (ssrf.ts) at registration and again immediately before every attempt, and the socket connects to the
-// address that was validated. The retry queue is in memory and bounded; a restart drops pending retries (the SSE outbox and the
-// public log remain the source of truth).
+// address that was validated.
+//
+// Persistence: every pending delivery is a row in control.webhook_outbox (body, attempt number, next attempt time) written
+// before it is queued, so a restart resumes retries at their scheduled time. A delivery whose attempt was in flight at crash
+// time is re-sent with the same attempt number (at-least-once; receivers dedupe on QV-Webhook-Id). The in-memory queue and
+// retry timers are only a cache of those rows. Per-hook consecutive-failure counts are persisted in control.webhook.failures.
+// Cap and pruning: at most `webhookMaxQueue` deliveries per process are queued or waiting for a retry (in-flight sends are not
+// counted, as before persistence). Admitting a delivery beyond the cap prunes the OLDEST queued/waiting rows (counted in
+// stats.dropped, their retry timers cancelled); the newcomer is always kept. A delivery in flight is never pruned.
 import { createHmac, randomBytes } from 'node:crypto';
 import type { WebhookRow } from './controldb.ts';
 import type { EventRow } from './electiondb.ts';
@@ -54,10 +61,12 @@ export class WebhookService {
   private readonly env: Env;
   private readonly resolve: WebhookResolver;
   private readonly transport: WebhookTransport;
+  /** Deliveries ready to send (their rows are in control.webhook_outbox). */
   private readonly queue: Job[] = [];
-  private readonly waiting = new Set<NodeJS.Timeout>();
-  private readonly failures = new Map<string, number>();
-  private inflight = 0;
+  /** Retry timers, keyed by delivery id. */
+  private readonly timers = new Map<string, NodeJS.Timeout>();
+  /** Deliveries whose send is in progress (never pruned). */
+  private readonly flying = new Set<string>();
   private stopped = false;
   private idleWaiters: (() => void)[] = [];
 
@@ -65,6 +74,7 @@ export class WebhookService {
     this.env = env;
     this.resolve = env.cfg.webhookResolver ?? systemResolver;
     this.transport = env.cfg.webhookTransport ?? httpsTransport();
+    this.restore();
   }
 
   // ------------------------------------------------------------------ management
@@ -125,43 +135,88 @@ export class WebhookService {
         this.stats.dropped++;
         continue;
       }
-      this.enqueue({ hookId: h.webhook_id, deliveryId, body, eventType: ev.type, attempt: 1 });
+      try {
+        this.admit({ hookId: h.webhook_id, deliveryId, body, eventType: ev.type, attempt: 1 });
+      } catch {
+        this.stats.dropped++; // storage failure: the delivery is not queued (the public log remains the source of truth)
+      }
     }
   }
 
-  private pendingCount(): number {
-    return this.queue.length + this.waiting.size;
-  }
-
-  private enqueue(j: Job): void {
+  /**
+   * Persists a new delivery and queues it. Enforces `webhookMaxQueue` by pruning the oldest pending rows, all in one transaction.
+   * Rows pruned from memory are cancelled here; a pruned in-flight delivery is handled in run().
+   */
+  private admit(j: Job): void {
+    const ctl = this.env.control;
     const max = this.env.cfg.webhookMaxQueue;
-    while (this.queue.length >= max || this.pendingCount() >= max) {
-      if (this.queue.length === 0) {
-        this.stats.dropped++; // everything pending is waiting on timers: refuse the newcomer instead
-        return;
-      }
-      this.queue.shift();
+    const pruned = ctl.tx(() => {
+      const gone = ctl.outboxPruneTo(max - 1, this.flying); // leave room for the newcomer
+      ctl.outboxInsert({ delivery_id: j.deliveryId, webhook_id: j.hookId, event_type: j.eventType, body: j.body, attempt: j.attempt, next_at: this.env.cfg.now() });
+      return gone;
+    });
+    for (const id of pruned) {
+      this.forget(id);
       this.stats.dropped++;
     }
     this.queue.push(j);
     this.pump();
   }
 
+  /** Cancels the in-memory state of a delivery whose row was removed. */
+  private forget(deliveryId: string): void {
+    const t = this.timers.get(deliveryId);
+    if (t !== undefined) {
+      clearTimeout(t);
+      this.timers.delete(deliveryId);
+    }
+    const i = this.queue.findIndex((q) => q.deliveryId === deliveryId);
+    if (i >= 0) this.queue.splice(i, 1);
+    this.checkIdle();
+  }
+
+  /** Reloads the persisted outbox at startup: due deliveries are queued now, the rest get a timer for their scheduled time. */
+  private restore(): void {
+    const ctl = this.env.control;
+    this.stats.dropped += ctl.outboxPruneTo(this.env.cfg.webhookMaxQueue).length; // the cap may have been lowered
+    const now = this.env.cfg.now();
+    for (const r of ctl.outboxAll()) {
+      const j: Job = { hookId: r.webhook_id, deliveryId: r.delivery_id, body: r.body, eventType: r.event_type, attempt: r.attempt };
+      const delay = Math.max(0, r.next_at - now);
+      if (delay === 0) this.queue.push(j);
+      else this.schedule(j, delay);
+    }
+    this.pump();
+  }
+
+  private schedule(j: Job, delayMs: number): void {
+    const t = setTimeout(() => {
+      this.timers.delete(j.deliveryId);
+      if (this.stopped) return;
+      this.queue.push(j);
+      this.pump();
+    }, delayMs);
+    t.unref();
+    this.timers.set(j.deliveryId, t);
+  }
+
   private pump(): void {
-    while (!this.stopped && this.inflight < this.env.cfg.webhookMaxInflight && this.queue.length > 0) {
+    while (!this.stopped && this.flying.size < this.env.cfg.webhookMaxInflight && this.queue.length > 0) {
       const j = this.queue.shift()!;
-      this.inflight++;
-      void this.run(j).finally(() => {
-        this.inflight--;
-        this.pump();
-        this.checkIdle();
-      });
+      this.flying.add(j.deliveryId);
+      void this.run(j)
+        .catch(() => this.env.logger.event('webhook', { outcome: 'error', note: 'internal' }))
+        .finally(() => {
+          this.flying.delete(j.deliveryId);
+          this.pump();
+          this.checkIdle();
+        });
     }
     this.checkIdle();
   }
 
   private checkIdle(): void {
-    if (this.inflight === 0 && this.queue.length === 0 && this.waiting.size === 0) {
+    if (this.flying.size === 0 && this.queue.length === 0 && this.timers.size === 0) {
       const w = this.idleWaiters;
       this.idleWaiters = [];
       for (const f of w) f();
@@ -176,10 +231,14 @@ export class WebhookService {
     });
   }
 
+  /**
+   * Stops timers and sends. Pending rows are kept in the outbox, so a later process resumes them. In-flight sends finish;
+   * their outcome is recorded (a retry is persisted but not scheduled).
+   */
   stop(): void {
     this.stopped = true;
-    for (const t of this.waiting) clearTimeout(t);
-    this.waiting.clear();
+    for (const t of this.timers.values()) clearTimeout(t);
+    this.timers.clear();
     this.queue.length = 0;
     this.checkIdle();
   }
@@ -193,8 +252,12 @@ export class WebhookService {
 
   private async run(j: Job): Promise<void> {
     const cfg = this.env.cfg;
-    const hook = this.env.control.webhook(j.hookId);
-    if (!hook || hook.disabled_at !== null) return; // deleted or disabled meanwhile
+    const ctl = this.env.control;
+    const hook = ctl.webhook(j.hookId);
+    if (!hook || hook.disabled_at !== null) {
+      ctl.outboxDelete(j.deliveryId); // deleted or disabled meanwhile
+      return;
+    }
     let outcome: 'ok' | 'retry' | 'fail';
     let note: string;
     try {
@@ -220,27 +283,27 @@ export class WebhookService {
     }
     if (outcome === 'ok') {
       this.stats.delivered++;
-      this.failures.delete(j.hookId);
+      ctl.outboxDelete(j.deliveryId);
+      ctl.setWebhookFailures(j.hookId, 0);
       this.env.logger.event('webhook', { outcome: 'ok', note });
       return;
     }
-    if (outcome === 'retry' && j.attempt < cfg.webhookMaxAttempts && !this.stopped) {
+    if (outcome === 'retry' && j.attempt < cfg.webhookMaxAttempts) {
+      const delay = this.backoffMs(j.attempt);
+      // The row carries the next attempt and its time before anything is scheduled, so a restart cannot lose it.
+      if (!ctl.outboxReschedule(j.deliveryId, j.attempt + 1, cfg.now() + delay)) return; // pruned meanwhile: never retried
       this.stats.retries++;
-      const t = setTimeout(() => {
-        this.waiting.delete(t);
-        this.enqueue({ ...j, attempt: j.attempt + 1 });
-      }, this.backoffMs(j.attempt));
-      t.unref();
-      this.waiting.add(t);
+      if (!this.stopped) this.schedule({ ...j, attempt: j.attempt + 1 }, delay);
       return;
     }
+    ctl.outboxDelete(j.deliveryId);
     this.stats.failed++;
     this.env.logger.event('webhook', { outcome: 'error', note: `${note} after ${j.attempt}` });
-    const n = (this.failures.get(j.hookId) ?? 0) + 1;
-    this.failures.set(j.hookId, n);
+    // Read fresh: concurrent in-flight deliveries of one hook must not overwrite each other's count (no await since the read).
+    const n = ctl.setWebhookFailures(j.hookId, (ctl.webhook(j.hookId)?.failures ?? 0) + 1);
     if (n >= cfg.webhookDisableAfter) {
-      this.env.control.disableWebhook(j.hookId);
-      this.failures.delete(j.hookId);
+      ctl.disableWebhook(j.hookId);
+      ctl.setWebhookFailures(j.hookId, 0);
       this.stats.disabled++;
       this.env.logger.event('webhook', { outcome: 'error', note: 'disabled_after_failures' });
     }

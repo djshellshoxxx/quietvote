@@ -348,7 +348,10 @@ test('board verify: election bundle with board export uses manifest anchors; wit
   assert.equal(none.code, 3);
   assert.match(none.err, /no usable board export/);
   // and the whole-bundle verdict agrees
-  assert.equal((await qv(['verify', f, '--skip-selftest'])).code, 0);
+  // the fixture board holds non-record bodies; the log layer (C3) now refuses to bind it => not a pass
+  const wholeBundle = await qv(['verify', f, '--skip-selftest']);
+  assert.equal(wholeBundle.code, 1, wholeBundle.out + wholeBundle.err);
+  assert.match(wholeBundle.out + wholeBundle.err, /E_LOG_BINDING/);
   assert.equal((await qv(['verify', writeJson(dir, 'with-bad-board.json', withBoard), '--skip-selftest'])).code, 1);
 });
 
@@ -372,7 +375,7 @@ test('election inspect: summary, JSON, mismatching hash, invalid manifest, bad i
   const t = tinyBundle();
   t.manifest_hash = '00'.repeat(32);
   const mm = await qv(['election', 'inspect', writeJson(dir, 'mm.json', t)]);
-  assert.equal(mm.code, 0);
+  assert.equal(mm.code, 1, 'a manifest hash that differs from the bundle is a failure (audit F12)');
   assert.match(mm.out, /DIFFERS from/);
   const bad = tinyBundle();
   bad.manifest.body.n = 'many';

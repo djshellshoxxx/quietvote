@@ -331,6 +331,7 @@ Per tlog-cosignature (accessed 2026-10-21): checkpoint cosignatures cover timest
 1. **Client-side pinning** (REQ-026): `last_seen = {origin, size, root, note}` stored; next visit: fetch latest note; request `consistency(last_seen.size → latest.size)`; verify; replace. Fail → alarm.
 2. **Witness cross-check**: client fetches `GET <W.monitoring>/<hex(H(origin))>/checkpoint` (tlog-witness monitoring endpoint) and verifies it is consistent with (not necessarily equal to — witnesses may lag ≤ 1 h by spec) the server's latest.
 3. **Checkpoint exchange**: voter clients post their pinned note to mirrors/witness-capable servers' `POST /api/v1/gossip/checkpoints` (QV-09) and receive that peer's latest note; both sides check consistency. This spreads views among voters without Tor-unfriendly direct contact. Rate-limited; accepted only if the log signature verifies.
+   *Reference-server rule:* a posted note counts only if it carries a valid signature of this log's key; every judgement (same / behind / ahead / diverged) is recomputed from the local tree and the evidence is built from local data, so a peer's own claims or proofs are never believed. A note for a larger tree than the log holds (rollback, REQ-053) or a root that differs from the local tree at a held size puts a live log into the persistent `QUARANTINE`; `fork` and `inconsistent` evidence is permanent, `rollback` can be cleared by an instance admin once the log is restored (`/admin/elections/{id}/quarantine/clear`). Outbound exchange with configured peers (`gossipPeers`, https only, SSRF policy of QV-09 §13, pinned address, no redirects, bounded answers) uses the same code path.
 4. **Out-of-band**: QR/short-code "checkpoint fingerprint" `SHA-256(note)[:6]` words can be compared in the meeting/chat; the UI (QV-10) offers it at close time.
 5. **Anchoring** (optional, ADR-012): `anchor` entries carrying an OpenTimestamps proof for a checkpoint root give an external lower time bound and a global anti-equivocation hook. Never required.
 
@@ -408,6 +409,7 @@ README.txt                     // human text: how to verify offline with `qv-ver
 
 - JSON uses UTF-8, no BOM; `bundle.json` signed optionally (`bundle.json.sig`, detached, by organizer key) — convenience only, the verifier never relies on it.
 - **Import** (`qv import`, `POST /imports`): extract to temp; run full verification (§13); only then create a read-only election DB flagged `imported=1, writable=0`. Verification failure reports `{seq, rule, detail}`.
+- **Reference-server details.** `bundle.json` additionally carries `log_pk_b64u`, `server_pk_b64u` and `organizer_pk_b64u` (the keys behind the manifest and `tally_aggregate` entry authors, which the log header only names by id; the importer checks each against the id in the header), and the archive carries `election.json` (the protocol `ElectionBundle`). The importer rejects bundles with redactions (the election could not be replayed), unlisted or unchecksummed files, tar links/devices/prefix names/duplicates/trailing data, and bundles whose log key is not the manifest's `bb.log_pk`. An imported election is `IMPORTED`: no signing keys, no invites, no registrations, no cosignature intake; gossip about it is judged against the imported tree and a peer that is ahead is reported (`peer_ahead`), not treated as an offence of the mirror.
 - **Portability**: the bundle contains everything needed to move an election to another operator ("exit-friendly", ADR-001). A *live* migration (continue appends on a new host) is not supported; migration is only for read-only archives, because the log key is bound to the old origin's sequencer. For in-flight elections, operator exit = export, a fresh election with the same roll/trustees is required (documented limitation; open question Q5).
 
 ## 13. Offline verification algorithm (`qv-verify`)
@@ -524,10 +526,10 @@ Voter: after casting, show "Your ballot is recorded: #233 — saved receipt" wit
 
 ## 24. References (accessed 2026-10-21)
 
-- RFC 9162, *Certificate Transparency Version 2.0* (IETF, Dec 2021; Experimental; obsoletes RFC 6962) — https://www.rfc-editor.org/rfc/rfc9162 `[UNVERIFIED: host unreachable from authoring environment; citation from author knowledge]`. RFC 6962 §2.1 Merkle hash definitions are carried over unchanged.
+- RFC 9162, *Certificate Transparency Version 2.0* (IETF, Dec 2021; Experimental; obsoletes RFC 6962) — https://www.rfc-editor.org/rfc/rfc9162. RFC 6962 §2.1 Merkle hash definitions are carried over unchanged.
 - C2SP tlog-checkpoint — https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md (fetched: origin/size/root note body, signature types 0x04/0x06, key-ID = first 4 bytes SHA-256).
 - C2SP tlog-cosignature — https://github.com/C2SP/C2SP/blob/main/tlog-cosignature.md (fetched: Ed25519 message `cosignature/v1\ntime…`, ML-DSA-44 recommended, timestamps monotone).
 - C2SP tlog-witness — https://github.com/C2SP/C2SP/blob/main/tlog-witness.md (fetched: `POST add-checkpoint`, `old <N>` body, 200/403/404/400/409/422 semantics, monitoring endpoint `GET <prefix>/<hex SHA-256 origin>/checkpoint`).
-- C2SP signed-note — https://github.com/C2SP/C2SP/blob/main/signed-note.md `[UNVERIFIED: not fetched; referenced via tlog-checkpoint]`.
+- C2SP signed-note — https://github.com/C2SP/C2SP/blob/main/signed-note.md.
 - OpenTimestamps — https://opentimestamps.org `[UNVERIFIED: not fetched]`.
-- Crosby & Wallach, *Efficient Data Structures for Tamper-Evident Logging*, USENIX Security 2009 `[UNVERIFIED: not fetched]` (background on history trees).
+- Crosby & Wallach, *Efficient Data Structures for Tamper-Evident Logging*, USENIX Security 2009 (background on history trees).

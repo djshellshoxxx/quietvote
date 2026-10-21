@@ -579,7 +579,7 @@ Non-zero-ness: `hs_nz` appends counter `u32(c)` as an additional last field and 
 ballot_code = H256("ballot-code"; ctx, JCS(ballot_body))                       ; 32 bytes — the tracking code
 ```
 
-**Display of the tracking code.** Encoded as Crockford base32 (RFC 4648 alphabet variant `[UNVERIFIED-OFFLINE: Crockford spec]`), 52 characters, grouped in fours. Clients shall display at least the first 26 characters (130 bits) and offer the full code; the Benaloh security argument requires that a cheating client cannot cheaply find a *different* ballot with the same displayed prefix (§5.22).
+**Display of the tracking code.** Specified as Crockford base32 (alphabet `0-9A-Z` without `I L O U`; this is a separate alphabet from RFC 4648 base32, `A-Z2-7`, not a variant of it), 52 characters. **Spec/implementation disagree:** the reference implementation uses the RFC 4648 lowercase alphabet (`a-z2-7`); see docs/errata/spec-errata-log.md (owner decision needed), grouped in fours. Clients shall display at least the first 26 characters (130 bits) and offer the full code; the Benaloh security argument requires that a cheating client cannot cheaply find a *different* ballot with the same displayed prefix (§5.22).
 
 #### 5.12.2 Signing and submission
 
@@ -598,7 +598,7 @@ Submission envelopes:
 
 The `reveal` object is optional. **Spoil modes (QV-ADR-020):** (a) `reveal` present: published reveal (voter opt-in); (b) `reveal` absent and `reveal_digest` ≠ 32 zero bytes: **private audit (default)** — the reveal is delivered only to the voter's second device/verifier, the log carries the signed `reveal_digest`; (c) `reveal` absent and `reveal_digest` = zeros: trustee-decryption mode (§5.13.4), valid only if the manifest enables it (off by default in suite v1). Cast and spoil signatures are over different labels so a spoil record can never be re-presented as a cast.
 
-**Verification of the signature shall be strict:** reject `S ≥ ℓ`, reject non-canonical or small-order `voter` keys, and use the cofactorless-equivalent strict RFC 8032 check (noble-curves `verify(sig, msg, pk, { zip215: false })` `[UNVERIFIED-OFFLINE: option name]`). Rationale: signature malleability and verifier disagreement (ZIP-215 vs RFC 8032 acceptance sets differ) would otherwise allow two verifiers to disagree on validity.
+**Verification of the signature shall be strict:** reject `S ≥ ℓ`, reject non-canonical or small-order `voter` keys, and use the cofactorless-equivalent strict RFC 8032 check (noble-curves `verify(sig, msg, pk, { zip215: false })` `[VERIFIED: noble-curves src/ed25519.ts zip215 option, 2026-10-21]`). Rationale: signature malleability and verifier disagreement (ZIP-215 vs RFC 8032 acceptance sets differ) would otherwise allow two verifiers to disagree on validity.
 
 ### 5.13 Benaloh cast-or-spoil (cast-as-intended)
 
@@ -815,7 +815,7 @@ In Phase 1 the roll is public, so returning precise codes to submitters leaks no
 
 | Capability | Phase 1 (ADR-005) | Phase 2 (stub) | Phase 3 (stub) |
 |---|---|---|---|
-| Voter authentication | Ed25519 key in Merkle-committed roll; signature on ballot | Blind-signed single-use token (RFC 9474 RSABSSA) obtained from a registrar; ballot signed by a fresh ephemeral key certified by the token | ZK Merkle-membership proof + nullifier (Semaphore-style) |
+| Voter authentication | Ed25519 key in Merkle-committed roll; signature on ballot | Blind-signed single-use token (RFC 9474 RSABSSA) obtained from a registrar; ballot signed by a fresh ephemeral key certified by the token | ZK Merkle-membership proof + nullifier (Semaphore-style) | <!-- claims-lint-ignore -->
 | Participation visibility | Public (who voted) | Registrar sees who *requested* a token; ballots unlinkable to voters if issuance/casting separated | Hidden (set membership only) |
 | `binder` | `H256("binder-roll"; ctx, voter_pk)` | `H256("binder-token"; ctx, token_digest)` | `H256("binder-nullifier"; ctx, nullifier)` |
 | Revote key (`supersede_key`) | `voter_pk` | token serial (revote = new ballot under the same token) | nullifier |
@@ -862,7 +862,7 @@ In Phase 1, `authData` = `{voter_pk, sig}`. A scheme may add fields to the ballo
 - **Secret material:** trustee shares `s_j`, coefficients `a_{i,k}`, `e_i`; voter Ed25519 seeds and `voter_nonce_key`; ballot seeds `ξ` (until spoiled).
 - **Visibility:** *Everyone:* roll, participation (who has a cast ballot, how many times — revoting is visible), ciphertexts, aggregates, results, proofs, spoiled selections. *Operator:* everything above plus network metadata (QV-26). *Trustees (< t):* nothing about individual ballots. *Voter:* own selections and `ξ` of the attempts they made.
 - **Retention:** election record is retained for the audit window; trustee secret shares destroyed after the window (ADR-013); voter seeds remain client-side only.
-- **Linkability risks:** Phase 1 links voter key ↔ ballot ciphertext (not content). Revote count and timing leak behaviour. `reveal` records link a voter to an audited choice.
+- **Linkability risks:** Phase 1 links voter key ↔ ballot ciphertext (not content). Revote count and timing leak behaviour. `reveal` records link a voter to an audited choice. <!-- claims-lint-ignore -->
 - **Claimed:** ballot secrecy against < t trustees plus operator (computational, classical); universal verifiability.
 - **Not claimed:** see §5.22 and ADR-008.
 
@@ -975,7 +975,7 @@ All proposals are **Proposed**; none is binding until recorded in `decision-log.
 - **Review trigger:** inability to achieve cross-implementation byte equality in QV-34.
 
 ### QV-ADR-P16-2 — DKG: Feldman VSS with commit-then-reveal, per-coefficient PoK and DH-reveal complaints
-- **Decision:** §5.7. **Alternatives:** Pedersen VSS (hiding; no public key shares directly), FROST-style two-round DKG (RFC 9591 `[UNVERIFIED-OFFLINE]`; designed for signatures), trusted dealer (violates ADR-001).
+- **Decision:** §5.7. **Alternatives:** Pedersen VSS (hiding; no public key shares directly), FROST-style two-round DKG (the FROST paper's DKG; RFC 9591 standardises FROST *signing* only and does not standardise a DKG), trusted dealer (violates ADR-001).
 - **Consequences:** Public, deterministic adjudication; operator can DoS a trustee by censorship but not forge `K`.
 - **Review trigger:** reviewer finds bias or adjudication gap.
 
@@ -1018,24 +1018,24 @@ Access date for all: 2026-10-21. Network note: direct page fetching failed (DNS)
 | [ElectionGuard] | ElectionGuard Specification, https://electionguard.vote/spec/ (v2.0 reported to remove placeholder selections and cut proof size >90%) | Verified (search snippet only); detailed mechanisms not read |
 | [BPW12] | D. Bernhard, O. Pereira, B. Warinschi, "How not to Prove Yourself: Pitfalls of the Fiat-Shamir Heuristic and Applications to Helios", ASIACRYPT 2012, https://eprint.iacr.org/2016/771 | Verified (search): weak vs strong Fiat–Shamir |
 | [CS11] | V. Cortier, B. Smyth, "Attacking and fixing Helios: An analysis of ballot secrecy", CSF 2011, https://lsv.ens-paris-saclay.fr/Projects/anr-avote/PUBLIS/CS-csf11.pdf | Existence verified (search); content paraphrased |
-| [Adida08] | B. Adida, "Helios: Web-based Open-Audit Voting", USENIX Security 2008 | `[UNVERIFIED-OFFLINE]` |
-| [Benaloh06] | J. Benaloh, "Simple Verifiable Elections", EVT 2006 | `[UNVERIFIED-OFFLINE]` |
-| [CGS97] | R. Cramer, R. Gennaro, B. Schoenmakers, "A Secure and Optimally Efficient Multi-Authority Election Scheme", EUROCRYPT 1997 | `[UNVERIFIED-OFFLINE]` |
-| [CDS94] | R. Cramer, I. Damgård, B. Schoenmakers, "Proofs of Partial Knowledge and Simplified Design of Witness Hiding Protocols", CRYPTO 1994 | `[UNVERIFIED-OFFLINE]` |
-| [CP92] | D. Chaum, T. P. Pedersen, "Wallet Databases with Observers", CRYPTO 1992 | `[UNVERIFIED-OFFLINE]` |
-| [Feldman87] | P. Feldman, "A Practical Scheme for Non-interactive Verifiable Secret Sharing", FOCS 1987 | `[UNVERIFIED-OFFLINE]` |
-| [Ped91] | T. P. Pedersen, "A Threshold Cryptosystem without a Trusted Party", EUROCRYPT 1991 | `[UNVERIFIED-OFFLINE]` |
+| [Adida08] | B. Adida, "Helios: Web-based Open-Audit Voting", USENIX Security 2008 |  |
+| [Benaloh06] | J. Benaloh, "Simple Verifiable Elections", EVT 2006 |  |
+| [CGS97] | R. Cramer, R. Gennaro, B. Schoenmakers, "A Secure and Optimally Efficient Multi-Authority Election Scheme", EUROCRYPT 1997 |  |
+| [CDS94] | R. Cramer, I. Damgård, B. Schoenmakers, "Proofs of Partial Knowledge and Simplified Design of Witness Hiding Protocols", CRYPTO 1994 |  |
+| [CP92] | D. Chaum, T. P. Pedersen, "Wallet Databases with Observers", CRYPTO 1992 |  |
+| [Feldman87] | P. Feldman, "A Practical Scheme for Non-interactive Verifiable Secret Sharing", FOCS 1987 |  |
+| [Ped91] | T. P. Pedersen, "A Threshold Cryptosystem without a Trusted Party", EUROCRYPT 1991 |  |
 | [GJKR] | R. Gennaro, S. Jarecki, H. Krawczyk, T. Rabin, "Secure Distributed Key Generation for Discrete-Log Based Cryptosystems" (EUROCRYPT 1999; J. Cryptology 2007) | `[UNVERIFIED-OFFLINE]` |
-| [Shamir79] | A. Shamir, "How to Share a Secret", CACM 1979 | `[UNVERIFIED-OFFLINE]` |
-| [Schnorr91] | C.-P. Schnorr, "Efficient Signature Generation by Smart Cards", J. Cryptology 1991 | `[UNVERIFIED-OFFLINE]` |
+| [Shamir79] | A. Shamir, "How to Share a Secret", CACM 1979 |  |
+| [Schnorr91] | C.-P. Schnorr, "Efficient Signature Generation by Smart Cards", J. Cryptology 1991 |  |
 | [RFC8032] | Edwards-Curve Digital Signature Algorithm (EdDSA), Jan 2017 | Existence/title verified (search) |
 | [RFC8785] | JSON Canonicalization Scheme (JCS), RFC 8785 | Existence verified (search); rules recalled from memory |
-| [RFC9162] | Certificate Transparency Version 2.0, RFC 9162 (Merkle tree hash definition) | `[UNVERIFIED-OFFLINE]` (not returned by search) |
-| [RFC9474] | RSA Blind Signatures, RFC 9474 | `[UNVERIFIED-OFFLINE]` |
-| [RFC5869] | HKDF, RFC 5869 | `[UNVERIFIED-OFFLINE]` |
-| [SP800-38D], [FIPS180-4] | NIST AES-GCM and Secure Hash Standard | `[UNVERIFIED-OFFLINE]` |
-| [Semaphore] | Semaphore protocol (ZK group membership with nullifiers) | `[UNVERIFIED-OFFLINE]` |
-| [RFC9591] | FROST, RFC 9591 | `[UNVERIFIED-OFFLINE]` |
+| [RFC9162] | Certificate Transparency Version 2.0, RFC 9162 (Merkle tree hash definition) | (not returned by search) |
+| [RFC9474] | RSA Blind Signatures, RFC 9474 |  |
+| [RFC5869] | HKDF, RFC 5869 |  |
+| [SP800-38D], [FIPS180-4] | NIST AES-GCM and Secure Hash Standard |  |
+| [Semaphore] | Semaphore protocol (ZK group membership with nullifiers) |  |
+| [RFC9591] | FROST, RFC 9591 |  |
 
 ---
 

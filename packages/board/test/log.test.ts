@@ -339,9 +339,10 @@ test('self-audit detects store corruption', () => {
 test('redaction leaves tree and proofs untouched', () => {
   const { log, store } = newLog();
   prelude(log);
+  assert.ok(add(log, 'ballot').r.ok);
   const before = toHex(log.root());
-  assert.ok(log.redact(1).ok);
-  assert.equal(store.getEntry(1)?.body, null);
+  assert.ok(log.redact(5).ok);
+  assert.equal(store.getEntry(5)?.body, null);
   assert.equal(toHex(log.root()), before);
   assert.equal(log.redact(99).ok, false);
 });
@@ -375,4 +376,35 @@ test('registering a voter key authorises ballots by that voter only', () => {
   register(voter);
   assert.ok(add(log, 'ballot', voter).r.ok);
   void authorKeyId; void resolveAuthorKey;
+});
+
+// QV-ADR-015 / QV-16 §5.15: static-roll manifests need no roll_commit; tally_aggregate is optional (recomputed).
+test('grammar: static-roll manifest waives roll_commit only when manifest carries roll.root', () => {
+  const run = (manifestBody: string, types: Parameters<typeof mk>[0][]): string[] => {
+    const { log } = newLog();
+    const out: string[] = [];
+    types.forEach((t, i) => {
+      const e = mk(t, ORG, i === 0 ? manifestBody : undefined);
+      const r = log.append(e.headerBytes, e.body);
+      out.push(r.ok ? 'ok' : r.error.code);
+    });
+    return out;
+  };
+  const seq = ['manifest', 'ceremony_start', 'joint_key', 'election_open'] as const;
+  assert.equal(run('{"roll":{"root":"ab"}}', [...seq]).at(-1), 'ok', 'static roll: open without roll_commit');
+  for (const body of ['{"roll":{"scheme":"x"}}', 'not json', '{"roll":{"root":5}}']) {
+    assert.equal(run(body, [...seq]).at(-1), 'QV_BOARD_GRAMMAR', `roll_commit still required: ${body}`);
+  }
+  assert.equal(run('{"roll":{"root":"ab"}}', ['manifest', 'ceremony_start', 'election_open']).at(-1), 'QV_BOARD_GRAMMAR', 'joint_key still required');
+});
+
+test('grammar: tally_result needs election_close, not tally_aggregate; late aggregate refused', () => {
+  const { log } = newLog();
+  for (const t of ['manifest', 'ceremony_start', 'joint_key', 'roll_commit', 'election_open'] as const) assert.ok(add(log, t).r.ok);
+  assert.equal(add(log, 'tally_result').r.ok, false, 'result before close');
+  assert.ok(add(log, 'election_close').r.ok);
+  assert.ok(add(log, 'decryption_share').r.ok, 'share without aggregate entry');
+  assert.ok(add(log, 'tally_result').r.ok, 'result without aggregate entry');
+  const late = add(log, 'tally_aggregate').r;
+  assert.ok(!late.ok && late.error.code === 'QV_BOARD_GRAMMAR', 'aggregate after result');
 });

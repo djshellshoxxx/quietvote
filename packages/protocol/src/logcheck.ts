@@ -1,7 +1,8 @@
 // QV-16 Appendix C step 11 (C3), QV-05 V4/V7 and receipts (QV-05 §4.3, QV-18 §7-§9, §13) for the protocol verifier.
 // No cryptography of its own: Merkle/checkpoint/cosignature/receipt primitives are @quietvote/board's, signatures are
 // strict Ed25519 from @quietvote/crypto. Every function is total (never throws on hostile input) and offline.
-// Spec readings taken here are NOTES.md errata X-21..X-30.
+// Spec readings taken here are NOTES.md errata X-21..X-34 (X-31..X-34: notices / control entries, which are authenticated
+// and reported but never relax a gate).
 import { bytesToHex, hexToBytes, isHex, jcs, sha256, utf8 } from '@quietvote/crypto';
 import {
   MerkleTree, authorKeyId, bundleFromJson, bytesEqual, checkEntry, decodeHeader, hashLeaf, nonceKey, parseCheckpoint,
@@ -9,8 +10,10 @@ import {
   type Checkpoint, type EntryHeader, type EntryType, type LogBundle, type PolicyWitness, type WitnessPolicy,
 } from '@quietvote/board';
 import type { Finding, FindingClass } from './ballotlog.ts';
-import { validTs } from './manifest.ts';
-import { err, ok, type ErrorCode, type Hex, type Manifest, type Result } from './types.ts';
+import { manifestHash, validTs } from './manifest.ts';
+import { verifyMultiSig } from './records.ts';
+import { PROTO, S, check, lit, obj, str } from './schema.ts';
+import { err, ok, type ErrorCode, type Hex, type Manifest, type MultiSignedRecord, type Result } from './types.ts';
 
 const H = bytesToHex;
 
@@ -49,8 +52,14 @@ export function witnessAnchors(m: Manifest, caller?: readonly WitnessAnchor[]): 
   const conv = (ws: readonly WitnessAnchor[]): PolicyWitness[] | undefined => {
     const out: PolicyWitness[] = [];
     const names = new Set<string>();
+    // One key under two names would let a single witness count twice towards witness_quorum (witnessStatus dedupes by
+    // name). The manifest path already refuses duplicate keys (validateManifest); caller anchors must too (review 2026-10-21, SR-5).
+    const keys = new Set<string>();
     for (const w of ws) {
       if (typeof w?.name !== 'string' || !isHex(w.pk, 32) || names.has(w.name) || w.name.length === 0 || /[\s+]/.test(w.name)) return undefined;
+      const k = w.pk.toLowerCase();
+      if (keys.has(k)) return undefined;
+      keys.add(k);
       names.add(w.name);
       out.push({ name: w.name, alg: 'ed25519', publicKey: hexToBytes(w.pk, 32) });
     }
@@ -104,6 +113,36 @@ interface Binding {
   keys: Map<string, Uint8Array>;
   /** For voter envelopes: the voter key (hex). */
   voter?: string;
+  /** The record is a coordinator control record (`type: "control"`), checked by `checkControl` (X-31). */
+  control?: boolean;
+}
+
+// ---------------------------------------------------------------- notices and control entries (X-31..X-34)
+
+/**
+ * Control actions the verifier recognises and the QV-18 entry type each must travel in. The first seven are the record
+ * shape `packages/server` writes (`server/src/records.ts`: pause/resume/invalidate/security-notice per QV-ADR-022, plus
+ * audit-close/cancel/abort). `witness-waiver` and `extension` are the QV-18 §5.2 `notice` codes `witness_waiver` and
+ * `extension`, spelled like the other actions (X-31). Anything else is an unknown kind and fails closed (X-33).
+ */
+export const CONTROL_ENTRY: Readonly<Record<string, EntryType>> = {
+  pause: 'notice', resume: 'notice', invalidate: 'notice', 'security-notice': 'notice',
+  'witness-waiver': 'notice', extension: 'notice',
+  'audit-close': 'audit_close', cancel: 'election_cancel', abort: 'ceremony_abort',
+};
+export type NoticeKind = 'pause' | 'resume' | 'invalidate' | 'security-notice' | 'witness-waiver' | 'extension' | 'audit-close' | 'cancel' | 'abort';
+
+/**
+ * Closed schema (QV-16 §4 rule 7: unknown fields are an error) of a control record: QV-18 §5.2 notice body `{code, text}`
+ * carried as the server's `{proto, type: "control", action, reason?}`. No field can carry a quorum, a witness set or a
+ * time, so no notice can restate a gate (X-32).
+ */
+const CONTROL_RECORD = S.multiSigned(obj({ proto: lit(PROTO), type: lit('control'), action: str(32) }, { reason: str(256) }));
+
+/** An authenticated, well-formed notice/control entry. Recognised notices are reported; none is ever applied (X-32). */
+export interface NoticeRef {
+  seq: number;
+  kind: NoticeKind;
 }
 
 const MARKER_TYPE: Record<string, EntryType> = {
@@ -159,6 +198,14 @@ class Keys {
       const sig = o['sig'] as { key?: unknown } | undefined;
       return { types: ['tally_result'], keys: hex32(sig?.key) ? this.one(sig.key) : new Map() };
     }
+    if (type === 'control') {
+      // X-31: control/notice records are coordinator records. QV-18 REQ-052 (waiver "signed by the organizer"),
+      // QV-ADR-022 / QV-ADR-P12-2 (the operator may only hold or notify, never pause, extend or invalidate): only a
+      // manifest coordinator key may author the entry. Unknown actions get no allowed type (reported by checkControl).
+      const a = body['action'];
+      const t = typeof a === 'string' && Object.hasOwn(CONTROL_ENTRY, a) ? CONTROL_ENTRY[a] : undefined;
+      return t === undefined ? { keys: this.coord, control: true } : { types: [t], keys: this.coord, control: true };
+    }
     const keys = new Map([...this.coord, ...[...this.trustee.values()], ...this.extra]);
     return { keys };
   }
@@ -178,6 +225,10 @@ export interface LogStructure {
   headers: (EntryHeader | undefined)[];
   bindings: (Binding | undefined)[];
   records: Map<number, unknown>;
+  /** Authenticated, well-formed control/notice entries in seq order (X-31). Reported only, never applied (X-32). */
+  notices: NoticeRef[];
+  /** Seq of the first bound `election_close` entry, if any (used when the protocol phases are unknown). */
+  closeSeq?: number;
 }
 
 const fnd = (code: ErrorCode, detail: string, seq?: number, cls: FindingClass = 'F'): Finding =>
@@ -203,7 +254,7 @@ export function verifyLogStructure(
   const logPk = hexToBytes(m.bb.log_pk, 32);
   const tree = new MerkleTree();
   const out: LogStructure = {
-    ok: false, findings, warnings, origin, logPk, tree, checkpoints: [], headers: [], bindings: [], records: new Map(),
+    ok: false, findings, warnings, origin, logPk, tree, checkpoints: [], headers: [], bindings: [], records: new Map(), notices: [],
   };
   const done = (): LogStructure => {
     out.ok = !findings.some((f) => f.cls === 'F');
@@ -225,6 +276,7 @@ export function verifyLogStructure(
   if (!bytesEqual(b.policy.logPublicKey, logPk)) F('E_LOG_BINDING', 'log export names a log key other than manifest bb.log_pk');
 
   const keys = new Keys(m, roll, ev.extraAuthorKeys ?? []);
+  const mh = manifestHash(m);
   const bySeq = new Map<number, unknown>();
   for (const e of log) bySeq.set(e.seq, e.entry);
   out.records = bySeq;
@@ -270,6 +322,16 @@ export function verifyLogStructure(
     if (seen.has(nk)) F('E_LOG_BINDING', 'duplicate (author, type, nonce)', i);
     seen.add(nk);
     out.headers[i] = h;
+    if (bind.control === true) {
+      const n = checkControl(m, mh, rec, i, F);
+      if (n !== undefined) out.notices.push(n);
+    } else if (h.type === 'notice' && bind.types === undefined) {
+      // X-33: a `notice` entry must carry a DKG round marker (X-22) or a control record. Anything else is a notice kind
+      // this verifier cannot interpret, so it fails closed rather than being skipped (QV-18 §5.2 closed code list,
+      // QV-18 REQ-006: server acceptance is never evidence).
+      F('E_LOG_BINDING', 'notice entry carries no recognised notice record (unknown notice kind: fail closed)', i);
+    }
+    if (h.type === 'election_close' && out.closeSeq === undefined) out.closeSeq = i;
   }
   if (n === 0) F('E_LOG_FORMAT', 'log export is empty');
   if (b.treeSize !== n || (n > 0 && !bytesEqual(b.root, tree.root()))) F('E_LOG_FORMAT', 'log export tree_size/root differ from its entries');
@@ -313,6 +375,37 @@ export function verifyLogStructure(
   return done();
 }
 
+/**
+ * X-31..X-33: a control/notice record whose header already verified under a coordinator key (Keys.bind). Fails closed on
+ * every deviation: closed schema (QV-16 §4 rule 7), known action (QV-18 §5.2 lists the notice codes; unknown kinds are
+ * never skipped), and >= m valid coordinator record signatures over sig-record(manifest_hash, "control", body) (X-3
+ * coordinator-record convention, same scope as the server's control records; QV-18 REQ-052 "signed by the organizer";
+ * QV-ADR-022: never the operator). A header signature alone does not authorise a notice: both must hold.
+ */
+function checkControl(
+  m: Manifest,
+  mh: Uint8Array,
+  rec: unknown,
+  seq: number,
+  F: (code: ErrorCode, d: string, seq?: number) => void,
+): NoticeRef | undefined {
+  const e = check(CONTROL_RECORD, rec);
+  if (e !== null) {
+    F('E_LOG_FORMAT', `control/notice record malformed (closed schema; a notice cannot carry a quorum, witness set or time): ${e}`, seq);
+    return undefined;
+  }
+  const r = rec as MultiSignedRecord<{ type: string; action: string }>;
+  if (!Object.hasOwn(CONTROL_ENTRY, r.body.action)) {
+    F('E_LOG_BINDING', `unknown notice kind '${r.body.action}': fail closed (QV-18 §5.2)`, seq);
+    return undefined;
+  }
+  if (!verifyMultiSig(mh, r, m.coordinator.keys, m.coordinator.m)) {
+    F('E_LOG_BINDING', `notice '${r.body.action}' lacks ${m.coordinator.m} valid coordinator record signature(s) (QV-18 REQ-052, QV-ADR-022)`, seq);
+    return undefined;
+  }
+  return { seq, kind: r.body.action as NoticeKind };
+}
+
 /** Parses a note and requires origin + log signature. Returns the reason string on failure. */
 function signedNote(note: string, origin: string, logPk: Uint8Array): Checkpoint | string {
   const p = parseCheckpoint(note);
@@ -349,12 +442,76 @@ export interface WitnessOutcome {
   windowFailed: boolean;
 }
 
+/**
+ * X-32..X-34: report every authenticated notice/control entry; apply none of them. No notice can lower the witness quorum,
+ * replace the witness set, waive a QV-18 §9.4 gate or move the QV-16 §5.14.3 close bound, because nothing in this module
+ * reads a notice when evaluating those checks (the gates read only the manifest and the tree heads). What a notice can do
+ * is make the verdict stricter: an extension sequenced after election-close is an attempted retroactive extension, F.
+ */
+function applyNotices(
+  ls: LogStructure,
+  seqs: PhaseSeqs | undefined,
+  k: number,
+  F: (code: ErrorCode, d: string, seq?: number) => void,
+  caveats: string[],
+  res: WitnessOutcome,
+): { waived: boolean; extended: boolean } {
+  let waived = false;
+  let extended = false;
+  const close = seqs?.close ?? ls.closeSeq;
+  for (const n of ls.notices) {
+    switch (n.kind) {
+      case 'witness-waiver':
+        // QV-18 REQ-052: "verifiers shall surface it prominently". QV-18 §9.4 lets a waiver unblock the *server's* phase
+        // transition; the verifier's gates (QV-18 §9.4, §13 step 6; QV-16 App. C) have no waiver input (X-32).
+        waived = true;
+        caveats.push(`WITNESS WAIVER (coordinator notice, seq ${n.seq}): reported, not applied; every witness gate is still evaluated against manifest witness_quorum ${k} (QV-18 REQ-052, §9.4)`);
+        break;
+      case 'extension':
+        extended = true;
+        // QV-03 §5.5: an extension is allowed only before close_at; QV-ADR-P18-3: the election_close seq is the cutoff.
+        if (close !== undefined && n.seq > close) {
+          res.windowFailed = true;
+          F('E_TIME_WINDOW', `extension notice after election-close (seq ${close}): a closed window cannot be extended retroactively (QV-03 §5.5, QV-ADR-P18-3)`, n.seq);
+        }
+        // QV-16 §5.14.3: the close bound is voting_close +/- clock_skew_s unless the manifest permits extensions via a signed
+        // extension record "not defined in suite v1" (QV-16 OQ-9: none in v1).
+        caveats.push(`EXTENSION notice (seq ${n.seq}): not applied; suite v1 defines no extension record, the close bound stays voting_close +/- clock_skew_s (QV-16 §5.14.3, OQ-9)`);
+        break;
+      case 'pause':
+      case 'resume':
+        // QV-03 §9 credits halted time to close_at; QV-16 §5.14.3 has no such input and QV-05 V13 is not implemented.
+        extended = true;
+        caveats.push(`${n.kind.toUpperCase()} control entry (seq ${n.seq}): not interpreted; it never moves voting_close (QV-16 §5.14.3; QV-03 §9 halt credit not applied)`);
+        break;
+      case 'invalidate':
+        caveats.push(`INVALIDATE control entry (seq ${n.seq}): the coordinators declared this election invalid (QV-ADR-022); control entries are not interpreted by this verifier`);
+        break;
+      case 'security-notice':
+        caveats.push(`SECURITY NOTICE control entry (seq ${n.seq}) (QV-ADR-022)`);
+        break;
+      case 'cancel':
+      case 'abort':
+        caveats.push(`${n.kind} control entry (seq ${n.seq}): terminal per QV-18 §5.2; not interpreted by this verifier`);
+        break;
+      case 'audit-close':
+        break;
+    }
+  }
+  return { waived, extended };
+}
+
 export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence, seqs: PhaseSeqs | undefined): WitnessOutcome {
   const findings: Finding[] = [];
   const caveats: string[] = [];
   const res: WitnessOutcome = { status: 'not_run', findings, caveats, timesWitnessed: false, windowFailed: false };
   const F = (code: ErrorCode, d: string, seq?: number, cls: FindingClass = 'F'): void => void findings.push(fnd(code, d, seq, cls));
+  // X-32: the threshold is the hash-pinned manifest's, always (QV-18 REQ-020: "witnessed status from manifest only").
+  // Nothing below reads a notice: notices are evaluated first and only ever add findings/caveats.
   const k = m.bb.witness_quorum;
+  const { waived, extended } = applyNotices(ls, seqs, k, F, caveats, res);
+  const gateNote = waived ? ' (a witness_waiver notice never relaxes this gate: X-32)' : '';
+  const closeNote = extended ? ' (extension/pause notices never move voting_close: X-32)' : '';
   if (k === 0) {
     caveats.push('NOT WITNESSED: manifest witness_quorum = 0 (QV-18 REQ-023); tree heads and election times are operator-attested only');
     return res;
@@ -363,7 +520,7 @@ export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence,
   if (source === 'caller') caveats.push('witness keys supplied by the verifier caller (manifest lists none)');
   if (m.bb.witnesses !== undefined && ev.witnesses !== undefined && ev.witnesses.length > 0) caveats.push('caller witness keys ignored: the manifest lists its witnesses');
   if (anchors.length < k) {
-    F('E_LOG_WITNESS', `witness_quorum ${k} cannot be met: ${anchors.length} trusted witness key(s)`);
+    F('E_LOG_WITNESS', `witness_quorum ${k} cannot be met: ${anchors.length} trusted witness key(s)${gateNote}`);
     res.status = 'fail';
     return res;
   }
@@ -392,13 +549,13 @@ export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence,
   // QV-18 §9.4: election-open only after a quorum-witnessed head covering every setup commitment it binds, and not the open itself.
   if (inRange(seqs.setupEnd + 1, seqs.open) === undefined) {
     failed = true;
-    F('E_LOG_WITNESS', `no quorum-witnessed tree head of size in [${seqs.setupEnd + 1}, ${seqs.open}] before election-open`, seqs.open);
+    F('E_LOG_WITNESS', `no quorum-witnessed tree head of size in [${seqs.setupEnd + 1}, ${seqs.open}] before election-open${gateNote}`, seqs.open);
   }
   // QV-18 §9.4: the final ballot set (size >= seq(close)) witnessed before the tally record.
   if (seqs.tally !== undefined) {
     if (inRange(seqs.close, seqs.tally) === undefined) {
       failed = true;
-      F('E_LOG_WITNESS', `no quorum-witnessed tree head of size in [${seqs.close}, ${seqs.tally}] between close and tally`, seqs.tally);
+      F('E_LOG_WITNESS', `no quorum-witnessed tree head of size in [${seqs.close}, ${seqs.tally}] between close and tally${gateNote}`, seqs.tally);
     }
     if (inRange(seqs.tally + 1, Number.MAX_SAFE_INTEGER) === undefined) caveats.push('NOT WITNESSED: tally record');
   } else if (inRange(seqs.close, Number.MAX_SAFE_INTEGER) === undefined) caveats.push('NOT WITNESSED: final ballot set (no tally yet)');
@@ -438,7 +595,7 @@ export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence,
     timesOk = false;
     res.windowFailed = true;
     failed = true;
-    F('E_TIME_WINDOW', 'election-close not witnessed within voting_close +/- clock_skew_s (early close or late cutoff)', seqs.close);
+    F('E_TIME_WINDOW', `election-close not witnessed within voting_close +/- clock_skew_s (early close or late cutoff)${closeNote}`, seqs.close);
   }
   res.timesWitnessed = timesOk;
   res.status = failed ? 'fail' : 'pass';

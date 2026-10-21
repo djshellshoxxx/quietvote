@@ -100,6 +100,13 @@ export async function buildSite(outDir: string, opts: { version?: string; connec
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(join(outDir, 'assets'), { recursive: true });
   const assets: Asset[] = [];
+  const emitNamed = (file: string, data: Uint8Array): Asset => {
+    const path = `assets/${file}`;
+    writeFileSync(join(outDir, path), data);
+    const a: Asset = { path, sha256: hashOf('sha256', data, 'hex'), sha384: hashOf('sha384', data, 'hex'), integrity: sri(data), size: data.length };
+    assets.push(a);
+    return a;
+  };
   const emit = (name: string, ext: string, data: Uint8Array | string): Asset => {
     const sha256 = hashOf('sha256', data, 'hex');
     const path = `assets/${name}.${sha256.slice(0, 12)}.${ext}`;
@@ -108,10 +115,17 @@ export async function buildSite(outDir: string, opts: { version?: string; connec
     assets.push(a);
     return a;
   };
-  const app = await esbuild({ ...common, entryPoints: { app: 'src/main.ts' }, outdir: 'out' });
+  // Code splitting: dynamic import() boundaries (translated catalogs, results chart) become chunks next to the entry. esbuild names
+  // chunks by content hash, so imports between files stay valid; the entry is renamed by its own hash below and imports its chunks
+  // by relative path (all live in assets/; esbuild names shared chunks `chunk-<hash>.js`). Chunks are listed in asset-manifest.json like every other asset.
+  const app = await esbuild({ ...common, splitting: true, chunkNames: '[name]-[hash]', entryPoints: { app: 'src/main.ts' }, outdir: 'out' });
   const worker = await esbuild({ ...common, entryPoints: { 'seal-worker': 'src/worker/seal-worker.ts' }, outdir: 'out' });
   const css = readFileSync(join(PKG, 'static', 'styles.css'));
-  const js = emit('app', 'js', app.outputFiles![0]!.contents);
+  const entry = app.outputFiles!.find((f) => /[\\/]app\.js$/.test(f.path));
+  if (entry === undefined) throw new Error('entry bundle missing from build output');
+  const chunks = app.outputFiles!.filter((f) => f !== entry).sort((x, y) => (x.path < y.path ? -1 : 1));
+  for (const c of chunks) emitNamed(c.path.split(/[\\/]/).pop()!, c.contents);
+  const js = emit('app', 'js', entry.contents);
   const wk = emit('seal-worker', 'js', worker.outputFiles![0]!.contents);
   const cs = emit('styles', 'css', css);
   const buildId = hashOf('sha256', assets.map((a) => a.sha256).sort().join('\n'), 'hex').slice(0, 12);

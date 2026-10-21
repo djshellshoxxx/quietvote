@@ -162,7 +162,7 @@ Because the share is **the only copy of `sk_i`**, lost shares reduce absence tol
 
 1. **Primary defence: threshold slack** (`n−t ≥ 1`). Prefer this to backups.
 2. **Own-device redundancy** (optional): a second copy of the *encrypted bundle* on a USB stick in a different physical location. Counts as a "backup" in transcript metadata. The encrypted bundle carries the same compromise surface as the passphrase — more copies mean more theft chances for the file but not for the passphrase.
-3. **Shamir split of the bundle passphrase / bundle decryption key** (Could, REQ-024): SLIP-0039 mnemonic shares (e.g. 2-of-3) given to the trustee's trusted people. Protects against trustee forgetting the passphrase; each split makes a new custody group. SLIP-0039 details `[UNVERIFIED: spec not re-fetched 2026-10-21]`. Not used to split `sk_i` itself, because that would introduce a second threshold scheme on top of the election's.
+3. **Shamir split of the bundle passphrase / bundle decryption key** (Could, REQ-024): SLIP-0039 mnemonic shares (e.g. 2-of-3) given to the trustee's trusted people. Protects against trustee forgetting the passphrase; each split makes a new custody group. SLIP-0039 details. Not used to split `sk_i` itself, because that would introduce a second threshold scheme on top of the election's.
 4. **Paper card** (§13): printed, containing the passphrase (generated words) and the bundle QR/hash only if the bundle fits; stored in an envelope in a safe place. Mandatory suggestion; not a mandatory action.
 
 Not supported (and warned): cloud sync (Dropbox, iCloud) of bundles; password-manager storage is acceptable for passphrase only if the manager is not the same place as the file; emailing bundles.
@@ -263,7 +263,7 @@ Time: 90 min for n=5 including hash checks; 20 min active per trustee.
 
 ### 8.3 Out-of-band fingerprint comparison (SAS)
 
-- Fingerprint = first 66 bits of `F`, rendered as 6 words from a 2048-word list (PGP-style / BIP39-sized list `[UNVERIFIED: wordlist choice not fixed; use a published 2048-word list with unique 4-letter prefixes]`) plus the first 8 hex bytes for technical users.
+- Fingerprint = first 66 bits of `F`, rendered as 6 words from a 2048-word list (BIP39-sized list; note the PGP word list is two 256-word lists, one word per byte, and cannot give 66 bits in 6 words `[UNVERIFIED: wordlist choice not fixed; use a published 2048-word list with unique 4-letter prefixes]`) plus the first 8 hex bytes for technical users.
 - Comparison protocol: trustees A and B on a call (voice recognition is a weak check; video preferred): A reads words 1–3, B reads 4–6, each checks the other half against their own screen. Any mismatch ⇒ **stop**; report; do not confirm.
 - At least one other **trustee** must be compared with (not only the organizer) and the client records `compared_with: [trustee_ids]` locally for the transcript (self-attested; non-claim).
 - 66 bits ≈ resistant to second-preimage in an interactive human setting (attacker must find a colliding joint key in advance; ceremony state is public beforehand so precomputation is limited); a mismatch protects against operator substitution of the `joint_pk` presented to a specific trustee, which the log would otherwise have to catch by the trustee verifying their own computation — the client does verify its own computation, so the SAS is defence in depth against a modified client/UI.
@@ -504,7 +504,7 @@ Design principle: **the trustee should never need to know the words "polynomial"
 | # | Question | Owner | Proposed default | Resolution |
 |---|---|---|---|---|
 | Q1 | Does QV-16 use `age` or ECIES (ristretto255/X25519) for `enc_share`? | QV-16 author | QV-16's own ECIES with domain separation; `age` only for local bundles | Pending (QV-16) |
-| Q2 | Which `age` implementation to depend on (JS port, `rage` WASM, shelling to `age` binary)? Adds dependency vs ADR-003 | Protocol lead | Use a small audited JS implementation if available; else CLI interop via spawning `age` for hardware plugins | Pending; `[UNVERIFIED]` ecosystem status |
+| Q2 | Which `age` implementation to depend on (JS port, `rage` WASM, shelling to `age` binary)? Adds dependency vs ADR-003 | Protocol lead | Use a small JS implementation with published third-party audit reports if available; else CLI interop via spawning `age` for hardware plugins | Pending; `[UNVERIFIED]` ecosystem status |
 | Q3 | Proactive resharing / trustee replacement after open | Research (QV-21) | Out of v1; document limitation | Deferred |
 | Q4 | Word list for SAS | UX | Published 2048-word list | Pending |
 | Q5 | Mandatory air-gap for elections above some size/stake? | Governance (QV-03) | Recommend, not require | Pending |
@@ -528,6 +528,6 @@ Design principle: **the trustee should never need to know the words "polynomial"
 
 - age file encryption format (C2SP) — https://github.com/C2SP/C2SP/blob/main/age.md (fetched: X25519 recipient, scrypt recipient with work-factor log2 argument and sole-recipient rule, plugin mechanism for hardware-tagged recipients, ChaCha20-Poly1305 64 KiB STREAM payload).
 - C2SP tlog-witness / tlog-checkpoint (witness quorum gating; see QV-18 §24).
-- Pedersen, *A Threshold Cryptosystem without a Trusted Party*, EUROCRYPT '91 `[UNVERIFIED: not re-fetched]`; Feldman, *A Practical Scheme for Non-interactive Verifiable Secret Sharing*, FOCS '87 `[UNVERIFIED]`; Gennaro, Jarecki, Krawczyk, Rabin, *Secure Distributed Key Generation for Discrete-Log Based Cryptosystems*, J. Cryptology 2007 `[UNVERIFIED]`. Exact DKG selection and analysis: QV-16.
-- Shamir, *How to share a secret*, CACM 1979 `[UNVERIFIED]`; SLIP-0039 (Shamir's Secret-Sharing for Mnemonic Codes) — https://github.com/satoshilabs/slips/blob/master/slip-0039.md `[UNVERIFIED: not fetched]`.
-- Adida, *Helios: Web-based Open-Audit Voting*, USENIX Security 2008 `[UNVERIFIED]`; ElectionGuard specification (key ceremony) — https://github.com/microsoft/electionguard `[UNVERIFIED: not fetched]`.
+- Pedersen, *A Threshold Cryptosystem without a Trusted Party*, EUROCRYPT '91; Feldman, *A Practical Scheme for Non-interactive Verifiable Secret Sharing*, FOCS '87; Gennaro, Jarecki, Krawczyk, Rabin, *Secure Distributed Key Generation for Discrete-Log Based Cryptosystems*, J. Cryptology 2007 `[UNVERIFIED]`. Exact DKG selection and analysis: QV-16.
+- Shamir, *How to share a secret*, CACM 1979; SLIP-0039 (Shamir's Secret-Sharing for Mnemonic Codes) — https://github.com/satoshilabs/slips/blob/master/slip-0039.md.
+- Adida, *Helios: Web-based Open-Audit Voting*, USENIX Security 2008; ElectionGuard specification (key ceremony) — https://github.com/microsoft/electionguard.

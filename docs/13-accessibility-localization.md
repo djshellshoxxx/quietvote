@@ -344,7 +344,7 @@ Threats: (i) ballot content (proposal text, options) sent to translators or mach
 - Assumes the QV-10 flows are the only interactive surfaces in MVP.
 - Assumes no third-party translation/MT service is acceptable (privacy stance).
 - The CLI voter provides the accessible fallback path for environments where browser limitations bite; its parity is a requirement, not a nicety.
-- ICU MessageFormat 2 (Unicode MF2) is a newer standard that is stabilizing; v1 syntax chosen for tooling maturity; migration tracked (open question Q-13-5). `[UNVERIFIED: MF2 status — check Unicode CLDR release notes]`.
+- Unicode MessageFormat 2 (MF2) was declared Stable in CLDR 47 (13 March 2025); v1 syntax is chosen for tooling maturity, not because MF2 is unstable; migration tracked (open question Q-13-5). `[VERIFIED: Unicode blog 2025/03 and CLDR 47 release notes, per part-2-standards-crypto.md S15]`.
 
 ## 16. Proposed ADRs
 
@@ -379,4 +379,4 @@ Threats: (i) ballot content (proposal text, options) sent to translators or mach
 - ICU MessageFormat — https://unicode-org.github.io/icu/userguide/format_parse/messages/ ; Unicode CLDR plural rules https://cldr.unicode.org `[UNVERIFIED in session]`.
 - BCP 47 / RFC 5646; RFC 3339 (timestamps); IANA Time Zone Database.
 - Unicode UAX #9 (Bidirectional Algorithm) and UTR #36/#39 for confusables/Trojan Source (Boucher & Anderson, "Trojan Source", 2021) `[UNVERIFIED in session]`.
-- W3C COGA — Making Content Usable for People with Cognitive and Learning Disabilities `[UNVERIFIED in session]`.
+- W3C COGA — Making Content Usable for People with Cognitive and Learning Disabilities.

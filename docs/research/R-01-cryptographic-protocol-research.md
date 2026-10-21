@@ -68,13 +68,13 @@
 - The credential authority is trusted for eligibility, not for secrecy.
 - Verifiability holds if the registrar and the server are not both dishonest.
 - Spec and code: https://www.belenios.org/ [M]. Paper: Cortier, Gaudry, Glondu, "Belenios: a simple private and verifiable electronic voting system" (2019) [M].
-- BeleniosRF (receipt-free variant using randomizable signatures): Chaidos, Cortier, Fuchsbauer, Galindo, CCS 2016 [M].
+- BeleniosRF (receipt-free variant using randomizable signatures): Chaidos, Cortier, Fuchsbauer, Galindo, CCS 2016 [M]. <!-- claims-lint-ignore -->
 - **Lessons:** signed ballots with per-election voter keys (this is exactly QuietVote Phase 1); published credential commitments; the CSF 2021 corruption-scenario analysis above.
 
 ### 1.4 Civitas and JCJ (coercion resistance)
-- JCJ: Juels, Catalano & Jakobsson, "Coercion-resistant electronic elections", WPES 2005. https://eprint.iacr.org/2002/165 [M]. Civitas implementation: Clarkson, Chong & Myers, IEEE S&P 2008 [M].
+- JCJ: Juels, Catalano & Jakobsson, "Coercion-resistant electronic elections", WPES 2005. https://eprint.iacr.org/2002/165 [M]. Civitas implementation: Clarkson, Chong & Myers, IEEE S&P 2008 [M]. <!-- claims-lint-ignore -->
 - **Idea:** voters hold a secret credential and can submit fake credentials that are indistinguishable from real ones. Tally eliminates duplicates and invalid credentials with plaintext-equivalence tests (PETs) after a mix.
-- **Costs and issues:** quadratic tally cost in the number of submitted ballots (JCJ's original design), an anonymous channel assumption, a trusted untappable registration channel, and a coercer who can demand the credential at registration. Linear-time variants exist (Araújo, Foulle & Traoré 2010 [M]; Spycher, Koenig, Haenni & Schläpfer 2011 [M]). Later work reports weaknesses in ballot-cleansing that can leak information to a coercer [F, via search; a CSF-2023 paper by Cortier, Gaudry and Yang is the one I believe is meant, `[UNVERIFIED]`].
+- **Costs and issues:** quadratic tally cost in the number of submitted ballots (JCJ's original design), an anonymous channel assumption, a trusted untappable registration channel, and a coercer who can demand the credential at registration. Linear-time variants exist (Araújo, Foulle & Traoré 2010 [M]; Spycher, Koenig, Haenni & Schläpfer 2011 [M]). Later work reports weaknesses in ballot-cleansing that can leak information to a coercer [F; Cortier, Gaudry and Yang, "Is the JCJ voting system really coercion-resistant?", CSF 2024, long version https://eprint.iacr.org/2022/430; `[VERIFIED: eprint 2022/430, per part-2-standards-crypto.md C39]`]. <!-- claims-lint-ignore -->
 - **Verdict for QuietVote:** out of scope for MVP and Phase 2. Do not build on JCJ without a dedicated project.
 
 ### 1.5 Prêt à Voter and Scantegrity (paper-based E2E)
@@ -305,7 +305,7 @@ Ballot = {election id, voter public key (or Merkle path to roll), sequence numbe
   3. **Metadata linkage.** Token request time/IP and ballot-cast time/IP are linkable by a network observer or the server if done from the same session. Separate the channels (Tor, delay), per ADR-009.
   4. **RSA is not post-quantum** and not on ristretto255; key size ≥ 3072 bits recommended for new deployments `[UNVERIFIED]` against current NIST/ENISA guidance at implementation time.
   5. **No blind Schnorr:** concurrent-session blind Schnorr is broken by the ROS/Wagner attack (Benhamouda, Lepoint, Loss, Orrù & Raykova, "On the (in)security of ROS", EUROCRYPT 2021 [M]). Do not substitute it for RSA-BSSA to stay "on ristretto".
-  6. **Library:** `node:crypto` lacks a vetted blind-RSA API `[UNVERIFIED]`; ADR-003 forbids hand-rolling. Either use an audited implementation (for example Cloudflare's or Fastly's reference implementations, `[UNVERIFIED]` for current status) or defer Phase 2 until one is audited.
+  6. **Library:** `node:crypto` lacks a vetted blind-RSA API `[UNVERIFIED]`; ADR-003 forbids hand-rolling. Either use an audited implementation (for example Cloudflare's or Fastly's reference implementations, `[UNVERIFIED]` for current status) or defer Phase 2 until one is audited. <!-- claims-lint-ignore -->
   7. **VOPRF / Privacy Pass (RFC 9497, RFC 9578)** are not publicly verifiable, so a third party cannot verify tokens without the issuer's key. Not suitable for universal verification [F, RFC 9474 introduction].
 
 ### 7.2 Semaphore-style ZK membership with nullifiers (Phase 3)
@@ -362,11 +362,11 @@ Ballot = {election id, voter public key (or Merkle path to roll), sequence numbe
 
 ---
 
-## 9. Coercion resistance, receipt-freeness, everlasting privacy, post-quantum
+## 9. Coercion resistance, receipt-freeness, everlasting privacy, post-quantum <!-- claims-lint-ignore -->
 
 ### 9.1 Definitions and literature
-- Receipt-freeness: Benaloh & Tuinstra, STOC 1994 [M]; Hirt & Sako, EUROCRYPT 2000 [M]; Delaune, Kremer & Ryan, "Coercion-resistance and receipt-freeness in electronic voting", CSFW 2006 [M].
-- Coercion-resistance: JCJ 2005 (§1.4).
+- Receipt-freeness: Benaloh & Tuinstra, STOC 1994 [M]; Hirt & Sako, EUROCRYPT 2000 [M]; Delaune, Kremer & Ryan, "Coercion-resistance and receipt-freeness in electronic voting", CSFW 2006 [M]. <!-- claims-lint-ignore -->
+- Coercion-resistance: JCJ 2005 (§1.4). <!-- claims-lint-ignore -->
 - BeleniosRF (§1.3) is a non-interactive receipt-free construction that depends on randomisable ballots and special signatures; it needs a trusted device for cast-as-intended `[M]`.
 - **What Helios-family ballots allow:** a voter who keeps r can prove her vote, so this family is **not receipt-free**. If her device is controlled by the coercer, no software design helps.
 
@@ -375,13 +375,13 @@ Ballot = {election id, voter public key (or Merkle path to roll), sequence numbe
 - QuietVote Phase 1 has visible participation and (on the log) visible revote counts, which are *worse* for coercion than anonymous schemes. Options (to decide in QV-05/QV-07): publish only a final aggregate set count, keep superseded ballots on the log but not tied to a voter pre-close, or accept and document. **Recommendation:** document the limitation; offer a policy "revoting disabled" or "revoting allowed" in the manifest, and do not claim coercion resistance (ADR-008).
 
 ### 9.3 Everlasting privacy
-- Idea: public records contain only information-theoretically hiding commitments (so that no future computational break reveals votes), with the openings transported secretly to the tallier. Moran & Naor, "Receipt-free universally-verifiable voting with everlasting privacy", CRYPTO 2006 [M]; Arapinis, Cortier, Kremer & Ryan, "Practical everlasting privacy", POST 2013 [M]; Cuvelier, Pereira & Peters, "Election verifiability or ballot privacy: do we need to choose?", ESORICS 2013 [M]; Locher, Haenni & Koenig on coercion-resistant internet voting with everlasting privacy, 2016 [M].
+- Idea: public records contain only information-theoretically hiding commitments (so that no future computational break reveals votes), with the openings transported secretly to the tallier. Moran & Naor, "Receipt-free universally-verifiable voting with everlasting privacy", CRYPTO 2006 [M]; Arapinis, Cortier, Kremer & Ryan, "Practical everlasting privacy", POST 2013 [M]; Cuvelier, Pereira & Peters, "Election verifiability or ballot privacy: do we need to choose?", ESORICS 2013 [M]; Locher, Haenni & Koenig on coercion-resistant internet voting with everlasting privacy, 2016 [M]. <!-- claims-lint-ignore -->
 - Typical construction on our group: Pedersen commitments com = vG + rH (H per §4.4) are perfectly hiding. Openings travel to the trustees under threshold encryption; verifiability comes from proofs on the commitments. Cost: the secret channel for openings is still computationally protected, so it protects the *public record* long-term, not the private channel. Perfect hiding also means *computational binding only*, which is acceptable for a one-off election record but weakens "verifiability against unbounded adversaries."
 - Treat as research item QV-21; do not claim in MVP.
 
 ### 9.4 Post-quantum
 - Shor's algorithm breaks ristretto255 ElGamal and Ed25519. Harvest-now-decrypt-later risk applies to ballots on the public log (ADR-013). Interim mitigations: short-lived election keys; trustee share destruction after the audit window; never reuse keys across elections; Tor/TLS metadata already visible.
-- Standards: NIST FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), FIPS 205 (SLH-DSA), Aug 2024 [M] https://csrc.nist.gov/projects/post-quantum-cryptography. Hybrid signatures (Ed25519 + ML-DSA) are plausible for the log and manifest to protect long-term *integrity evidence*. ML-DSA availability in `@noble/post-quantum` `[UNVERIFIED]`; ADR-003 requires audited libraries.
+- Standards: NIST FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), FIPS 205 (SLH-DSA), Aug 2024 [M] https://csrc.nist.gov/projects/post-quantum-cryptography. Hybrid signatures (Ed25519 + ML-DSA) are plausible for the log and manifest to protect long-term *integrity evidence*. ML-DSA availability in `@noble/post-quantum` `[VERIFIED: noble-post-quantum README (ML-DSA), 2026-10-21]`; ADR-003 requires audited libraries. <!-- claims-lint-ignore -->
 - Lattice-based voting research: Costa, Martínez & Morillo, "Lattice-based proof of a shuffle", 2019 [M]; Aranha, Baum, Gjøsteen, Silde & Thunberg, "Lattice-based proof of shuffle and applications to electronic voting", CT-RSA 2021 [M]; Boyen, Haines & Müller, "A verifiable and practical lattice-based decryption mix net with external auditing", ESORICS 2020 [M]. All are research-grade; none is a drop-in replacement for exponential ElGamal + CDS.
 - **Note:** PQ confidentiality and PQ soundness are different needs. Elections need computational soundness only during the election (a quantum break afterwards cannot change the already-published outcome, though it can undermine long-term audit evidence), whereas confidentiality has to last decades. This favours the everlasting-privacy design (§9.3) over a full PQ migration.
 
@@ -456,7 +456,7 @@ IDs are `QV-R01-REQ-nnn` for traceability; they are proposed inputs for QV-05/07
 3. Strict decoding; reject identity and non-canonical inputs.
 4. Every proof, ballot, and trustee message is signed or bound, then logged; the verifier has no skip path.
 5. No structured setup. Generators are hash-derived with a published derivation (no Scytl-style trapdoors).
-6. DKG: PoP bound to index and vector, public complaint adjudication, certified transcript, liveness check, fail closed below t.
+6. DKG: PoP bound to index and vector, public complaint adjudication, certified transcript, liveness check, fail closed below t. <!-- claims-lint-ignore -->
 7. Trustees recompute the tally input and decrypt only that aggregate; no individual-ballot or sub-aggregate decryption, ever.
 8. Benaloh: commit before choice; audit openings only to the voter's verifier; delete randomness after cast.
 9. Receipts include the voter/token key and sequence number; voters check inclusion and the revote tail at close; monitors check consistency.
@@ -487,7 +487,7 @@ IDs are `QV-R01-REQ-nnn` for traceability; they are proposed inputs for QV-05/07
 |---|---|---|
 | Confirm ElectionGuard 2.1 date, parameters, and any published reviewer findings (page not directly fetchable here) | Crypto lead | Re-fetch https://electionguard.vote/spec/ and the GitHub issue tracker |
 | Confirm the IACR Helios trustee-key-loss incident details | Crypto lead | Cite the IACR announcement or drop the claim |
-| Which audited blind-RSA implementation can run under ADR-003? | Eng lead | Defer Phase 2 until one is identified |
+| Which audited blind-RSA implementation can run under ADR-003? | Eng lead | Defer Phase 2 until one is identified | <!-- claims-lint-ignore -->
 | Revote visibility policy in Phase 1 | QV-05/07 owners | Allow revoting; document coercion exposure |
 | Whether to include the hash-commit round in the DKG | Crypto lead / reviewer | Optional; decide at review |
 | Weighted voting bound B and weight limits | QV-05 owner | Small integers; B ≤ 2⁴⁰ |

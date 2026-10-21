@@ -19,6 +19,10 @@ export class ElectionPool {
     this.env = env;
   }
 
+  openCount(): number {
+    return this.open.size;
+  }
+
   async get(id: string): Promise<ElectionRuntime | undefined> {
     const hit = this.open.get(id);
     if (hit && !hit.poisoned) {

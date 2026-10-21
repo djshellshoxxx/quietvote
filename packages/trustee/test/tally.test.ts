@@ -1,6 +1,6 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { baseMul, bytesToHex, hexToBytes, pointAdd, pointToBytes } from '@quietvote/crypto';
+import { baseMul, bytesToHex, ed25519Keypair, hexToBytes, pointAdd, pointToBytes, sha256, utf8 } from '@quietvote/crypto';
 import { signRecord, type SignedRecord } from '@quietvote/protocol';
 import { Trustee, OVERRIDE_UNWITNESSED, drillCiphertext, verifyKeycheck, type TallyShareBody, type KeycheckBody } from '../src/index.ts';
 import { analysisOf, electionFixture, finishTally, verifyAll, type Fixture } from './helpers/harness.ts';
@@ -148,11 +148,12 @@ test('a log that commits to a different key set is refused', async () => {
 test('unwitnessed checkpoint: refused unless the typed override is given; the override is recorded (QV-17-REQ-041)', async () => {
   const f2 = await electionFixture({ n: 3, t: 2, seed: 'tally-witness', witnessQuorum: 1 });
   try {
-    await assert.rejects(f2.c.act(1, (t) => t.releaseTally(f2.c.bundle())), { code: 'NOT_WITNESSED' });
-    await assert.rejects(f2.c.act(1, (t) => t.releaseTally(f2.c.bundle(), { override: 'yes' })), { code: 'NOT_WITNESSED' });
-    await f2.c.act(1, (t) => t.releaseTally(f2.c.bundle(), { override: OVERRIDE_UNWITNESSED }));
+    const unwitnessed = f2.c.bundle({ witnessed: false });
+    await assert.rejects(f2.c.act(1, (t) => t.releaseTally(unwitnessed)), { code: 'NOT_WITNESSED' });
+    await assert.rejects(f2.c.act(1, (t) => t.releaseTally(unwitnessed, { override: 'yes' })), { code: 'NOT_WITNESSED' });
+    await f2.c.act(1, (t) => t.releaseTally(unwitnessed, { override: OVERRIDE_UNWITNESSED }));
     assert.equal((await f2.c.act(1, async (x) => x)).data.overrides.length, 1);
-    await f2.c.act(2, (t) => t.releaseTally(f2.c.bundle(), { witnessed: true }));
+    await f2.c.act(2, (t) => t.releaseTally(f2.c.bundle())); // cosigned head from the manifest's witnesses: no override needed
     assert.equal((await f2.c.act(2, async (x) => x)).data.overrides.length, 0);
   } finally {
     f2.c.cleanup();
@@ -162,9 +163,11 @@ test('unwitnessed checkpoint: refused unless the typed override is given; the ov
 test('a bogus coordinator tally record in the log cannot block honest trustees', async () => {
   const f2 = await electionFixture({ n: 3, t: 2, seed: 'tally-bogus' });
   try {
-    const b = f2.c.bundle();
-    const junk = { body: { proto: 'qv1-r255-sha2', type: 'tally', garbage: true }, sig: { key: '00'.repeat(32), sig: '00'.repeat(64) } };
-    const p = await f2.c.act(1, (t) => t.releaseTally({ ...b, log: [...b.log, { seq: 9999, entry: junk }] }));
+    // the bogus record is really on the board (QV-18 evidence covers it) but is not a valid tally
+    const junkKey = ed25519Keypair(sha256(utf8('junk-tally-author')));
+    f2.c.authors.set(H(junkKey.publicKey), junkKey);
+    f2.c.push({ body: { proto: 'qv1-r255-sha2', type: 'tally', garbage: true }, sig: { key: H(junkKey.publicKey), sig: '00'.repeat(64) } });
+    const p = await f2.c.act(1, (t) => t.releaseTally(f2.c.bundle()));
     assert.equal(p.round, 'tally-share');
   } finally {
     f2.c.cleanup();

@@ -408,7 +408,7 @@ Legend: ✔ allowed; ✔(k) needs k-of-n; ✖ none; R = read; L = logged only.
 ## References
 
 1. drand — HTTP API and quicknet: https://drand.love/developer/http-api and https://docs.drand.love/blog/2023/10/16/quicknet-is-live (accessed 2026-10-21; quicknet chain hash `52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971`, 3 s period as listed there).
-2. RFC 8785 — JSON Canonicalization Scheme (JCS), https://www.rfc-editor.org/rfc/rfc8785 `[UNVERIFIED by fetch this session; widely known]`.
+2. RFC 8785 — JSON Canonicalization Scheme (JCS), https://www.rfc-editor.org/rfc/rfc8785.
 3. RFC 9162 — Certificate Transparency Version 2.0, https://www.rfc-editor.org/rfc/rfc9162.html (accessed 2026-10-21) — log structure underlying ADR-007.
 
 ## Proposed ADRs

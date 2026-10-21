@@ -295,7 +295,7 @@ Key backup must work with screen readers (text code available, QR optional), pas
 
 ## References (accessed 2026-10-21)
 
-1. RFC 8032, Edwards-Curve Digital Signature Algorithm (EdDSA), https://www.rfc-editor.org/rfc/rfc8032 `[UNVERIFIED by fetch this session]`.
+1. RFC 8032, Edwards-Curve Digital Signature Algorithm (EdDSA), https://www.rfc-editor.org/rfc/rfc8032.
 2. RFC 9162, Certificate Transparency Version 2.0 (Merkle tree, inclusion/consistency proofs), https://www.rfc-editor.org/rfc/rfc9162.html — hash prefix bytes 0x00/0x01 are from the author's knowledge of §2.1.1 `[UNVERIFIED in this session; check]`.
 3. RFC 9474, RSA Blind Signatures (Denis, Jacobs, Wood; Oct 2023; Informational, CFRG), https://www.rfc-editor.org/rfc/rfc9474.html.
 4. Liu, Wei, Wong, "Linkable Spontaneous Anonymous Group Signature for Ad Hoc Groups," ACISP 2004, https://eprint.iacr.org/2004/027 (DOI 10.1007/978-3-540-27800-9_28).

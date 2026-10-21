@@ -10,9 +10,9 @@
 
 | Area | State |
 |---|---|
-| Specs | QV-00…QV-34 mostly **Draft**/Framework; none **Approved**; ADR-001…013 provisional; no owner review recorded |
-| Code | Monorepo scaffold (8 packages, strict TS, npm workspaces). `crypto`: SHA-256/hash helper + Ed25519 sign/verify + 1 smoke test. `board`: Merkle tree (RFC 9162-style), inclusion/consistency verify, checkpoint (signed-note) + witness policy, entry header/type model, byte helpers, errors — **no tests yet**. `protocol`, `server`, `web`, `cli`, `trustee`, `verifier`: empty `index.ts` stubs |
-| Assurance | Below L-0: no CI, no vectors (`test-vectors/` empty), no release process |
+| Specs | QV-00…QV-35 all **Draft** (none Review or Approved). ADR-001…013 provisional; ADR-014…024 provisional (reconciliation); no owner review recorded. QV-35 (second verifier) added 2026-10-21 |
+| Code | All eight packages hold implementation code and a `test/` directory: `crypto`, `protocol` (QV-16 reference), `board`, `server`, `trustee`, `verifier`, `cli`, `web`. Known gaps are listed in each `packages/*/NOTES.md`. `test-vectors/v1` (status candidate) and `verifier-py/` (second-verifier skeleton, QV-35) exist. **`npm run typecheck` failed on the 2026-10-21 re-run** (see [TODO](TODO.md) N-01); test results are not restated here |
+| Assurance | Below L-0 for release purposes. A CI workflow exists (typecheck and test matrix; claims lint non-blocking). Not present: SAST, SBOM, reproducible builds, release signing, an independent second implementation that passes all vectors, and any review or audit |
 | Assurance level target | L-0 (Experimental) at v0.5/v0.9; L-1 Beta; L-2 at 1.0; L-3 post-1.0 |
 
 ## 2. Phases

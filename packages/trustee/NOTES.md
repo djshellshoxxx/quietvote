@@ -29,8 +29,11 @@ when re-run, so a crash at any point is resumable (tests reopen the bundle for e
   (tally records stripped so a bogus one cannot block trustees), re-adjudicates the DKG and checks K/ctx/Y_j equal its own, recomputes
   the counted set and aggregates, and calls `trusteeDecryptTally` (floor + claimed-mismatch refusals -> `PRIVACY_MIN` / `AGGREGATE_MISMATCH`, exit 60).
   The fire drill decrypts only a ciphertext recomputed from (K, ctx) (`drillCiphertext`), so it is not a decryption oracle either.
-* **Witness gating (REQ-041)**: board checkpoint/witness verification is not wired in; if `bb.witness_quorum > 0` release requires
-  `witnessed: true` from the embedding code or the typed override `RELEASE-WITHOUT-WITNESSED-CHECKPOINT`, which is logged in the bundle.
+* **Witness gating (REQ-041)**: computed, never asserted by the caller (the old `witnessed` boolean is gone). If `bb.witness_quorum > 0`
+  release needs a log-signed tree head of size > seq(election-close) with >= quorum valid cosignatures from the manifest's `bb.witnesses`
+  (`witnessAnchors`/`witnessStatus`), taken from the bundle's `log_evidence`; otherwise `NOT_WITNESSED`, or the typed override
+  `RELEASE-WITHOUT-WITNESSED-CHECKPOINT`, which is logged in `overrides`. Not re-checked here (the full verifier does): witnessed
+  open/close *times* (voting_close +/- skew), per-witness timestamp monotonicity, `observed` heads beyond what `verifyLogStructure` does.
 * Record types defined here, not in QV-16 (verifier ignores them as unknown): `keycheck`, `tally-share` (signed by trustee, scope ctx),
   `key-destruction`, `trustee-compromise-report`, `ceremony-transcript` signature body, and the `audit-close` body
   `{ctx, closed_at}` (coordinator m-of-k, scope ctx) consumed by `destroy`. `collectTallyShares` is the coordinator-side helper.
@@ -49,3 +52,70 @@ Network/outbox, localhost UI, `qv-ceremony` image, dealer mode, `trustee_accept`
 
 ## Windows file permissions (known gap)
 POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"group-accessible" refusal there, and the tests guard the mode assertions with a platform check. On Windows a trustee bundle is protected only by its passphrase-based encryption, not by an ACL check. Trustees should keep bundles in a user-private directory. Track as a hardening task (NTFS ACL verification).
+
+## Log origin in the ceremony transcript (X-21)
+* `transcript.ts` sets `origin = logOrigin(manifest)` (`quietvote/v1/` + base32(election_id), from `@quietvote/protocol`). It was
+  `quietvote/v1/<bb.log_id>`, which is the wrong field and the wrong encoding. QV-18 REQ-001 and QV-28 name `election_id` as the origin
+  source, and the protocol log check requires `bb.log_id = SHA-256(origin)`.
+* Open spec point (not decided here): QV-18 REQ-001 and QV-28 literally write `<election_id>` as 32 lowercase hex. The board, server
+  and protocol all use the 26-char base32 form, and the board rejects hex. Changing the encoding is a spec-owner decision.
+* `test/origin.test.ts` pins the origin derivation. The harness sets `bb.log_id = expectedLogId(logOrigin(manifest))`.
+
+## Spoil-decryption relay (QV-ADR-020 "trustees" mode)
+* `Trustee.releaseSpoil(electionBundle, codes)` / CLI `spoil-release --codes HEX[,HEX]` returns a `spoil-share` packet: per code one signed
+  `SpoilShareBody` (`cp-dec-spoil` proofs, `spoil_seq`). Verify and combine with `decryptSpoiled` from `@quietvote/protocol`
+  (`spoilShareRecordSchema` validates records). The requester supplies ballot codes only; ciphertexts come from the trustee's own analysis.
+* Same gate as the tally (full log verification, key binding, election-close present, log evidence, witnessed checkpoint or typed override). Also refused:
+  manifest without `spoil_trustee_decrypt` (`SPOIL_MODE_OFF`); code without a verified spoil record (`NOT_SPOILED`); spoil that is not in
+  trustee mode (`reveal_digest` != 0, `NOT_TRUSTEE_MODE`); any code that appears in a cast envelope anywhere in the log, valid or not, or in
+  the counted set (`BALLOT_WAS_CAST`; a cast ballot is never decryptable); malformed/duplicate/oversize (>`MAX_SPOIL_REQUEST` = 64) requests.
+  A request is all-or-nothing.
+* Replay: each code is released at most once per share (`SPOIL_REPLAY`); the signed record is kept in the sealed bundle (`out.spoil`).
+  Trade-off: a lost response cannot be re-fetched from the trustee; the requester must keep the packet. Re-serving the stored record would be a
+  safe alternative if operators prefer idempotence.
+* Works in states CONFIRMED/DRILLED/STANDBY/TALLYING/RELEASED; does not change state. Tally log gate was factored into `verifiedElection`.
+* Needs from protocol (not done here): none blocking. Nice to have: a `spoil-share` record type + `collectSpoilShares` in protocol so the
+  coordinator/verifier need not use trustee-local types, and publishing into the tally record's `spoiled[].shares` (types exist).
+* Unaudited; not for real elections.
+
+## QV-ADR-015 election-open binding
+Test harness now posts a `roll-commit` and an `election-open` built with `electionOpenBody()` (binds manifest hash, `dkg-final` seq, roll-commit seq).
+Trustee code needed no change: it ignores `roll-commit` entries and relies on the full-log `verifyElection` gate.
+
+## Audit hardening (T1..T12)
+* **T1 log evidence (API change)**: the election bundle passed to `releaseTally`/`releaseSpoil` must be `{manifest, manifest_hash, roll, log,
+  log_evidence: {board, witnesses?, observed?}}` where `board` is the QV-18 log export (`bundleToJson`). Without it: `LOG_EVIDENCE_REQUIRED`
+  (REFUSED, 60). The gate runs protocol `verifyLogStructure` over the supplied log: every log entry must correspond 1:1 to a board entry
+  (author-authorised, signed header, body digest), the Merkle tree must match a log-signed (manifest `bb.log_pk`) head covering the whole
+  log; any F finding -> `LOG_EVIDENCE_INVALID` (VERIFY, 20). So a cast envelope cannot be dropped from the supplied log to let `releaseSpoil`
+  decrypt a cast ballot (castCodes come from the proven log). Order: content verification, key binding, election window, then evidence.
+  The tally records stay stripped for the content verdict but are part of the evidence check (so a bogus tally must exist on the board too).
+  Residual risk: the evidence is only as good as `bb.log_pk` and the log's own honesty; an entry the log never sequenced is invisible.
+  Witness-quorum 0 manifests still need the evidence (head log-signed) but no cosignatures. No override exists for missing evidence.
+  Requires `@quietvote/board` at run time (via protocol); not added to `package.json`.
+* **T2 release ledger**: every released `tally-share`/`spoil-share` record is also written (before it is returned) to the public sidecar
+  `<bundle>.releases` (`ledger.ts`, JCS, 0644). `Trustee.open` merges it (bundle file rolled back by copying an old backup over it ->
+  guards come back, state forced to RELEASED if a tally share is found). `Trustee.restore(..., opts)` reads the ledger of the backup's
+  recorded original path (`home`) or `opts.ledger` (CLI `--ledger`), adopts own valid same-ctx records, writes a ledger for the new
+  path. No ledger found and the backup holds a key -> `NO_RELEASE_LEDGER` unless `OVERRIDE_NO_LEDGER` is typed (logged in `overrides`,
+  CLI `--override-no-ledger`). `releaseTally` is idempotent only for the same counted set: the full gate runs even for the cached share
+  and a different counted_root is `RELEASE_CONFLICT`. LIMIT: an operator controlling the filesystem can delete the ledger and the live
+  bundle and restore any older backup with the typed override; this stops mistakes and stale restores, not a hostile operator. A
+  hardware-backed monotonic counter would be needed for that. `keygen` refuses a path with an existing ledger.
+* **T3**: see Witness gating above. **T4** `destroy`: `closed_at` must match `YYYY-MM-DDThh:mm:ss[.f]Z` and parse; election-close must be on
+  the imported log (`NO_ELECTION_CLOSE`); closed_at >= voting_close - clock_skew_s (`AUDIT_BEFORE_CLOSE`). A minimum audit window
+  (`audit_window_days`) is not in the protocol: TBD, deliberately not added.
+* **T5/T9 backup**: refuses an existing destination (`BUNDLE_EXISTS`) and any destination whose real path (symlinks and `..` resolved, also
+  for not-yet-existing files) is the bundle, tombstone, attestation, ledger or a registered backup (`BACKUP_SAME_FILE`). If the live save
+  fails after the backup was written, the backup is shredded and the in-memory bookkeeping rolled back.
+* **T6/T8/T11 CLI**: `--out` goes through `atomicWrite` and is refused if it resolves to the bundle/backups/tombstone/attestation/ledger
+  (`OUT_PATH_PROTECTED`) or exists (`OUT_EXISTS`), checked right after the bundle opens, before any state change (so re-running a
+  command with the same `--out` after a crash needs the file removed first). Passphrase files use `readSecretFile` (0600). Bad JSON ->
+  `BAD_JSON` (20), missing file -> `NO_SUCH_FILE` (2), malformed `--claimed` -> `BAD_CLAIMED` (20), manifest without `roll` ->
+  `MANIFEST_INVALID` (20), malformed transcript -> `TRANSCRIPT_FORMAT`.
+* **T7**: repeat credit is capped at the number of distinct characters (`'a'x50` now ~4 bits).
+* **T10**: cached round outputs are re-served only in the states at/after that step (`AT_OR_AFTER`); `abort` clears commit/dealing/shares/
+  complaints/keyconf/keycheck and `derived`. **T12**: `releaseTally` needs STANDBY/TALLYING/RELEASED, checked before any log work.
+
+## Dependency note
+`@quietvote/board` added to package.json dependencies (workspace-internal; used by the log-evidence gate). package-lock.json gains the one workspace line; no external dependency added.

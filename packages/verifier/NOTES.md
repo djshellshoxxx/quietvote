@@ -29,8 +29,8 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
 
 ## Decisions and deviations
 
-1. **V mapping.** V1 = manifest hash+sig; V2 = no `E_ROLL` and the pipeline got past the roll; V3 = DKG; V4 = board append-only +
-   witness; V5 = `chk.ballots.valid`; V6 = latest; V7 = time window; V8 = Benaloh; V9 = aggregate; V10/V11 split `chk.tally.decrypt`
+1. **V mapping.** V1 = manifest hash+sig; V2 = no `E_ROLL` and the pipeline got past the roll; V3 = DKG; V4 = log integrity: board
+   append-only + witness (both layers, see item 9) and `chk.receipts.sample` when any receipt was checked; V5 = `chk.ballots.valid`; V6 = latest; V7 = time window; V8 = Benaloh; V9 = aggregate; V10/V11 split `chk.tally.decrypt`
    by finding code (`E_DEC_PROOF`/`E_TALLY_INSUFFICIENT` vs `E_DLOG_RANGE`, both fail if neither); V12 = rules; V14 = no encoding
    failure and a tally record present (else `not_run`). `reportHash` = SHA-256(RFC 8785 of the report without `reportHash`/`selfTest`).
 2. **V13 is always `not_run`** (no Appendix C step; control entries of QV-ADR-022 are not parsed). Not a pass, printed as not run.
@@ -42,7 +42,16 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
    anything else fails closed (`QV_BOARD_AUTHOR_UNRESOLVED`). The board's manifest entry digest (`qv/body/v1`) is a different hash from the
    protocol manifest hash, so the two are not cross-pinned yet (no QV-16-encoded manifest body inside board entries). Board entry bodies are
    not parsed against protocol records (board NOTES 3/5): ordering of ballot entries between the two representations is not compared.
-5. **Verdict PASS with failed checks.** Protocol NOTES X-10/X-11: ignored ballots (L-class) and Benaloh alarms fail named checks but keep
+9. **Log layer (C3) is wired in.** When the bundle has a `board` member, `verifyBundle` passes the raw JSON export to
+   `protocol.verifyElection(election, {log})` together with the caller's `witnesses` (X-23 fallback, used only when the manifest lists
+   none), `observedCheckpoints` plus `pinnedCheckpoint` (log-signed notes are evidence, others ignored with a warning) and `receipts`.
+   Protocol results: `chk.board.append_only` (entry/record binding, tree heads, forks, rollback), `chk.board.witness` (gates, X-23),
+   `chk.receipts.sample` (G-V2, clash = ALARM, broken promise = F, malformed = I), `chk.time.window` (witnessed times, V7). They are
+   combined with the board layer's own statuses by "any fail fails, both pass passes, otherwise not run" (`both` in verify.ts), so
+   neither layer can be bypassed. The report carries a `log` section (`LogLayerSummary`: the four protocol statuses, where witness keys
+   came from, counts) and the text output prints one `log layer (QV-16 C3)` line. Without a board export the log layer is absent and
+   `receipts`/`observedCheckpoints` are reported as not checked (caveat).
+10. **Verdict PASS with failed checks.** Protocol NOTES X-10/X-11: ignored ballots (L-class) and Benaloh alarms fail named checks but keep
    the verdict PASS. The text report prints `FLAGGED: ...`; the self-test treats "some named check fails" as rejection (QV-34 section 9.3).
 6. **Pinned manifest hash** (`--manifest-hash`) replaces the bundle's own `manifest_hash`, which is attacker-controlled.
 7. **Independence (QV-08 D5).** The package imports only `@quietvote/crypto`, `protocol` and `board`. D1 says L3 packages never import each
@@ -52,8 +61,23 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
 
 ## Known gaps
 
-* No worker threads / resumable verification (QV-11 scale row); no HTML offline page; no signed corpus; no receipt-sample check
-  (`chk.receipts.sample` stays `not_run`); redaction handling is coarse; no board-level canary in the corpus (covered by tests only).
+* No worker threads / resumable verification (QV-11 scale row); no HTML offline page (the offline `verifier.html` is built by
+  `packages/web` from the protocol API, not from this package); no signed corpus; redaction handling is coarse; no board-level canary
+  in the corpus (covered by tests only).
+* **Board grammar vs protocol log (open, owner: board).** `board` requires a `roll_commit` before `election_open` even when the
+  manifest carries `roll.root`, and a `tally_aggregate` before `tally_result`. The protocol log produces neither (a roll-commit is
+  required only when `roll.root` is absent, and the tally is a single `tally` record). Every tallied or roll-root log therefore fails
+  the board layer with `QV_BOARD_GRAMMAR` and V4 fails. `test/helpers/sim.ts` emits a roll-commit to satisfy the grammar; the
+  tally case is avoided in `test/logcheck.test.ts` (those elections verify as INCOMPLETE).
+* **Shipped test vectors do not bind their log (open, owner: test-vectors / protocol).** `test-vectors/v1` manifests carry a constant
+  placeholder `bb.log_id` (836ff184...c213) that is not SHA-256 of `logOrigin(manifest)` (X-21), so `E_LOG_BINDING` on any board export
+  built for them. Left unchanged (zero-diff). Tests build their own conformant elections instead; new vectors would be the fix.
+* Test helpers `test/helpers/{sim,board}.ts` are copies of `packages/protocol/test/helpers` (test-only), with the protocol import
+  changed and one addition: a `witnessPolicy` option on `buildBoard` (board.ts). Re-synced after QV-ADR-015 (`election-open` carries
+  manifest_hash, joint_key_seq, roll_commit_seq; sim order is dkg-final, roll-commit, election-open; `electionOpenBody` imported from the
+  protocol package); the local roll-commit workaround is gone. Re-sync by hand; regenerate `canary/corpus.json` with
+  `node packages/verifier/scripts/build-corpus.ts` whenever test-vectors change.
+  changed and two additions: a roll-commit before election-open, and a `witnessPolicy` option on `buildBoard`. Re-sync by hand.
 
 ## CLI (`packages/cli`, binary `qv`)
 

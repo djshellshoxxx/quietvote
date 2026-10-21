@@ -181,10 +181,23 @@ export interface GrammarState {
   opened: boolean;
   closed: boolean;
   terminal: boolean;
+  /** Manifest carries `roll.root` (static-roll mode, QV-ADR-015): a `roll_commit` entry is then optional. */
+  staticRoll: boolean;
+}
+
+/** True iff the (JCS JSON) manifest body declares `roll.root`. Anything unparsable is "no": fail closed to roll_commit required. */
+export function manifestDeclaresRoll(body: Uint8Array | null): boolean {
+  if (body === null) return false;
+  try {
+    const m = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)) as { roll?: { root?: unknown } } | null;
+    return typeof m?.roll?.root === 'string';
+  } catch {
+    return false;
+  }
 }
 
 export function newGrammar(): GrammarState {
-  return { count: 0, seen: new Set(), opened: false, closed: false, terminal: false };
+  return { count: 0, seen: new Set(), opened: false, closed: false, terminal: false, staticRoll: false };
 }
 
 const ONCE: ReadonlySet<EntryType> = new Set<EntryType>([
@@ -194,22 +207,39 @@ const NEEDS: Partial<Record<EntryType, EntryType>> = {
   dkg_round1: 'ceremony_start', dkg_round2: 'ceremony_start', dkg_complaint: 'ceremony_start',
   dkg_justification: 'ceremony_start', key_confirm: 'ceremony_start', joint_key: 'ceremony_start',
   roll_commit: 'joint_key', election_open: 'roll_commit', election_close: 'election_open',
-  tally_aggregate: 'election_close', decryption_share: 'tally_aggregate', tally_result: 'tally_aggregate',
+  // QV-18 lists tally_aggregate but QV-16 §5.15/QV-17 have verifiers and trustees recompute the aggregate: the entry is optional.
+  tally_aggregate: 'election_close', decryption_share: 'election_close', tally_result: 'election_close',
   audit_close: 'election_close', key_destruction: 'audit_close',
 };
 
+/**
+ * Types valid only while the election is not yet open (docs/18 §5.2 Phase column "S"). Ceremony types are
+ * deliberately not tied to a finer sub-phase than "before election_open" (key_confirm/keycheck follow joint_key).
+ */
+const SETUP_ONLY: ReadonlySet<EntryType> = new Set<EntryType>([
+  'trustee_accept', 'trustee_decline', 'ceremony_start', 'dkg_round1', 'dkg_round2', 'dkg_complaint',
+  'dkg_justification', 'key_confirm', 'joint_key', 'keycheck', 'roll_commit',
+]);
+
 /** Validates and applies the next entry type. Returns an error string or undefined. */
-export function grammarStep(g: GrammarState, type: EntryType): string | undefined {
+export function grammarStep(g: GrammarState, type: EntryType, body: Uint8Array | null = null): string | undefined {
   if (g.terminal) return 'log is terminated';
   if (g.count === 0 && type !== 'manifest') return 'first entry must be manifest';
   if (g.count > 0 && type === 'manifest') return 'manifest only allowed at seq 0';
   if (ONCE.has(type) && g.seen.has(type)) return `${type} already present`;
+  if (SETUP_ONLY.has(type) && g.opened) return `${type} not allowed after election_open`;
+  // §5.4: ceremony_abort only from CEREMONY (ceremony_start seen, no joint_key yet); election_cancel only SETUP/READY/OPEN.
+  if (type === 'ceremony_abort' && !(g.seen.has('ceremony_start') && !g.seen.has('joint_key'))) return 'ceremony_abort only during the key ceremony';
+  if (type === 'election_cancel' && g.closed) return 'election_cancel not allowed after election_close';
   const need = NEEDS[type];
-  if (need && !g.seen.has(need)) return `${type} requires prior ${need}`;
+  const waived = type === 'election_open' && g.staticRoll; // QV-ADR-015: manifest roll.root replaces roll_commit
+  if (need && !waived && !g.seen.has(need)) return `${type} requires prior ${need}`;
+  if (type === 'tally_aggregate' && g.seen.has('tally_result')) return 'tally_aggregate after tally_result';
   if (type === 'election_open' && !g.seen.has('joint_key')) return 'election_open requires prior joint_key';
   if ((type === 'ballot' || type === 'ballot_audit') && !(g.opened && !g.closed)) return `${type} outside open phase`;
   g.seen.add(type);
   g.count++;
+  if (type === 'manifest') g.staticRoll = manifestDeclaresRoll(body);
   if (type === 'election_open') g.opened = true;
   if (type === 'election_close') g.closed = true;
   if (type === 'election_cancel' || type === 'ceremony_abort') g.terminal = true;

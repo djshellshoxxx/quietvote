@@ -1,6 +1,6 @@
 # Cryptographic Protocol Summary
 
-> **Draft – unaudited software.** The protocol is not implemented or independently reviewed. Do not treat any of this as a security claim.
+> **Draft – unaudited software.** The protocol is implemented in part and has not been independently reviewed. Do not treat any of this as a security claim.
 
 Authoritative source: spec [16 Crypto protocol](https://github.com/djshellshoxxx/quietvote/blob/main/docs/16-crypto-protocol.md) (byte-level). Research: [R-01](https://github.com/djshellshoxxx/quietvote/blob/main/docs/research/R-01-cryptographic-protocol-research.md).
 
@@ -35,4 +35,4 @@ Ciphertexts are summed by anyone. At least *t* trustees publish decryption share
 - Phase 3: zero-knowledge membership with nullifiers (research).
 - Post-quantum secrecy is out of scope for v1 (QV-ADR-013).
 
-Code status: only hash and Ed25519 helpers exist in `packages/crypto`. See [[Repository and Packages]].
+Code status (2026-10-21): `packages/crypto` and `packages/protocol` implement the building blocks above, with unit and negative tests. Those tests do not replace an independent review, and no real ceremony has been run. See [[Repository and Packages]].

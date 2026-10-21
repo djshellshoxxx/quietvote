@@ -6,7 +6,7 @@ import {
   type WitnessPolicy,
 } from './checkpoint.ts';
 import {
-  checkEntry, decodeHeader, grammarStep, newGrammar,
+  bodyDigest, checkEntry, decodeHeader, grammarStep, newGrammar,
   type AuthorKeyResolver, type EntryHeader, type GrammarState,
 } from './entry.ts';
 import { err, ok, type Result } from './errors.ts';
@@ -31,6 +31,10 @@ export interface BoardLogOptions {
 
 export type LogState = 'ok' | 'quarantine';
 
+const REDACTABLE: ReadonlySet<string> = new Set([
+  'ballot', 'ballot_audit', 'dkg_round1', 'dkg_round2', 'dkg_complaint', 'dkg_justification',
+]);
+
 function copyGrammar(g: GrammarState): GrammarState {
   return { ...g, seen: new Set(g.seen) };
 }
@@ -48,15 +52,27 @@ export class BoardLog {
     this.o = o;
     this.origin = o.origin;
     this.store = o.store;
-    this.tree = MerkleTree.fromLeafHashes(o.store.leafHashes(0, o.store.size()));
+    // Never trust stored leaf hashes / digests: recompute from header bytes (REQ-054) and quarantine on any mismatch.
+    const leaves: Uint8Array[] = [];
+    let bad = '';
     for (let i = 0; i < o.store.size(); i++) {
       const e = o.store.getEntry(i);
       const h = e ? decodeHeader(e.headerBytes) : undefined;
-      if (!h?.ok || grammarStep(this.grammar, h.value.type) !== undefined) {
-        this.quarantine('stored log fails grammar/parse on load');
-        break;
+      if (!e || !h?.ok) {
+        bad = bad || 'stored log fails grammar/parse on load';
+        leaves.push(o.store.leafHashes(i, i + 1)[0] ?? new Uint8Array(32));
+        continue;
       }
+      const lh = hashLeaf(e.headerBytes);
+      leaves.push(lh);
+      if (bad !== '') continue;
+      if (!bytesEqual(lh, e.leafHash)) bad = `stored leaf hash at seq ${i} does not match header`;
+      else if (e.body !== null && (e.body.length !== h.value.bodyLen || !bytesEqual(bodyDigest(e.body), h.value.bodyDigest))) bad = `stored body at seq ${i} does not match header digest`;
+      else if (grammarStep(this.grammar, h.value.type, e.body) !== undefined) bad = 'stored log fails grammar/parse on load';
+      else if (h.value.type === 'manifest' && e.staticRoll !== undefined) this.grammar.staticRoll = e.staticRoll;
     }
+    this.tree = MerkleTree.fromLeafHashes(leaves);
+    if (bad !== '') this.quarantine(bad);
     // Rollback / corruption guard (REQ-012, REQ-053, REQ-054): every stored checkpoint must match the tree.
     for (const cp of o.store.listCheckpoints()) {
       if (cp.size > this.tree.size || !bytesEqual(this.tree.root(cp.size), cp.root)) {
@@ -105,11 +121,16 @@ export class BoardLog {
     const now = this.o.clock();
     if (Math.abs(h.createdAt - now) > (this.o.maxClockSkew ?? 86400)) return err('QV_BOARD_CLOCK_SKEW', 'created_at outside tolerated skew');
     const g = copyGrammar(this.grammar);
-    const gErr = grammarStep(g, h.type);
+    const gErr = grammarStep(g, h.type, body);
     if (gErr !== undefined) return err('QV_BOARD_GRAMMAR', gErr);
     const leafHash = hashLeaf(headerBytes);
     const stored: StoredEntry = { seq, headerBytes, body, leafHash, sequencedAt: now, nonceKey: key };
-    this.store.appendEntry(stored); // atomic; throws leave tree/grammar untouched
+    if (h.type === 'manifest') stored.staticRoll = g.staticRoll;
+    try {
+      this.store.appendEntry(stored); // atomic; throws leave tree/grammar untouched
+    } catch {
+      return err('QV_BOARD_INTERNAL', 'store failed to append entry');
+    }
     this.tree.appendLeafHash(leafHash);
     this.grammar = g;
     return ok({ receipt: this.receiptFor(stored), duplicate: false });
@@ -156,19 +177,28 @@ export class BoardLog {
     if (!stored) return err('QV_BOARD_NOT_FOUND', 'no checkpoint of that size');
     const cur = parseCheckpoint(stored.note);
     if (!cur.ok) return cur;
+    // Online path: reject future-dated cosignatures (docs/18 §9.3, now + 300 s).
+    const maxTs = this.o.clock() + 300;
     const good: string[] = [];
-    for (const line of lines) {
-      const cand = parseCheckpoint(stored.note + (line.endsWith('\n') ? line : line + '\n'));
-      if (!cand.ok) continue;
-      const before = witnessStatus(cur.value, policy).valid;
-      const after = witnessStatus(cand.value, policy);
+    let acc = stored.note;
+    // One signature line per candidate: split multi-line elements so nothing unchecked rides along.
+    const cands = lines.flatMap((l) => l.split('\n')).filter((l) => l !== '');
+    for (const line of cands) {
+      const accP = parseCheckpoint(acc);
+      const cand = parseCheckpoint(acc + line + '\n');
+      if (!accP.ok || !cand.ok || cand.value.lines.length !== accP.value.lines.length + 1) continue;
+      const before = witnessStatus(accP.value, policy, maxTs).valid;
+      const after = witnessStatus(cand.value, policy, maxTs);
       const name = cand.value.lines.at(-1)?.name ?? '';
-      if (after.valid.has(name) && !before.has(name)) good.push(line.endsWith('\n') ? line : line + '\n');
+      if (after.valid.has(name) && !before.has(name)) {
+        good.push(line + '\n');
+        acc += line + '\n';
+      }
     }
     const note = addCosignatures(stored.note, good);
     this.store.putCheckpoint({ size, root: stored.root, note });
     const p = parseCheckpoint(note);
-    return p.ok ? ok({ witnessed: witnessStatus(p.value, policy).witnessed, note }) : p;
+    return p.ok ? ok({ witnessed: witnessStatus(p.value, policy, maxTs).witnessed, note }) : p;
   }
 
   inclusionProof(seq: number, size: number = this.tree.size): Result<Uint8Array[]> {
@@ -210,16 +240,42 @@ export class BoardLog {
 
   /** Full root recomputation from stored leaf hashes (REQ-054). Quarantines on mismatch. */
   selfAudit(): boolean {
-    const t = MerkleTree.fromLeafHashes(this.store.leafHashes(0, this.store.size()));
-    const okRoot = t.size === this.tree.size && bytesEqual(t.root(), this.tree.root());
+    // Recompute leaf hashes from header bytes and body digests; stored leaf hashes are not trusted.
+    const leaves: Uint8Array[] = [];
+    const stored = this.store.leafHashes(0, this.store.size());
+    let okEntries = stored.length === this.store.size();
+    for (let i = 0; i < this.store.size(); i++) {
+      const e = this.store.getEntry(i);
+      const h = e ? decodeHeader(e.headerBytes) : undefined;
+      if (!e || !h?.ok) {
+        okEntries = false;
+        leaves.push(stored[i] ?? new Uint8Array(32));
+        continue;
+      }
+      const lh = hashLeaf(e.headerBytes);
+      leaves.push(lh);
+      if (!bytesEqual(lh, stored[i] ?? new Uint8Array(0)) || !bytesEqual(lh, e.leafHash)) okEntries = false;
+      if (e.body !== null && (e.body.length !== h.value.bodyLen || !bytesEqual(bodyDigest(e.body), h.value.bodyDigest))) okEntries = false;
+    }
+    const t = MerkleTree.fromLeafHashes(leaves);
+    const okRoot = okEntries && t.size === this.tree.size && bytesEqual(t.root(), this.tree.root());
     const okCps = this.store.listCheckpoints().every((c) => c.size <= t.size && bytesEqual(c.root, t.root(c.size)));
     if (!okRoot || !okCps) this.quarantine('self-audit mismatch');
     return okRoot && okCps;
   }
 
-  /** Redact a body (leaf unchanged). Caller (server) enforces retention policy. */
+  /**
+   * Redact a body (leaf unchanged). Caller (server) enforces retention policy. Only ballot, ballot_audit and dkg_*
+   * bodies may be redacted (docs/18 §11.1); the manifest and other bodies are needed to replay the grammar.
+   */
   redact(seq: number): Result<true> {
-    if (!this.store.getEntry(seq)) return err('QV_BOARD_NOT_FOUND', 'no such entry');
+    if (this.state !== 'ok') return err('QV_BOARD_QUARANTINE', 'log is quarantined');
+    if (this.store.isReadOnly()) return err('QV_BOARD_READ_ONLY', 'log is read-only');
+    const e = Number.isSafeInteger(seq) ? this.store.getEntry(seq) : undefined;
+    if (!e) return err('QV_BOARD_NOT_FOUND', 'no such entry');
+    const h = decodeHeader(e.headerBytes);
+    if (!h.ok) return h;
+    if (!REDACTABLE.has(h.value.type)) return err('QV_BOARD_GRAMMAR', `${h.value.type} bodies are not redactable`);
     this.store.redactBody(seq);
     return ok(true);
   }

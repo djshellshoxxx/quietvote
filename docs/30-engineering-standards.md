@@ -65,7 +65,7 @@ Rule changes affecting `crypto`/`protocol` need a security-reviewer approval.
 
 ## 6. Constant-time and secret-handling rules
 
-JavaScript gives no hard constant-time guarantee (JIT, GC, BigInt). The rules aim to avoid *avoidable* leaks and to rely on audited implementations (`@noble/curves`, `@noble/hashes` are designed for constant-time-ish scalar operations and publish a security stance ADR-003). We make no stronger claim.
+JavaScript gives no hard constant-time guarantee (JIT, GC, BigInt). The rules aim to avoid *avoidable* leaks and to rely on implementations with published third-party audit reports (`@noble/curves`, `@noble/hashes` are designed for constant-time-ish scalar operations and publish a security stance ADR-003). We make no stronger claim.
 
 | ID | Rule |
 |---|---|
@@ -289,7 +289,7 @@ A change is done when **all** hold:
 | Compromised maintainer account | Attacker | Backdoor merge | 2FA/hardware keys, two-person review on critical paths, signed tags, rebuild checks | Collusion |
 | Reviewer fatigue on crypto diff | Process | Missed flaw | Mandatory security reviewer, vectors, small PRs | Human error |
 | Secret leaked in log | Bug | Key exposure | Redacting types, canary tests, lint | Low |
-| Timing leak in JS | Platform | Partial key info | Audited libs, avoid secret branching, accepted residual (documented) | JIT/GC effects |
+| Timing leak in JS | Platform | Partial key info | Libraries with published third-party audit reports, avoid secret branching, accepted residual (documented) | JIT/GC effects |
 | Dependency drift | Upstream | Backdoor | QV-19 P1–P11 | Zero-day |
 | Protocol drift between impls | Maintenance | Unverifiable elections | Vectors, differential tests, immutable versions | Low |
 
@@ -313,7 +313,7 @@ A change is done when **all** hold:
 ## 18. References (accessed 2026-10-21; web fetch unavailable in sandbox, items marked cited from memory)
 
 - Developer Certificate of Origin 1.1 — https://developercertificate.org `[UNVERIFIED access]`.
-- Conventional Commits 1.0.0 — https://www.conventionalcommits.org `[UNVERIFIED access]`; Semantic Versioning 2.0.0 — https://semver.org.
+- Conventional Commits 1.0.0 — https://www.conventionalcommits.org; Semantic Versioning 2.0.0 — https://semver.org.
 - GitHub Docs: security hardening for Actions; protected branches/rulesets `[UNVERIFIED access]`.
 - RFC 8032 (Ed25519), RFC 9496 (ristretto255/decaf448), RFC 9106 (Argon2) — https://www.rfc-editor.org/ `[UNVERIFIED access]`.
 - OpenSSF Scorecard — https://scorecard.dev `[UNVERIFIED access]`.

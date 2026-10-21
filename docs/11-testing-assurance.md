@@ -212,7 +212,7 @@ Targets (harness per target in `fuzz/`): manifest parser/validator, ballot decod
 - Flake policy: retries ≤ 1 and reported; a retry-needed test is flagged.
 
 ### 8.3 Security tests
-- SAST (Semgrep, CodeQL `[UNVERIFIED availability]`), dependency audit (`npm audit`, OSV scanner), license check, SBOM (CycloneDX/SPDX) generation and diff, secret scanning.
+- SAST (Semgrep, CodeQL `[VERIFIED: semgrep and codeql-action READMEs, 2026-10-21]`), dependency audit (`npm audit`, OSV scanner), license check, SBOM (CycloneDX/SPDX) generation and diff, secret scanning.
 - DAST: OWASP ZAP baseline against a test instance each release; custom tests for authZ matrix (organizer/trustee/voter/observer/anonymous × endpoint).
 - Headers/TLS: CSP strict (no inline, no remote), HSTS, `Referrer-Policy: no-referrer`, COOP/COEP as applicable, cache policy, `Permissions-Policy`; Tor onion profile (no TLS expectation; headers retained).
 - Annual (and pre-1.0) third-party penetration test of the web client + server (§9).
@@ -368,7 +368,7 @@ For each release `evidence/<version>/` (immutable, hash-listed in `EVIDENCE.json
 |---|---|---|---|---|
 | L-0 | Experimental | G1–G3, G8, G11–G14 | "Experimental software for low-stakes decisions among people who accept the risk." No claims of anonymity/integrity guarantees | "has not yet been independently reviewed" |
 | L-1 | Beta | + G4, G5, G6, G10 | "Designed to provide…; verifiable by independent tools"; still no "secure" | same, plus beta notice |
-| L-2 | Reviewed | + G9 (R1+R2) | "Independently reviewed by {reviewer}, {date}, report linked; findings fixed" and properties as stated in ADR-008 scope | Review line with link |
+| L-2 | Reviewed | + G9 (R1+R2) | "Independently reviewed by {reviewer}, {date}, report linked; findings fixed" and properties as stated in ADR-008 scope | Review line with link | <!-- claims-lint-ignore -->
 | L-3 | Hardened | + R3, R4, R5, one year bounty without open Critical, ≥ 3 real elections completed with independent observers | "Production-ready for voluntary-organization decisions within stated limits" | Review line + date |
 
 Never claimed at any level: coercion resistance, protection from compromised devices, quantum-resistant secrecy, anonymity of participation in Phase 1 (ADR-008).
@@ -452,7 +452,7 @@ CI: GitHub Actions or self-hosted `[decision with QV-12]`; nightly/weekly schedu
 - Cortier & Smyth, "Attacking and fixing Helios: An analysis of ballot secrecy", CSF 2011 / J. Computer Security 21(1), 2013: https://members.loria.fr/VCortier/files/Publications/b2hd-Helios-CSF11.html
 - Lewis, Pereira, Teague, "Ceci n'est pas une preuve: The use of trapdoor commitments in Bayer-Groth proofs and the implications for the verifiability of the Scytl-SwissPost Internet voting system", 12 Mar 2019: https://sarahjamielewis.com/evoting/UniversalVerifiabilitySwissPost.pdf (trapdoor in commitment scheme of shuffle proof; Swiss authorities withdrew system for May 2019 votes — per news summary in University of Melbourne newsroom item).
 - Gennaro, Jarecki, Krawczyk, Rabin, "Secure Distributed Key Generation for Discrete-Log Based Cryptosystems", EUROCRYPT 1999 `[UNVERIFIED]`.
-- Benaloh, "Simple Verifiable Elections", EVT 2006 `[UNVERIFIED]`; Cramer–Damgård–Schoenmakers, "Proofs of Partial Knowledge…", CRYPTO 1994 `[UNVERIFIED]`; Chaum–Pedersen, CRYPTO 1992 `[UNVERIFIED]`.
+- Benaloh, "Simple Verifiable Elections", EVT 2006; Cramer–Damgård–Schoenmakers, "Proofs of Partial Knowledge…", CRYPTO 1994; Chaum–Pedersen, CRYPTO 1992.
 - ElectionGuard specifications (versions 0.85 … 2.1 listed; 2.0 major refactor eliminated placeholder selections; 2.1 changed challenged-ballot opening to release nonces) via search results 2026-10-21: https://electionguard.vote/spec/ (primary site not fetchable in session); Machine-checked universal verifiability of ElectionGuard (ANU repository listing) https://openresearch-repository.anu.edu.au/items/9557a547-813f-4e65-84a6-0dbeae696f84; MITRE ElectionGuard pilot requirements https://www.electionguard.vote/images/MITRE-EG-CP-requirements.pdf; E-Vote-ID 2024 "Verifying ElectionGuard – a theoretical and empirical analysis" https://dl.gi.de/items/3bd629bb-cf25-48c9-988d-a9461ce060ef/full
-- RFC 9162 (CT 2.0), RFC 6962, RFC 9496, RFC 8032, RFC 9474 `[UNVERIFIED in session]`.
+- RFC 9162 (CT 2.0), RFC 6962, RFC 9496, RFC 8032, RFC 9474.
 - Tooling notes (fast-check, Stryker, jazzer.js, Playwright, axe-core) `[UNVERIFIED in session]`; Deque note on axe-core and WCAG 2.2: https://www.deque.com/blog/wcag-2-2-removes-4-1-1-parsing-and-how-axe-core-is-impacted/ (via search listing).

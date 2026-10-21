@@ -32,3 +32,40 @@ Where QV-18 is ambiguous or depends on QV-16 (not yet written), the safest readi
 12. **Not implemented here** (server/network concerns): tlog-witness HTTP flow, rate limits, retention jobs, gossip transport,
     `witness_conflict` and `missing_consistency` evidence (needs transcripts); the `fork`, `inconsistent`, `broken_promise`
     checkers are in `equivocation.ts`. `created_at` skew is enforced at admission only (offline verifiers ignore it).
+
+13. **Grammar vs protocol log (QV-ADR-015, QV-16 §5.15, QV-17 §tally).** The board required `roll_commit` before `election_open` and
+    `tally_aggregate` before `tally_result`/`decryption_share`; the protocol log emits neither in those cases and every tallied log failed
+    `QV_BOARD_GRAMMAR`. Spec reading: ADR-015 makes the manifest `roll.root` an alternative to `roll_commit` (static-roll mode; if both
+    exist they must match, enforced by the protocol layer `E_ROLL`), and QV-16/QV-17 have verifiers and trustees recompute the aggregate
+    (`tally_aggregate` "if present"). Board changed: `GrammarState.staticRoll` is set from the manifest body (JCS JSON `roll.root` is a string;
+    anything unparsable means "not static", i.e. `roll_commit` stays required); `election_open` then does not need `roll_commit`
+    (`joint_key` is still required); `decryption_share` and `tally_result` need `election_close` only; a `tally_aggregate` after
+    `tally_result` is refused. Witness gates: `election_open` lower bound is `roll_commit` else `joint_key`; `election_close` is now a hard
+    gate up to `tally_aggregate`, or up to `tally_result` when no aggregate exists. `grammarStep` has a third optional `body` argument.
+    Server (not edited here) should pass nothing new: `BoardLog.append` supplies the body itself.
+    Update after QV-ADR-015 landed in protocol: the protocol log now always emits a `roll-commit` and its `election-open` binds
+    `(manifest_hash, joint_key_seq, roll_commit_seq)`. The static-roll waiver above stays accepted by the board (spec-permitted) but is
+    unused by the protocol sim; `tally_aggregate` remains optional.
+
+14. **Audit fixes (behaviour changes).**
+    1. `importBundle` (REQ-033) now requires caller-trusted `logPublicKey`, `witnessPolicy` and `resolveAuthorKey` (missing => `QV_BOARD_BAD_BUNDLE` /
+       `QV_BOARD_AUTHOR_UNRESOLVED`) and an integrity `VERIFIED` verdict. `PARTIAL` (e.g. redacted bodies) is refused unless `allowPartial: true`;
+       `allowPartial` never waives the trust anchors. New type `ImportOptions extends VerifyOptions`. Callers that passed only a subset must pass all three.
+    2. Phase gating in `grammarStep` (docs/18 §5.2/§5.4): S-phase types (`trustee_accept/decline`, `ceremony_start`, `dkg_*`, `key_confirm`, `joint_key`,
+       `keycheck`, `roll_commit`) are refused after `election_open`; `ceremony_abort` only with `ceremony_start` seen and no `joint_key` (CEREMONY);
+       `election_cancel` refused after `election_close` (SETUP incl. CEREMONY/SETUP_KEYED, READY, OPEN are allowed). `staticRoll`/optional `tally_aggregate` unchanged.
+    3. `BoardLog.redact` only for `ballot`, `ballot_audit`, `dkg_*` bodies (docs/18 §11.1); other types return `QV_BOARD_GRAMMAR`. Previously redacting the
+       manifest made replay see a null body, `staticRoll` false, and quarantine the log. `StoredEntry.staticRoll` (optional, manifest only) is persisted at
+       append/import time and used on replay instead of re-deriving from the body; stores that do not persist it fall back to the body.
+    4. `redact` returns `QV_BOARD_QUARANTINE` on a quarantined log and `QV_BOARD_READ_ONLY` on a read-only (imported) one.
+    5. `BoardLog` load and `selfAudit` recompute `hashLeaf(headerBytes)` and the body digest/length instead of trusting stored leaf hashes; any mismatch
+       quarantines (load) or returns false (audit). `MemoryBoardStore` copies entries/roots in and out (`getEntry`, `leafHashes`, `appendEntry`, checkpoints).
+    6. `witnessStatus` counts distinct public keys: the same key listed under two witness names counts once (first valid line in note order wins).
+    7. `attachCosignatures` splits multi-line elements, accepts one signature line per candidate, updates the "before" set as lines are accepted, so a
+       witness is attached at most once per call and junk lines cannot ride along.
+    8. `attachCosignatures` (online) rejects cosignatures with `ts > clock() + 300` (docs/18 §9.3), also for the returned `witnessed` flag.
+    9. `BoardLog.append` converts a throwing `store.appendEntry` into `QV_BOARD_INTERNAL`; tree and grammar stay unchanged.
+    10. `checkFork`, `checkInconsistent`, `checkBrokenPromise` are total: receipt numbers must be safe non-negative integers, any throw becomes an error Result.
+    11. `MemoryBoardStore.putCheckpoint` compares full roots with `bytesEqual` and requires 32-byte roots.
+    12. `isPow2` (merkle.ts, now exported for tests) uses exact arithmetic; `Math.log2(2**52+1)` rounds to 52.
+    Not implemented on purpose: `broken_promise` second branch (F11) and origin base32-vs-hex spec wording (F13) are spec questions, left as is.

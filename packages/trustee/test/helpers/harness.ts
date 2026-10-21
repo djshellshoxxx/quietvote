@@ -5,10 +5,11 @@ import {
   bytesToHex, ed25519Keypair, encryptShare, hexToBytes, jcs, pointToBytes, scalarRandomNonZero, sha256, streamRng, utf8,
   type Ed25519Keypair, type Point, type Rng,
 } from '@quietvote/crypto';
+import { MerkleTree, buildEntry, bundleToJson, cosignLine, signCheckpoint, type EntryType, type LogBundle } from '@quietvote/board';
 import {
-  NO_SUPERSEDES, PROTO_ID, adjudicateDkg, buildBallot, dkgDeal, dkgMakeComplaint, dkgMakeShares, makeCast, manifestHash, rollRoot,
+  NO_SUPERSEDES, PROTO_ID, electionOpenBody, adjudicateDkg, buildBallot, dkgDeal, dkgMakeComplaint, dkgMakeShares, expectedLogId, logOrigin, makeCast, makeSpoil, manifestHash, rollRoot,
   signRecord, signRecordRaw,
-  type DealerSecret, type DkgOutcome, type LogEntry, type Manifest, type MarkerBody, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type Selections,
+  type DealerSecret, type DkgOutcome, type LogEntry, type Manifest, type MarkerBody, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type Selections, type SpoilMode,
 } from '@quietvote/protocol';
 import { computeR1, takeDkg, markerSeq } from '../../src/ceremonylog.ts';
 import { Trustee, LOG_FORMAT, type Packet } from '../../src/trustee.ts';
@@ -42,6 +43,19 @@ export interface Options {
   malicious?: Record<number, Behaviour>;
   witnessQuorum?: number;
   minCounted?: number;
+  /** manifest.spoil_trustee_decrypt (QV-ADR-020) */
+  spoilDecrypt?: boolean;
+}
+
+export const BOARD_CREATED_AT = 1_793_000_000;
+const MARKER_ENTRY: Record<string, EntryType> = {
+  'dkg-open': 'ceremony_start', 'dkg-final': 'joint_key', 'election-open': 'election_open', 'election-close': 'election_close',
+};
+export interface BundleOpts {
+  /** false: omit the log evidence entirely (an operator that supplies only a bare log) */
+  evidence?: boolean;
+  /** false: log-signed head without witness cosignatures (only meaningful when witness_quorum > 0) */
+  witnessed?: boolean;
 }
 
 export function mkDeps(seed: string): VaultDeps {
@@ -66,14 +80,23 @@ export class Ceremony {
   readonly paths = new Map<number, string>();
   readonly scripted = new Map<number, Scripted>();
   readonly rng: Rng;
+  /** every signing key the harness can post log entries with, by public key (hex) */
+  readonly authors = new Map<string, Ed25519Keypair>();
+  readonly trusteeKeys = new Map<number, Ed25519Keypair>();
+  readonly logKey: Ed25519Keypair;
+  readonly witnessKeys: Ed25519Keypair[];
 
   constructor(o: Options) {
     this.o = o;
     this.dir = mkdtempSync(join(tmpdir(), 'qvt-'));
     this.coord = kp(o.seed, 'coord');
+    this.logKey = kp(o.seed, 'log');
+    this.witnessKeys = [kp(o.seed, 'w1'), kp(o.seed, 'w2'), kp(o.seed, 'w3')];
+    this.authors.set(H(this.coord.publicKey), this.coord);
     this.rng = streamRng(`ceremony/${o.seed}`);
     this.voters = Array.from({ length: o.voters ?? 0 }, (_, i) => kp(o.seed, `voter${i}`)).sort((a, b) => (H(a.publicKey) < H(b.publicKey) ? -1 : 1));
     this.rollHex = this.voters.map((v) => H(v.publicKey));
+    for (const v of this.voters) this.authors.set(H(v.publicKey), v);
   }
   cleanup(): void {
     rmSync(this.dir, { recursive: true, force: true });
@@ -91,6 +114,7 @@ export class Ceremony {
     for (let i = 1; i <= n; i++) {
       if (this.o.malicious?.[i] !== undefined) {
         this.signKeys.push(kp(seed, `mal${i}`));
+        this.trusteeKeys.set(i, kp(seed, `mal${i}`));
         continue;
       }
       const deps = mkDeps(`${seed}/${i}`);
@@ -99,6 +123,7 @@ export class Ceremony {
       this.paths.set(i, p);
       const t = await Trustee.keygen(p, PASS, deps);
       this.signKeys.push({ secretKey: new Uint8Array(0), publicKey: hexToBytes(t.signPk, 32) });
+      this.trusteeKeys.set(i, { secretKey: hexToBytes(t.data.sk_sign, 32), publicKey: hexToBytes(t.signPk, 32) });
     }
     const rr = this.rollHex.length > 0 ? rollRoot(this.rollHex) : undefined;
     this.manifest = {
@@ -112,9 +137,14 @@ export class Ceremony {
       trustees: this.signKeys.map((k, i) => ({ index: i + 1, name: `T${i + 1}`, sign_pk: H(k.publicKey) })),
       n, t: this.o.t, coordinator: { keys: [H(this.coord.publicKey)], m: 1 },
       ballots: { max_per_voter: 4, max_spoils_per_voter: 4 },
-      bb: { log_id: H(sha256(utf8('log'))), log_pk: H(kp(seed, 'log').publicKey), witness_quorum: this.o.witnessQuorum ?? 0 },
-      privacy_ack: true, ...(this.o.minCounted !== undefined ? { min_counted_ballots: this.o.minCounted } : {}),
+      bb: {
+        log_id: '', log_pk: H(this.logKey.publicKey), witness_quorum: this.o.witnessQuorum ?? 0,
+        ...((this.o.witnessQuorum ?? 0) > 0 ? { witnesses: this.witnessKeys.map((k, w) => ({ name: `w${w + 1}`, pk: H(k.publicKey) })) } : {}),
+      },
+      privacy_ack: true, ...(this.o.spoilDecrypt === true ? { spoil_trustee_decrypt: true } : {}), ...(this.o.minCounted !== undefined ? { min_counted_ballots: this.o.minCounted } : {}),
     };
+    // QV-16 bb.log_id = SHA-256(log origin) (protocol X-21); the origin depends only on election_id.
+    this.manifest.bb.log_id = expectedLogId(logOrigin(this.manifest));
     this.mh = manifestHash(this.manifest);
     this.mrec = { body: this.manifest, sigs: [signRecordRaw(this.coord.secretKey, this.coord.publicKey, this.mh, 'manifest', this.manifest)] };
     for (const [i, p] of this.paths) {
@@ -207,7 +237,12 @@ export class Ceremony {
       await this.sync(i);
       this.post(await this.act(i, (t) => t.drill()));
     }
-    this.marker('election-open');
+    // QV-ADR-015: roll-commit, then an election-open that binds (manifest_hash, joint_key_seq, roll_commit_seq).
+    const root = this.manifest.roll.root; // DKG-only ceremonies have an empty roll and never reach a tally
+    const rc = { proto: PROTO_ID, type: 'roll-commit' as const, root: root ?? '00'.repeat(32), size: this.rollHex.length };
+    const rcSeq = root === undefined ? 0 : this.push({ body: rc, sigs: [signRecordRaw(this.coord.secretKey, this.coord.publicKey, this.mh, 'roll-commit', rc)] });
+    const body = electionOpenBody(PROTO_ID, H(this.mh), markerSeq(this.log, 'dkg-final')!, rcSeq);
+    this.push({ body, sigs: [signRecordRaw(this.coord.secretKey, this.coord.publicKey, this.ctx!, 'marker', body)] });
     await this.syncAll();
     return outcome;
   }
@@ -233,8 +268,67 @@ export class Ceremony {
     if (!b.ok) throw new Error(`build ${b.error}`);
     this.push(makeCast(this.params(o), v.secretKey, b.value));
   }
-  bundle(): { manifest: MultiSignedRecord<Manifest>; manifest_hash: string; roll: string[]; log: LogEntry[] } {
-    return { manifest: this.mrec, manifest_hash: H(this.mh), roll: this.rollHex, log: this.log };
+  /** Builds a ballot without posting it. */
+  build(o: DkgOutcome, voterIdx: number, sel: Selections, attempt = 0) {
+    const v = this.voters[voterIdx]!;
+    const b = buildBallot(this.params(o), v.secretKey, v.publicKey, NO_SUPERSEDES, sel, this.rng, attempt);
+    if (!b.ok) throw new Error(`build ${b.error}`);
+    return b.value;
+  }
+  /** Posts a spoil record for a built ballot; returns its hex ballot code. */
+  spoil(o: DkgOutcome, voterIdx: number, b: ReturnType<Ceremony['build']>, mode: SpoilMode = 'trustees'): string {
+    this.push(makeSpoil(this.params(o), this.voters[voterIdx]!.secretKey, b, mode));
+    return H(b.code);
+  }
+  castBuilt(o: DkgOutcome, voterIdx: number, b: ReturnType<Ceremony['build']>): void {
+    this.push(makeCast(this.params(o), this.voters[voterIdx]!.secretKey, b));
+  }
+  /** Author key and QV-18 entry type of a protocol record (mirrors protocol/test/helpers/board.ts). */
+  private entryFor(rec: Record<string, any>, isManifest: boolean): [EntryType, Ed25519Keypair] {
+    if (isManifest) return ['manifest', this.coord];
+    if ('intent' in rec) return [rec.intent === 'cast' ? 'ballot' : 'ballot_audit', this.authors.get(rec.body.voter)!];
+    const b = rec.body;
+    switch (b.type) {
+      case 'marker': return [MARKER_ENTRY[b.name] ?? 'notice', this.coord];
+      case 'roll-commit': return ['roll_commit', this.coord];
+      case 'dkg-commit': case 'dkg-dealing': return ['dkg_round1', this.trusteeKeys.get(b.i)!];
+      case 'dkg-shares': return ['dkg_round2', this.trusteeKeys.get(b.i)!];
+      case 'dkg-complaint': return ['dkg_complaint', this.trusteeKeys.get(b.accuser)!];
+      case 'dkg-keyconf': return ['key_confirm', this.trusteeKeys.get(b.j)!];
+      case 'keycheck': return ['keycheck', this.trusteeKeys.get(b.j)!];
+      case 'tally': return ['tally_result', this.authors.get(rec.sig.key) ?? this.coord];
+      default: return ['decryption_share', this.trusteeKeys.get(b.j)!];
+    }
+  }
+  /** QV-18 log export (JSON) for the current log, head at full size, cosigned by all witnesses unless `witnessed: false`. */
+  board(o: { witnessed?: boolean } = {}): unknown {
+    const origin = logOrigin(this.manifest);
+    const recs: [number, unknown][] = [[0, this.mrec], ...this.log.map((e): [number, unknown] => [e.seq, e.entry])];
+    const tree = new MerkleTree();
+    const entries: LogBundle['entries'] = [];
+    for (const [seq, rec] of recs) {
+      const [type, who] = this.entryFor(rec as Record<string, any>, seq === 0);
+      const body = jcs(rec);
+      const e = buildEntry({ origin, type, secretKey: who.secretKey, publicKey: who.publicKey, nonce: sha256(utf8(`nonce-${seq}`)).slice(0, 16), createdAt: BOARD_CREATED_AT, body });
+      tree.appendLeaf(e.headerBytes);
+      entries.push({ seq, headerBytes: e.headerBytes, body });
+    }
+    let note = signCheckpoint(origin, tree.size, tree.root(), this.logKey.secretKey, this.logKey.publicKey);
+    if (o.witnessed !== false && (this.o.witnessQuorum ?? 0) > 0) {
+      const text = note.slice(0, note.indexOf('\n\n') + 1);
+      const ts = Date.parse(this.manifest.voting_close) / 1000;
+      this.witnessKeys.forEach((k, w) => { note += cosignLine(`w${w + 1}`, k.secretKey, k.publicKey, text, ts); });
+    }
+    const lb: LogBundle = {
+      format: 'qv-bundle/v1', origin, createdAt: BOARD_CREATED_AT, treeSize: tree.size, root: tree.root(), generator: 'trustee-test', spec: 'QV-18',
+      entries, checkpoints: [note], receipts: [],
+      policy: { logPublicKey: this.logKey.publicKey, witnessPolicy: { quorum: 0, noneAcknowledged: true, witnesses: [] } }, redactions: [],
+    };
+    return bundleToJson(lb);
+  }
+  bundle(o: BundleOpts = {}): { manifest: MultiSignedRecord<Manifest>; manifest_hash: string; roll: string[]; log: LogEntry[]; log_evidence?: { board: unknown } } {
+    const b = { manifest: this.mrec, manifest_hash: H(this.mh), roll: this.rollHex, log: this.log };
+    return o.evidence === false ? b : { ...b, log_evidence: { board: this.board(o) } };
   }
 }
 

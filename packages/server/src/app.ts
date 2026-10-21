@@ -13,6 +13,9 @@ import { ControlDb } from './controldb.ts';
 import { SERVER_VERSION, type ElectionRuntime } from './election.ts';
 import type { Env } from './env.ts';
 import { electionBundle, qvb } from './export.ts';
+import { registerExtRoutes } from './ext-routes.ts';
+import { GossipService } from './gossip.ts';
+import { JobRunner } from './jobs.ts';
 import { createHttpApp, type Ctx, type HttpApp, type Reply, type Route } from './http.ts';
 import { loadOrCreateKek, seal, open as unsealBytes } from './kek.ts';
 import { Logger } from './logger.ts';
@@ -33,6 +36,8 @@ export interface QuietVoteServer {
   pool: ElectionPool;
   sse: SseHub;
   webhooks: WebhookService;
+  jobs: JobRunner;
+  gossip: GossipService;
   start(): Promise<{ port: number; host: string; url: string }>;
   stop(): Promise<void>;
 }
@@ -65,6 +70,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const pool = new ElectionPool(env);
   const sse = new SseHub(env);
   const webhooks = new WebhookService(env);
+  const jobs = new JobRunner(env);
+  const gossip = new GossipService(env, pool);
   env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
   const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
   const releaseKey = cfg.releaseSeedHex ? ed25519Keypair(hexToBytes(cfg.releaseSeedHex, 32)) : undefined;
@@ -160,7 +167,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       witness_quorum: { required: w.required, have: w.have },
       ...(rt.st.mh ? { manifest_hash: b64u(rt.st.mh) } : {}),
       phase_seq: st.phaseSeq,
-      integrity: quarantine ? 'quarantined' : w.required > 0 && !w.witnessed ? 'unwitnessed' : 'ok',
+      integrity: rt.edb.hasPermanentEvidence() ? 'compromised' : quarantine ? 'quarantined' : w.required > 0 && !w.witnessed ? 'unwitnessed' : 'ok',
       gates,
     };
   };
@@ -188,8 +195,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       json: {
         instance_id: control.instanceId(), api_versions: ['1.0'], server_version: SERVER_VERSION, protocol_suites: [PROTO_ID], entry_types: [...ENTRY_TYPES],
         registration_mode: cfg.registrationMode, logging: { ip: false, user_agent: false },
-        limits: { max_entry_bytes: 1 << 20, max_ballot_bytes: cfg.maxBallotBytes, max_import_bytes: 0, max_revotes: 20, max_log_bytes: cfg.maxLogBytes },
-        features: ['signed-requests', 'link-access', 'qvb-export', 'witness-cosign'], witnesses_supported: cfg.witnesses.map((w) => w.name),
+        limits: { max_entry_bytes: 1 << 20, max_ballot_bytes: cfg.maxBallotBytes, max_import_bytes: cfg.maxImportBytes, max_revotes: 20, max_log_bytes: cfg.maxLogBytes },
+        features: ['signed-requests', 'link-access', 'qvb-export', 'witness-cosign', 'gossip', 'imports', 'range-export', 'admin'], witnesses_supported: cfg.witnesses.map((w) => w.name),
       },
     }),
   });
@@ -426,7 +433,10 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   });
 
   // ---- invites, registration, roll
-  const unlockDek = (rt: ElectionRuntime): Uint8Array => unsealBytes(env.kek, new Uint8Array(rt.registry.dek_wrapped ?? new Uint8Array()), `dek:${rt.id}`);
+  const unlockDek = (rt: ElectionRuntime): Uint8Array => {
+    if (!rt.registry.dek_wrapped) throw conflict('this election holds no operator data (imported mirror)');
+    return unsealBytes(env.kek, new Uint8Array(rt.registry.dek_wrapped ?? new Uint8Array()), `dek:${rt.id}`);
+  };
   add({
     method: 'POST', path: '/api/v1/elections/:id/invites', cls: 'M', auth: 'sig', body: 'json', maxBody: 262144,
     handler: async (c) => {
@@ -704,10 +714,13 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     method: 'POST', path: '/api/v1/elections/:id/log/cosignatures', cls: 'G', auth: 'none', body: 'json', maxBody: 16384,
     handler: async (c) => {
       const rt = await rtOf(c);
+      if (rt.imported) throw conflict('imported elections are read-only mirrors; they take no cosignatures');
       const b = c.parse(fObj({ checkpoint_size: req(fInt(1, 2 ** 40)), lines: req(fArr(fStr({ min: 10, max: 400 }), 16)) }));
       if (!rt.edb.store.getCheckpoint(b.checkpoint_size)) throw notFound('checkpoint');
       const before = rt.witnessInfo();
       const r = await rt.attachCosignatures(b.checkpoint_size, b.lines);
+      exportGen.set(rt.id, (exportGen.get(rt.id) ?? 0) + 1);
+      exportCache.delete(rt.id);
       const after = rt.witnessInfo();
       return { status: 200, json: { accepted: after.cosigners.filter((x) => !before.cosigners.includes(x)), rejected: [], witnessed: r.witnessed } };
     },
@@ -777,13 +790,42 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     },
   });
 
-  // ---- export
+  // ---- export (QV-09 §10; single-range `Range` support, QV-09 §13 "Mass export abuse")
+  // Built bundles are cached per election for 10 minutes (bounded in total bytes) so resumed/ranged downloads do not rebuild them;
+  // a cosignature attach bumps the generation, which changes the ETag and drops the cached bytes.
+  const exportGen = new Map<string, number>();
+  const exportCache = new Map<string, { etag: string; bytes: Uint8Array; at: number }>();
+  const EXPORT_CACHE_MAX = 128 * 1024 * 1024;
+  const exportEtag = (rt: ElectionRuntime): string => `"${rt.log.size}:${toHex(rt.log.root()).slice(0, 16)}:${exportGen.get(rt.id) ?? 0}"`;
+  const cachedQvb = (rt: ElectionRuntime): { bytes: Uint8Array; etag: string } => {
+    const etag = exportEtag(rt);
+    const hit = exportCache.get(rt.id);
+    if (hit && hit.etag === etag && nowMs() - hit.at < 600_000) {
+      exportCache.delete(rt.id);
+      exportCache.set(rt.id, hit); // LRU order
+      return { bytes: hit.bytes, etag };
+    }
+    exportCache.delete(rt.id);
+    const bytes = qvb(rt);
+    if (bytes.length <= EXPORT_CACHE_MAX) {
+      exportCache.set(rt.id, { etag, bytes, at: nowMs() });
+      let total = 0;
+      for (const v of exportCache.values()) total += v.bytes.length;
+      for (const [k, v] of exportCache) {
+        if (total <= EXPORT_CACHE_MAX) break;
+        exportCache.delete(k);
+        total -= v.bytes.length;
+      }
+    }
+    return { bytes, etag };
+  };
   add({
     method: 'GET', path: '/api/v1/elections/:id/export.qvb', cls: 'X', auth: 'none',
     handler: async (c) => {
       const rt = await readable(c);
       if (!rt.st.manifest) throw new ApiError(409, 'WRONG_PHASE', 'nothing to export before the manifest');
-      return { status: 200, bytes: qvb(rt), contentType: 'application/x-tar', cache: 'public, max-age=600', etag: `"${rt.log.size}:${toHex(rt.log.root()).slice(0, 16)}"` };
+      const b = cachedQvb(rt);
+      return { status: 200, bytes: b.bytes, ranges: true, contentType: 'application/x-tar', cache: 'public, max-age=600', etag: b.etag };
     },
   });
   add({
@@ -791,14 +833,16 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     handler: async (c) => {
       const rt = await readable(c);
       if (!rt.st.manifest) throw new ApiError(409, 'WRONG_PHASE', 'nothing to export before the manifest');
-      return { status: 200, json: electionBundle(rt), cache: 'public, max-age=600' };
+      return { status: 200, bytes: Buffer.from(JSON.stringify(electionBundle(rt))), ranges: true, contentType: 'application/json; charset=utf-8', cache: 'public, max-age=600', etag: exportEtag(rt) };
     },
   });
   void audienceOf;
 
+  registerExtRoutes({ env, pool, jobs, add, idem, readable, intQ });
+
   const http = createHttpApp(env, R, statics);
   return {
-    http, env, pool, sse, webhooks,
+    http, env, pool, sse, webhooks, jobs, gossip,
     async start() {
       const a = await http.listen();
       return { ...a, url: `http://${a.host}:${a.port}` };
@@ -806,6 +850,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     async stop() {
       sse.closeAll();
       webhooks.stop();
+      gossip.stop();
+      await jobs.stop();
       await http.close();
       await pool.closeAll();
       control.close();
