@@ -27,7 +27,7 @@ Layout target: spec [30 Engineering standards](https://github.com/djshellshoxxx/
 | `protocol` | `@quietvote/protocol` | Manifest and roll, distributed key generation, ballot build and verify, Benaloh spoil, ballot-log checks, tally and partial decryption, election verification. Spec errata in `NOTES.md`. |
 | `board` | `@quietvote/board` | Merkle log, entry encoding, checkpoints, inclusion and consistency checks, receipts, bundle export, equivocation checks. |
 | `server` | `@quietvote/server` | HTTP service (no third-party dependencies), SQLite-backed board and control store, admission checks, event stream, webhooks, rate limits. |
-| `web` | `@quietvote/web` | Browser client (framework-free TypeScript), key handling, ballot flow, receipts, i18n catalogs, static build with CSP and SRI, offline verifier page. 74 unit tests pass. Playwright e2e is separate. |
+| `web` | `@quietvote/web` | Browser client (framework-free TypeScript), key handling, ballot flow, receipts, i18n catalogs, static build with CSP and SRI, offline verifier page. Playwright e2e is separate. |
 | `cli` | `@quietvote/cli` | `qv` command: keygen, election and ballot commands, verify, board commands. Imports the verifier in-process (layering issue, see `packages/cli/NOTES.md`). |
 | `trustee` | `@quietvote/trustee` | `qv-trustee`: key ceremony state machine, air-gapped log and packet files, sealed bundle. |
 | `verifier` | `@quietvote/verifier` | `qv-verify`: offline verification into a named-check report, canary self-test. |

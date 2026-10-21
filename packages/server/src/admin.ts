@@ -241,7 +241,7 @@ export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, 
   }
   if (names.size === 0) throw new ApiError(422, 'VALIDATION_FAILED', 'verified_against must name at least one configured witness');
   // 1. re-open from disk: a fresh replay recomputes tree, grammar and every stored checkpoint (QV-18 REQ-053/054)
-  const minSize = Math.max(forced?.min_size ?? 0, rt0.edb.maxEvidenceSize());
+  let minSize = Math.max(forced?.min_size ?? 0, rt0.edb.maxEvidenceSize());
   await pool.evict(id);
   let rt: ElectionRuntime | undefined;
   try {
@@ -253,6 +253,13 @@ export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, 
   if (rt.log.status.state === 'quarantine') throw new ApiError(409, 'STATE_CONFLICT', 'the stored log is still inconsistent after a fresh replay');
   const audit = await auditLog(rt);
   if (!audit.ok) throw new ApiError(409, 'STATE_CONFLICT', `a full self-audit still fails (${audit.failures[0]?.rule ?? 'unknown'}${audit.failures[0]?.seq !== undefined ? ` at seq ${audit.failures[0].seq}` : ''})`);
+  // TOCTOU (security review 2026-10-21, SR-2): gossip may have recorded evidence or re-quarantined the log while this request was
+  // awaiting the eviction / re-open above. Everything decided from rt0 is re-checked on the fresh runtime; from here to
+  // clearForcedQuarantine() there is no await, so nothing can interleave.
+  if (rt.edb.hasPermanentEvidence()) throw new ApiError(409, 'COMPROMISED', 'the log key signed contradictory histories (fork evidence); this quarantine cannot be cleared, retire the election instead');
+  const forcedNow = rt.forcedQuarantine === undefined ? undefined : (JSON.parse(rt.forcedQuarantine) as { code: string; incident: string; min_size: number });
+  if (forcedNow !== undefined && forcedNow.incident !== incident) throw new ApiError(409, 'STATE_CONFLICT', 'ack does not match the current incident id');
+  minSize = Math.max(minSize, forcedNow?.min_size ?? 0, rt.edb.maxEvidenceSize());
   if (rt.log.size < minSize) throw new ApiError(409, 'STATE_CONFLICT', `the log holds ${rt.log.size} entries but a checkpoint signed by this log covers ${minSize}: restore the newer database first`);
   // 2. every named witness must hold a valid cosignature over a stored checkpoint that this (re-verified) log reproduces, at least as large as the incident
   const policy = rt.witnessPolicy();
