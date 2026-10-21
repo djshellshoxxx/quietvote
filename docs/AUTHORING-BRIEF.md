@@ -14,3 +14,9 @@ QuietVote is a minimal-trust, exit-friendly, crypto-libertarian private voting s
 6. Be dense and concrete; avoid filler. Markdown only. Mermaid diagrams welcome.
 7. Don't write application code (that's a later phase) except short illustrative pseudocode/snippets.
 8. Final reply to the orchestrator: ≤120 words — files written, key decisions made, unresolved cross-spec conflicts or ADRs proposed.
+
+
+## Pointers (added by the consistency pass, 2026-10-21)
+- Proposed ADRs from all specs are collected in `docs/decision-log.md` ("Proposed ADRs (pending owner review)"), and conflicts are resolved there by QV-ADR-014–024 ("Reconciliation decisions"). Specs shall follow those ADRs and QV-16 for crypto/byte-level questions.
+- Cross-spec contradictions found and the minimal fixes made: `docs/plan/CONSISTENCY-REPORT.md`. Outstanding `[UNVERIFIED]` claims: `docs/plan/VERIFICATION-TODO.md`.
+- ADR ID convention: `QV-ADR-P<spec#>-n` for specs; `QV-ADR-P-R<nn>-n` for research docs (R-02/R-03/R-04 originally collided; renamed).

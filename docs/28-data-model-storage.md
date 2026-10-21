@@ -117,7 +117,7 @@ Rationale and rejected alternative: a single shared DB with `election_id` column
 
 ## 8. Schema
 
-Conventions: timestamps `INTEGER` unix **milliseconds** UTC (`*_at`); ids `TEXT` lowercase base32 (26 chars = 128-bit) unless noted; keys/hashes/ciphertexts `BLOB`; enumerations `TEXT` with `CHECK`; booleans `INTEGER CHECK (x IN (0,1))`. `STRICT` tables. Hash lengths enforced by `CHECK (length(x)=32)`. SQLite JSON (`TEXT` holding JSON) only for non-queried payloads.
+Conventions: timestamps `INTEGER` unix **milliseconds** UTC (`*_at`); ids `TEXT` lowercase base32 (26 chars = 128-bit) unless noted (`election_id` is the QV-16 32-char lowercase hex, QV-16 §5.6.1); keys/hashes/ciphertexts `BLOB`; enumerations `TEXT` with `CHECK`; booleans `INTEGER CHECK (x IN (0,1))`. `STRICT` tables. Hash lengths enforced by `CHECK (length(x)=32)`. SQLite JSON (`TEXT` holding JSON) only for non-queried payloads.
 
 ### 8.1 Control database (`control.sqlite`)
 
@@ -184,7 +184,7 @@ CREATE TABLE session (                  -- P3-hash
 CREATE INDEX session_exp ON session(expires_at);
 
 CREATE TABLE election_registry (        -- P0/P4
-  election_id TEXT PRIMARY KEY CHECK (length(election_id)=26),
+  election_id TEXT PRIMARY KEY CHECK (length(election_id)=32 AND election_id NOT GLOB '*[^0-9a-f]*'),
   org_id      TEXT NOT NULL REFERENCES org(org_id) ON DELETE RESTRICT,
   db_path     TEXT NOT NULL UNIQUE,     -- relative to $QV_DATA
   state       TEXT NOT NULL CHECK (state IN ('DRAFT','SETUP','CEREMONY','SETUP_KEYED','READY','OPEN','PAUSED','CLOSED','TALLYING','STALLED','TALLIED','CHALLENGED','AUDIT','ARCHIVED','INVALIDATED','CANCELLED','ABORTED','DELETED','IMPORTED')),
@@ -265,7 +265,7 @@ CREATE TABLE schema_migration (
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;   -- P4: election_id, created_at, spec_version
 
 CREATE TABLE election (                 -- exactly one row
-  election_id   TEXT PRIMARY KEY CHECK (length(election_id)=26),
+  election_id   TEXT PRIMARY KEY CHECK (length(election_id)=32 AND election_id NOT GLOB '*[^0-9a-f]*'),
   origin        TEXT NOT NULL UNIQUE,        -- 'quietvote/v1/<election_id>'
   state         TEXT NOT NULL,               -- as registry; derived from log (projection) except DRAFT
   phase_seq     TEXT NOT NULL DEFAULT '{}',  -- JSON: {"manifest":0,"joint_key":14,"roll_commit":17,"open":18,"close":412,...}

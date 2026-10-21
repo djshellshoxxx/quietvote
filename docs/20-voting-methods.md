@@ -52,18 +52,18 @@ All proofs are non-interactive via Fiat–Shamir over a transcript that includes
 - **P05(ciphertext tuple, S⊂{0,1}^m) — pattern membership** (used for ranked ballots, §8): CDS OR over patterns s∈S of the *conjunction* over coordinates j of a CP proof "ct_j encrypts s_j". Standard AND/OR sigma composition [R2][R3].
 
 ### 4.3 Manifest fields consumed (QV-09 schema owner)
-`method` ∈ {`yesno`,`single`,`approval`,`kofn`,`ranked`}; `options[]` (ids, labels, ≤ 255 chars each, unique); `selection_limits {min,max}`; `allow_blank` (bool); `threshold {kind, num, den, base}`; `quorum {kind, value}`; `tie_break {kind, params}`; `weights_mode` ∈ {`none`,`roll`,`delegated`}; `max_weight`; `disclosure` (§10); `tally_algorithm` ∈ {`schulze`,`ranked_pairs`} for ranked.
+**Names conformed to QV-16 §5.6.1 (QV-16 prevails):** `method` ∈ {`yes-no`,`single-choice`,`approval`,`k-of-n`} in suite v1 (`ranked` is Phase 2 and gated, QV-ADR-023; older names `yesno`/`single`/`kofn` are retired); `selection_limit` (`L`, max) replaces `selection_limits.max`, and `min_selections` is `0` in suite v1 (min > 0 is presentation-only/reserved); `rule {type:"threshold", num, den, basis ∈ {yes+no, counted, roll}, strict}` replaces `threshold {kind,num,den,base}` (`yn`→`yes+no`, `cast`→`counted`, `eligible`→`roll`); `tie_break.type` uses hyphens (`status-quo`, `declare-tie`, `lexicographic`; `beacon` is reserved and rejected in suite v1); `allow_blank` is presentation-only because an all-zero ballot is always valid. Original list: `method` ∈ {`yesno`,`single`,`approval`,`kofn`,`ranked`}; `options[]` (ids, labels, ≤ 255 chars each, unique); `selection_limits {min,max}`; `allow_blank` (bool); `threshold {kind, num, den, base}`; `quorum {kind, value}`; `tie_break {kind, params}`; `weights_mode` ∈ {`none`,`roll`,`delegated`}; `max_weight`; `disclosure` (§10); `tally_algorithm` ∈ {`schulze`,`ranked_pairs`} for ranked.
 
 ### 4.4 Placeholder (slack) technique — undervotes without range proofs
 To support `min ≤ Σ selections ≤ max` using only P02 and BIT, the client appends `max − min` **slack selections** (bits). The ballot is valid iff every real and slack bit satisfies BIT and the homomorphic sum of *all* (real+slack) bits equals `max` (P02). Then real sum ∈ [min, max]. Slack ciphertexts are included in the ballot and aggregated like any other; they are not attributed to any option and their aggregate total only reveals the **total undervote count** `N·max − Σ_real` (derivable anyway from the public ballot count and the real totals). Slack positions are shuffled by a client-chosen permutation *inside* the vector only if the vector order is public-structure-irrelevant; QV-16 fixes slack at the end (the order leaks nothing since all are encrypted).
 
 ## 5. Methods — MVP
 
-### 5.1 Yes/No (with optional Abstain)
-- **Semantics.** Options `[yes, no]` plus optional `abstain` when `allow_blank` is true (abstain counts toward quorum but not toward the threshold base unless `base = cast`).
-- **Encoding.** Vector of m ciphertexts (m = 2 or 3), exactly one bit set: this is single-choice with limit 1 (§5.2). No slack required since min=max=1.
+### 5.1 Yes/No (blank = abstain)
+- **Semantics.** Options are exactly `[yes, no]` (QV-16 §5.6.1). There is **no `abstain` option or ciphertext**: abstaining is a blank (all-zero) ballot, always valid, counted as participation (quorum) and in `T_abs = V − T_yes − T_no` (derived from the public counted-voter count `V`), and counted in the threshold base only for basis `counted`. `allow_blank` only controls whether the UI offers an explicit "Abstain" choice.
+- **Encoding.** Vector of 2 real ciphertexts (`yes`, `no`) plus the QV-16 placeholder, at most one real bit set (limit `L = 1`, blank allowed); QV-16 §5.9–5.10 prevail over the older "exactly one bit" text below.
 - **Validity statement.** `∀j: BIT(c_j)` ∧ `P02(⊕_j c_j, 1)`. Proof size m·128 + 64 B (m=2: 320 B).
-- **Tally.** Aggregate `C_j = ⊕_ballots c_j`; threshold decryption yields `T_j·G`; solve dlog (§11) for `T_yes, T_no, T_abs`.
+- **Tally.** Aggregate `C_j = ⊕_ballots c_j`; threshold decryption yields `T_j·G`; solve dlog (§11) for `T_yes, T_no` (and `T_abs = V − T_yes − T_no`).
 - **Decision rule** (all integer arithmetic, no floats): let `base = T_yes + T_no` (`base=yn`) or `T_yes+T_no+T_abs` (`base=cast`) or `|roll|` (`base=eligible`). Passes iff quorum satisfied ∧ `den·T_yes ≥ num·base` (≥) or `>` per manifest `threshold.strict`. Simple majority: num/den = 1/2 with strict `>`. Two-thirds: 2/3 with `≥`. Pseudocode:
 
 ```
@@ -117,7 +117,7 @@ function counted_ballots(log):
       latest[v] = entry
   return latest.values()            # exactly one per voter
 ```
-`seq` is a voter-chosen strictly increasing integer included in the signed statement; ordering by log position alone would let the server reorder, so `seq` (signed) is authoritative, with log position only breaking nothing. Superseded ballots remain in the log (needed for public verifiability of the count) but are excluded from the homomorphic sum. A Benaloh-audited (spoiled) ballot is never counted (§13).
+**Conformed to QV-16 §5.14 / QV-ADR-016:** there is no voter-chosen `seq`. Order is the bulletin-board sequence number; the server's power to reorder is bounded by the signed `supersedes` hash chain (a ballot with a stale `supersedes` is inadmissible, `E_SUPERSEDES`) and by `max_per_voter` (`E_REVOTE_LIMIT`). The pseudocode's `entry.seq` is the log sequence number and the comparison is replaced by the chain rule. Original text: `seq` is a voter-chosen strictly increasing integer included in the signed statement. Superseded ballots remain in the log (needed for public verifiability of the count) but are excluded from the homomorphic sum. A Benaloh-audited (spoiled) ballot is never counted (§13).
 
 ## 8. Phase 2 — Ranked ballots (Schulze / Ranked Pairs)
 
@@ -243,14 +243,14 @@ Manifest `tie_break.kind` (declared before opening; Must):
 ## 13. Invalid, spoiled, and malformed ballots
 | Class | Detection | Handling |
 |---|---|---|
-| Malformed encoding (bad point, non-canonical scalar, wrong vector length, wrong manifest hash) | Server and every verifier | Rejected pre-append; reason code `E_ENCODING`; **not** logged as a ballot entry (to avoid DoS growth) except in a rate-limited rejection counter. Verifiers re-check all logged ballots |
-| Proof failure | Server | Rejected, `E_PROOF`. A malicious server may *wrongly* accept; verifiers re-run all proofs and reject the tally if any counted ballot fails (so a bad accepted ballot is a verifiable server fault) |
-| Wrong signature / voter not on roll | Server/verifiers | `E_AUTH` |
-| Old `seq` (replay/revote) | Server | `E_SUPERSEDED`, retained only if appended earlier |
+| Malformed encoding (bad point, non-canonical scalar, wrong vector length, wrong manifest hash) | Server and every verifier | Rejected pre-append; reason code from QV-16 §5.20 (`E_PARSE`/`E_SCHEMA`/`E_POINT_DECODE`/`E_SCALAR_RANGE`; legacy `E_ENCODING`); **not** logged as a ballot entry (to avoid DoS growth) except in a rate-limited rejection counter. Verifiers re-check all logged ballots |
+| Proof failure | Server | Rejected, `E_CDS`/`E_LIMIT_PROOF` (legacy `E_PROOF`). A malicious server may *wrongly* accept; verifiers re-run all proofs and reject the tally if any counted ballot fails (so a bad accepted ballot is a verifiable server fault) |
+| Wrong signature / voter not on roll | Server/verifiers | `E_SIG` / `E_VOTER_NOT_ELIGIBLE` (legacy `E_AUTH`) |
+| Stale `supersedes` / over revote limit | Server | `E_SUPERSEDES` / `E_REVOTE_LIMIT`, retained only if appended earlier |
 | Late (after close) | Server clock + log time | `E_CLOSED` |
 | Spoiled by Benaloh challenge | Client sends audit request | Ballot + randomness published and marked SPOILED; never counted |
-| Blank | Valid if `allow_blank` | Counted for quorum |
-Because validity is proven in zero knowledge, **no counted ballot can be "invalid-but-undetectable"**; there is no unreadable or discarded-in-the-tally category (QV-20-REQ-004). An all-zero real vector in an `allow_blank=false` election fails P02/BIT.
+| Blank (all-zero selections) | Always valid in suite v1 (QV-16 `min_selections = 0`); `allow_blank=false` is enforced by the UI only | Counted for quorum/participation |
+Because validity is proven in zero knowledge, **no counted ballot can be "invalid-but-undetectable"**; there is no unreadable or discarded-in-the-tally category (QV-20-REQ-004). An all-zero real vector is valid in every suite-v1 election (placeholders absorb the limit sum); an election that wants no blanks can only discourage them in the UI and report them as undervotes.
 
 ## 14. Audit procedure
 The independent CLI verifier (QV-11) performs, in order, and outputs PASS/FAIL with the first failing step:
@@ -277,7 +277,7 @@ Voters additionally: (a) Benaloh challenge on their own device (cast-as-intended
 | QV-20-REQ-007 | Decrypted values shall be accompanied by `M` and P04 proofs; verifiers shall check `M·G` rather than solving dlog | Must | Verifier runs on a 2^40-weight election in < 5 s without BSGS | Perf test |
 | QV-20-REQ-008 | A tally exceeding its bound or violating `d[i][j]+d[j][i] ≤ N` shall abort with a published error | Must | Fault-injection test | Integration |
 | QV-20-REQ-009 | Manifest validation shall reject `|roll| < 3` and shall warn at `|roll| < 10` | Must | Validator unit tests | Unit |
-| QV-20-REQ-010 | Superseded ballots shall be excluded and the signed `seq` shall be authoritative over log position | Must | Server reorder simulation yields identical tally | Integration |
+| QV-20-REQ-010 | Superseded ballots shall be excluded; ordering is the log sequence number plus the QV-16 `supersedes` chain (QV-ADR-016), with no voter-chosen `seq` | Must | Server reorder simulation yields identical tally | Integration |
 | QV-20-REQ-011 | Benaloh-spoiled ballots shall be published with randomness and never counted | Must | Spoiled ballot absent from aggregate; opening re-encrypts to same ciphertexts | Integration |
 | QV-20-REQ-020 | Weighted voting shall apply public weights via scalar multiplication with `ΣW ≤ 2^40` | Should | Aggregate equals Σ w·x on random vectors | Unit |
 | QV-20-REQ-021 | Delegation shall be public, depth-capped (default 3), cycle-safe, overridden by a delegator's own ballot, and disallowed with unlinkable tokens | Should | Cycle/override/depth fixtures; validator rejects combination | Unit |
@@ -296,7 +296,7 @@ Voters additionally: (a) Benaloh challenge on their own device (cast-as-intended
 |---|---|---|---|---|
 | Over/under-vote ballot | Malicious client | Skewed tally | P02/BIT proofs rejected by all verifiers | Soundness depends on DL hardness |
 | Ballot replay across elections | Server/voter | Duplicate/foreign votes | Statement-bound Fiat–Shamir, manifest hash | None known |
-| Server reorders revotes | Server | Wrong ballot counted | Signed `seq` | Withholding (availability) |
+| Server reorders revotes | Server | Wrong ballot counted | Signed `supersedes` chain (QV-16 §5.14.2) | Withholding (availability) |
 | Pattern signalling in ranked ballots | Vote buyer | Coercion | Documented non-claim; revoting | Residual (ADR-008) |
 | Small-group inference | Coalition | Reveals last vote | §10 warnings | Residual |
 | Malformed point / small-subgroup | Malicious client | Crash/forgery | ristretto255 canonical decoding rejects invalid encodings (prime-order abstraction) | Library bugs |
@@ -336,7 +336,7 @@ Unit: encode/decode, each proof (honest + 100% mutation set), threshold arithmet
 
 ## 24. Proposed ADRs
 - **QV-ADR-P20-1 — Slack-selection encoding for min/max limits.** Use BIT + constant-sum P02 over real+slack bits instead of range proofs. Rationale: reuses audited primitives, mirrors ElectionGuard's selection-limit approach [R6]. Consequence: aggregates of slack reveal total undervote count only.
-- **QV-ADR-P20-2 — Ranked ballots via encrypted pairwise bits with per-triple weak-order pattern proofs.** Strict-order shortcut via 3-cycle test. Gated by independent review. Alternatives: mixnet (ADR-004), decrypting rankings per ballot (violates secrecy).
+- **QV-ADR-P20-2 — Ranked ballots via encrypted pairwise bits with per-triple weak-order pattern proofs.** Strict-order shortcut via 3-cycle test. Gated by independent review (adopted as QV-ADR-023, n ≤ 12). Alternatives: mixnet (ADR-004), decrypting rankings per ballot (violates secrecy).
 - **QV-ADR-P20-3 — Delegation is public, static, Phase 1 only.**
 - **QV-ADR-P20-4 — Verifiers check `M·G` instead of solving dlog.**
 - **QV-ADR-P20-5 — Declared tie-break kinds including beacon-random.**

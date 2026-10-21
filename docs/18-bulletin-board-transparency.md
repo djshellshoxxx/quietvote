@@ -61,7 +61,7 @@ Priorities: Must / Should / Could. Verification: T = automated test, R = review,
 
 | ID | Requirement | Pri | Acceptance criteria | Ver |
 |---|---|---|---|---|
-| QV-18-REQ-001 | Each election shall have exactly one log identified by an `origin` string `quietvote/v1/<election_id>` (`election_id` = 26-char lowercase base32 of 128 random bits). | Must | Two elections never share an origin; origin appears in every checkpoint, entry header and signature domain. | T |
+| QV-18-REQ-001 | Each election shall have exactly one log identified by an `origin` string `quietvote/v1/<election_id>` (`election_id` = 32-char lowercase hex of 16 random bytes, exactly as QV-16 §5.6.1). | Must | Two elections never share an origin; origin appears in every checkpoint, entry header and signature domain. | T |
 | QV-18-REQ-002 | The tree shall use RFC 9162 §2.1 hashing with SHA-256: `MTH({})=H("")`, leaf `=H(0x00‖LeafBytes)`, node `=H(0x01‖L‖R)`, split at the largest power of two `< n`. | Must | Passes RFC 9162 / RFC 6962 reference vectors for roots, inclusion and consistency proofs for n=1..1025. | I |
 | QV-18-REQ-003 | `LeafBytes` shall be `enc(EntryHeader)` (§5.1) where the header includes a `body_digest`, so bodies can be redacted without invalidating the tree (§11.2). | Must | Replacing a body with `null` leaves root and all proofs valid; changing body bytes changes `body_digest` check result. | T |
 | QV-18-REQ-004 | Sequence numbers shall be the zero-based leaf index, gapless and monotone; the server shall never reuse or skip one. | Must | DB constraint + test: concurrent 1000-writer stress yields seq 0..n-1 exactly once. | T |

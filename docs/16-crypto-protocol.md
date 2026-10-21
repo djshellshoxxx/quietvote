@@ -807,6 +807,7 @@ Classes: **R** = refuse at admission (server SHOULD not append; verifier does no
 | `E_COUNTED_ROOT` | F | Published counted-set root differs from recomputation |
 | `E_RESULT` | F | Published results differ from exact evaluation |
 | `E_LOG_*` | F | Log inconsistency (QV-18) |
+| `E_BELOW_FLOOR` | F | Result published with fewer counted voters than manifest `min_counted_ballots` (QV-ADR-021) |
 
 In Phase 1 the roll is public, so returning precise codes to submitters leaks nothing; Phase 2/3 specifications must revisit whether eligibility errors may be distinguished from proof errors.
 

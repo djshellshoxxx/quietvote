@@ -385,6 +385,7 @@ Shared definitions (`$defs`) — abbreviated; complete files live in `packages/p
     "B64u":    {"type": "string", "pattern": "^[A-Za-z0-9_-]*$"},
     "B64":     {"type": "string", "pattern": "^[A-Za-z0-9+/]*={0,2}$"},
     "Id":      {"type": "string", "pattern": "^[a-z2-7]{26}$"},
+    "ElectionId": {"type": "string", "pattern": "^[0-9a-f]{32}$", "description": "QV-16 manifest election_id (16 random bytes, lower-case hex); used wherever this document says election_id"},
     "KeyId":   {"type": "string", "pattern": "^[A-Za-z0-9_-]{16,64}$"},
     "Hash32":  {"type": "string", "pattern": "^[A-Za-z0-9_-]{43}$"},
     "Ts":      {"type": "string", "format": "date-time"},
