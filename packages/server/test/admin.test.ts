@@ -209,7 +209,9 @@ test('self-audit: clean log passes; a tampered body is found at its seq, the log
   const clearPath = `/api/v1/admin/elections/${id()}/quarantine/clear`;
   const refused = await A('POST', clearPath, { ack: found.result.incident, verified_against: ['witness:w1'] });
   assert.equal(refused.status, 409);
-  assert.match(refused.json.detail, /self-audit still fails \(BODY_DIGEST at seq 1\)|cannot be re-opened/);
+  // The flipped byte lands in a different field per run (keys are random), so a fresh replay refuses in one of three
+  // ways: audit failure, no re-open, or replay-time quarantine. All three refuse the clear (409); the follow-up below proves it is only lifted once the body is restored.
+  assert.match(refused.json.detail, /self-audit still fails \(BODY_DIGEST at seq 1\)|cannot be re-opened|still inconsistent after a fresh replay/);
   // restore the body: the clear now succeeds and appends resume
   const fix = new DatabaseSync(dbPath);
   fix.prepare('UPDATE log_entry SET body=? WHERE seq=1').run(orig);
