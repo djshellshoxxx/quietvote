@@ -1,6 +1,6 @@
 // `qv vectors check`: runs the test-vectors/v1 conformance corpus (QV-34) against this build.
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   LABELS, QvCryptoError, baseMul, bytesToHex, canonicalize, cdsVerify, decVerify, dhVerify, ed25519Keypair, ed25519Sign, ed25519Verify,
@@ -123,8 +123,55 @@ const UNSUPPORTED = new Set(['dkg.adjudicate']);
 interface Row { file: string; id: string; ok: boolean; detail?: string }
 
 const posix = (p: string): string => p.split(sep).join('/');
-const walk = (dir: string): string[] => readdirSync(dir).sort().flatMap((n) => (statSync(join(dir, n)).isDirectory() ? walk(join(dir, n)) : [join(dir, n)]));
-const rdJson = (p: string): Any => JSON.parse(readFileSync(p, 'utf8'));
+const isObj = (v: unknown): v is Any => typeof v === 'object' && v !== null && !Array.isArray(v);
+const malformed = (path: string, what: string): InputError => new InputError(`${path}: malformed ${what}`);
+const isFile = (p: string): boolean => {
+  try {
+    return statSync(p).isFile();
+  } catch {
+    return false;
+  }
+};
+
+/** Regular files and directories under `dir`. Symlinks are never followed (a link cycle would not terminate); they are collected in `links`. */
+const walk = (dir: string, links: string[]): string[] => readdirSync(dir).sort().flatMap((n) => {
+  const p = join(dir, n);
+  const st = lstatSync(p);
+  if (st.isSymbolicLink()) {
+    links.push(p);
+    return [];
+  }
+  return st.isDirectory() ? walk(p, links) : [p];
+});
+
+/** A corpus path must stay inside the corpus, both lexically and after symlink resolution. A missing path passes here and fails at its read. */
+function inside(base: string, p: string): boolean {
+  const within = (b: string, q: string): boolean => {
+    const r = relative(b, resolve(b, q));
+    return r !== '' && r !== '..' && !r.startsWith(`..${sep}`) && !isAbsolute(r);
+  };
+  if (!within(base, p)) return false;
+  try {
+    return within(realpathSync(base), realpathSync(resolve(base, p)));
+  } catch {
+    return true;
+  }
+}
+
+/** Reads and parses a corpus file; an unreadable or non-JSON file is an input error naming the file (exit 4), not an internal one. */
+const rdJson = (p: string): Any => {
+  let text: string;
+  try {
+    text = readFileSync(p, 'utf8');
+  } catch {
+    throw new InputError(`cannot read ${p}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new InputError(`${p} is not valid JSON`);
+  }
+};
 
 export function defaultVectorsDir(): string {
   return fileURLToPath(new URL('../../../test-vectors', import.meta.url));
@@ -136,35 +183,45 @@ export async function cmdVectorsCheck(argv: string[], io: Io): Promise<number> {
   const root = p.positional[0] ?? defaultVectorsDir();
   const v1 = join(root, 'v1');
   if (!existsSync(join(root, 'MANIFEST.json')) || !existsSync(v1)) throw new InputError(`${root} is not a test-vectors directory (MANIFEST.json and v1/ expected)`);
+  const required = [join(v1, 'elections'), join(v1, 'mutations'), join(v1, 'canary', 'canary-election.json'), join(v1, 'canary', 'expected-report.json')];
+  if (!required.every((f) => existsSync(f)) || !inside(root, 'v1')) throw new InputError(`${root}: v1/elections, v1/mutations and v1/canary/ are required inside the directory`);
   const rows: Row[] = [];
   const skipped: string[] = [];
   const add = (file: string, id: string, ok: boolean, detail?: string): void => void rows.push({ file, id, ok, ...(detail === undefined ? {} : { detail }) });
 
-  // 1. MANIFEST.json: every listed file has the listed SHA-256; every file is listed.
-  const man = rdJson(join(root, 'MANIFEST.json')) as { files: { path: string; sha256: string }[] };
+  // 1. MANIFEST.json: every listed file has the listed SHA-256 and stays inside the corpus; every file is listed; no symlinks.
+  const man = rdJson(join(root, 'MANIFEST.json'));
+  if (!isObj(man) || !Array.isArray(man.files) || !man.files.every((f: Any) => isObj(f) && typeof f.path === 'string' && typeof f.sha256 === 'string')) {
+    throw malformed(join(root, 'MANIFEST.json'), 'file list (each entry needs a string path and sha256)');
+  }
   const listed = new Set<string>();
-  for (const f of man.files) {
+  for (const f of man.files as { path: string; sha256: string }[]) {
     listed.add(f.path);
     const fp = join(root, f.path);
-    add('MANIFEST.json', f.path, existsSync(fp) && H(sha256(readFileSync(fp))) === f.sha256, 'sha256 differs or file missing');
+    if (!inside(root, f.path)) add('MANIFEST.json', f.path, false, 'path resolves outside the corpus');
+    else add('MANIFEST.json', f.path, isFile(fp) && H(sha256(readFileSync(fp))) === f.sha256, 'sha256 differs or file missing');
   }
-  for (const f of walk(root)) {
+  const links: string[] = [];
+  for (const f of walk(root, links)) {
     const rel = posix(relative(root, f));
     if (rel !== 'MANIFEST.json') add('MANIFEST.json', `${rel} listed`, listed.has(rel), 'file not listed in MANIFEST.json');
   }
+  for (const l of links) add('MANIFEST.json', `${posix(relative(root, l))} not a symlink`, false, 'symbolic links are not allowed in the corpus');
 
   // 2. Known-answer and negative vectors.
-  for (const f of walk(v1).filter((x) => x.endsWith('.json') && !/\/(elections|mutations|canary)\//.test(posix(x)))) {
+  for (const f of walk(v1, []).filter((x) => x.endsWith('.json') && !/\/(elections|mutations|canary)\//.test(posix(x)))) {
     const rel = posix(relative(v1, f));
-    const file = rdJson(f) as { operation: string; format_version?: number; vectors: { id: string; input: Any; expect: { ok: boolean; output?: unknown; error?: string } }[] };
-    const ids = file.vectors.map((v) => v.id);
+    const file = rdJson(f);
+    if (!isObj(file) || typeof file.operation !== 'string' || !Array.isArray(file.vectors)) throw malformed(f, 'vector file (operation and vectors)');
+    for (const v of file.vectors) if (!isObj(v) || typeof v.id !== 'string' || !isObj(v.expect)) throw malformed(f, 'vector entry (id and expect)');
+    const ids = file.vectors.map((v: Any) => v.id);
     add(rel, 'envelope', file.format_version === 1 && new Set(ids).size === ids.length, 'format_version != 1 or duplicate vector ids');
-    const run = runners[file.operation];
+    const run = Object.hasOwn(runners, file.operation) ? runners[file.operation] : undefined;
     if (run === undefined || UNSUPPORTED.has(file.operation)) {
       skipped.push(`${rel} (${file.operation})`);
       continue;
     }
-    for (const v of file.vectors) {
+    for (const v of file.vectors as { id: string; input: Any; expect: { ok: boolean; output?: unknown; error?: string } }[]) {
       let got: Any;
       try {
         got = run(v.input);
@@ -181,16 +238,24 @@ export async function cmdVectorsCheck(argv: string[], io: Io): Promise<number> {
 
   // 3. Whole-election reports, mutants and the canary, through the verifier composition (what `qv verify` runs).
   const chkOf = (r: { chk: Record<string, string> }): string[] => Object.entries(r.chk).filter(([k, s]) => s === 'fail' && !k.startsWith('chk.board.')).map(([k]) => k).sort();
-  for (const name of readdirSync(join(v1, 'elections')).sort()) {
-    const bundle = rdJson(join(v1, 'elections', name, 'bundle.json'));
-    const exp = rdJson(join(v1, 'elections', name, 'expected-report.json'));
+  const elections = join(v1, 'elections');
+  for (const name of readdirSync(elections).sort()) {
+    const dir = join(elections, name);
+    const bundle = rdJson(join(dir, 'bundle.json'));
+    const exp = rdJson(join(dir, 'expected-report.json'));
+    if (!isObj(bundle)) throw malformed(join(dir, 'bundle.json'), 'bundle');
+    if (!isObj(exp) || !isObj(exp.checks) || !isObj(exp.counts)) throw malformed(join(dir, 'expected-report.json'), 'report (checks and counts)');
     const r = await verifyBundle(bundle);
     const same = r.verdict === exp.verdict && JSON.stringify(Object.keys(exp.checks).map((k) => r.chk[k])) === JSON.stringify(Object.values(exp.checks))
       && canonicalize(r.results) === canonicalize(exp.results) && r.ctxPrefix === exp.ctx_prefix && r.counts.counted === exp.counts.counted;
     add('elections', name, same, `verdict ${r.verdict}, expected ${exp.verdict}, or checks/results differ`);
   }
-  for (const f of readdirSync(join(v1, 'mutations')).sort()) {
-    const m = rdJson(join(v1, 'mutations', f));
+  const mutations = join(v1, 'mutations');
+  for (const f of readdirSync(mutations).sort()) {
+    const path = join(mutations, f);
+    const m = rdJson(path);
+    if (!isObj(m) || typeof m.id !== 'string' || !isObj(m.bundle) || !isObj(m.expect) || !Array.isArray(m.expect.failed_checks)
+      || !Array.isArray(m.expect.codes) || typeof m.expect.verdict !== 'string') throw malformed(path, 'mutation (id, bundle, expect)');
     const r = await verifyBundle(m.bundle);
     const failed = chkOf(r);
     const ok = JSON.stringify(failed) === JSON.stringify(m.expect.failed_checks) && r.verdict === m.expect.verdict
@@ -198,8 +263,10 @@ export async function cmdVectorsCheck(argv: string[], io: Io): Promise<number> {
     add('mutations', m.id, ok, `failed [${failed.join(',')}], verdict ${r.verdict}; expected [${(m.expect.failed_checks as string[]).join(',')}] ${m.expect.verdict}`);
   }
   {
+    const canaryPath = join(v1, 'canary', 'expected-report.json');
     const r = await verifyBundle(rdJson(join(v1, 'canary', 'canary-election.json')));
-    const exp = rdJson(join(v1, 'canary', 'expected-report.json'));
+    const exp = rdJson(canaryPath);
+    if (!isObj(exp) || !isObj(exp.checks)) throw malformed(canaryPath, 'report (checks)');
     add('canary', 'canary-election', r.verdict === exp.verdict && JSON.stringify(Object.keys(exp.checks).map((k) => r.chk[k])) === JSON.stringify(Object.values(exp.checks)), 'canary report differs from expected-report.json');
   }
 

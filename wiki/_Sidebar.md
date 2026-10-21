@@ -24,3 +24,5 @@
 - [[Contributing]]
 - [[Roadmap and Status]]
 - [[Specification Index]]
+- [Claims register](https://github.com/djshellshoxxx/quietvote/blob/main/docs/claims/claims-register-v0.md)
+- [Dependency licence snapshot](https://github.com/djshellshoxxx/quietvote/blob/main/docs/reports/dependency-licence-snapshot.md)

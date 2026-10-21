@@ -92,6 +92,27 @@ def _record_schema_ok(entry: Any) -> bool:
     req, opt = _RECORD_KEYS[body["type"]]
     if not _keys_ok(body, req, opt):
         return False
+    if body["type"] == "marker":
+        # QV-ADR-015 / X-40: binding fields required on election-open, forbidden on every other marker.
+        bind = {"manifest_hash", "joint_key_seq", "roll_commit_seq"}
+        have = bind & set(body)
+        if body.get("name") == "election-open":
+            # Absence is NOT a schema error: the vectors (open-*-absent) expect E_MARKERS on
+            # chk.time.window, raised by the binding check (see errata QV-ERR-PY-006).
+            mhx = body.get("manifest_hash")
+            if mhx is not None and not (isinstance(mhx, str) and len(mhx) == 64
+                                        and all(c in "0123456789abcdef" for c in mhx)):
+                return False
+            if not all(type(body[k]) is int and body[k] >= 0 for k in ("joint_key_seq", "roll_commit_seq") if k in body):
+                return False
+        elif have:
+            return False
+    if body["type"] == "roll-commit":
+        if not (isinstance(body["root"], str) and len(body["root"]) == 64
+                and all(c in "0123456789abcdef" for c in body["root"])):
+            return False
+        if type(body["size"]) is not int or not 1 <= body["size"] <= 1 << 20:
+            return False
     if body["type"] == "tally":
         for c in body["contests"]:
             if not _keys_ok(c, {"id", "options"}, set()):
@@ -265,6 +286,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         st.add("chk.manifest.sig", getattr(e, "code", "E_ROLL"), True, str(e))
         roll_pks = []
     roll = set(roll_pks)
+    roll_root_hex = locals().get("roll_root_hex")
     n_roll = m["roll"].get("size", len(roll_pks))
 
     # ------------------------------------------------ log structure
@@ -307,6 +329,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     keyconfs: list[tuple[int, dict]] = []
     tally_recs: list[tuple[int, dict]] = []
     later_markers: list[tuple[int, dict]] = []
+    roll_commits: list[tuple[int, dict]] = []
     kind = {"dkg-commit": ("commits", "i"), "dkg-dealing": ("dealings", "i"),
             "dkg-shares": ("shares", "i"), "dkg-complaint": ("complaints", "accuser")}
     for seq, en in records:
@@ -328,6 +351,11 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
                 pre[lst].append({"seq": seq, "body": b})
             else:
                 st.add("chk.keys.trustees", "E_SIG", False, f"seq {seq}: {ty} not signed by trustee {idx}")
+        elif ty == "roll-commit":
+            if _coordinator_ok(mh, b, en.get("sigs"), coord):
+                roll_commits.append((seq, b))
+            else:
+                st.add("chk.keys.trustees", "E_SIG", True, f"seq {seq}: roll-commit signature")
         elif ty == "dkg-keyconf":
             keyconfs.append((seq, en))
         elif ty == "tally":
@@ -379,6 +407,25 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         open_seq, close_seq = 0, -1
     else:
         open_seq, close_seq = opens[0][0], closes[0][0]
+        # QV-ADR-015 / X-40: election-open binds (manifest_hash, joint_key_seq, roll_commit_seq); fail closed.
+        ob = opens[0][1]["body"]
+        rc = {s_: b_ for s_, b_ in roll_commits}.get(ob.get("roll_commit_seq"))
+        bind_err = None
+        if any(k not in ob for k in ("manifest_hash", "joint_key_seq", "roll_commit_seq")):
+            bind_err = "election-open lacks manifest_hash/joint_key_seq/roll_commit_seq"
+        elif ob["manifest_hash"] != mh.hex():
+            bind_err = "election-open manifest_hash differs from the manifest hash"
+        elif ob["joint_key_seq"] >= open_seq or ob["roll_commit_seq"] >= open_seq:
+            bind_err = "election-open references a record that is not earlier in the log"
+        elif ob["joint_key_seq"] != mk["dkg-final"]:
+            bind_err = "election-open joint_key_seq does not point at the dkg-final marker"
+        elif rc is None:
+            bind_err = "election-open roll_commit_seq does not point at a valid roll-commit record"
+        elif rc["root"] != roll_root_hex or rc["size"] != len(roll_hex):
+            bind_err = "the roll-commit bound by election-open does not match the supplied roll"
+        if bind_err:
+            st.add("chk.time.window", "E_MARKERS", True, f"seq {open_seq}: {bind_err}")
+            _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
     if m["bb"]["witness_quorum"] == 0:
         st.skip("chk.board.witness")
         st.notes.append("times unwitnessed (witness_quorum = 0)")

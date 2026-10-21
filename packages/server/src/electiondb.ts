@@ -74,6 +74,32 @@ CREATE TABLE event (
 ) STRICT;
 `,
   },
+  {
+    version: 3,
+    name: 'gossip',
+    // QV-28 §8.2 `gossip_seen` (checkpoints posted by peers; P4, bounded) and the QV-18 §9.6 evidence record.
+    // `fingerprint` is SHA-256 of the signed text of the note (origin, size, root), not of the note with its signature lines,
+    // so a peer cannot multiply rows by appending signature lines.
+    sql: `
+CREATE TABLE gossip_seen (
+  fingerprint BLOB PRIMARY KEY CHECK (length(fingerprint)=32),
+  tree_size   INTEGER NOT NULL, root_hash BLOB NOT NULL CHECK (length(root_hash)=32), received_at INTEGER NOT NULL,
+  consistent  INTEGER NOT NULL CHECK (consistent IN (0,1))
+) STRICT;
+CREATE INDEX gossip_seen_time ON gossip_seen(received_at);
+CREATE TABLE equivocation_evidence (
+  evidence_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fingerprint BLOB NOT NULL UNIQUE CHECK (length(fingerprint)=32),
+  kind        TEXT NOT NULL CHECK (kind IN ('fork','inconsistent','rollback','missing_consistency','broken_promise','witness_conflict')),
+  tree_size   INTEGER NOT NULL,
+  source      TEXT NOT NULL CHECK (source IN ('inbound','outbound')),
+  recorded_at INTEGER NOT NULL,
+  evidence    TEXT NOT NULL CHECK (length(evidence) <= 32768)
+) STRICT;
+CREATE TRIGGER equivocation_evidence_noupdate BEFORE UPDATE ON equivocation_evidence BEGIN SELECT RAISE(ABORT,'evidence is append-only'); END;
+CREATE TRIGGER equivocation_evidence_nodelete BEFORE DELETE ON equivocation_evidence BEGIN SELECT RAISE(ABORT,'evidence is append-only'); END;
+`,
+  },
 ];
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
@@ -99,8 +125,17 @@ export interface ElectionRow {
   draft: string | null;
   org_id: string;
   quarantine: string | null;
-  imported: number;
   created_at: number;
+  imported: number;
+}
+
+export interface EvidenceRow {
+  evidence_id: number;
+  kind: string;
+  tree_size: number;
+  source: 'inbound' | 'outbound';
+  recorded_at: number;
+  evidence: string;
 }
 
 export interface VoterRow {
@@ -215,8 +250,59 @@ export class ElectionDb {
       run(this.db, "INSERT INTO meta(key,value) VALUES ('election_id',?),('spec_version','QV-28')", row.election_id);
     });
   }
+  /** Read-only mirror of a verified bundle (QV-18-REQ-033): no signing keys, state IMPORTED. */
+  initImported(row: Omit<ElectionRow, 'quarantine' | 'draft' | 'imported' | 'log_sk_enc' | 'srv_sk_enc' | 'state'>): void {
+    this.tx(() => {
+      run(this.db, `INSERT INTO election(election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,org_id,created_at,imported)
+        VALUES (?,?, 'IMPORTED', ?, NULL, ?, NULL, ?,?,?,?,?, 1)`, row.election_id, row.origin, row.log_pk, row.srv_pk, row.access, row.read_key_hash, row.title, row.org_id, row.created_at);
+      run(this.db, "INSERT INTO meta(key,value) VALUES ('election_id',?),('spec_version','QV-28')", row.election_id);
+    });
+  }
+  meta(key: string): string | undefined {
+    return get<{ value: string }>(this.db, 'SELECT value FROM meta WHERE key=?', key)?.value;
+  }
+  setMeta(key: string, value: string): void {
+    run(this.db, 'INSERT INTO meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, value);
+  }
+  importVoters(pks: Uint8Array[], kidOf: (pk: Uint8Array) => string, at: number): void {
+    pks.forEach((pk, i) => {
+      run(this.db, "INSERT INTO voter(voter_kid,pk,alg,status,registered_at,roll_index) VALUES (?,?, 'ed25519', 'committed', ?, ?)", kidOf(pk), pk, at, i);
+    });
+  }
+  // ---- gossip and equivocation evidence (QV-18 §9.5-9.6)
+  /** Records a verified peer note. Bounded: rows older than `retentionMs` go, and at most `maxRows` stay (oldest first out). */
+  recordGossip(fp: Uint8Array, size: number, root: Uint8Array, now: number, consistent: boolean, maxRows: number, retentionMs: number): void {
+    run(this.db, 'INSERT OR IGNORE INTO gossip_seen(fingerprint,tree_size,root_hash,received_at,consistent) VALUES (?,?,?,?,?)', fp, size, root, now, consistent ? 1 : 0);
+    run(this.db, 'DELETE FROM gossip_seen WHERE received_at < ?', now - retentionMs);
+    run(this.db, 'DELETE FROM gossip_seen WHERE fingerprint IN (SELECT fingerprint FROM gossip_seen ORDER BY received_at DESC, rowid DESC LIMIT -1 OFFSET ?)', maxRows);
+  }
+  gossipCount(): number {
+    return get<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM gossip_seen')!.n;
+  }
+  /** Returns true when the evidence is new. At most `maxRows` rows are kept; later distinct evidence is dropped (the first is what matters). */
+  addEvidence(fp: Uint8Array, kind: string, size: number, source: 'inbound' | 'outbound', now: number, evidence: string, maxRows: number): boolean {
+    if (get<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM equivocation_evidence')!.n >= maxRows) return false;
+    return Number(run(this.db, 'INSERT OR IGNORE INTO equivocation_evidence(fingerprint,kind,tree_size,source,recorded_at,evidence) VALUES (?,?,?,?,?,?)', fp, kind, size, source, now, evidence).changes) === 1;
+  }
+  evidence(limit: number): EvidenceRow[] {
+    return all<EvidenceRow>(this.db, 'SELECT evidence_id,kind,tree_size,source,recorded_at,evidence FROM equivocation_evidence ORDER BY evidence_id LIMIT ?', limit);
+  }
+  evidenceCount(): number {
+    return get<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM equivocation_evidence')!.n;
+  }
+  /** Evidence that the log key signed a history this database does not contain or contradicts (fork, inconsistent, rollback). */
+  hasKeyEvidence(): boolean {
+    return get<{ n: number }>(this.db, "SELECT COUNT(*) AS n FROM equivocation_evidence WHERE kind IN ('fork','inconsistent','rollback')")!.n > 0;
+  }
+  /** fork / inconsistent: the log key signed contradictory histories. Not clearable by an operator. */
+  hasPermanentEvidence(): boolean {
+    return get<{ n: number }>(this.db, "SELECT COUNT(*) AS n FROM equivocation_evidence WHERE kind IN ('fork','inconsistent')")!.n > 0;
+  }
+  maxEvidenceSize(): number {
+    return get<{ m: number | null }>(this.db, "SELECT MAX(tree_size) AS m FROM equivocation_evidence WHERE kind='rollback'")?.m ?? 0;
+  }
   row(): ElectionRow {
-    const r = get<ElectionRow>(this.db, 'SELECT election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,draft,org_id,quarantine,imported,created_at FROM election');
+    const r = get<ElectionRow>(this.db, 'SELECT election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,draft,org_id,quarantine,created_at,imported FROM election');
     if (!r) throw new Error('election row missing');
     return r;
   }

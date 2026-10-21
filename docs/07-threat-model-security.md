@@ -37,13 +37,13 @@ The MVP stack of QV-ADR-002/003: single self-hostable server (untrusted coordina
 - **System decomposition and DFDs** (levels 0 and 1) with explicit trust boundaries.
 - **STRIDE per element** (Shostack, *Threat Modeling: Designing for Security*, 2014) for spoofing/tampering/repudiation/information disclosure/denial of service/elevation, supplemented by **privacy threats** in the style of LINDDUN (linkability, identifiability, detectability, non-repudiation, disclosure of information, unawareness, non-compliance) where STRIDE is silent — chiefly linkability of voter to ballot.
 - **Attack trees** (Schneier, "Attack Trees", Dr. Dobb's Journal, 1999) for the eight highest-impact goals; leaves carry difficulty and a mitigation reference.
-- **Property-first** analysis from the e-voting literature: individual verifiability, universal verifiability, eligibility verifiability, ballot secrecy, receipt-freeness and coercion-resistance (Benaloh–Tuinstra 1994; Juels–Catalano–Jakobsson 2005); lineage Helios (Adida 2008) and ElectionGuard.
+- **Property-first** analysis from the e-voting literature: individual verifiability, universal verifiability, eligibility verifiability, ballot secrecy, receipt-freeness and coercion-resistance (Benaloh–Tuinstra 1994; Juels–Catalano–Jakobsson 2005); lineage Helios (Adida 2008) and ElectionGuard. <!-- claims-lint-ignore -->
 
 ### Standards and guidance consulted (verified status in §21)
 | Source | Use here | Applicability caveat |
 |---|---|---|
 | Council of Europe, Recommendation CM/Rec(2017)5 on standards for e-voting (adopted 14 June 2017; supersedes Rec(2004)11) | Cross-check of property list (secrecy, integrity, verifiability, availability, transparency, voter authentication); informs the claims register | Non-binding; written for statutory elections. QuietVote does **not** claim conformance (claim C-12 forbids it). |
-| BSI **BSI-CC-PP-0121** "Protection Profile for E-Voting Systems for non-political Elections" v1.0 (certified 20 Feb 2024; EAC4+ALC_FLR.2, per BSI) | Checklist for security objectives of a server-side non-political e-voting product; informs §13 gates and the audit scope | Server-product PP with a trust model that differs from ours (we do not trust the server). No conformance or certification claimed. Full SFR mapping is an open question (OQ-3). |
+| BSI **BSI-CC-PP-0121** "Protection Profile for E-Voting Systems for non-political Elections" v1.0 (certified 20 Feb 2024; EAC4+ALC_FLR.2, per BSI) | Checklist for security objectives of a server-side non-political e-voting product; informs §13 gates and the audit scope | Server-product PP with a trust model that differs from ours (we do not trust the server). No conformance or certification claimed. Full SFR mapping is an open question (OQ-3). | <!-- claims-lint-ignore -->
 | NISTIR 7551 (2008) *A Threat Analysis on UOCAVA Voting Systems*; NISTIR 7770 (2011) *Security Considerations for Remote Electronic UOCAVA Voting* | Source for client-malware and remote-voting threat classes; basis for non-claim N-3 (compromised device) | US overseas-voter context; older. NISTIR 7770 itself concludes internet voting cannot be audited with polling-place-comparable confidence — an input to our honest-guarantee stance. |
 | NIST SP 800-53 Rev. 5 control families | Mapped informally in §9 (column "800-53") for operators who need control language (AC, AU, CM, IA, SA, SC, SI, SR families) | A catalogue, not a threat model; we map selectively, no claim of baseline compliance. |
 | NIST SP 800-30 Rev. 1 (risk assessment) | Likelihood/impact vocabulary in §10 | Qualitative only. |
@@ -519,7 +519,7 @@ Conventions: "shall" = mandatory; Priority Must/Should/Could. Elsewhere in this 
 |---|---|---|---|---|---|
 | QV-07-REQ-001 | Any change that alters a trust boundary, data flow, adversary assumption, or cryptographic construction **shall** be reviewed against this threat model; the PR template **shall** include a "threat-model impact" checkbox with a link to the updated section or "none". | Must | CI fails PRs touching `packages/{crypto,protocol,server,client}` lacking the checkbox; review log shows at least one security reviewer approval | T/I | SA-3, CM-3 |
 | QV-07-REQ-002 | All public security/privacy statements (README, site, UI strings, release notes) **shall** be drawn from the claims register (§12). A lint **shall** fail on forbidden phrases (§12.3) in `docs/`, `README.md`, UI string catalogs, and release notes. | Must | Lint test with fixtures of each forbidden phrase fails; allowed phrases pass; lint runs in CI | T | PL-4, SA-5 |
-| QV-07-REQ-003 | Every build, the server's status page, and the election page **shall** display an **assurance label** from {`Experimental`, `Reviewed`, `Audited`} determined solely by the evidence recorded in the release manifest (§13). Default is `Experimental`. | Must | Snapshot test; label cannot be set by config; label `Reviewed` appears only if manifest lists a valid review report hash | T | CA-2 |
+| QV-07-REQ-003 | Every build, the server's status page, and the election page **shall** display an **assurance label** from {`Experimental`, `Reviewed`, `Audited`} determined solely by the evidence recorded in the release manifest (§13). Default is `Experimental`. | Must | Snapshot test; label cannot be set by config; label `Reviewed` appears only if manifest lists a valid review report hash | T | CA-2 | <!-- claims-lint-ignore -->
 | QV-07-REQ-004 | Each election page **shall** show a **trust declaration** generated from the manifest: trustee count n, threshold t, whether the operator, steward, or any trustee overlap (declared), witness count and tier (REQ-043), whether revoting is on, eligibility phase, and the non-claims list link. | Must | Rendering test across ≥6 manifest permutations; degraded single-trustee shows red banner "Organizer can read individual ballots" | T | PL-2 |
 | QV-07-REQ-005 | On any verification failure (signature, proof, tree, tally, release hash), clients and verifiers **shall** fail closed: stop, show an explicit "NOT VERIFIED" state with the failing check, and never present a result as verified. | Must | Mutation tests: flip one byte in each artifact class ⇒ verifier exit ≠ 0 and UI never shows "verified" | T | SI-7, SI-10 |
 | QV-07-REQ-006 | Release-blocking gates SG-1…SG-16 (§13) **shall** be enforced by a release script that refuses to sign a release unless each gate has linked evidence. | Must | Dry run with one missing evidence item fails; evidence bundle signed | T/I | SA-11, CM-3 |
@@ -617,7 +617,7 @@ Conventions: "shall" = mandatory; Priority Must/Should/Could. Elsewhere in this 
 | QV-07-REQ-086 | A public, blameless post-incident review **should** be published within 14 days for Sev-1/Sev-2 incidents (redacting non-public data). | Should | Template and published examples | I | IR-4 |
 | QV-07-REQ-087 | Vulnerability reports **shall** be handled under QV-33 (published `SECURITY.md`, `security.txt`, SLAs, advisories, CVE handling). | Must | QV-33 acceptance criteria | I | SI-2, RA-5 |
 | QV-07-REQ-090 | The review plan of §14 **shall** be executed on its schedule and results (summaries and fixed findings) published. | Must | Reports linked in release evidence | R | CA-2, CA-8 |
-| QV-07-REQ-091 | A symbolic or computational model of the ballot protocol (e.g., ProVerif/Tamarin for cast-as-intended, eligibility and board properties) **should** be produced for P2–P4/P6 before `Audited`. | Should | Model files + results in repo | R | SA-11 |
+| QV-07-REQ-091 | A symbolic or computational model of the ballot protocol (e.g., ProVerif/Tamarin for cast-as-intended, eligibility and board properties) **should** be produced for P2–P4/P6 before `Audited`. | Should | Model files + results in repo | R | SA-11 | <!-- claims-lint-ignore -->
 | QV-07-REQ-092 | A penetration test of the deployed reference stack (server, client, CLI, container) **shall** be completed before `Reviewed`. | Must | Report with zero open High/Critical | R | CA-8 |
 | QV-07-REQ-093 | Property-based and fuzz tests **shall** cover all decoders, the tally/counting rule, Merkle code, and proof verification, run on every PR (short) and nightly (long). | Must | CI jobs present; coverage of target modules ≥ 90% line, mutation score reported (target ≥ 70% for crypto/protocol packages) | T | SA-11 |
 | QV-07-REQ-094 | Privacy-leak tests **shall** run on every release: logs, DB, exports, error pages, headers, and board entries scanned for canary identifiers (IP, UA, key material, plaintext). | Must | Canary suite green | T | PT-2 |
@@ -641,7 +641,7 @@ Likelihood/impact: L/M/H (qualitative, per NIST SP 800-30 vocabulary). "Owner" i
 | R-11 | Cryptographic protocol or implementation flaw not yet found | M (unreviewed) | H | No review yet | Assurance label `Experimental`; SG gates; audits | Project owner |
 | R-12 | Human error by stewards (misconfigured trust, publishing wrong roll) | M | M–H | Usability | Trust declaration, roll check, templates, dry-run mode | Steward |
 | R-13 | Legal compulsion of trustees/stewards | L–M | H | Out of technical control | Jurisdictional diversity guidance | Trustees |
-| R-14 | Side channels in JS crypto (timing, memory remanence) | M | M | Browser JS limitations | Audited constant-time-oriented libraries; no secret-dependent branching in our code; documented | Maintainers |
+| R-14 | Side channels in JS crypto (timing, memory remanence) | M | M | Browser JS limitations | Constant-time-oriented libraries with published third-party audit reports (not re-verified here); no secret-dependent branching in our code; documented | Maintainers |
 | R-15 | Time/clock manipulation at deadlines | L–M | M | Server UTC | Witness times, absolute UTC display | Operator |
 
 ## 11. Explicit non-claims
@@ -650,7 +650,7 @@ These are binding and shall appear (in condensed form) in onboarding and documen
 
 | ID | QuietVote does **not** claim… | Basis |
 |---|---|---|
-| N-1 | Receipt-freeness or coercion-resistance against a strong adversary (observation of the voting act, key surrender, vote buying). Revoting is a *partial* mitigation. | QV-ADR-008; R-04 |
+| N-1 | Receipt-freeness or coercion-resistance against a strong adversary (observation of the voting act, key surrender, vote buying). Revoting is a *partial* mitigation. | QV-ADR-008; R-04 | <!-- claims-lint-ignore -->
 | N-2 | Secrecy if ≥ t trustees collude or are compelled, or if single-trustee degraded mode is used. | R-05 |
 | N-3 | Protection from a compromised voter device, browser, or extension. | A7; NISTIR 7770 |
 | N-4 | Anonymity of participation in Phase 1 (who voted is public); anonymity only from Phase 2/3 and only as specified there. | QV-ADR-005, 008 |
@@ -669,7 +669,7 @@ These are binding and shall appear (in condensed form) in onboarding and documen
 
 ### 12.1 Rules of use
 1. Public language **may** use only the **allowed text** below (or text that is strictly weaker), together with the stated **conditions**. Where a condition depends on election configuration, the claim is shown **only on pages generated for elections meeting it** (e.g., the Tier 2 witness claim).
-2. The **assurance label** (REQ-003) must accompany any security claim: claims C-1…C-8 are made under label `Experimental` only in the hedged form "is designed to…". The unhedged form "provides…" requires label `Reviewed` or `Audited` per column "Min. label".
+2. The **assurance label** (REQ-003) must accompany any security claim: claims C-1…C-8 are made under label `Experimental` only in the hedged form "is designed to…". The unhedged form "provides…" requires label `Reviewed` or `Audited` per column "Min. label". <!-- claims-lint-ignore -->
 3. Adding or relaxing a claim requires a PR to this section, approval by security lead + project owner, and a link to supporting evidence in QV-24 (rows for P-numbers).
 4. Marketing, README, talks, funding applications and sales material are covered. Third parties' statements are outside our control but we correct those we learn of.
 
@@ -689,27 +689,27 @@ These are binding and shall appear (in condensed form) in onboarding and documen
 | C-11 | "You can change your vote until the election closes; only your latest ballot counts. This helps if you were pressured, but QuietVote cannot protect you from someone watching you vote." | REQ-070, 071 | Experimental | P14 |
 | C-12 | "QuietVote is not certified and does not claim compliance with any government e-voting standard." | Always true unless certified | — | P13 |
 | C-13 | "The code is open source (AGPL-3.0-or-later) and builds are reproducible." | After REQ-050 achieved; hash list published | Reviewed | P9 |
-| C-14 | "This software has been independently reviewed by <named firm/people> on <date>; the report is here <link>; findings fixed: …" | Only with an actual report; state scope and version reviewed | Reviewed/Audited | P15 |
+| C-14 | "This software has been independently reviewed by <named firm/people> on <date>; the report is here <link>; findings fixed: …" | Only with an actual report; state scope and version reviewed | Reviewed/Audited | P15 | <!-- claims-lint-ignore -->
 | C-15 | "We accept vulnerability reports at <link>; we commit to the published response times." | QV-33 live | — | P15 |
 
 ### 12.3 Forbidden or restricted language (lint list, REQ-002)
 | Phrase / idea | Why | Use instead |
 |---|---|---|
-| "unhackable", "unbreakable", "100% secure", "bulletproof", "guaranteed secure" | Absolute | "designed to…", state assumption |
-| "military-grade", "bank-grade", "government-grade" encryption | Meaningless marketing | Name the primitive (ristretto255, Ed25519) |
+| "unhackable", "unbreakable", "100% secure", "bulletproof", "guaranteed secure" | Absolute | "designed to…", state assumption | <!-- claims-lint-ignore -->
+| "military-grade", "bank-grade", "government-grade" encryption | Meaningless marketing | Name the primitive (ristretto255, Ed25519) | <!-- claims-lint-ignore -->
 | "anonymous voting" (unqualified) | Phase 1 participation is public | C-10 wording |
-| "coercion-proof", "coercion-resistant", "receipt-free", "vote-buying proof" | N-1 | C-11 wording |
-| "tamper-proof", "immutable ledger" | Tamper-*evident* only | C-6 wording |
-| "trustless" | There are trusted parties (trustees, witnesses, maintainers) | "minimal-trust" with the list of trusted parties |
-| "blockchain-secured", "decentralized" (as a security property) | No chain (QV-ADR-012); decentralization ≠ security | — |
-| "quantum-safe", "post-quantum secure" | N-6 | "classical security; PQ migration researched" |
-| "end-to-end verifiable" unqualified | Requires voter action and honest verifier availability | C-3/C-4 wording |
+| "coercion-proof", "coercion-resistant", "receipt-free", "vote-buying proof" | N-1 | C-11 wording | <!-- claims-lint-ignore -->
+| "tamper-proof", "immutable ledger" | Tamper-*evident* only | C-6 wording | <!-- claims-lint-ignore -->
+| "trustless" | There are trusted parties (trustees, witnesses, maintainers) | "minimal-trust" with the list of trusted parties | <!-- claims-lint-ignore -->
+| "blockchain-secured", "decentralized" (as a security property) | No chain (QV-ADR-012); decentralization ≠ security | — | <!-- claims-lint-ignore -->
+| "quantum-safe", "post-quantum secure" | N-6 | "classical security; PQ migration researched" | <!-- claims-lint-ignore -->
+| "end-to-end verifiable" unqualified | Requires voter action and honest verifier availability | C-3/C-4 wording | <!-- claims-lint-ignore -->
 | "the operator cannot see your vote" without condition | True only if ≥t trustees exclude operator control | C-1/C-2 wording |
-| "certified", "compliant with Council of Europe/BSI/EAC/VVSG/ISO 27001/SOC 2" | N-9 | C-12 |
-| "audited"/"independently reviewed" without link to report | Unverifiable | C-14 |
-| "no data collected" | Roll keys, ballots, and metadata at network level exist | specific data list (QV-06) |
-| "safe for governmental/legally binding elections" | Out of scope | — |
-| "your vote is secret even if we are hacked" | Depends on trustees/clients | C-2 wording |
+| "certified", "compliant with Council of Europe/BSI/EAC/VVSG/ISO 27001/SOC 2" | N-9 | C-12 | <!-- claims-lint-ignore -->
+| "audited"/"independently reviewed" without link to report | Unverifiable | C-14 | <!-- claims-lint-ignore -->
+| "no data collected" | Roll keys, ballots, and metadata at network level exist | specific data list (QV-06) | <!-- claims-lint-ignore -->
+| "safe for governmental/legally binding elections" | Out of scope | — | <!-- claims-lint-ignore -->
+| "your vote is secret even if we are hacked" | Depends on trustees/clients | C-2 wording | <!-- claims-lint-ignore -->
 
 ## 13. Release-blocking security gates
 
@@ -731,7 +731,7 @@ A release (including release candidates published for general use) **shall not**
 | SG-12 | Incident response tabletop within last 6 months; contact path live (`security.txt` valid, not expired) | Exercise report | 080, 087 |
 | SG-13 | `Reviewed` label only: independent protocol review (R1) and implementation review (R2) completed, no open High/Critical | Reports | 007 |
 | SG-14 | `Reviewed` label only: penetration test (R3) completed, no open High/Critical | Report | 092 |
-| SG-15 | `Audited` label only: second independent audit within 12 months, symbolic model results, public bounty live for ≥ 90 days | Reports | 091 |
+| SG-15 | `Audited` label only: second independent audit within 12 months, symbolic model results, public bounty live for ≥ 90 days | Reports | 091 | <!-- claims-lint-ignore -->
 | SG-16 | Migration check: upgrade from previous release preserves board verification of existing archived elections | Migration test log | 059 |
 
 **Severity vocabulary for blocking defects:** Critical/High/Medium/Low as defined in QV-33 §5 (CVSS v4.0 plus QuietVote overrides).
@@ -868,8 +868,8 @@ Incident commander (security lead), crypto lead, comms lead, scribe; for hosted 
 - **Review trigger:** Governance disputes over who may invalidate.
 
 ### QV-ADR-P07-2 — Assurance labels and witness tiers
-- **Decision:** Three labels (`Experimental`, `Reviewed`, `Audited`) tied to evidence; witness Tiers 0/1/2; claims register governs language. Default `Experimental`.
-- **Alternatives:** Binary "audited or not" (too coarse); no labels (invites overclaim).
+- **Decision:** Three labels (`Experimental`, `Reviewed`, `Audited`) tied to evidence; witness Tiers 0/1/2; claims register governs language. Default `Experimental`. <!-- claims-lint-ignore -->
+- **Alternatives:** Binary "audited or not" (too coarse); no labels (invites overclaim). <!-- claims-lint-ignore -->
 
 ### QV-ADR-P07-3 — Single-trustee degraded mode permitted only with explicit banner
 - **Context:** Small groups may not have 3 independent trustees. **Decision:** allow `t=1,n=1` only with explicit flag, red banner, and exclusion from claims C-1/C-2. **Alternatives:** forbid (excludes small groups; they would use worse tools).
@@ -884,18 +884,18 @@ Incident commander (security lead), crypto lead, comms lead, scribe; for hosted 
 
 Verified in this session by search:
 - Council of Europe, *Recommendation CM/Rec(2017)5 on standards for e-voting*, adopted 14 June 2017 — existence/date confirmed via search results (coe.int); the retrieved PDF URL was not confirmed to be the 2017 text: https://rm.coe.int/1680726f6f `[UNVERIFIED which text this URL is]`. Predecessor Rec(2004)11 confirmed.
-- BSI, *Protection Profile for E-Voting Systems for non-political Elections* BSI-CC-PP-0121 v1.0, certified 20 Feb 2024: https://www.bsi.bund.de/SharedDocs/Zertifikate_CC/PP/aktuell/PP_0121.html ; Common Criteria portal copy: https://www.commoncriteriaportal.org/files/ppfiles/pp0121a_pdf.pdf . SFR contents **not** read in full.
+- BSI, *Protection Profile for E-Voting Systems for non-political Elections* BSI-CC-PP-0121 v1.0, certified 20 Feb 2024: https://www.bsi.bund.de/SharedDocs/Zertifikate_CC/PP/aktuell/PP_0121.html ; Common Criteria portal copy: https://www.commoncriteriaportal.org/files/ppfiles/pp0121a_pdf.pdf . SFR contents **not** read in full. <!-- claims-lint-ignore -->
 - NISTIR 7551 (Regenscheid & Hastings, Dec 2008), *A Threat Analysis on UOCAVA Voting Systems*: https://www.nist.gov/node/1805471 ; NISTIR 7770 (Hastings, Peralta, Popoveniuc, Regenscheid, Feb 2011), *Security Considerations for Remote Electronic UOCAVA Voting*: https://csrc.nist.gov/publications/detail/nistir/7770/final
 - NIST IR 8363: search found no matching publication; **not used** `[UNVERIFIED]`.
 - RFC 9116 (security.txt): https://www.rfc-editor.org/rfc/rfc9116 ; RFC 9474 (RSA Blind Signatures): https://www.rfc-editor.org/rfc/rfc9474
-- Juels, Catalano, Jakobsson, *Coercion-Resistant Electronic Elections*, 2005 (WPES): https://eprint.iacr.org/2002/165
+- Juels, Catalano, Jakobsson, *Coercion-Resistant Electronic Elections*, 2005 (WPES): https://eprint.iacr.org/2002/165 <!-- claims-lint-ignore -->
 - Adida, *Helios: Web-based Open-Audit Voting*, USENIX Security 2008 (citation confirmed; text not re-read). Cortier & Smyth, *Attacking and fixing Helios: an analysis of ballot secrecy*, JCS 2013 (existence confirmed by search summary).
 - CVSS v4.0 specification (FIRST, released 1 Nov 2023): https://www.first.org/cvss/specification-document
 
 From the author's knowledge, **not re-fetched this session** (verify before citing externally):
 - NIST SP 800-53 Rev. 5, *Security and Privacy Controls for Information Systems and Organizations*; NIST SP 800-30 Rev. 1.
 - RFC 9162 *Certificate Transparency Version 2.0*; RFC 8032 *EdDSA*.
-- Benaloh, *Simple Verifiable Elections*, EVT 2006; Benaloh & Tuinstra, *Receipt-free secret-ballot elections*, STOC 1994.
+- Benaloh, *Simple Verifiable Elections*, EVT 2006; Benaloh & Tuinstra, *Receipt-free secret-ballot elections*, STOC 1994. <!-- claims-lint-ignore -->
 - Cramer, Damgård, Schoenmakers, *Proofs of Partial Knowledge…*, CRYPTO 1994; Chaum & Pedersen, *Wallet databases with observers*, CRYPTO 1992.
 - Pedersen, *A threshold cryptosystem without a trusted party*, EUROCRYPT 1991; Feldman, *A practical scheme for non-interactive verifiable secret sharing*, FOCS 1987; Gennaro, Jarecki, Krawczyk, Rabin, *Secure distributed key generation for discrete-log based cryptosystems*, EUROCRYPT 1999 / J. Cryptology 2007.
 - Schneier, *Attack Trees*, Dr. Dobb's Journal, Dec 1999. Shostack, *Threat Modeling: Designing for Security*, Wiley 2014. LINDDUN privacy threat modeling (KU Leuven). OWASP ASVS. SLSA framework.

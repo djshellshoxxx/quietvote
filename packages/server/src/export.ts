@@ -1,6 +1,6 @@
 // Export bundle writer: the protocol ElectionBundle (feeds verifyElection) and the .qvb tar (QV-18 §12).
-import { b64u, bundleToJson, exportBundle, toHex, type LogBundle } from '@quietvote/board';
-import { bytesToHex, parseQvJson, sha256, utf8 } from '@quietvote/crypto';
+import { b64u, bundleToJson, decodeHeader, exportBundle, toHex, type LogBundle } from '@quietvote/board';
+import { bytesToHex, hexToBytes, parseQvJson, sha256, utf8 } from '@quietvote/crypto';
 import { manifestHash, type ElectionBundle, type LogEntry } from '@quietvote/protocol';
 import { SERVER_VERSION, type ElectionRuntime } from './election.ts';
 import { writeTar } from './tar.ts';
@@ -40,6 +40,19 @@ export function logBundle(rt: ElectionRuntime): LogBundle {
   });
 }
 
+/**
+ * Key that signed the manifest entry (an org organizer key on the instance that ran the election, or the value recorded at import).
+ * Not derivable from the log (headers carry only a key id), so bundles carry it for importers; the importer checks it against that id.
+ */
+export function organizerPk(rt: ElectionRuntime): Uint8Array | undefined {
+  const rec = rt.edb.meta('organizer_pk');
+  if (rec !== undefined) return hexToBytes(rec, 32);
+  const e = rt.edb.store.getEntry(0);
+  const h = e ? decodeHeader(e.headerBytes) : undefined;
+  const k = h?.ok ? rt.env.control.keyAnyById(b64u(h.value.author)) : undefined;
+  return k ? new Uint8Array(k.pk) : undefined;
+}
+
 export function qvb(rt: ElectionRuntime): Uint8Array {
   const lb = logBundle(rt);
   const j = bundleToJson(lb) as Record<string, unknown> & { entries: unknown[]; checkpoints: string[]; policy: unknown; redactions: unknown };
@@ -58,6 +71,7 @@ export function qvb(rt: ElectionRuntime): Uint8Array {
     data: utf8(JSON.stringify({
       format: j['format'], origin: j['origin'], created_at: j['created_at'], tree_size: j['tree_size'], root_b64: j['root_b64'],
       entries_sha256: toHex(sha256(entries)), generator: j['generator'], spec: j['spec'], log_pk_b64u: b64u(rt.logPk),
+      server_pk_b64u: b64u(rt.srvPk), ...(organizerPk(rt) ? { organizer_pk_b64u: b64u(organizerPk(rt)!) } : {}),
     })),
   });
   files.push({ name: 'README.txt', data: utf8('QuietVote bundle v1. Verify offline: check SHA256SUMS, then run the board and protocol verifiers on log/ and election.json.\n') });
