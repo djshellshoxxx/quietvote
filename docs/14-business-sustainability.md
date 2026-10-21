@@ -7,7 +7,7 @@
 **Related specs:** QV-00, QV-08, QV-12 (ops costs), QV-25 (legal/licensing), QV-11 (audit costs), QV-26, QV-31; ADR-001, ADR-002, ADR-011, ADR-012.
 
 ## 1. Objective
-Identify how QuietVote can remain maintained and independently audited without compromising its stance: no operator in the trust base, no mandatory identity, full export, no token/chain (ADR-012), AGPL code (ADR-011). Revenue models are evaluated against one test: **can the revenue stream be turned against the user?** (e.g., by data monetisation, lock-in, or a single funder gaining control). All numbers are *hypotheses to validate*, not forecasts.
+Identify how QuietVote can remain maintained and open to independent audit without compromising its stance: no operator in the trust base, no mandatory identity, full export, no token/chain (ADR-012), AGPL code (ADR-011). Revenue models are evaluated against one test: **can the revenue stream be turned against the user?** (e.g., by data monetisation, lock-in, or a single funder gaining control). All numbers are *hypotheses to validate*, not forecasts.
 
 ## 2. Scope
 ### In scope

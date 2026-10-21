@@ -1,6 +1,6 @@
 # Auditor and Verifier Guide
 
-> **Draft – unaudited software, not for real elections yet.** The independent checker is not built yet. This page describes the planned checks.
+> **Draft – unaudited software, not for real elections yet.** A first-cut checker (`qv-verify`, in `packages/verifier`) exists. Three of its board-layer tests fail (see [[Roadmap and Status]]), and there is only one implementation. This page describes the intended checks.
 
 Anyone can check a vote without trusting the operator. You need an honest checker program and the public data.
 
@@ -14,10 +14,10 @@ Anyone can check a vote without trusting the operator. You need an honest checke
 
 The full list of checks is in spec [16](https://github.com/djshellshoxxx/quietvote/blob/main/docs/16-crypto-protocol.md) (Appendix C) and spec [18](https://github.com/djshellshoxxx/quietvote/blob/main/docs/18-bulletin-board-transparency.md) section 13.
 
-## Tools (planned)
+## Tools
 
-- `qv-verify`, a command-line checker.
-- An offline **checker page** that checks a saved bundle in your browser.
+- `qv-verify`, a command-line checker (first cut, `packages/verifier`).
+- An offline **checker page** that checks a saved bundle in your browser (built by `packages/web`).
 - The export format is a bundle file (`.qvb`). See spec 18 section 12.
 
 ## Limits

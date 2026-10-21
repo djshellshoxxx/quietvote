@@ -2,12 +2,13 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { parseQvJson } from '@quietvote/crypto';
-import { authenticate, type AuthInfo } from './auth.ts';
+import { authenticate, preflightAuth, type AuthInfo } from './auth.ts';
 import type { RateConfig } from './config.ts';
 import type { Env } from './env.ts';
 import { ApiError, problemBody } from './problem.ts';
 import { BucketKeyer } from './ratelimit.ts';
 import { ELECTION_ID_RE, ORG_ID_RE, type Field } from './util.ts';
+import { ifRangeHolds, parseRange } from './range.ts';
 
 export type RateClass = 'R' | 'P' | 'W' | 'A' | 'M' | 'X' | 'G';
 const CLASS_KEY: Record<RateClass, keyof RateConfig> = { R: 'read', P: 'proof', W: 'writePre', A: 'auth', M: 'manage', X: 'export', G: 'gossip' };
@@ -26,6 +27,8 @@ export interface Reply {
    * headers (security headers, CORS, request id). The callback owns the response from then on and must write the head.
    */
   stream?: (res: ServerResponse, headers: Record<string, string>) => void;
+  /** Serve a single `Range` of `bytes` (export downloads): adds Accept-Ranges and answers 206/416. */
+  ranges?: boolean;
 }
 
 export interface Ctx {
@@ -55,14 +58,15 @@ export interface Route {
   cls: RateClass;
   /** none: anonymous; sig: signed management request; self: handler authenticates (e.g. org registration). */
   auth: 'none' | 'sig' | 'self';
-  body?: 'json' | 'none';
+  /** json: strict JSON. tar: raw `application/x-tar` upload (Content-Length required, preauth before the body is read). */
+  body?: 'json' | 'none' | 'tar';
   maxBody?: number;
   cache?: string;
   handler(c: Ctx): Promise<Reply> | Reply;
 }
 
 const PARAM_RE: Record<string, RegExp> = {
-  id: ELECTION_ID_RE, org: ORG_ID_RE, invite: ORG_ID_RE, seq: /^\d{1,12}$/, wh: ORG_ID_RE, kid: /^[A-Za-z0-9_-]{16,64}$/, leaf: /^[A-Za-z0-9_-]{43}$/,
+  id: ELECTION_ID_RE, org: ORG_ID_RE, invite: ORG_ID_RE, seq: /^\d{1,12}$/, wh: ORG_ID_RE, job: ORG_ID_RE, kid: /^[A-Za-z0-9_-]{16,64}$/, leaf: /^[A-Za-z0-9_-]{43}$/,
   j: /^\d{1,2}$/, keyid: /^[A-Za-z0-9_-]{16,64}$/,
 };
 
@@ -166,6 +170,39 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
       chunks.push(b);
     }
     return Buffer.concat(chunks);
+  }
+
+  let uploads = 0;
+  /**
+   * Raw tar upload (POST /imports). The body is held in memory, so: signature pre-check first, Content-Length mandatory and
+   * bounded, exact length enforced while streaming, and a cap on uploads in flight.
+   */
+  async function readUpload(req: IncomingMessage, route: Route): Promise<Buffer> {
+    if (route.auth === 'sig') preflightAuth(env, req.headers.authorization);
+    const max = route.maxBody ?? cfg.maxJsonBytes;
+    if (req.headers['transfer-encoding'] !== undefined) throw new ApiError(411, 'LENGTH_REQUIRED', 'Content-Length is required; chunked uploads are not accepted');
+    const clh = req.headers['content-length'];
+    if (clh === undefined || !/^\d{1,15}$/.test(clh)) throw new ApiError(411, 'LENGTH_REQUIRED', 'Content-Length is required');
+    const cl = Number(clh);
+    if (cl > max) throw new ApiError(413, 'PAYLOAD_TOO_LARGE', `request body exceeds ${max} bytes`);
+    const ct = (req.headers['content-type'] ?? '').toLowerCase().replace(/\s/g, '');
+    if (ct !== 'application/x-tar') throw new ApiError(415, 'UNSUPPORTED_MEDIA_TYPE', 'Content-Type must be application/x-tar');
+    if (uploads >= cfg.maxImportUploads) throw new ApiError(503, 'BUSY', 'too many uploads in progress', { retryAfter: 5 });
+    uploads++;
+    try {
+      const buf = Buffer.allocUnsafe(cl);
+      let n = 0;
+      for await (const ch of req) {
+        const b = ch as Buffer;
+        if (n + b.length > cl) throw new ApiError(400, 'BAD_REQUEST', 'body is longer than Content-Length');
+        b.copy(buf, n);
+        n += b.length;
+      }
+      if (n !== cl) throw new ApiError(400, 'BAD_REQUEST', 'body is shorter than Content-Length');
+      return buf;
+    } finally {
+      uploads--;
+    }
   }
 
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -288,13 +325,22 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
         throw new ApiError(415, 'UNSUPPORTED_MEDIA_TYPE', 'request Content-Encoding is not accepted');
       }
       let body: Buffer = Buffer.alloc(0);
-      const expectsBody = route.body === 'json';
+      const isTar = route.body === 'tar';
+      const expectsBody = route.body === 'json' || isTar;
       const hasBody = (req.headers['content-length'] !== undefined && req.headers['content-length'] !== '0') || req.headers['transfer-encoding'] !== undefined;
       if (!expectsBody && hasBody) {
         closeAfter = true;
         throw new ApiError(400, 'BAD_REQUEST', 'this endpoint takes no request body');
       }
-      if (expectsBody) {
+      if (isTar) {
+        try {
+          body = await readUpload(req, route);
+        } catch (e) {
+          closeAfter = true;
+          throw e;
+        }
+        bytesIn = body.length;
+      } else if (expectsBody) {
         const max = Math.min(route.maxBody ?? cfg.maxJsonBytes, cfg.maxRequestBytes);
         const cl = req.headers['content-length'];
         if (cl !== undefined && Number(cl) > max) {
@@ -367,7 +413,27 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
           return;
         }
       }
-      send(res, method, reply.status, h, payload);
+      let outStatus = reply.status;
+      if (reply.ranges === true && payload !== undefined && reply.status === 200 && (method === 'GET' || method === 'HEAD')) {
+        h['Accept-Ranges'] = 'bytes';
+        const rh = req.headers['range'];
+        const rangeHeader = Array.isArray(rh) ? rh.join(', ') : rh;
+        if (rangeHeader !== undefined && ifRangeHolds(Array.isArray(req.headers['if-range']) ? '"invalid"' : req.headers['if-range'], reply.etag)) {
+          const r = parseRange(rangeHeader, payload.length);
+          if (r.kind === 'unsatisfiable') {
+            throw new ApiError(416, 'RANGE_NOT_SATISFIABLE', 'the requested range cannot be served (one satisfiable byte range is supported)', {
+              headers: { 'Content-Range': `bytes */${payload.length}`, 'Accept-Ranges': 'bytes' },
+            });
+          }
+          if (r.kind === 'partial') {
+            outStatus = 206;
+            h['Content-Range'] = `bytes ${r.start}-${r.end}/${payload.length}`;
+            payload = payload.subarray(r.start, r.end + 1);
+          }
+        }
+      }
+      status = outStatus;
+      send(res, method, outStatus, h, payload);
     } catch (e) {
       const err = e instanceof ApiError ? e : new ApiError(500, 'INTERNAL', 'internal error');
       if (!(e instanceof ApiError)) env.logger.event('internal_error', { request_id: requestId, route: routeTpl, error_code: (e as Error)?.name ?? 'Error', outcome: 'error' });
@@ -375,6 +441,7 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
       errCode = err.code;
       const h: Record<string, string> = { ...headers, 'Content-Type': 'application/problem+json; charset=utf-8', 'Cache-Control': 'no-store' };
       if (err.extra.retryAfter !== undefined) h['Retry-After'] = String(err.extra.retryAfter);
+      if (err.extra.headers !== undefined) Object.assign(h, err.extra.headers);
       if (closeAfter) h['Connection'] = 'close';
       if (!res.headersSent) send(res, method, err.status, h, Buffer.from(JSON.stringify(problemBody(err, requestId))));
       else res.destroy();

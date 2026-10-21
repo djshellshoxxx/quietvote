@@ -1,6 +1,6 @@
 # Trustee Guide
 
-> **Draft – unaudited software, not for real elections yet.** The trustee tool is not built yet. This page describes the planned role.
+> **Draft – unaudited software, not for real elections yet.** The trustee tool (`qv-trustee`) exists in the repository and is tested with simulated parties. It has not been run in a live key ceremony. This page describes the planned role.
 
 ## What a trustee does
 

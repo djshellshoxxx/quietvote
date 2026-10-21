@@ -82,6 +82,29 @@ CREATE TABLE webhook_outbox (
 CREATE INDEX webhook_outbox_hook ON webhook_outbox(webhook_id);
 `,
   },
+  {
+    version: 4,
+    name: 'jobs_quarantine_flag',
+    // QV-28 §8.1 `job` (imports, backups, self-audits, deletions; P4, no PII) plus a registry flag so /admin/status can list quarantined
+    // elections without opening every election database.
+    sql: `
+CREATE TABLE job (
+  job_id      TEXT PRIMARY KEY CHECK (length(job_id)=26),
+  kind        TEXT NOT NULL CHECK (kind IN ('export','import','delete','backup','self_audit','redact','migrate')),
+  election_id TEXT,
+  state       TEXT NOT NULL CHECK (state IN ('queued','running','done','failed','expired')),
+  params      TEXT NOT NULL DEFAULT '{}',
+  progress    REAL NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 1),
+  result      TEXT,
+  result_ref  TEXT,
+  error       TEXT,
+  created_by  TEXT NOT NULL,
+  created_at  INTEGER NOT NULL, started_at INTEGER, finished_at INTEGER, expires_at INTEGER
+) STRICT;
+CREATE INDEX job_state ON job(state, created_at);
+ALTER TABLE election_registry ADD COLUMN quarantine TEXT;
+`,
+  },
 ];
 
 export interface OutboxRow {
@@ -123,6 +146,25 @@ export interface Org {
   created_at: number;
   status: string;
 }
+export type JobKind = 'export' | 'import' | 'delete' | 'backup' | 'self_audit' | 'redact' | 'migrate';
+export type JobState = 'queued' | 'running' | 'done' | 'failed' | 'expired';
+export interface JobRow {
+  job_id: string;
+  kind: JobKind;
+  election_id: string | null;
+  state: JobState;
+  params: string;
+  progress: number;
+  result: string | null;
+  result_ref: string | null;
+  error: string | null;
+  created_by: string;
+  created_at: number;
+  started_at: number | null;
+  finished_at: number | null;
+  expires_at: number | null;
+}
+
 export interface RegistryRow {
   election_id: string;
   org_id: string;
@@ -137,6 +179,8 @@ export interface RegistryRow {
   audit_close_at: number | null;
   archived_at: number | null;
   bytes_used: number;
+  imported?: number;
+  quarantine?: string | null;
 }
 
 export class ControlDb {
@@ -221,6 +265,74 @@ export class ControlDb {
   }
   markDeleted(id: string): void {
     run(this.db, "UPDATE election_registry SET state='DELETED', dek_wrapped=NULL, deleted_at=? WHERE election_id=?", this.now(), id);
+  }
+
+  /** Any registry row, deleted tombstones included (an id is never reused). */
+  electionAny(id: string): { election_id: string; state: ElectionStateName } | undefined {
+    return get(this.db, 'SELECT election_id,state FROM election_registry WHERE election_id=?', id) as never;
+  }
+  insertImported(r: { election_id: string; org_id: string; db_path: string; access: 'public' | 'link'; title: string; bytes_used: number }): void {
+    run(this.db, "INSERT INTO election_registry(election_id,org_id,db_path,state,access,title,dek_wrapped,created_at,imported,bytes_used) VALUES (?,?,?, 'IMPORTED', ?,?, NULL, ?, 1, ?)",
+      r.election_id, r.org_id, r.db_path, r.access, r.title, this.now(), r.bytes_used);
+  }
+  /** Instance-wide listing for /admin (never exposes P2 data: registry columns only). */
+  listAllElections(state: string | undefined, after: string | undefined, limit: number): RegistryRow[] {
+    return all<RegistryRow>(this.db,
+      `SELECT * FROM election_registry WHERE state<>'DELETED' AND (? IS NULL OR state=?) AND (? IS NULL OR election_id>?) ORDER BY election_id LIMIT ?`,
+      state ?? null, state ?? null, after ?? null, after ?? null, limit);
+  }
+  countAllElections(): number {
+    return get<{ n: number }>(this.db, "SELECT COUNT(*) AS n FROM election_registry WHERE state<>'DELETED'")?.n ?? 0;
+  }
+  electionsByState(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const r of all<{ state: string; n: number }>(this.db, "SELECT state, COUNT(*) AS n FROM election_registry WHERE state<>'DELETED' GROUP BY state")) out[r.state] = r.n;
+    return out;
+  }
+  setQuarantineFlag(id: string, reason: string | null): void {
+    run(this.db, 'UPDATE election_registry SET quarantine=? WHERE election_id=?', reason, id);
+  }
+  quarantinedElections(): { election_id: string; quarantine: string }[] {
+    return all<{ election_id: string; quarantine: string }>(this.db, "SELECT election_id,quarantine FROM election_registry WHERE quarantine IS NOT NULL AND state<>'DELETED' ORDER BY election_id");
+  }
+  migrationVersion(): number {
+    return get<{ user_version: number }>(this.db, 'PRAGMA user_version')?.user_version ?? 0;
+  }
+
+  // ---- jobs
+  createJob(j: { job_id: string; kind: JobKind; election_id: string | null; params: string; created_by: string }): JobRow {
+    const t = this.now();
+    run(this.db, 'DELETE FROM job WHERE expires_at IS NOT NULL AND expires_at < ?', t);
+    run(this.db, "INSERT INTO job(job_id,kind,election_id,state,params,created_by,created_at) VALUES (?,?,?, 'queued', ?,?,?)", j.job_id, j.kind, j.election_id, j.params, j.created_by, t);
+    return this.job(j.job_id)!;
+  }
+  job(id: string): JobRow | undefined {
+    return get<JobRow>(this.db, 'SELECT * FROM job WHERE job_id=?', id);
+  }
+  startJob(id: string): void {
+    run(this.db, "UPDATE job SET state='running', started_at=? WHERE job_id=? AND state='queued'", this.now(), id);
+  }
+  setJobProgress(id: string, p: number): void {
+    run(this.db, "UPDATE job SET progress=? WHERE job_id=? AND state='running'", Math.max(0, Math.min(1, p)), id);
+  }
+  finishJob(id: string, r: { state: 'done' | 'failed'; result?: unknown; result_ref?: string | null; error?: unknown }, retentionMs: number): void {
+    const t = this.now();
+    run(this.db, 'UPDATE job SET state=?, progress=?, result=?, result_ref=?, error=?, finished_at=?, expires_at=? WHERE job_id=? AND state IN (\'queued\',\'running\')',
+      r.state, r.state === 'done' ? 1 : 0, r.result === undefined ? null : JSON.stringify(r.result), r.result_ref ?? null,
+      r.error === undefined ? null : JSON.stringify(r.error), t, t + retentionMs, id);
+  }
+  /** Jobs that were queued or running when the process died cannot resume (their input lived in memory). */
+  failInterruptedJobs(retentionMs: number): number {
+    const t = this.now();
+    const r = run(this.db, "UPDATE job SET state='failed', error=?, finished_at=?, expires_at=? WHERE state IN ('queued','running')",
+      JSON.stringify({ code: 'INTERRUPTED', detail: 'the server restarted before the job finished; submit it again' }), t, t + retentionMs);
+    return Number(r.changes);
+  }
+  meta(key: string): string | undefined {
+    return get<{ value: string }>(this.db, 'SELECT value FROM instance_meta WHERE key=?', key)?.value;
+  }
+  setMeta(key: string, value: string): void {
+    run(this.db, 'INSERT INTO instance_meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, value);
   }
 
   // ---- webhooks

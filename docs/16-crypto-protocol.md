@@ -579,7 +579,7 @@ Non-zero-ness: `hs_nz` appends counter `u32(c)` as an additional last field and 
 ballot_code = H256("ballot-code"; ctx, JCS(ballot_body))                       ; 32 bytes — the tracking code
 ```
 
-**Display of the tracking code.** Encoded as Crockford base32 (RFC 4648 alphabet variant `[UNVERIFIED-OFFLINE: Crockford spec]`), 52 characters, grouped in fours. Clients shall display at least the first 26 characters (130 bits) and offer the full code; the Benaloh security argument requires that a cheating client cannot cheaply find a *different* ballot with the same displayed prefix (§5.22).
+**Display of the tracking code.** Specified as Crockford base32 (alphabet `0-9A-Z` without `I L O U`; this is a separate alphabet from RFC 4648 base32, `A-Z2-7`, not a variant of it), 52 characters. **Spec/implementation disagree:** the reference implementation uses the RFC 4648 lowercase alphabet (`a-z2-7`); see docs/errata/spec-errata-log.md (owner decision needed), grouped in fours. Clients shall display at least the first 26 characters (130 bits) and offer the full code; the Benaloh security argument requires that a cheating client cannot cheaply find a *different* ballot with the same displayed prefix (§5.22).
 
 #### 5.12.2 Signing and submission
 
@@ -815,7 +815,7 @@ In Phase 1 the roll is public, so returning precise codes to submitters leaks no
 
 | Capability | Phase 1 (ADR-005) | Phase 2 (stub) | Phase 3 (stub) |
 |---|---|---|---|
-| Voter authentication | Ed25519 key in Merkle-committed roll; signature on ballot | Blind-signed single-use token (RFC 9474 RSABSSA) obtained from a registrar; ballot signed by a fresh ephemeral key certified by the token | ZK Merkle-membership proof + nullifier (Semaphore-style) |
+| Voter authentication | Ed25519 key in Merkle-committed roll; signature on ballot | Blind-signed single-use token (RFC 9474 RSABSSA) obtained from a registrar; ballot signed by a fresh ephemeral key certified by the token | ZK Merkle-membership proof + nullifier (Semaphore-style) | <!-- claims-lint-ignore -->
 | Participation visibility | Public (who voted) | Registrar sees who *requested* a token; ballots unlinkable to voters if issuance/casting separated | Hidden (set membership only) |
 | `binder` | `H256("binder-roll"; ctx, voter_pk)` | `H256("binder-token"; ctx, token_digest)` | `H256("binder-nullifier"; ctx, nullifier)` |
 | Revote key (`supersede_key`) | `voter_pk` | token serial (revote = new ballot under the same token) | nullifier |
@@ -862,7 +862,7 @@ In Phase 1, `authData` = `{voter_pk, sig}`. A scheme may add fields to the ballo
 - **Secret material:** trustee shares `s_j`, coefficients `a_{i,k}`, `e_i`; voter Ed25519 seeds and `voter_nonce_key`; ballot seeds `ξ` (until spoiled).
 - **Visibility:** *Everyone:* roll, participation (who has a cast ballot, how many times — revoting is visible), ciphertexts, aggregates, results, proofs, spoiled selections. *Operator:* everything above plus network metadata (QV-26). *Trustees (< t):* nothing about individual ballots. *Voter:* own selections and `ξ` of the attempts they made.
 - **Retention:** election record is retained for the audit window; trustee secret shares destroyed after the window (ADR-013); voter seeds remain client-side only.
-- **Linkability risks:** Phase 1 links voter key ↔ ballot ciphertext (not content). Revote count and timing leak behaviour. `reveal` records link a voter to an audited choice.
+- **Linkability risks:** Phase 1 links voter key ↔ ballot ciphertext (not content). Revote count and timing leak behaviour. `reveal` records link a voter to an audited choice. <!-- claims-lint-ignore -->
 - **Claimed:** ballot secrecy against < t trustees plus operator (computational, classical); universal verifiability.
 - **Not claimed:** see §5.22 and ADR-008.
 
@@ -975,7 +975,7 @@ All proposals are **Proposed**; none is binding until recorded in `decision-log.
 - **Review trigger:** inability to achieve cross-implementation byte equality in QV-34.
 
 ### QV-ADR-P16-2 — DKG: Feldman VSS with commit-then-reveal, per-coefficient PoK and DH-reveal complaints
-- **Decision:** §5.7. **Alternatives:** Pedersen VSS (hiding; no public key shares directly), FROST-style two-round DKG (RFC 9591 `[UNVERIFIED-OFFLINE]`; designed for signatures), trusted dealer (violates ADR-001).
+- **Decision:** §5.7. **Alternatives:** Pedersen VSS (hiding; no public key shares directly), FROST-style two-round DKG (the FROST paper's DKG; RFC 9591 standardises FROST *signing* only and does not standardise a DKG), trusted dealer (violates ADR-001).
 - **Consequences:** Public, deterministic adjudication; operator can DoS a trustee by censorship but not forge `K`.
 - **Review trigger:** reviewer finds bias or adjudication gap.
 

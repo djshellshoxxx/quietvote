@@ -5,6 +5,10 @@ export interface ProblemExtra {
   retryAfter?: number;
   errors?: { pointer: string; message: string }[];
   retryable?: boolean;
+  /** Extra response headers (e.g. Content-Range on 416). */
+  headers?: Record<string, string>;
+  /** Extra top-level problem members (additive, e.g. `evidence`). */
+  body?: Record<string, unknown>;
 }
 
 const TITLES: Record<string, string> = {
@@ -20,6 +24,8 @@ const TITLES: Record<string, string> = {
   RATE_LIMITED: 'Rate limited', REVOTE_LIMIT: 'Revote limit reached', INTERNAL: 'Internal error',
   LOG_UNAVAILABLE: 'Log unavailable', QUARANTINED: 'Log quarantined', MAINTENANCE: 'Maintenance', BUSY: 'Server busy', LOG_FULL: 'Log full',
   URI_TOO_LONG: 'URI too long', HEADERS_TOO_LARGE: 'Request headers too large',
+  EQUIVOCATION: 'Equivocation evidence', RANGE_NOT_SATISFIABLE: 'Range not satisfiable', LENGTH_REQUIRED: 'Content-Length required',
+  IMPORT_REJECTED: 'Import rejected', COMPROMISED: 'Log key compromised', INTERNAL_JOB: 'Job failed',
 };
 
 const RETRYABLE = new Set(['RATE_LIMITED', 'BUSY', 'LOG_UNAVAILABLE', 'MAINTENANCE', 'IDEMPOTENCY_IN_PROGRESS', 'WITNESS_QUORUM_REQUIRED', 'INTERNAL']);
@@ -51,6 +57,7 @@ export function problemBody(e: ApiError, requestId: string): Record<string, unkn
   };
   if (e.extra.reason !== undefined) b['reason'] = e.extra.reason;
   if (e.extra.errors !== undefined) b['errors'] = e.extra.errors;
+  if (e.extra.body !== undefined) for (const [k, v] of Object.entries(e.extra.body)) if (!(k in b)) b[k] = v;
   return b;
 }
 

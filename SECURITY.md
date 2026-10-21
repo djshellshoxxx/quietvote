@@ -50,6 +50,14 @@ There are no releases yet. Once released, the latest minor version and the previ
 |---|---|
 | `main` (pre-release) | Best effort; reports welcome |
 
+## Open items (before this policy is operational)
+
+- Security contact address `security@quietvote.example` is a placeholder; no real contact has been chosen.
+- Confirm GitHub Private Vulnerability Reporting is enabled.
+- PGP fingerprint and key, `age` recipient and `security.txt` are placeholders.
+- Staging instance for safe-harbor testing is a placeholder.
+- The preamble above ("pre-implementation specification project, no released software") predates the code now in the repository; owner to confirm the wording.
+
 ## Bug bounty
 
 There is currently **no cash bounty**. Reporters are credited (hall of fame, advisory) unless they prefer anonymity. A staged bounty plan is in QV-33 §10 and will be announced only when funded.

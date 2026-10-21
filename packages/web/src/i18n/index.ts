@@ -2,10 +2,11 @@
 // different language (REQ-064): a locale that lacks one is not offered, and asking for one anyway throws.
 import { format, parse, evaluate, type Args, type Node } from './icu.ts';
 import { EN, type MessageKey } from './en.ts';
-import { LOCALES, dirOf, type LocaleDef } from './locales.ts';
+import { SOURCE_ONLY, dirOf, type LocaleDef } from './locales-core.ts';
 
 export { EN, MESSAGE_KEYS, type MessageKey } from './en.ts';
-export { LOCALES, offeredLocales, negotiateLocale, gate, dirOf, type LocaleDef } from './locales.ts';
+// LOCALES (all tables loaded) is in ./locales.ts; the app loads tables on demand through ./runtime.ts.
+export { offeredLocales, negotiateLocale, gate, dirOf, SOURCE_ONLY, type LocaleDef } from './locales-core.ts';
 export type { Args } from './icu.ts';
 
 export interface Translator {
@@ -22,7 +23,7 @@ export interface TranslatorOptions {
 }
 
 export function createTranslator(locale: string, o: TranslatorOptions = {}): Translator {
-  const defs = o.defs ?? LOCALES;
+  const defs = o.defs ?? SOURCE_ONLY;
   const def = defs.find((d) => d.tag === locale);
   const lang = locale.split('-')[0]!;
   const base = defs.find((d) => d.tag === lang);

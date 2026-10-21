@@ -23,6 +23,27 @@ export function base32(bytes: Uint8Array): string {
   return out;
 }
 
+/** Inverse of `base32` for canonical input only: lower case alphabet, exact length, zero pad bits. Returns undefined otherwise. */
+export function unbase32(s: string, nbytes: number): Uint8Array | undefined {
+  if (s.length !== Math.ceil((nbytes * 8) / 5)) return undefined;
+  let bits = 0;
+  let acc = 0;
+  const out: number[] = [];
+  for (const ch of s) {
+    const v = B32.indexOf(ch);
+    if (v < 0) return undefined;
+    acc = (acc << 5) | v;
+    bits += 5;
+    if (bits >= 8) {
+      out.push((acc >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+    acc &= (1 << bits) - 1;
+  }
+  if (acc !== 0 || out.length !== nbytes) return undefined;
+  return new Uint8Array(out);
+}
+
 export function randomId(): string {
   return base32(randomBytes(16));
 }

@@ -24,7 +24,7 @@ Source: spec [08 Architecture and deployment](https://github.com/djshellshoxxx/q
 | `trustee` | Trustee tool (`qv-trustee`) | L3 |
 | `verifier` | Independent verifier (`qv-verify`) and offline page | L3 |
 
-Dependencies point downward only. The rules are enforced mechanically by the spec 08 section 5.1 checks.
+Dependencies should point downward only. This is not enforced by CI in the current repository: `packages/cli` imports `packages/verifier` in-process, which breaks the rule (see `packages/cli/NOTES.md`).
 
 ## Election flow
 

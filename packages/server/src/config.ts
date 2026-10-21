@@ -1,4 +1,4 @@
-import type { WebhookResolver, WebhookTransport } from './ssrf.ts';
+import { parseTargetUrl, TargetRejected, type WebhookResolver, type WebhookTransport } from './ssrf.ts';
 // Server configuration with compiled-in hard bounds (QV-29 §5): a misconfiguration refuses start.
 
 export interface RateSpec {
@@ -109,15 +109,38 @@ export interface ServerOptions {
   /** Test seams: DNS resolution and the HTTPS transport used for deliveries. */
   webhookResolver?: WebhookResolver;
   webhookTransport?: WebhookTransport;
+  /** Largest accepted `POST /imports` body (`limits.max_import_bytes`). */
+  maxImportBytes?: number;
+  /** Largest number of log entries (and of checkpoint files) in an imported bundle. */
+  maxImportEntries?: number;
+  /** Import uploads being received at the same moment (each holds its body in memory). */
+  maxImportUploads?: number;
+  /** Import jobs queued or running; further submissions get 503 BUSY. */
+  importQueueMax?: number;
+  /** Jobs (imports, backups, audits) are dropped this long after they finished. */
+  jobRetentionMs?: number;
+  /** HTTPS base URLs of gossip peers (mirrors, witnesses, other boards). Checked with the SSRF policy at start. */
+  gossipPeers?: string[];
+  /** Outbound gossip period; 0 disables the timer (exchanges can still be run on demand). */
+  gossipIntervalMs?: number;
+  /** Per-request deadline of an outbound gossip exchange. */
+  gossipTimeoutMs?: number;
+  /** `gossip_seen` rows kept per election. */
+  gossipSeenMax?: number;
+  /** Test seams for outbound gossip. */
+  gossipResolver?: WebhookResolver;
+  gossipTransport?: WebhookTransport;
 }
 
-export interface ServerConfig extends Required<Omit<ServerOptions, 'staticDir' | 'releaseSeedHex' | 'bucketHeader' | 'rate' | 'webhookResolver' | 'webhookTransport'>> {
+export interface ServerConfig extends Required<Omit<ServerOptions, 'staticDir' | 'releaseSeedHex' | 'bucketHeader' | 'rate' | 'webhookResolver' | 'webhookTransport' | 'gossipResolver' | 'gossipTransport'>> {
   staticDir: string | undefined;
   releaseSeedHex: string | undefined;
   bucketHeader: string | undefined;
   rate: RateConfig;
   webhookResolver: WebhookResolver | undefined;
   webhookTransport: WebhookTransport | undefined;
+  gossipResolver: WebhookResolver | undefined;
+  gossipTransport: WebhookTransport | undefined;
 }
 
 const MIN = 60;
@@ -148,6 +171,7 @@ export const HARD = {
   minBallotIntervalSec: 2,
   sseHeartbeatMs: 20_000,
   webhookTimeoutMs: 30_000,
+  maxImportBytes: 1024 ** 3,
 } as const;
 
 function bound(name: string, v: number, hi: number, lo = 1): number {
@@ -159,6 +183,15 @@ export function resolveConfig(o: ServerOptions): ServerConfig {
   const rate: RateConfig = { ...DEFAULT_RATE, ...(o.rate ?? {}) };
   for (const [k, r] of Object.entries(rate) as [string, RateSpec][]) {
     if (!(r.limit >= 1) || !(r.windowSec >= 1) || (r.burst !== undefined && !(r.burst >= 1))) throw new Error(`config rate.${k} invalid`);
+  }
+  const peers = (o.gossipPeers ?? []).slice();
+  if (peers.length > 16) throw new Error('config gossipPeers: at most 16 peers');
+  for (const p of peers) {
+    try {
+      parseTargetUrl(p); // static SSRF policy at start: a bad peer refuses start (fail closed); DNS is checked again before every send
+    } catch (e) {
+      throw new Error(`config gossipPeers: ${e instanceof TargetRejected ? `${e.code}: ${e.message}` : 'invalid url'}`);
+    }
   }
   return {
     dataDir: o.dataDir,
@@ -217,5 +250,16 @@ export function resolveConfig(o: ServerOptions): ServerConfig {
     webhookDisableAfter: bound('webhookDisableAfter', o.webhookDisableAfter ?? 5, 1000),
     webhookResolver: o.webhookResolver,
     webhookTransport: o.webhookTransport,
+    maxImportBytes: bound('maxImportBytes', o.maxImportBytes ?? 64 * 1024 * 1024, HARD.maxImportBytes),
+    maxImportEntries: bound('maxImportEntries', o.maxImportEntries ?? 250_000, 2_000_000),
+    maxImportUploads: bound('maxImportUploads', o.maxImportUploads ?? 2, 16),
+    importQueueMax: bound('importQueueMax', o.importQueueMax ?? 2, 16),
+    jobRetentionMs: bound('jobRetentionMs', o.jobRetentionMs ?? 7 * 86_400_000, 90 * 86_400_000, 1000),
+    gossipPeers: peers,
+    gossipIntervalMs: bound('gossipIntervalMs', o.gossipIntervalMs ?? 0, 86_400_000, 0),
+    gossipTimeoutMs: bound('gossipTimeoutMs', o.gossipTimeoutMs ?? 5_000, 30_000, 10),
+    gossipSeenMax: bound('gossipSeenMax', o.gossipSeenMax ?? 5000, 100_000),
+    gossipResolver: o.gossipResolver,
+    gossipTransport: o.gossipTransport,
   };
 }

@@ -11,9 +11,14 @@ import { entryRecord } from '../flow/entries.ts';
 import { parseFragment } from '../flow/invite.ts';
 import { ORGANIZER_SLOT, createKey, importKeyFile, keySlot, recoveryCodeFor, registrationBody, unlockKey } from '../flow/onboarding.ts';
 import { buildManifest, parseRoll, TEMPLATES, type Template } from '../flow/organizer.ts';
+import { runPublish, type PublishOutcome } from '../flow/publish-ui.ts';
+import type { PublishForm, PublishState } from '../flow/publish.ts';
 import { BoardIntegrityError, checkInclusion, parseReceiptFile } from '../flow/receipt.ts';
+import { LiveElection } from '../flow/live.ts';
+import { BallotIndex } from '../flow/supersede.ts';
+import type { ConnStatus } from '../net/sse.ts';
 import { inlineSealer, type Sealer } from '../flow/seal.ts';
-import { createTranslator, offeredLocales, negotiateLocale, type MessageKey, type Translator, type Args } from '../i18n/index.ts';
+import { createTranslator, offeredLocales, negotiateLocale, SOURCE_ONLY, type LocaleDef, type MessageKey, type Translator, type Args } from '../i18n/index.ts';
 import { formatDeadline } from '../i18n/datetime.ts';
 import { KeyError } from '../key/keystore.ts';
 import { checkPassphrase, generatePassphrase } from '../key/passphrase.ts';
@@ -31,6 +36,8 @@ export interface AppEnv {
   build: { version: string; id: string };
   sealer?: Sealer;
   apiBase?: string;
+  /** Locale tables, loaded lazily by main.ts (i18n/runtime.ts). Defaults to English only. */
+  locales?: readonly LocaleDef[];
 }
 
 interface Loaded {
@@ -42,11 +49,16 @@ interface Loaded {
   logPk: Uint8Array;
   title: string;
   records: { seq: number; record: unknown }[];
+  /** Live update connection (SSE), started when the election is first opened. */
+  live?: LiveElection;
+  /** Incremental index of ballots, for receipt standing. */
+  ballots?: BallotIndex;
 }
 
 export function startApp(env: AppEnv): void {
-  const locale = negotiateLocale({ query: new URLSearchParams(location.search).get('lang') ?? undefined, browser: navigator.languages, offered: offeredLocales().map((l) => l.tag) });
-  const tr: Translator = createTranslator(locale);
+  const defs = env.locales ?? SOURCE_ONLY;
+  const locale = negotiateLocale({ query: new URLSearchParams(location.search).get('lang') ?? undefined, browser: navigator.languages, offered: offeredLocales(defs).map((l) => l.tag) });
+  const tr: Translator = createTranslator(locale, { defs });
   const t = (k: MessageKey, a?: Args): string => tr.t(k, a);
   document.documentElement.lang = locale;
   document.documentElement.dir = tr.dir;
@@ -120,7 +132,56 @@ export function startApp(env: AppEnv): void {
     a.remove();
   };
 
+  /** Set by views that can refresh themselves in place when live data arrives (receipt standing, results). */
+  let repaint: (() => void) | undefined;
+  const liveLine = h('p', { class: 'qv-live', id: 'qv-live' });
+  const liveText = (s: ConnStatus): string => {
+    switch (s.state) {
+      case 'connecting': return t('qv.live.connecting');
+      case 'live': return t('qv.live.live');
+      case 'reconnecting': return t('qv.live.reconnecting', { seconds: Math.max(1, Math.ceil((s.waitMs ?? 1000) / 1000)) });
+      case 'failed': return t('qv.live.failed');
+      default: return '';
+    }
+  };
+  let liveState: ConnStatus['state'] = 'closed';
+  let liveId: string | undefined;
+  const stopLive = (): void => {
+    for (const L of loaded.values()) {
+      L.live?.close();
+      delete L.live;
+    }
+    liveId = undefined;
+    liveState = 'closed';
+    liveLine.textContent = '';
+  };
+  /** Starts (once per election) the SSE connection; events only trigger a re-read of the signed log. */
+  function startLive(L: Loaded): void {
+    if (L.live !== undefined) return;
+    if (liveId !== undefined && liveId !== L.apiId) stopLive();
+    liveId = L.apiId;
+    const live = new LiveElection(L, {
+      onStatus: (st) => {
+        const prev = liveState;
+        liveState = st.state;
+        if (loaded.get(L.apiId)?.live !== live) return;
+        liveLine.textContent = liveText(st);
+        if (st.state === 'failed' || (st.state === 'live' && prev === 'reconnecting')) say.say(liveText(st));
+      },
+      onChange: () => {
+        if (repaint !== undefined) {
+          repaint();
+          say.say(t('qv.live.updated'));
+        }
+      },
+      onAlert: () => say.say(t('qv.live.alert'), true),
+    });
+    L.live = live;
+    live.start();
+  }
+
   function render(title: string, ...kids: Child[]): void {
+    repaint = undefined;
     document.title = t('qv.shell.titleNoElection', { step: title });
     clear(main);
     add(main, kids);
@@ -153,6 +214,7 @@ export function startApp(env: AppEnv): void {
 
   async function route(): Promise<void> {
     const r: Route = parseRoute(location.pathname);
+    if (r.name !== 'election') stopLive();
     nav.replaceChildren(link('/', t('qv.nav.home')), link('/new', t('qv.nav.create')), link('/verify', t('qv.nav.verify')), link('/help', t('qv.shell.helpLink')));
     try {
       if (r.name === 'home') return home();
@@ -218,10 +280,11 @@ export function startApp(env: AppEnv): void {
   async function electionView(r: Extract<Route, { name: 'election' }>): Promise<void> {
     const frag = parseFragment(location.hash);
     const L = await load(r.id, frag.readKey);
+    startLive(L);
     const sub = r.view;
     const tabs = h('ul', { class: 'tabs' }, ...(['overview', 'rules', 'key', 'vote', 'receipt', 'results'] as const).map((v) =>
       h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results' } as const)[v])))));
-    const head = [electionHeader(L), tabs];
+    const head = [electionHeader(L), tabs, liveLine];
     if (L.ctx === undefined) return render('Election', ...head, errorBox('E-ORG-MANIFEST', { detail: L.ctxError ?? '' }));
     const ctx = L.ctx;
     const settings = await env.storage.getSettings();
@@ -250,7 +313,7 @@ export function startApp(env: AppEnv): void {
     if (sub === 'key') return keyView(L, ctx, head, frag.token);
     if (sub === 'vote') return voteView(L, ctx, head);
     if (sub === 'receipt') return await receiptView(L, ctx, head);
-    if (sub === 'results') return resultsView(L, ctx, head);
+    if (sub === 'results') return await resultsView(L, ctx, head);
     return render('Admin', ...head, heading(t('qv.nav.admin')), h('p', {}, t('qv.org.nopeek')), h('p', {}, t('qv.org.export')));
   }
 
@@ -411,29 +474,77 @@ export function startApp(env: AppEnv): void {
         say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
       }
     };
-    const file = h('input', { type: 'file', accept: 'application/json', onchange: async (e: Event) => { const f = (e.target as HTMLInputElement).files?.[0]; const p = f ? parseReceiptFile(await f.text()) : undefined; if (p) await check(p.seq, p.leaf_hash); } });
-    render(t('qv.nav.receipt'), ...head, heading(t('qv.receipt.checkTitle')), h('p', {}, t('qv.receipt.proves')), field(t('qv.receipt.orFile'), file),
-      h('h2', {}, t('qv.receipt.stored')), stored.length === 0 ? h('p', {}, t('qv.receipt.none')) : h('ul', {}, ...stored.map((s) => h('li', {}, codeEl(ballotCodeDisplay(hexToBytes(s.code, 32), true)), ' ', btn(t('qv.receipt.check'), () => { const f = parseReceiptFile(s.json); if (f) void check(f.seq, f.leaf_hash); })))), out);
+    const file = h('input', { type: 'file', accept: 'application/json', onchange: async (e: Event) => { const f = (e.target as HTMLInputElement).files?.[0]; const p = f ? parseReceiptFile(await f.text()) : undefined; if (p) { await check(p.seq, p.leaf_hash); addStanding(p.seq, p.ballot_code); } } });
+    // Standing: is this receipt still the voter's newest ballot? Derived from the public log we hold; refreshed in place on live updates.
+    const standings: { seq: number; code: string; el: HTMLElement }[] = [];
+    const standingText = (seq: number, code: string): { text: string; kind: string; note?: string } => {
+      const cur = L.ctx;
+      if (cur === undefined) return { text: t('qv.receipt.standing.unknown'), kind: 'unknown' };
+      L.ballots ??= new BallotIndex(cur.params.ctx);
+      L.ballots.update(L.records);
+      const st = L.ballots.standing(seq, code, { openSeq: cur.openSeq, closeSeq: cur.closeSeq, maxPerVoter: cur.manifest.ballots.max_per_voter });
+      switch (st.state) {
+        case 'current': return { text: t('qv.receipt.standing.current'), kind: 'current' };
+        case 'superseded': return { text: t('qv.receipt.standing.superseded', { seq: st.bySeq }), kind: 'superseded', note: t('qv.receipt.standing.supersededNote') };
+        case 'mismatch': return { text: t('qv.receipt.standing.mismatch'), kind: 'mismatch' };
+        default: return { text: t('qv.receipt.standing.unknown'), kind: 'unknown' };
+      }
+    };
+    const paintStanding = (x: { seq: number; code: string; el: HTMLElement }): void => {
+      const r = standingText(x.seq, x.code);
+      clear(x.el);
+      x.el.className = `qv-standing ${r.kind}`;
+      add(x.el, [h('strong', {}, t('qv.receipt.standing.title'), ': '), r.text, r.note ? h('span', { class: 'hint' }, ' ', r.note) : null]);
+    };
+    const addStanding = (seq: number, code: string): void => {
+      const el = h('p', {});
+      const x = { seq, code, el };
+      standings.push(x);
+      paintStanding(x);
+      standingBox.append(el);
+    };
+    const standingBox = h('div', {});
+    const items = stored.map((s) => {
+      const f = parseReceiptFile(s.json);
+      const el = h('span', {});
+      if (f) standings.push({ seq: f.seq, code: s.code, el });
+      return h('li', {}, codeEl(ballotCodeDisplay(hexToBytes(s.code, 32), true)), ' ', btn(t('qv.receipt.check'), () => { if (f) void check(f.seq, f.leaf_hash); }), h('div', {}, el));
+    });
+    for (const x of standings) paintStanding(x);
+    render(t('qv.nav.receipt'), ...head, heading(t('qv.receipt.checkTitle')), h('p', {}, t('qv.receipt.proves')), field(t('qv.receipt.orFile'), file), standingBox,
+      h('h2', {}, t('qv.receipt.stored')), stored.length === 0 ? h('p', {}, t('qv.receipt.none')) : h('ul', {}, ...items), out);
+    repaint = () => { for (const x of standings) paintStanding(x); };
     void ctx;
   }
 
-  function resultsView(L: Loaded, ctx: ElectionContext, head: Child[]): void {
-    if (!ctx.tally) return render(t('qv.results.title'), ...head, heading(t('qv.results.title')), h('p', {}, t('qv.results.notYet')));
-    const tally = ctx.tally;
-    const sections = tally.results.map((res) => {
-      const c = ctx.manifest.contests.find((x) => x.id === res.contest);
-      const opts = tally.contests.find((x) => x.id === res.contest)?.options ?? [];
-      const label = (id: string): string => c?.options.find((o) => o.id === id)?.label ?? id;
-      const text = opts.map((o) => `${label(o.id)} ${o.T}`).join(', ');
-      return h('section', {}, h('h2', {}, c?.title ?? res.contest),
-        h('table', {}, h('caption', {}, c?.title ?? res.contest), h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, t('qv.results.option')), h('th', { scope: 'col' }, t('qv.results.count')))),
-          h('tbody', {}, ...opts.map((o) => h('tr', {}, h('th', { scope: 'row' }, label(o.id)), h('td', {}, String(o.T)))))),
-        h('p', {}, t('qv.results.summary', { text })), h('p', {}, t('qv.results.participation', { count: res.participation })),
-        h('p', {}, t('qv.results.quorum', { met: String(res.quorum_met) })),
-        h('p', {}, res.outcome.kind === 'winners' ? t('qv.results.outcome.winners', { names: (res.outcome.winners ?? []).map(label) }) : t(`qv.results.outcome.${res.outcome.kind}` as MessageKey)));
-    });
-    render(t('qv.results.title'), ...head, heading(t('qv.results.title')), ...sections, h('details', {}, h('summary', {}, t('qv.results.how')), h('p', {}, t('qv.results.howBody')), link('/verify', t('qv.nav.verify'))));
-    void L;
+  async function resultsView(L: Loaded, ctx: ElectionContext, head: Child[]): Promise<void> {
+    if (!ctx.tally) {
+      render(t('qv.results.title'), ...head, heading(t('qv.results.title')), h('p', {}, t('qv.results.notYet')));
+      // the tally can arrive while the page is open (live): then draw it without a reload
+      repaint = () => { if (L.ctx?.tally) void resultsView(L, L.ctx, head); };
+      return;
+    }
+    // The chart code is a separate chunk, fetched only when a tally exists. Without it the table below still shows every number.
+    const charts = await import('./charts.ts').catch(() => undefined);
+    const sections = (): HTMLElement[] => {
+      const cur = L.ctx ?? ctx;
+      const tally = cur.tally ?? ctx.tally!;
+      return tally.results.map((res) => {
+        const c = cur.manifest.contests.find((x) => x.id === res.contest);
+        const opts = tally.contests.find((x) => x.id === res.contest)?.options ?? [];
+        const label = (id: string): string => c?.options.find((o) => o.id === id)?.label ?? id;
+        const text = opts.map((o) => `${label(o.id)} ${o.T}`).join(', ');
+        const winners = res.outcome.kind === 'winners' ? res.outcome.winners ?? [] : [];
+        return h('section', {}, h('h2', {}, c?.title ?? res.contest),
+          charts ? charts.renderBarChart({ t, rtl: tr.dir === 'rtl' }, c?.title ?? res.contest, { options: opts.map((o) => ({ id: o.id, label: label(o.id), count: o.T })), winners }) : null,
+          h('table', {}, h('caption', {}, c?.title ?? res.contest), h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, t('qv.results.option')), h('th', { scope: 'col' }, t('qv.results.count')))),
+            h('tbody', {}, ...opts.map((o) => h('tr', {}, h('th', { scope: 'row' }, label(o.id)), h('td', {}, String(o.T)))))),
+          h('p', {}, t('qv.results.summary', { text })), h('p', {}, t('qv.results.participation', { count: res.participation })),
+          h('p', {}, t('qv.results.quorum', { met: String(res.quorum_met) })),
+          h('p', {}, res.outcome.kind === 'winners' ? t('qv.results.outcome.winners', { names: winners.map(label) }) : t(`qv.results.outcome.${res.outcome.kind}` as MessageKey)));
+      });
+    };
+    render(t('qv.results.title'), ...head, heading(t('qv.results.title')), ...sections(), h('details', {}, h('summary', {}, t('qv.results.how')), h('p', {}, t('qv.results.howBody')), link('/verify', t('qv.nav.verify'))));
   }
 
   function verifyView(): void {
@@ -472,6 +583,48 @@ export function startApp(env: AppEnv): void {
     const opens = h('input', { type: 'datetime-local' }) as HTMLInputElement;
     const closes = h('input', { type: 'datetime-local' }) as HTMLInputElement;
     const org = await env.storage.getKey(ORGANIZER_SLOT);
+    // Set by a successful preview; the publish section uses it. The state of a failed publish is kept here, in memory only.
+    let prepared: { form: PublishForm; rollHex: string[] } | undefined;
+    let pubState: PublishState | undefined;
+    const publishBox = h('div', {});
+    const publishSection = (): HTMLElement => {
+      const orgIn = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
+      const pw = h('input', { type: 'password', autocomplete: 'current-password', spellcheck: false, autocapitalize: 'off', autocorrect: 'off' }) as HTMLInputElement;
+      const pubOut = h('div', { role: 'status' });
+      const pubBtn = btn(t('qv.org.publish'), async () => {
+        const prep = prepared;
+        if (!prep) return;
+        const button = pubBtn as HTMLButtonElement;
+        clear(pubOut);
+        button.disabled = true;
+        add(pubOut, [h('p', {}, t('qv.org.publishing'))]);
+        let o: PublishOutcome;
+        try {
+          o = await runPublish({ orgId: orgIn.value, passphrase: pw.value, form: prep.form, rollHex: prep.rollHex, prior: pubState, storage: env.storage, apiBase: env.apiBase ?? '', origin: location.origin });
+        } finally {
+          pw.value = '';
+        }
+        clear(pubOut);
+        if (o.kind === 'published') {
+          pubState = o.state;
+          add(pubOut, [h('p', {}, t('qv.org.published', { id: o.electionId })), h('h2', {}, t('qv.org.inviteList')), h('p', {}, t('qv.org.publishInvites')),
+            h('ul', {}, ...o.invites.map((i) => h('li', {}, codeEl(i.code ?? ''))))]);
+          say.say(t('qv.org.published', { id: o.electionId }));
+          return;
+        }
+        button.disabled = false;
+        if (o.kind === 'noOrg') return void add(pubOut, [h('p', { class: 'error' }, t('qv.org.orgRequired'))]);
+        if (o.kind === 'noKey') return void add(pubOut, [h('p', { class: 'error' }, t('qv.org.publishNoKey'))]);
+        if (o.kind === 'locked') return void add(pubOut, [errorBox(o.ux)]);
+        if (o.kind === 'failed') {
+          if (o.state !== undefined) pubState = o.state;
+          add(pubOut, [errorBox(o.ux, { detail: o.detail }, o.ref), h('p', {}, t('qv.org.publishResume'))]);
+          say.say(t('qv.org.publishResume'), true);
+        }
+      }, { primary: true });
+      return h('section', { 'aria-labelledby': 'pub-h' }, h('h2', { id: 'pub-h' }, t('qv.org.publish')), h('p', {}, t('qv.org.publishHelp')),
+        field(t('qv.org.orgId'), orgIn, t('qv.org.orgIdHint')), field(t('qv.key.passphrase'), pw), pubBtn, pubOut);
+    };
     render(t('qv.nav.create'), heading(t('qv.org.title')), h('p', {}, t('qv.org.keyHelp')), org ? null : h('p', {}, t('qv.org.keyTitle')),
       field(t('qv.org.name'), title), field(t('qv.org.template'), tpl), field(t('qv.org.question'), q), field(t('qv.org.options'), opts),
       field(t('qv.org.opens'), opens), field(t('qv.org.closes'), closes), field(t('qv.org.roll'), rollT, t('qv.org.rollHelp')),
@@ -479,15 +632,20 @@ export function startApp(env: AppEnv): void {
       h('p', {}, t('qv.org.translateWarn')), h('p', {}, t('qv.org.freeze')),
       btn(t('qv.org.freezeConfirm'), () => {
         clear(out);
+        clear(publishBox);
+        prepared = undefined;
+        pubState = undefined;
         const roll = parseRoll(rollT.value);
         if (roll.errors.length) return void add(out, [h('ul', { role: 'alert' }, ...roll.errors.map((e) => h('li', {}, t('qv.org.rollRow', { row: e.row, problem: t(e.problem === 'dup' ? 'qv.org.rollDup' : e.problem === 'badHex' ? 'qv.org.rollBadHex' : 'qv.org.rollBadKey') }))))]);
         const tl = trustees.value.split(/\r?\n/).filter(Boolean).map((l) => { const [n, k] = l.split(','); return { name: (n ?? '').trim(), signPkHex: (k ?? '').trim().toLowerCase() }; });
-        const res = buildManifest({ title: title.value, contests: [{ template: tpl.value as Template, question: q.value, options: opts.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean), k: 1 }],
-          opensIso: new Date(opens.value).toISOString().replace('.000Z', 'Z'), closesIso: new Date(closes.value).toISOString().replace('.000Z', 'Z'), maxBallots: 8, quorumCount: 0, trustees: tl, t: Number(tt.value),
-          coordinatorPkHex: '00'.repeat(32), logPkHex: logPk.value.trim(), origin: location.origin, rollHex: roll.keys, electionIdHex: bytesToHex(systemRng.bytes(16)) });
+        const form: PublishForm = { title: title.value, contests: [{ template: tpl.value as Template, question: q.value, options: opts.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean), k: 1 }],
+          opensIso: new Date(opens.value).toISOString().replace('.000Z', 'Z'), closesIso: new Date(closes.value).toISOString().replace('.000Z', 'Z'), maxBallots: 8, quorumCount: 0, trustees: tl, t: Number(tt.value) };
+        const res = buildManifest({ ...form, coordinatorPkHex: '00'.repeat(32), logPkHex: logPk.value.trim(), origin: location.origin, rollHex: roll.keys, electionIdHex: bytesToHex(systemRng.bytes(16)) });
         if (!res.ok) return void add(out, [errorBox(res.code, { detail: res.detail })]);
+        prepared = { form, rollHex: roll.keys };
+        add(publishBox, [publishSection()]);
         add(out, [h('p', {}, t('qv.org.rollSummary', { count: roll.keys.length, root: roll.rootHex ?? '' })), h('p', {}, t('qv.org.announce', { id: 'see Election ID after signing' }))]);
-      }, { primary: true }), out);
+      }, { primary: true }), out, publishBox);
   }
 
   // ---------------------------------------------------------------- shell

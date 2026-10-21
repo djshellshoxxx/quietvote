@@ -269,6 +269,33 @@ test('witness gating: election_open waits for a quorum-cosigned checkpoint', { t
   }
 });
 
+test('election_open must bind (manifest_hash, joint_key_seq, roll_commit_seq): absent, forward and mismatched refs are rejected (QV-ADR-015)', { timeout: 120_000 }, async () => {
+  const w5 = new World({ seed: 'neg-bind', n: 3, t: 2, voters: 3 });
+  await w5.start();
+  try {
+    await w5.setupOrgAndElection();
+    await w5.registerVoters();
+    assert.equal((await w5.publishManifest()).status, 201);
+    await w5.ceremony();
+    const good = await w5.openBinding();
+    const log = await w5.fetchLog();
+    const r3 = log.find((e) => e.rec?.body?.name === 'dkg-r3-close')!.seq;
+    const size = log.length === 0 ? 0 : log[log.length - 1]!.seq + 1;
+    const bad: Record<string, unknown>[] = [
+      { roll_commit_seq: undefined }, { joint_key_seq: undefined }, { manifest_hash: undefined },
+      { roll_commit_seq: size + 5 }, { joint_key_seq: size + 5 }, { roll_commit_seq: r3 }, { joint_key_seq: r3 },
+      { roll_commit_seq: good.joint_key_seq }, { joint_key_seq: good.roll_commit_seq }, { manifest_hash: '22'.repeat(32) },
+    ];
+    for (const o of bad) {
+      const r = await w5.open(o);
+      assert.equal(r.status, 422, JSON.stringify(o));
+    }
+    assert.equal((await w5.open()).status, 201);
+  } finally {
+    await w5.stop();
+  }
+});
+
 test('flood of pre-auth writes from one bucket is throttled (default limits)', async () => {
   const w4 = new World({ seed: 'neg-rate', n: 3, t: 2, voters: 0, server: { rate: { writePre: { limit: 30, windowSec: 60 } } } });
   await w4.start();

@@ -6,7 +6,7 @@ import {
   type Ed25519Keypair, type Point, type Rng,
 } from '@quietvote/crypto';
 import {
-  NO_SUPERSEDES, PROTO_ID, adjudicateDkg, buildBallot, dkgDeal, dkgMakeComplaint, dkgMakeShares, expectedLogId, logOrigin, makeCast, makeSpoil, manifestHash, rollRoot,
+  NO_SUPERSEDES, PROTO_ID, electionOpenBody, adjudicateDkg, buildBallot, dkgDeal, dkgMakeComplaint, dkgMakeShares, expectedLogId, logOrigin, makeCast, makeSpoil, manifestHash, rollRoot,
   signRecord, signRecordRaw,
   type DealerSecret, type DkgOutcome, type LogEntry, type Manifest, type MarkerBody, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type Selections, type SpoilMode,
 } from '@quietvote/protocol';
@@ -211,7 +211,12 @@ export class Ceremony {
       await this.sync(i);
       this.post(await this.act(i, (t) => t.drill()));
     }
-    this.marker('election-open');
+    // QV-ADR-015: roll-commit, then an election-open that binds (manifest_hash, joint_key_seq, roll_commit_seq).
+    const root = this.manifest.roll.root; // DKG-only ceremonies have an empty roll and never reach a tally
+    const rc = { proto: PROTO_ID, type: 'roll-commit' as const, root: root ?? '00'.repeat(32), size: this.rollHex.length };
+    const rcSeq = root === undefined ? 0 : this.push({ body: rc, sigs: [signRecordRaw(this.coord.secretKey, this.coord.publicKey, this.mh, 'roll-commit', rc)] });
+    const body = electionOpenBody(PROTO_ID, H(this.mh), markerSeq(this.log, 'dkg-final')!, rcSeq);
+    this.push({ body, sigs: [signRecordRaw(this.coord.secretKey, this.coord.publicKey, this.ctx!, 'marker', body)] });
     await this.syncAll();
     return outcome;
   }
