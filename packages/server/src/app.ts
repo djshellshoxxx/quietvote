@@ -408,6 +408,35 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       };
     },
   });
+  // QV-ADR-020: trustee-signed spoil shares are not log records; they have their own endpoints.
+  add({
+    method: 'POST', path: '/api/v1/elections/:id/spoil-shares', cls: 'W', auth: 'none', body: 'json', maxBody: 1_048_576,
+    handler: async (c) => {
+      const rt = await rtOf(c); // the record authenticates itself (trustee signature under the election ctx)
+      rt.inUse++;
+      try {
+        const o = await rt.addSpoilShare(c.rawJson());
+        return { status: o.duplicate ? 200 : 201, json: { status: o.duplicate ? 'duplicate' : 'accepted', j: o.j, code: o.code } };
+      } finally {
+        rt.inUse--;
+      }
+    },
+  });
+  add({
+    method: 'GET', path: '/api/v1/elections/:id/spoil-shares', cls: 'R', auth: 'none',
+    handler: async (c) => {
+      const rt = await readable(c);
+      for (const k of c.query.keys()) if (k !== 'code') throw new ApiError(400, 'BAD_REQUEST', `unknown query parameter ${k.slice(0, 40)}`);
+      const code = c.query.get('code');
+      if (code === null) {
+        const by = new Map<string, number[]>();
+        for (const r of rt.edb.spoilShareIndex()) by.set(r.code, [...(by.get(r.code) ?? []), r.j]);
+        return { status: 200, json: { items: [...by].map(([k, trustees]) => ({ code: k, trustees })) } };
+      }
+      if (!/^[0-9a-f]{64}$/.test(code)) throw new ApiError(400, 'BAD_REQUEST', 'bad code');
+      return { status: 200, json: { code, items: rt.edb.spoilSharesOf(code).map((r) => ({ j: r.j, spoil_seq: r.spoil_seq, record: JSON.parse(r.record) as unknown })) } };
+    },
+  });
   add({
     method: 'GET', path: '/api/v1/elections/:id/tally/draft', cls: 'R', auth: 'none',
     handler: async (c) => {

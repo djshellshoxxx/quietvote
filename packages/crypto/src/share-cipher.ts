@@ -44,6 +44,8 @@ export async function encryptShare(
   y: Scalar,
   rng: Rng,
 ): Promise<EncryptedShare> {
+  // C1: an identity E_j makes S = O, so the share key would be derivable from public data.
+  if (Ej.is0()) throw new QvCryptoError('E_IDENTITY', 'recipient key is the identity');
   const r = scalarRandomNonZero(rng);
   const R = pointToBytes(baseMul(r));
   const S = pointMul(Ej, r);

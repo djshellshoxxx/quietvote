@@ -8,16 +8,16 @@ import {
   type EntryHeader, type EntryType, type Receipt,
 } from '@quietvote/board';
 import {
-  bytesToHex, hexToBytes, jcs, parseQvJson, pointToBytes, decVerify,
+  bytesToHex, hexToBytes, jcs, parseQvJson, pointFromBytes, pointToBytes, decVerify, spoilDecVerify, type Point,
   type Ed25519Keypair,
 } from '@quietvote/crypto';
 import {
   NO_SUPERSEDES, S, adjudicateDkg, aggregate, analyzeBallotLog, ballotCode, buildTally, castEnvelopeSchema, check, checkDealing,
   countedRoot, dealingCommitHash, effectiveMinCounted, manifestHash, manifestSchema, rollRoot, shareFromHex, shareKey,
-  signRecord, spoilEnvelopeSchema, tallySchema, validateManifest, verifyEnvelope, verifyKeyconf, verifyMultiSig, verifySig, verifySpoilReveal, PROTO_ID,
+  collectSpoilShares, decryptSpoiled, signRecord, spoilEnvelopeSchema, spoilShareRecordSchema, tallySchema, validateManifest, verifyEnvelope, verifyKeyconf, verifyMultiSig, verifySig, verifySpoilReveal, PROTO_ID,
   type Aggregate, type BallotAnalysis, type CastEnvelope, type CommitBody, type ComplaintBody, type DealingBody, type DkgOutcome,
   type ElectionParams, type KeyconfBody, type Manifest, type MarkerBody, type MultiSignedRecord, type RollCommitBody,
-  type ShareSet, type SharesBody, type SignedRecord, type SpoilEnvelope, type TallyBody,
+  type ShareSet, type SharesBody, type SignedRecord, type SpoilEnvelope, type SpoilShareBody, type TallyBody,
 } from '@quietvote/protocol';
 import type { RegistryRow, ElectionStateName } from './controldb.ts';
 import { ElectionDb, type EventRow } from './electiondb.ts';
@@ -1146,6 +1146,75 @@ export class ElectionRuntime {
     return { rec };
   }
 
+  private spoilShareSets(code: string): Map<number, ShareSet> {
+    const out = new Map<number, ShareSet>();
+    for (const row of this.edb.spoilSharesOf(code)) {
+      const col = collectSpoilShares(this.st.manifest!, this.st.params!.ctx, code, [JSON.parse(row.record)]);
+      for (const [j, mp] of col.sets) out.set(j, mp);
+    }
+    return out;
+  }
+
+  private spoilSetValid(p: ElectionParams, Y: ReadonlyMap<number, Point>, rec: { code: string; env: SpoilEnvelope }, j: number, set: ShareSet): boolean {
+    const Yj = Y.get(j);
+    if (Yj === undefined) return false;
+    for (const c of rec.env.body.contests) {
+      for (const s of c.sel) {
+        const sp = set.get(shareKey(c.id, s.opt));
+        if (sp === undefined) return false;
+        if (!spoilDecVerify({ ctx: p.ctx, ballotCode: hexToBytes(rec.code, 32), cid: c.id, oid: s.opt, j, Yj, alpha: pointFromBytes(hexToBytes(s.a, 32), { nonIdentity: true }), beta: pointFromBytes(hexToBytes(s.b, 32), { nonIdentity: true }), M: sp.M }, { c: sp.c, s: sp.s })) return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * QV-ADR-020: accept one trustee-signed spoil-share record for a trustees-mode spoil. Not a board log record;
+   * stored in the election DB and published via the tally. Returns `duplicate` for a byte-identical replay.
+   */
+  async addSpoilShare(raw: unknown): Promise<{ j: number; code: string; duplicate: boolean }> {
+    if (this.quarantineReason() !== undefined) throw new ApiError(503, 'QUARANTINED', 'log is quarantined; reads still work');
+    const e = check(spoilShareRecordSchema, raw);
+    if (e !== null) throw invalid('E_SCHEMA', e);
+    const rec = raw as SignedRecord<SpoilShareBody>;
+    return this.queued(async () => {
+      const st = this.st;
+      if (this.poisoned) throw new ApiError(503, 'LOG_UNAVAILABLE', 'election runtime is being reloaded');
+      if (st.closeSeq === undefined || st.params === undefined || st.dkgPre === undefined || st.manifest === undefined) throw wrongPhase('election is not closed');
+      if (st.tallySeq !== undefined) throw wrongPhase('the tally has been posted');
+      const m = st.manifest;
+      if (m.spoil_trustee_decrypt !== true) throw invalid('E_TRUSTEE_REFUSE', 'trustee-mode spoil decryption is disabled by the manifest');
+      const j = rec.body.j;
+      const trustee = m.trustees[j - 1];
+      if (trustee === undefined || j > m.n) throw forbidden('unknown trustee index', 'AUTHOR_NOT_AUTHORIZED');
+      if (rec.body.ctx !== bytesToHex(st.params.ctx)) throw invalid('E_CTX', 'record is bound to a different election');
+      if (!verifySig(st.params.ctx, 'spoil-share', rec.body, rec.sig, trustee.sign_pk)) throw invalid('E_SIG', 'spoil-share signature invalid');
+      if (!st.decrypters.has(j)) throw forbidden('trustee did not complete key confirmation', 'AUTHOR_NOT_AUTHORIZED');
+      const kb = this.env.limiter.take(`ss:${this.id}:${j}`, this.env.cfg.rate.writeKey);
+    if (!kb.ok) throw new ApiError(429, 'RATE_LIMITED', 'too many submissions for this trustee', { retryAfter: kb.retryAfterSec });
+      const an = this.ensureAnalysis();
+      const sp = an.spoiled.get(rec.body.code);
+      if (sp === undefined) throw new ApiError(404, 'NOT_FOUND', 'no analysed spoiled ballot has this code');
+      if (sp.env.reveal !== undefined || sp.env.reveal_digest !== ZERO32) throw invalid('E_SPOIL_MISMATCH', 'this spoil is reveal-mode, not trustees-mode');
+      if (sp.seq !== rec.body.spoil_seq) throw invalid('E_SPOIL_MISMATCH', 'spoil_seq does not match the spoil record');
+      const prior = this.edb.spoilShare(rec.body.code, j);
+      const text = JSON.stringify(rec);
+      if (prior !== undefined) {
+        if (prior.record === text) return { j, code: rec.body.code, duplicate: true };
+        throw conflict('this trustee already posted spoil shares for this ballot code');
+      }
+      const col = collectSpoilShares(m, st.params.ctx, rec.body.code, [rec]);
+      const set = col.sets.get(j);
+      if (set === undefined) throw invalid('E_DEC_PROOF', `spoil shares rejected: ${col.rejected[0]?.why ?? 'undecodable'}`);
+      const expected = sp.env.body.contests.reduce((n, c) => n + c.sel.length, 0);
+      if (set.size !== expected || rec.body.shares.length !== expected) throw invalid('E_DEC_PROOF', 'shares must cover every option of the spoiled ballot exactly once');
+      this.env.stats.proofVerifications++;
+      if (!this.spoilSetValid(st.params, st.dkgPre.Y, sp, j, set)) throw invalid('E_DEC_PROOF', 'spoil share proof invalid');
+      this.edb.insertSpoilShare(rec.body.code, j, sp.seq, text, this.env.nowSec());
+      return { j, code: rec.body.code, duplicate: false };
+    });
+  }
+
   /** The tally record the coordinator should sign, from received shares (`use` selects a subset of trustees). */
   buildTallyDraft(use?: number[]): TallyBody {
     const st = this.st;
@@ -1155,7 +1224,21 @@ export class ElectionRuntime {
     const shares = new Map<number, ShareSet>();
     for (const [j, v] of [...st.decShares].sort((a, b) => a[0] - b[0])) if (use === undefined || use.includes(j)) shares.set(j, v.set);
     const spoiled: Parameters<typeof buildTally>[1]['spoiled'] = [];
-    for (const rec of an.spoiled.values()) if (rec.env.reveal !== undefined) spoiled.push({ rec, mode: 'reveal', selections: rec.env.reveal.selections });
+    const { params, dkgPre, manifest } = st;
+    for (const rec of an.spoiled.values()) {
+      if (rec.env.reveal !== undefined) {
+        spoiled.push({ rec, mode: 'reveal', selections: rec.env.reveal.selections });
+        continue;
+      }
+      // QV-ADR-020: a trustees-mode spoil is published only once >= t verified distinct-trustee share sets exist for it.
+      if (rec.env.reveal_digest !== ZERO32 || manifest.spoil_trustee_decrypt !== true) continue;
+      const sets = this.spoilShareSets(rec.code);
+      const dr = decryptSpoiled(params, dkgPre.Y, st.decrypters, { code: rec.code, body: rec.env.body }, sets);
+      if (!dr.ok) continue;
+      // publish exactly the t lowest valid trustee sets (the ones decryptSpoiled used), so late extra shares do not change the record
+      const valid = [...sets.keys()].filter((j) => this.spoilSetValid(params, dkgPre.Y, rec, j, sets.get(j)!)).sort((a, b) => a - b).slice(0, manifest.t);
+      spoiled.push({ rec, mode: 'trustees', selections: dr.value.selections, shares: new Map(valid.map((j) => [j, sets.get(j)!])) });
+    }
     const t = buildTally(st.params, { analysis: an, shares, Y: st.dkgPre.Y, decrypters: st.decrypters, rollSize: st.rollSet!.size, spoiled });
     if (!t.ok) throw conflict(`tally cannot be built yet: ${t.error}`, 'STATE_CONFLICT');
     return t.value.body;

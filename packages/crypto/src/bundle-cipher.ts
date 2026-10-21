@@ -16,7 +16,8 @@ import type { Rng } from './rng.ts';
 const MAGIC = utf8('QVBUNDL1');
 const HDR = MAGIC.length + 1 + 16 + 12 + 48 + 12;
 export const BUNDLE_MIN_LOGN = 18;
-export const BUNDLE_MAX_LOGN = 22;
+/** C10: upper bound on the header work factor: 2^20 is ~1 GiB scrypt memory, read before any authentication. */
+export const BUNDLE_MAX_LOGN = 20;
 export const BUNDLE_DEFAULT_LOGN = 18;
 
 export interface SealOpts {
@@ -68,10 +69,14 @@ export async function sealWithPassphrase(plaintext: Uint8Array, passphrase: stri
 }
 
 /** Throws E_AEAD on a wrong passphrase or any tampering, E_PARSE on a malformed container. */
-export async function openWithPassphrase(file: Uint8Array, passphrase: string, opts: Pick<SealOpts, 'aad' | 'allowWeak'> = {}): Promise<Uint8Array> {
+export async function openWithPassphrase(
+  file: Uint8Array,
+  passphrase: string,
+  opts: Pick<SealOpts, 'aad' | 'allowWeak'> & { /** Lower cap for the header work factor, e.g. the value the caller seals with. */ maxLogN?: number } = {},
+): Promise<Uint8Array> {
   if (file.length < HDR + 16 || !ctEqual(file.subarray(0, MAGIC.length), MAGIC)) throw new QvCryptoError('E_PARSE', 'not a QV bundle');
   const logN = file[MAGIC.length]!;
-  if (logN > BUNDLE_MAX_LOGN || logN < (opts.allowWeak === true ? 4 : BUNDLE_MIN_LOGN)) throw new QvCryptoError('E_PARSE', 'unacceptable scrypt work factor');
+  if (logN > Math.min(BUNDLE_MAX_LOGN, opts.maxLogN ?? BUNDLE_MAX_LOGN) || logN < (opts.allowWeak === true ? 4 : BUNDLE_MIN_LOGN)) throw new QvCryptoError('E_PARSE', 'unacceptable scrypt work factor');
   let o = MAGIC.length + 1;
   const salt = file.subarray(o, (o += 16));
   const wrapNonce = file.subarray(o, (o += 12));

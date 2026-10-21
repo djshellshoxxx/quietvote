@@ -60,7 +60,10 @@ export function validateManifest(body: unknown, rollSize: number): Result<Manife
   const m = body as Manifest;
   const warnings: string[] = [];
 
-  const free = [m.title, ...m.contests.flatMap((c) => [c.title, ...c.options.map((o) => o.label)])];
+  const free = [
+    m.title, ...m.contests.flatMap((c) => [c.title, ...c.options.map((o) => o.label)]),
+    ...m.trustees.map((t) => t.name), ...(m.bb.witnesses ?? []).map((w) => w.name), // P6: displayed names too
+  ];
   for (const s of free) {
     if (s !== s.normalize('NFC')) return bad('free text not NFC');
     if (BIDI.test(s)) return bad('bidi control character in text');

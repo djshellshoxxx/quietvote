@@ -2,7 +2,7 @@
   "protocol_version": "qv1",
   "generator": "vecgen@0.1.0",
   "signature": "unsigned (release job signs)",
-  "merkle_root_sha256_rfc9162": "c8e55ab18943bb80830a356caab4983229b2816673fc42899ad3245f74e8ed53",
+  "merkle_root_sha256_rfc9162": "6c4dcebbc36443be6c115c66e7630b467b6be2c5a4c468ce752cce1c47914da5",
   "files": [
     {
       "path": "README.md",
@@ -22,7 +22,7 @@
     },
     {
       "path": "v1/canary/expected-report.json",
-      "sha256": "a1ec032b1bc636d062a10fd44bdd31ed28d7e260acbbb524cbe21bc5181541e0"
+      "sha256": "a20813e4ea5c007c59314c9c5495b4f02555cd1c267186a25861ce2413c516de"
     },
     {
       "path": "v1/elections/log-layer-4v/adv-board.json",
