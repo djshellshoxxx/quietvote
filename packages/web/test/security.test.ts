@@ -98,7 +98,7 @@ test('worker URL policy admits only same-origin /assets/*.js', () => {
 test('source lint: no secret-bearing console logging in src (seed, passphrase, token, xi, nonce key)', () => {
   const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
   const src = join(import.meta.dirname, '..', 'src');
-  for (const f of walk(src).filter((x) => x.endsWith('.ts') && !x.includes('/build/'))) {
+  for (const f of walk(src).filter((x) => x.endsWith('.ts') && !x.replaceAll('\\', '/').includes('/build/'))) {
     const text = readFileSync(f, 'utf8');
     assert.ok(!/console\.(log|info|debug|warn|error)/.test(text), `${f}: console output in browser code`);
   }
