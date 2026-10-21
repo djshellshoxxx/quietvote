@@ -5,6 +5,7 @@
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "exports": { ".": "./src/index.ts" },
+  "bin": { "qv-trustee": "./src/cli.ts" },
   "engines": { "node": ">=22.18" },
   "scripts": { "test": "node --test --test-reporter=spec \"test/**/*.test.ts\"" }
 }
