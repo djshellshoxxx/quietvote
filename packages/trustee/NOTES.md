@@ -49,3 +49,11 @@ Network/outbox, localhost UI, `qv-ceremony` image, dealer mode, `trustee_accept`
 
 ## Windows file permissions (known gap)
 POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"group-accessible" refusal there, and the tests guard the mode assertions with a platform check. On Windows a trustee bundle is protected only by its passphrase-based encryption, not by an ACL check. Trustees should keep bundles in a user-private directory. Track as a hardening task (NTFS ACL verification).
+
+## Log origin in the ceremony transcript (X-21)
+* `transcript.ts` sets `origin = logOrigin(manifest)` (`quietvote/v1/` + base32(election_id), from `@quietvote/protocol`). It was
+  `quietvote/v1/<bb.log_id>`, which is the wrong field and the wrong encoding. QV-18 REQ-001 and QV-28 name `election_id` as the origin
+  source, and the protocol log check requires `bb.log_id = SHA-256(origin)`.
+* Open spec point (not decided here): QV-18 REQ-001 and QV-28 literally write `<election_id>` as 32 lowercase hex. The board, server
+  and protocol all use the 26-char base32 form, and the board rejects hex. Changing the encoding is a spec-owner decision.
+* `test/origin.test.ts` pins the origin derivation. The harness sets `bb.log_id = expectedLogId(logOrigin(manifest))`.

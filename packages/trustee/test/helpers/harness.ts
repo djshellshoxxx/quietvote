@@ -6,7 +6,7 @@ import {
   type Ed25519Keypair, type Point, type Rng,
 } from '@quietvote/crypto';
 import {
-  NO_SUPERSEDES, PROTO_ID, adjudicateDkg, buildBallot, dkgDeal, dkgMakeComplaint, dkgMakeShares, makeCast, manifestHash, rollRoot,
+  NO_SUPERSEDES, PROTO_ID, adjudicateDkg, buildBallot, dkgDeal, dkgMakeComplaint, dkgMakeShares, expectedLogId, logOrigin, makeCast, manifestHash, rollRoot,
   signRecord, signRecordRaw,
   type DealerSecret, type DkgOutcome, type LogEntry, type Manifest, type MarkerBody, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type Selections,
 } from '@quietvote/protocol';
@@ -112,9 +112,11 @@ export class Ceremony {
       trustees: this.signKeys.map((k, i) => ({ index: i + 1, name: `T${i + 1}`, sign_pk: H(k.publicKey) })),
       n, t: this.o.t, coordinator: { keys: [H(this.coord.publicKey)], m: 1 },
       ballots: { max_per_voter: 4, max_spoils_per_voter: 4 },
-      bb: { log_id: H(sha256(utf8('log'))), log_pk: H(kp(seed, 'log').publicKey), witness_quorum: this.o.witnessQuorum ?? 0 },
+      bb: { log_id: '', log_pk: H(kp(seed, 'log').publicKey), witness_quorum: this.o.witnessQuorum ?? 0 },
       privacy_ack: true, ...(this.o.minCounted !== undefined ? { min_counted_ballots: this.o.minCounted } : {}),
     };
+    // QV-16 bb.log_id = SHA-256(log origin) (protocol X-21); the origin depends only on election_id.
+    this.manifest.bb.log_id = expectedLogId(logOrigin(this.manifest));
     this.mh = manifestHash(this.manifest);
     this.mrec = { body: this.manifest, sigs: [signRecordRaw(this.coord.secretKey, this.coord.publicKey, this.mh, 'manifest', this.manifest)] };
     for (const [i, p] of this.paths) {
