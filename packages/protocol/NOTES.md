@@ -256,3 +256,6 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
   `collectAlphas`). `verifyElection` fails `chk.benaloh.spoiled` with ALARM `E_SPOILED_CODE_CAST` when a trustees-mode spoil in the tally shares
   any `a` with a cast envelope: spoils are not chain-checked and proofs bind only (ctx, voter), so a voter could re-wrap a cast ballot's
   ciphertexts under a new code (`supersedes`) and have trustees decrypt it. Test: `tally.test.ts` (fails without the check).
+* **CP-01 (crypto-protocol audit)**: the TR-01 rule is enforced in `analyzeBallotLog` itself (any mode, either order), not only for tally-listed
+  trustees-mode spoils. **CP-03**: closed schemas use `Object.hasOwn`. **CP-04**: `ed25519IsStrictPoint` (crypto) now also requires a
+  torsion-free point (mixed-order roll/author keys and signature R values are rejected). See `docs/audit/crypto-protocol.md`.
