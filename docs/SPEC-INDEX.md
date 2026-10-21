@@ -49,11 +49,13 @@ This is the entry point for product and engineering specifications. Specs are in
 | QV-32 | [Federation and decentralization](32-federation-decentralization.md) | Relays, witnesses, P2P roadmap | QV-18 | Draft |
 | QV-33 | [Vulnerability disclosure](33-vulnerability-disclosure.md) | Coordinated disclosure, bounty, [SECURITY.md](../SECURITY.md) | QV-07 | Draft |
 | QV-34 | [Test vectors and conformance](34-test-vectors-conformance.md) | Known-answer vectors, cross-implementation suite | QV-16 | Draft |
+| QV-35 | [Independent second verifier](35-second-verifier.md) | Requirements for the second, independently written verifier (`verifier-py/`), gate G4 | QV-11, QV-16, QV-34 | Draft |
 | QV-15 | [Decision log](decision-log.md) | Durable record of accepted decisions; baseline ADR-001–013, proposed ADRs, reconciliation ADR-014–024 | All | Active |
 | — | [Authoring brief](AUTHORING-BRIEF.md) | Rules shared by spec and research authors | — | Active |
 | — | [Spec template](templates/SPEC-TEMPLATE.md) | Template for new specs | — | Active |
 | — | [Consistency report](plan/CONSISTENCY-REPORT.md) | Cross-spec contradictions found, fixes made, residual issues (2026-10-21 pass) | All | Active |
 | — | [Verification TODO](plan/VERIFICATION-TODO.md) | All `[UNVERIFIED]` citation clusters by source domain | All | Active |
+| — | [Consolidated TODO](plan/TODO.md) | Every open task, decision and errata item with package, priority, status and source | All | Active (2026-10-21) |
 
 **Authority order for conflicts:** QV-16 (cryptographic bytes) and the reconciliation ADRs (QV-ADR-014–024 in the decision log) outrank other specs; QV-18 outranks others on log mechanics; baseline ADR-001–013 are binding unless amended. Statuses were updated on 2026-10-21: every written spec is **Draft**; none is Review or Approved.
 
@@ -64,6 +66,8 @@ This is the entry point for product and engineering specifications. Specs are in
 ### Retained pre-renumbering drafts
 
 The following files were added on `main` before the current specification map was established: `15-cryptography-and-technical-design.md`, `17-portable-membership-credentials.md`, `18-federated-governance.md`, and `19-delegation-exit-fork.md`. They are retained as source material, but their former QV numbers overlap with the current index. Treat them as non-authoritative until their useful content is reconciled into the current specifications or `IDEAS.md`; do not cite their old QV IDs as active requirements.
+
+Reconciliation status (2026-10-21): the topics of these drafts are covered at idea level in [IDEAS.md](../IDEAS.md) §1 (portable credentials), §6 (exit, export, forks), §7 (delegation) and §8 (federation). Clause-by-clause reconciliation into the current specs is not done and is tracked as TODO item N-19 in [plan/TODO.md](plan/TODO.md) (owner: Docs; priority P2).
 
 ## Proposed completion order
 
