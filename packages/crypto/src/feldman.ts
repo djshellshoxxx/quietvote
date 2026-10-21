@@ -41,6 +41,7 @@ export function feldmanEval(commitments: readonly Point[], j: number): Point {
 /** Equation (F): [y]G == sum_k [j^k] A_k. */
 export function feldmanVerifyShare(y: Scalar, commitments: readonly Point[], j: number): boolean {
   if (y < 0n || y >= ORDER) return false;
+  if (!Number.isSafeInteger(j) || j < 1) return false; // C7: f(0) is the secret, never a share
   return baseMul(y).equals(feldmanEval(commitments, j));
 }
 
@@ -52,12 +53,13 @@ export function publicKeyShare(dealerCommitments: readonly (readonly Point[])[],
 /** Lagrange coefficient at 0 for index j within index set S: prod_{m in S, m != j} m / (m - j). */
 export function lagrangeAtZero(S: readonly number[], j: number): Scalar {
   if (!S.includes(j)) throw new QvCryptoError('E_ARG', 'j not in S');
+  // C7: check every index up front (the loop below skips m === j, so S = [0], j = 0 used to pass).
+  if (!S.every((m) => Number.isSafeInteger(m) && m >= 1)) throw new QvCryptoError('E_ARG', 'index must be >= 1');
   if (new Set(S).size !== S.length) throw new QvCryptoError('E_ARG', 'duplicate index');
   let num = 1n;
   let den = 1n;
   for (const m of S) {
     if (m === j) continue;
-    if (m <= 0 || j <= 0) throw new QvCryptoError('E_ARG', 'index must be >= 1');
     num = scalarMul(num, scalarFromInt(m));
     den = scalarMul(den, scalarSub(scalarFromInt(m), scalarFromInt(j)));
   }

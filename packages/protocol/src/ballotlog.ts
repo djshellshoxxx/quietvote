@@ -59,10 +59,22 @@ export function analyzeBallotLog(
   const castCodes = new Set<string>();
 
   for (const { seq, raw } of entries) {
-    const r = verifyEnvelope(p, roll, raw);
+    let r = verifyEnvelope(p, roll, raw);
     const intent = (raw as { intent?: string } | null)?.intent;
     if (intent === 'cast') castSeen++;
     else if (intent === 'spoil') spoilSeen++;
+    // P4 (REQ-015): the voter signature covers reveal_digest, not the attached reveal. A voter-signed spoil whose attached reveal
+    // fails its digest is still a signed statement that this code was audited: register it (so the code can never be counted),
+    // but raise the alarm and fail chk.benaloh.spoiled.
+    if (!r.ok && r.error === 'E_SPOIL_MISMATCH' && intent === 'spoil' && Object.hasOwn(raw as object, 'reveal')) {
+      const { reveal: _bad, ...bare } = raw as Record<string, unknown>;
+      const r2 = verifyEnvelope(p, roll, bare);
+      if (r2.ok) {
+        cf.benaloh = false;
+        add('E_SPOIL_MISMATCH', seq, `${r.detail ?? 'reveal invalid'}; the signed spoil still spoils its code`, 'ALARM');
+        r = r2;
+      }
+    }
     if (!r.ok) {
       if (r.error === 'E_SCHEMA' || r.error === 'E_PARSE' || r.error === 'E_VERSION') cf.encoding = false;
       if (r.error === 'E_SPOIL_MISMATCH') cf.benaloh = false;

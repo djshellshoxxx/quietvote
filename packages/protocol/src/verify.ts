@@ -388,8 +388,11 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     if (!(k.seq > mk['dkg-r3-close'] && k.seq < mk['dkg-final'])) continue;
     const Yj = dkg.Y.get(k.body.j);
     if (Yj === undefined || seenKc.has(k.body.j)) continue;
-    seenKc.add(k.body.j);
-    if (verifyKeyconf(dkg.ctx, Yj, k.body)) decrypters.add(k.body.j);
+    // P9 (§5.7.8: T = { j in Q : valid timely keyconf }): only a VALID keyconf settles j; an invalid one does not shadow a later valid one.
+    if (verifyKeyconf(dkg.ctx, Yj, k.body)) {
+      seenKc.add(k.body.j);
+      decrypters.add(k.body.j);
+    }
     else F('E_DKG_KEYCONF', `trustee ${k.body.j}: key confirmation proof invalid`, k.seq, 'L');
   }
   if (decrypters.size < m.t) {
@@ -465,11 +468,14 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   // ---- C6/C7: tally
   if (tallies.length === 0) return done();
   const tr = tallies[0]!;
-  if (tallies.length > 1) F('E_SCHEMA', 'multiple tally records; only the first is examined', tallies[1]!.seq, 'L');
   const tb = tr.rec.body;
+  // P3: an identical repeat is only logged; a second tally record with a different body is a conflicting result (fatal).
+  for (const other of tallies.slice(1)) {
+    if (H(jcs(other.rec.body)) === H(jcs(tb))) F('E_SCHEMA', 'duplicate tally record; only the first is examined', other.seq, 'L');
+    else F('E_RESULT', 'conflicting tally records: a later tally body differs from the first', other.seq);
+  }
   R.checks['chk.tally.aggregate'] = 'pass';
-  R.checks['chk.tally.decrypt'] = 'pass';
-  R.checks['chk.result.rules'] = 'pass';
+  // P7/TSV-03: chk.tally.decrypt is set only by the share verification / combination step below; it stays not_run if that never ran.
   const failCheck = (c: CheckId, code: ErrorCode, d: string): void => {
     R.checks[c] = 'fail';
     F(code, d);
@@ -478,6 +484,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     failCheck('chk.tally.aggregate', 'E_CTX', 'tally record ctx mismatch');
     return done();
   }
+  R.checks['chk.result.rules'] = 'pass';
   if (!verifySig(dkg.ctx, 'tally', tb, tr.rec.sig) || !m.coordinator.keys.includes(tr.rec.sig.key)) {
     F('E_SIG', 'tally convenience signature invalid or not a coordinator key', tr.seq, 'I');
   }
@@ -525,7 +532,12 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     const dec = decryptAggregates(p, dkg.Y, decrypters, aggs, V, shareSets);
     if (!dec.ok) failCheck('chk.tally.decrypt', dec.error, dec.detail ?? '');
     else {
+      R.checks['chk.tally.decrypt'] = 'pass';
       for (const j of dec.value.invalid) F('E_DEC_PROOF', `trustee ${j}: share set invalid, ignored`, undefined, 'I');
+      // P11 (§5.19 / REQ-019): `decrypters` is T_valid and is recomputed like every other field.
+      if (H(jcs(tb.decrypters)) !== H(jcs(dec.value.validSet))) {
+        failCheck('chk.tally.decrypt', 'E_DEC_PROOF', `tally decrypters [${tb.decrypters.join(',')}] differ from recomputed T_valid [${dec.value.validSet.join(',')}]`);
+      }
       counts = dec.value.counts;
       for (const mc of m.contests) {
         for (const o of mc.options) {
@@ -534,15 +546,16 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
         }
       }
     }
-  } else if (R.checks['chk.tally.aggregate'] === 'pass' && V === 0) {
+  } else if (R.checks['chk.tally.aggregate'] === 'pass' && V === 0 && V >= floor) {
+    R.checks['chk.tally.decrypt'] = 'pass'; // nothing to decrypt
     counts = new Map(m.contests.map((c) => [c.id, new Map(c.options.map((o) => [o.id, 0]))]));
   }
   if (counts !== undefined && R.checks['chk.tally.decrypt'] === 'pass') {
     const expected = evaluateAll(m, counts, V, rollHex.length);
     if (H(jcs(expected)) !== H(jcs(tb.results))) failCheck('chk.result.rules', 'E_RESULT', 'published results differ from exact evaluation');
-    else R.results = expected;
-  } else if (R.checks['chk.tally.decrypt'] === 'pass') {
-    R.checks['chk.result.rules'] = 'not_run';
+    else if (R.checks['chk.result.rules'] === 'pass') R.results = expected;
+  } else if (R.checks['chk.result.rules'] === 'pass') {
+    R.checks['chk.result.rules'] = 'not_run'; // P7: never overwrite an earlier failure (e.g. E_BELOW_FLOOR)
   }
 
   // ---- C5: spoiled ballots listed in the tally record
