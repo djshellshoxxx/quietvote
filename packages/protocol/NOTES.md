@@ -158,3 +158,14 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
   files for ops (only registries).
 * Mutation of `n` > 32 / roll > 2^20 limits are enforced by schema bounds but not fuzzed.
 * Performance: ~35 ms per ciphertext for build + two verifications in JS; the 50-voter end-to-end test takes ~25 s.
+
+## Spoil shares and private audit (audit/QA wave 1)
+* `src/spoilshare.ts`: `SpoilShareBody`, `spoilShareRecordSchema` and `collectSpoilShares(m, ctx, code, records)` (QV-ADR-020 trustees mode).
+  The record is signed by the trustee `sign_pk` under scope = ctx, is NOT a board record (packets only) and reaches verifiers via
+  `tally.spoiled[].shares`, which `verifyElection` already checks. The collector rejects wrong ctx/code/index, bad signature, duplicates
+  (first wins), duplicate share keys and undecodable points; DLEQ proofs are checked by `decryptSpoiled`, not by the collector.
+  `trustee` still carries its own identical schema/type (same wire format); switching it to this export is a follow-up.
+* `auditSpoil(p, roll, env, reveal)` (ballot.ts): voter-side private audit = envelope verifies + reveal reproduces the ballot +
+  `reveal_digest` commits to the reveal (zero digest = trustee mode, commits to nothing). New vector set
+  `protocol/benaloh/private-audit.json` (operation `benaloh.private_audit`, QV-10/QV-34), runners in `vectors.test.ts` and `qv vectors check`.
+* Unaudited; not for real elections.

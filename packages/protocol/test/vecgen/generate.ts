@@ -7,7 +7,7 @@ import {
   scalarRandomNonZero, scalarToBytes, sha256, sha512, streamRng, u32, utf8, QvCryptoError, pointFromBytes, scalarFromBytes, type Label,
 } from '@quietvote/crypto';
 import {
-  analyzeBallotLog, ballotCode, binderFor, castDigest, checkDealing, deriveXi, encryptBallot, evaluateContest, manifestHash,
+  analyzeBallotLog, auditSpoil, makeSpoil, spoilDigest, ballotCode, binderFor, castDigest, checkDealing, deriveXi, encryptBallot, evaluateContest, manifestHash,
   rollLeaf, rollRoot, mth, selvecDigest, validateManifest, verifyElection, verifyEnvelope, voterNonceKey, verifySpoilReveal,
   adjudicateDkg, NO_SUPERSEDES, type DkgInput, type ElectionBundle, type Manifest, type MarkerBody, type MarkerSeqs,
 } from '../../src/index.ts';
@@ -380,6 +380,31 @@ export async function generateAll(): Promise<Map<string, string>> {
     assert(!r.ok, `benaloh ${id}`);
     bn.push({ id: `spoil-${id}`, input: { params: paramsJson, body, reveal: rev }, expect: bad('E_SPOIL_MISMATCH'), tags: ['negative'] });
   }
+  // private audit (QV-10 / QV-ADR-020): private-mode spoil envelope (no reveal on the log) + out-of-band reveal
+  {
+    const rev = { xi: H(xi), selections: SEL };
+    const pe = makeSpoil(p, v0.secretKey, { body, code, xi, selections: SEL, voterPk: v0.publicKey }, 'private');
+    const au = auditSpoil(p, roll, pe, rev);
+    assert(au.ok, 'private audit');
+    const badDigest = clone(pe);
+    badDigest.reveal_digest = '11'.repeat(32);
+    badDigest.sig = H(ed25519Sign(v0.secretKey, spoilDigest(p.ctx, code, hexToBytes(badDigest.reveal_digest, 32)))); // validly signed, but commits to a different reveal
+    const wrongSel = { xi: H(xi), selections: { ...SEL, budget: ['no'] } };
+    const wrongXi = { xi: H(sha512(utf8('x'))), selections: SEL };
+    const notSpoil = { intent: 'cast', body, sig: H(sig) };
+    const cases: [string, unknown, typeof rev, string][] = [
+      ['wrong-selections', pe, wrongSel, 'E_SPOIL_MISMATCH'], ['wrong-xi', pe, wrongXi, 'E_SPOIL_MISMATCH'],
+      ['digest-not-committing', badDigest, rev, 'E_SPOIL_MISMATCH'], ['envelope-is-a-cast', notSpoil, rev, 'E_SPOIL_MISMATCH'],
+    ];
+    const pa: Vec[] = [{ id: 'private-audit-reproduces', input: { params: paramsJson, roll: sim.rollHex, envelope: pe, reveal: rev }, expect: ok({ audited: true, ballot_code_hex: H(code) }), tags: ['kat'] }];
+    for (const [id, e, rv, code2] of cases) {
+      const r = auditSpoil(p, roll, e, rv);
+      assert(!r.ok && r.error === code2, `private audit ${id}: got ${r.ok ? 'ok' : r.error}`);
+      pa.push({ id: `private-audit-${id}`, input: { params: paramsJson, roll: sim.rollHex, envelope: e, reveal: rv }, expect: bad(code2), tags: ['negative'] });
+    }
+    put(f('protocol', 'benaloh', 'private-audit.json'), envelope('protocol/benaloh', 'benaloh.private_audit', 'Voter-side private audit of a spoil: envelope + out-of-band reveal', 'quietvote', pa));
+  }
+
   put(f('protocol', 'benaloh', 'spoil-reveal.json'), envelope('protocol/benaloh', 'benaloh.verify_spoiled', 'Benaloh audit: recompute ballot from published reveal', 'quietvote', bn));
 
   // ------------------------------------------------------------------ rules
