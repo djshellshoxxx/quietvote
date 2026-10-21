@@ -192,7 +192,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 
 ## Double-check step (optional)
 
-- `qv.audit.title`: Test ballot opened
+- `qv.audit.title`: Practice vote opened
 - `qv.audit.why` **[normative]**: Your device locks your choices. A test lets you check that it locked the choices you picked, and not something else. A tested ballot is thrown away and cannot be cast.
 - `qv.audit.public` **[normative]**: A test ballot is posted to the public record, but what it contained stays on your device unless you choose to publish it. Don't test with choices you want to keep private, and never cast a ballot you have tested.
 - `qv.audit.publishReveal` **[normative]**: Also publish what this test ballot contained. Everyone will then see these choices.

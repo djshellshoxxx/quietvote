@@ -55,7 +55,7 @@ test('SqliteBoardStore: BoardLog works over it; gapless, nonce uniqueness, check
     // DB-level append-only triggers
     assert.throws(() => t.edb.db.exec('DELETE FROM log_entry WHERE seq=0'), /append-only/);
     assert.throws(() => t.edb.db.exec("UPDATE log_entry SET type='ballot' WHERE seq=0"), /immutable/);
-    assert.throws(() => t.edb.db.exec('INSERT INTO log_entry(seq,type,author,author_nonce,nonce_key,header,leaf_hash,body_digest,body,body_len,received_at) VALUES (9,"a","b",zeroblob(16),"k",x"00",zeroblob(32),zeroblob(32),NULL,0,0)'), /max\+1|constraint/);
+    assert.throws(() => t.edb.db.exec("INSERT INTO log_entry(seq,type,author,author_nonce,nonce_key,header,leaf_hash,body_digest,body,body_len,received_at) VALUES (9,'a','b',zeroblob(16),'k',X'00',zeroblob(32),zeroblob(32),NULL,0,0)"), /max\+1|constraint/);
     // redaction leaves the leaf hash and tree intact
     t.edb.store.redactBody(0);
     assert.equal(t.edb.store.getEntry(0)!.body, null);

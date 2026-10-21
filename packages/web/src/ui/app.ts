@@ -1,6 +1,6 @@
 // Application shell, router and views. Framework-free; all logic lives in ../flow and ../key (unit-tested in node).
 import { bytesToHex, hexToBytes, systemRng } from '@quietvote/crypto';
-import { NO_SUPERSEDES, castDigest, verifyElectionText } from '@quietvote/protocol';
+import { NO_SUPERSEDES, ballotCode, castDigest, verifyElectionText } from '@quietvote/protocol';
 import { ed25519Verify } from '@quietvote/crypto';
 import { ApiClient } from '../api/client.ts';
 import { ApiError, uxCodeFor } from '../api/errors.ts';
@@ -323,7 +323,7 @@ export function startApp(env: AppEnv): void {
     const signer = signers.get(L.apiId);
     if (!signer) return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), h('p', {}, t('qv.key.locked')), link(electionPath(L.apiId, 'key') + location.hash, t('qv.key.unlock'), 'btn primary'));
     const pkHex = bytesToHex(signer.publicKey);
-    const supersedes = lastOwnBallotCode(L.records, pkHex, bytesToHex(ctx.params.ctx), (env) => ed25519Verify(signer.publicKey, hexToBytes(env.sig, 64), castDigest(ctx.params.ctx, hexToBytes(bytesToHex(new Uint8Array(0)) || '00', 1).length ? new Uint8Array(32) : new Uint8Array(32))) || true);
+    const supersedes = lastOwnBallotCode(L.records, pkHex, bytesToHex(ctx.params.ctx), (env) => ed25519Verify(signer.publicKey, hexToBytes(env.sig, 64), castDigest(ctx.params.ctx, ballotCode(ctx.params.ctx, env.body))));
     const ctl = new BallotController({ ctx, apiElectionId: L.apiId, origin: L.origin, signer, api: L.api, sealer, storage: env.storage, rng: systemRng, logPk: L.logPk, supersedes: supersedes || NO_SUPERSEDES, clientBuild: env.build.id });
     const draw = (): void => {
       const s = ctl.state;
@@ -372,7 +372,7 @@ export function startApp(env: AppEnv): void {
       } else if (s.kind === 'casting' || s.kind === 'auditing') add(area, [h('p', { role: 'status' }, s.kind === 'casting' ? t('qv.ballot.casting') : t('qv.ballot.testing')), h('progress', { 'aria-label': t('qv.a11y.working') })]);
       else if (s.kind === 'audited') {
         const a = ctl.lastAudit;
-        add(area, [h('p', {}, t('qv.audit.why')), h('h3', {}, t('qv.audit.autoChecks')), h('ul', {}, ...(a?.result.checks ?? []).map((c) => h('li', {}, `${t(({ context: 'qv.audit.check.code', code: 'qv.audit.check.code', proofs: 'qv.audit.check.proofs', plaintext: 'qv.audit.check.plain' } as const)[c.id])}: ${c.ok ? t('qv.verify.status.pass') : t('qv.verify.status.fail')}`))),
+        add(area, [h('h2', { tabindex: -1, class: 'step-heading' }, t('qv.audit.title')), h('p', {}, t('qv.audit.why')), h('h3', {}, t('qv.audit.autoChecks')), h('ul', {}, ...(a?.result.checks ?? []).map((c) => h('li', {}, `${t(({ context: 'qv.audit.check.code', code: 'qv.audit.check.code', proofs: 'qv.audit.check.proofs', plaintext: 'qv.audit.check.plain' } as const)[c.id])}: ${c.ok ? t('qv.verify.status.pass') : t('qv.verify.status.fail')}`))),
           h('p', {}, t('qv.audit.sameSoftware')), a?.posted ? h('p', {}, t('qv.audit.posted')) : h('p', {}, t('qv.audit.notPosted')),
           h('fieldset', {}, h('legend', {}, t('qv.audit.matchQ')), h('label', {}, h('input', { type: 'radio', name: 'mq', onchange: () => { ctl.confirmMatch(true); } }), ' ', t('qv.audit.matchYes')), h('br'), h('label', {}, h('input', { type: 'radio', name: 'mq', onchange: () => { ctl.confirmMatch(false); } }), ' ', t('qv.audit.matchNo'))),
           h('p', {}, t(a?.result.ok ? 'qv.audit.ok' : 'qv.audit.mismatch')),

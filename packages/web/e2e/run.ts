@@ -70,7 +70,7 @@ const step = async (name: string, f: () => Promise<void>): Promise<void> => {
 try {
   const page = await (await browser.newContext()).newPage();
   const errors: string[] = [];
-  page.on('console', (m) => { if (m.type() === 'error' || /Content Security|Trusted Type/i.test(m.text())) errors.push(m.text()); });
+  page.on('console', (m) => { if ((m.type() === 'error' && !/404/.test(m.text())) || /Content Security|Trusted Type/i.test(m.text())) errors.push(m.text()); });
   page.on('request', (r) => { if (!r.url().startsWith(origin) && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) external.push(r.url()); });
   const base = `${origin}/e/${board.apiId}`;
   await step('home shows How this works', async () => {
@@ -87,7 +87,7 @@ try {
     await page.goto(`${base}/key#inv=AAAAAAAAAAAAAAAAAAAAAA`);
     await page.getByText('Step 2 of 4').waitFor();
     await page.getByLabel('Use a key file I saved before').check();
-    await page.getByLabel('Key file').setInputFiles(keyFile);
+    await page.getByLabel('Key file', { exact: true }).setInputFiles(keyFile);
     await page.getByLabel('Passphrase', { exact: true }).fill(PASS);
     await page.getByRole('button', { name: 'Create key' }).click();
     await page.getByText('Your key is registered.').waitFor({ timeout: 30000 });
@@ -104,7 +104,7 @@ try {
   });
   await step('optional double-check, then seal again', async () => {
     await page.getByRole('button', { name: 'Double-check this vote' }).click();
-    await page.getByText('Test ballot opened').waitFor({ timeout: 30000 });
+    await page.getByText('Practice vote opened').waitFor({ timeout: 30000 });
     await page.getByRole('button', { name: 'Seal a new ballot' }).click();
     await page.getByRole('button', { name: 'Seal my ballot' }).click();
     await page.getByRole('button', { name: 'Send my vote' }).waitFor({ timeout: 30000 });

@@ -203,7 +203,7 @@ export const EN = {
   'qv.ballot.oneBallot': n('This election allows one ballot per person.', 'Revote disabled note.'),
   'qv.ballot.closingSoon': n('Closing in less than 1 minute — submit now or it won\'t count.', 'Final-minute announcement (QV-13-REQ-094).'),
   // ---- audit (V8)
-  'qv.audit.title': n('Test ballot opened', 'V8 heading.'),
+  'qv.audit.title': n('Practice vote opened', 'V8 heading.'),
   'qv.audit.why': g('Your device locks your choices. A test lets you check that it locked the choices you picked, and not something else. A tested ballot is thrown away and cannot be cast.', 'Why test.'),
   'qv.audit.public': g('A test ballot is posted to the public record, but what it contained stays on your device unless you choose to publish it. Don\'t test with choices you want to keep private, and never cast a ballot you have tested.', 'Test ballots are posted; the opening is private by default (QV-ADR-020 outranks the QV-10 wording).'),
   'qv.audit.publishReveal': g('Also publish what this test ballot contained. Everyone will then see these choices.', 'Opt-in checkbox label (QV-ADR-020 (3)); default off.'),
