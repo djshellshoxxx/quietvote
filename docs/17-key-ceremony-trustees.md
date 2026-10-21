@@ -97,8 +97,8 @@ A coalition of `t` trustees can decrypt any ciphertext. In Phase 1 ballots are l
 | QV-17-REQ-052 | Ceremony restart before `election_open` shall create fresh keys (new `ceremony_id`); old transcript entries remain in the log marked superseded by `ceremony_abort`. | Must | After abort, `ceremony_start` allowed once more with new id; verifier uses last. | T |
 | QV-17-REQ-060 | Every ceremony shall produce a **transcript** (§10) consisting of the public log entries plus a human-readable summary, signed by each participating trustee (and scribe/witnesses in air-gap mode). | Must | `qv ceremony verify` validates. | T |
 | QV-17-REQ-070 | After `audit_close`, each trustee client shall offer one-tap **key destruction** (§11) and publish `key_destruction`; the organizer UI shall show attestation status; reminders at +1, +7, +30 days. | Must | State machine reaches DESTROYED; entry published. | T |
-| QV-17-REQ-080 | The trustee CLI and web client shall implement the state machine in §12 with persisted state and idempotent, resumable steps (crash at any step is recoverable). | Must | Chaos test: kill at every transition. | T |
-| QV-17-REQ-081 | A non-technical trustee shall complete the online ceremony using only a browser, with no command line, in ≤ 6 screens (§13); usability test: ≥ 8/10 first-time participants complete without help. | Should | Moderated usability study (QV-10). | R |
+| QV-17-REQ-080 | The trustee CLI (`qv-trustee`, including its localhost UI) shall implement the state machine in §12 with persisted state and idempotent, resumable steps (crash at any step is recoverable). | Must | Chaos test: kill at every transition. | T |
+| QV-17-REQ-081 | A non-technical trustee shall complete the online ceremony using only the guided localhost UI of the `qv-trustee` executable (no command line; no remote-origin web page ever holds trustee secrets, QV-ADR-024), in ≤ 6 screens (§13); usability test: ≥ 8/10 first-time participants complete without help. | Should | Moderated usability study (QV-10). | R |
 | QV-17-REQ-082 | All ceremony and trustee UX shall meet QV-13 accessibility requirements, including keyboard/screen-reader operation and non-visual fingerprint comparison (words, not only QR). | Must | QV-13 audit. | R |
 
 ## 5. Threshold selection guidance
@@ -209,11 +209,13 @@ Common pre-conditions: manifest published (seq 0); all `trustee_accept` entries 
 | R5 | Fire drill | ≥ t trustees | `keycheck` | R4 close + 72 h |
 | R6 | Seal & card | each trustee | (local) bundle finalized, `transcript` signed | with R4 |
 
+**Round mapping to QV-16 (normative: QV-16 prevails):** R1 `dkg_round1` = QV-16 round 0 `dkg-commit` followed by round 1 `dkg-dealing` (two `dkg_round1` entries per trustee, in that order); R2 `dkg_round2` = `dkg-shares`; R3 `dkg_complaint` = `dkg-complaint` (DH-reveal; QV-16 has no separate justification step, so `dkg_justification` is unused in suite v1); R4 = `dkg-final` (`joint_key`) and `dkg-keyconf` (`key_confirm`).
+
 Phase advance occurs when all (non-disqualified) trustees posted or the deadline passes. Missing at a deadline ⇒ disqualified (R1/R2) or ceremony stalls (R4/R5, see §9.1).
 
 ### 8.1 Online DKG runbook (default)
 
-Prerequisites: each trustee has a modern browser or the CLI, a second channel to other trustees (phone call/chat), the invite accepted.
+Prerequisites: each trustee has the `qv-trustee` executable (CLI or localhost UI; QV-ADR-024), a second channel to other trustees (phone call/chat), the invite accepted.
 
 1. **Organizer** posts `ceremony_start`. Everyone is notified (SSE/ICS/organizer message).
 2. **R1 (≈2 min each).** Trustee client: unlock bundle → generate polynomial (degree `t−1`) from CSPRNG → compute `commitments_i` and proof of knowledge of the constant term → post `dkg_round1`. The polynomial coefficients live in memory only, written to the bundle encrypted as `ceremony_state` so a crash is resumable (re-derive deterministic from stored seed, never re-randomize after posting R1).
@@ -345,8 +347,8 @@ Each step is idempotent; posting twice returns the same receipt.
 ## 12. Trustee client and CLI behaviour
 
 ### 12.1 Deliverables
-- **Web client** `/t/...` (same code as voter client, separate route); can run in a *pinned/installed* mode (ADR-010). Key operations in a Web Worker; bundle persisted via File System Access / download + IndexedDB cache of the **encrypted** bundle only.
-- **CLI** `qv-trustee` (Node 22 single executable) and `qv-ceremony` (air-gapped build with no network code).
+- **Web client** `/t/...`: invitation redemption and read-only ceremony status only. Per QV-ADR-024 it shall not generate, hold or use trustee secrets (shares, signing keys, polynomials); those operations run only in `qv-trustee`/`qv-ceremony`. (Superseded text: an earlier draft ran key operations in a Web Worker in the browser.)
+- **CLI** `qv-trustee` (Node 22/24 single executable, QV-ADR-014) and `qv-ceremony` (air-gapped build with no network code).
 
 ### 12.2 CLI surface (illustrative)
 

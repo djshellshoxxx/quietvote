@@ -73,7 +73,7 @@ sequenceDiagram
 | `election_id`, `manifest_id` | Binds ballot to the exact rules the voter saw |
 | `voter_pk` | Phase 1: roll key (Phase 2: ephemeral token key; Phase 3: absent) |
 | `contests[]` | per contest: ciphertext vector (one ElGamal ciphertext per selection) + proofs (bit-ness per selection; sum constraint per method) |
-| `ballot_id` | Hash of the canonical encoded ballot (the **tracking code** shown to the voter, grouped base32 with checksum) |
+| `ballot_id` | = QV-16 `ballot_code` = `H256("ballot-code"; ctx, JCS(ballot_body))` (the **tracking code** shown to the voter, Crockford base32; first ≥ 26 chars displayed) |
 | `supersedes` | Optional `ballot_id` the voter intends to replace (informational; order is defined by the log) |
 | `client_info` | Client build hash (for ADR-010 transparency); no user agent |
 | `sig` | Voter signature over the canonical envelope with domain separation |
@@ -289,7 +289,7 @@ Success includes the idempotent replay of an existing `ballot_id` (200 with orig
 | Question | Owner | Target | Proposed default |
 |---|---|---|---|
 | Is Benaloh audit possible for a command-line voter (no UI second device)? | QV-16 | v0.5 | Yes, CLI `qv audit` |
-| Should tracking codes be shortened for readability while keeping collision resistance? | UX/crypto | v0.5 | 20 base32 chars (100 bits) + 2 checksum chars displayed; full hash kept |
+| Should tracking codes be shortened for readability while keeping collision resistance? | UX/crypto | v0.5 | Closed by QV-16 §5.12.1: display ≥ 26 base32 chars (130 bits), full code available |
 | Should aggregation be performed by trustees (signed) rather than "anyone"? | Protocol | v0.5 | Anyone; trustees sign what they decrypt, which names the aggregate hash |
 | Post witness cosigning in MVP? | Architecture | v0.9 | Hooks + one public witness volunteer |
 | Required `mmd` | Architecture | v0.5 | 60 s |

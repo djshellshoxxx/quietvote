@@ -72,7 +72,7 @@ Priorities: Must / Should / Could. Verification: T = automated test, R = review,
 
 | ID | Requirement | Pri | Acceptance criteria | Ver |
 |---|---|---|---|---|
-| QV-18-REQ-010 | Checkpoints shall use the C2SP `tlog-checkpoint` note format (origin / size / base64 root, blank line, signature lines) and be signed by the per-election log key (Ed25519, signed-note type 0x01 with key name = origin). | Must | `qv verify` parses checkpoints produced by the server and by a third-party signed-note library. | I |
+| QV-18-REQ-010 | Checkpoints shall use the C2SP `tlog-checkpoint` note format (origin / size / base64 root, blank line, signature lines) and be signed by the per-election log key (Ed25519, signed-note type 0x01 with key name = origin). | Must | `qv-verify` parses checkpoints produced by the server and by a third-party signed-note library. | I |
 | QV-18-REQ-011 | The sequencer shall issue a new checkpoint within 1 s of any append when the previous checkpoint is older than 1 s (batching ≤ 1 s), and always before responding `included` (§7.2). | Must | p99 append→checkpoint ≤ 2 s at 50 appends/s in load test. | T |
 | QV-18-REQ-012 | Tree size in successive checkpoints shall be non-decreasing; the server shall never sign two checkpoints that are mutually inconsistent. A server restart shall not change this (persist last checkpoint before replying). | Must | Test: restore older DB backup → server refuses to sign (REQ-053). | F |
 | QV-18-REQ-013 | Append responses shall carry a **receipt** (§7) enabling the submitter to prove the server accepted the entry even if the server later denies it. | Must | Receipt verifies offline against log public key; a receipt for a missing leaf is accepted as equivocation evidence. | T |
@@ -97,7 +97,7 @@ Priorities: Must / Should / Could. Verification: T = automated test, R = review,
 |---|---|---|---|---|
 | QV-18-REQ-030 | The server shall enforce rate limits and size limits (§10) without recording client IP addresses by default (QV-ADR-009). | Must | Limits hold in load test; DB/logs contain no IPs by default. | T/R |
 | QV-18-REQ-031 | Every accepted entry shall be retained at least until the audit window has closed (`audit_close`, QV-17 §11) **and** an export bundle was generated and the organizer acknowledged/downloaded it or the instance default grace (30 days) elapsed. | Must | Deletion job refuses earlier deletion. | T |
-| QV-18-REQ-032 | The system shall produce a self-contained **export bundle** (§12) from which any third party can reconstruct and verify the entire election offline with no network. | Must | `qv verify bundle.qvb` succeeds in an air-gapped container. | T |
+| QV-18-REQ-032 | The system shall produce a self-contained **export bundle** (§12) from which any third party can reconstruct and verify the entire election offline with no network. | Must | `qv-verify bundle.qvb` succeeds in an air-gapped container. | T |
 | QV-18-REQ-033 | An import shall verify the whole bundle (every entry, checkpoint, signature) before exposing it, and mark the imported log `read-only mirror`. | Must | Corrupted bundle rejected with exact failing seq. | T |
 | QV-18-REQ-035 | A proof-of-work challenge for pre-auth endpoints could be offered as an anti-spam option (§10). | Could | Off by default; difficulty configurable. | T |
 | QV-18-REQ-034 | Bodies of entries may be redacted after retention (§11.2); redaction shall be recorded, never alter leaf hashes, and verifiers shall report "verified with N redacted bodies" with degraded claims. | Should | Verifier output lists which guarantees no longer re-checkable. | T |
@@ -150,7 +150,7 @@ EntryHeader {
 | `trustee_accept` | S | trustee | `{trustee_id, pk_sign, pk_xport, pop}` proof-of-possession | 2 KiB | one per trustee; must match manifest |
 | `trustee_decline` | S | trustee | `{trustee_id, reason_code}` | 1 KiB | → ceremony cannot start; organizer must amend (new election) |
 | `ceremony_start` | S | organizer | `{ceremony_id, mode, deadline}` | 1 KiB | once |
-| `dkg_round1` | S | trustee | `{commitments (Feldman/Pedersen), pok_secret}` | 8 KiB | one per trustee |
+| `dkg_round1` | S | trustee | QV-16 `dkg-commit` (hash commitment), then QV-16 `dkg-dealing` (Feldman commitments + per-coefficient PoK); two entries per trustee, commit strictly before reveal | 8 KiB | one per trustee |
 | `dkg_round2` | S | trustee | `{for_trustee: [{recipient, enc_share, ...}]}` encrypted to each recipient's `pk_xport` | 16 KiB·n | one per trustee |
 | `dkg_complaint` | S | trustee | `{accused, round2_seq, revealed_evidence}` | 4 KiB | refs → the `dkg_round2` |
 | `dkg_justification` | S | trustee | `{complaint_seq, opened_share}` | 4 KiB | by accused; verifier decides disqualification |
@@ -161,7 +161,7 @@ EntryHeader {
 | `roll_commit` | S | organizer | `{roll_root, roll_size, roll_policy_hash}` plus Merkle commitment of voter keys (QV-04) | 4 KiB | once; before open |
 | `election_open` | S→O | organizer | `{manifest_hash, joint_key_seq, roll_commit_seq, opens_at}` | 1 KiB | requires witness quorum (REQ-023); commits to the three artifacts (§5.4) |
 | `ballot` | O | voter | `{ballot_ct, proofs, contest selections ciphertexts, voter_sig_data}` per QV-16 | contest-dependent, ≤ 256 KiB | author ∈ roll; latest valid per voter counts (ADR-005); all stay in log |
-| `ballot_audit` | O | voter | `{spoiled_ballot_ct, randomness / plaintext openings}` — Benaloh challenge | 256 KiB | The spoiled ballot is a separate ciphertext that was never cast; the body carries it with its openings. Never counted; `refs` empty. |
+| `ballot_audit` | O | voter | `{spoiled_ballot_ct, proofs, reveal_digest, reveal? (opt-in)}` — Benaloh challenge | 256 KiB | The spoiled ballot is a separate ciphertext that was never cast. Signed under `sig-spoil` with `reveal_digest` (QV-16 §5.12.2); the `reveal` openings are included **only if the voter opts in** (QV-ADR-020). Never counted; `refs` empty. |
 | `notice` | any | organizer / server-op key | `{code, text}`; codes: `witness_waiver`, `extension`, `info` | 4 KiB | advisory, except `witness_waiver`, `extension` |
 | `election_close` | O→C | organizer | `{closes_at, last_ballot_seq_claim}` | 1 KiB | after `opens_at`; ballots after are rejected; also auto-close entry by organizer key delegate (§5.5) |
 | `tally_aggregate` | C | **anyone** (typically server) | `{contest → aggregated ciphertexts, included_ballot_set_hash}` | 64 KiB | verifier recomputes from ballots; mismatch = invalid |
@@ -172,6 +172,10 @@ EntryHeader {
 | `anchor` | any | server or anyone | `{checkpoint_size, root, kind: "ots"|"other", proof}` | 64 KiB | optional external timestamp (ADR-012) |
 | `audit_close` | C→A | organizer | `{final_size_claim, export_hash?}` | 1 KiB | signals end of challenge window |
 | `election_cancel` | any | organizer (+ policy) | `{reason_code, note}` | 1 KiB | terminal; see QV-03 |
+
+**QV-16 mapping (QV-16 prevails on bodies).** `dkg_round2` = `dkg-shares`; `dkg_complaint` = `dkg-complaint` (carries the DH reveal; adjudicated deterministically, so `dkg_justification` is unused in suite v1); `joint_key` = `dkg-final`; `key_confirm` = `dkg-keyconf`; `election_open`/`election_close` = QV-16 `ELECTION_OPEN`/`ELECTION_CLOSE` markers signed by a manifest `coordinator` key (the QV-18 "organizer" key). Entry bodies are QV-JSON (hex inside; QV-ADR-019). Ballot order is by `seq` with the QV-16 `supersedes` chain (QV-ADR-016).
+
+**Control entries (QV-ADR-022).** Types `pause`, `resume`, `invalidate`, `security_notice` (authors per manifest steward/trustee delegation; never the operator key except `security_notice` as a notice) extend the phase grammar: `OPEN`↔`PAUSED`, `STALLED` (QV-07), `INVALIDATED` (terminal), `CHALLENGED`.
 
 Cardinality, ordering and authorization are enforced as a **grammar** (§5.3) by both server and verifier.
 
@@ -399,14 +403,14 @@ witness/policy.json            // copy of manifest witness_policy + any extra tr
 anchors/<size>.ots             // optional raw OpenTimestamps proofs
 redactions.json                // [{seq, redacted_at, reason}], else []
 SHA256SUMS                     // sha256 of every other file
-README.txt                     // human text: how to verify offline with `qv verify`
+README.txt                     // human text: how to verify offline with `qv-verify`
 ```
 
 - JSON uses UTF-8, no BOM; `bundle.json` signed optionally (`bundle.json.sig`, detached, by organizer key) — convenience only, the verifier never relies on it.
 - **Import** (`qv import`, `POST /imports`): extract to temp; run full verification (§13); only then create a read-only election DB flagged `imported=1, writable=0`. Verification failure reports `{seq, rule, detail}`.
 - **Portability**: the bundle contains everything needed to move an election to another operator ("exit-friendly", ADR-001). A *live* migration (continue appends on a new host) is not supported; migration is only for read-only archives, because the log key is bound to the old origin's sequencer. For in-flight elections, operator exit = export, a fresh election with the same roll/trustees is required (documented limitation; open question Q5).
 
-## 13. Offline verification algorithm (`qv verify`)
+## 13. Offline verification algorithm (`qv-verify`)
 
 Inputs: bundle (or live URL), optional extra trusted witness keys, optional previously pinned checkpoint.
 

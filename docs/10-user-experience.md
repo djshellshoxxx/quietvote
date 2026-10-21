@@ -94,7 +94,7 @@ Priority: M = Must, S = Should, C = Could. Verification: T = automated test, M =
 | QV-10-REQ-006 | The client shall state one of exactly six submission outcomes (§8.2) and never "Success" without an outcome. | M | State-machine coverage test: all outcomes reachable by fault injection. | T |
 | QV-10-REQ-007 | Cast-or-audit (Benaloh): the ballot code (commitment) shall be shown **before** the voter chooses Cast or Test, and the choice screen shall give equal prominence to both options. Audit shall be offered every time, default focus on Cast, with text making clear the test ballot is discarded. | M | e2e: network trace shows ciphertext not sent to board before Cast; UI snapshot checks button parity. | T, R |
 | QV-10-REQ-008 | A test (spoiled) ballot shall be shown as a **plaintext decryption record** (selections + randomness proof) plus a "Check on a second device" path (QR + file + link) and an in-page checker clearly labeled as less independent (ADR-010). | M | Usability T6; verifier accepts the exported record (QV-34 vector `benaloh/*`). | T, M |
-| QV-10-REQ-009 | The receipt shall contain: election ID, ballot code (100-bit, §10.2), board inclusion proof + signed tree head (machine-readable), timestamp as logged, supersede status field, **no choice data**, and a plain statement of what the receipt does/does not prove. | M | Receipt JSON validates against QV-09 schema; copy string `qv.receipt.proves`/`qv.receipt.doesnt` present. | T |
+| QV-10-REQ-009 | The receipt shall contain: election ID, ballot code (QV-16 `ballot_code`; displayed as ≥ 26 Crockford chars = ≥ 130 bits per QV-16 §5.12.1, full code on request), board inclusion proof + signed tree head (machine-readable), timestamp as logged, supersede status field, **no choice data**, and a plain statement of what the receipt does/does not prove. | M | Receipt JSON validates against QV-09 schema; copy string `qv.receipt.proves`/`qv.receipt.doesnt` present. | T |
 | QV-10-REQ-010 | The client shall allow the voter to re-check inclusion later (receipt lookup by code or file) without logging in. | M | e2e: lookup works without credential; returns Included/Superseded/NotFound. | T |
 | QV-10-REQ-011 | Shared-device mode: a persistent "This is a shared or public device" toggle and a **Clear this device** action that deletes voter key material, receipts and drafts from the browser; the confirmation screen offers it as the primary secondary action. | M | e2e: after clear, IndexedDB/localStorage contain no QV entries (QV-06). | T |
 | QV-10-REQ-012 | Every election link given to voters shall be accompanied (in organizer UX) by the Election ID, with a prompt to distribute it by a second channel; voter client shall show the Election ID in a persistent header and ask the voter to compare once ("Does this match what your organizer told you?"). | M | Unit: header present on all voter routes. Usability T9. | T, M |
@@ -242,7 +242,7 @@ The review screen carries `translate="no"` on the choices region plus a banner w
 
 **V6 Seal, then choose**
 ```
-Your ballot is sealed.   Ballot code: 4Q8T-W2LM-9ZRX-C7DK-5HPN  [Copy]
+Your ballot is sealed.   Ballot code: 4Q8T-W2LM-9ZRX-C7DK-5HPN-B3VG-J6… [Copy]
 This code is a fingerprint of your sealed ballot. It was created before you chose below.
 What would you like to do?
   [Cast this ballot]   Send it. You'll get a receipt.
@@ -255,7 +255,7 @@ Both buttons same size/style; Cast gets initial focus; keyboard order Cast, Test
 **V7 Receipt (after Cast)**
 ```
 ✔ Your ballot is recorded.   (state text: ACCEPTED_RECORDED)
-Ballot code 4Q8T-W2LM-9ZRX-C7DK-5HPN   Logged <time>, entry #<n>
+Ballot code 4Q8T-W2LM-9ZRX-C7DK-5HPN-B3VG-J6…   Logged <time>, entry #<n>
 This receipt shows your ballot was received and recorded. It does not show what you chose.
 Voting is open until <…>. You can change your vote <if allowed> and your newest ballot counts.
 [Save receipt file] [Show QR] [Print] [Check inclusion now]
@@ -496,7 +496,7 @@ Design rules:
 6. **Coercion note:** tested ballots reveal their content by construction; copy `qv.audit.public` warns. Test records must not include voter identity beyond the board's existing voter key signature (spoiled record is unsigned by the voter key? **Open Q-10-3**: signing spoiled ballots links the voter to the test content; recommended unsigned with a per-session proof-of-eligibility to avoid spam — decided jointly with QV-16).
 
 ### 10.2 Receipt design
-- **Ballot code format:** 20 Crockford base32 chars = 100 bits of H(ballot bytes) in 4-char groups. Full 256-bit hash in "Details".
+- **Ballot code format:** the QV-16 `ballot_code` (256-bit) in Crockford base32 (52 chars, groups of 4); the UI shall show at least the first 26 chars (130 bits) and offer the full code (QV-16 §5.12.1; the 100-bit form applies to Election ID only, QV-ADR-019/QV-16 prevail).
 - **Receipt file:** `qv-receipt-<electionIdShort>-<codeShort>.json` (schema: QV-09; `QV-34` vector `receipt/*`): election ID, ballot hash, board entry index, leaf hash, inclusion proof, signed tree head, time, client build hash. Plaintext (it has no secrets). Optional QR (for ≤ ~1.2 kB compact form: ballot hash + index + tree size; the full proof is refetched).
 - **Receipt check semantics:** `Included` requires verifying the inclusion proof against a tree head the client independently re-fetched; `consistent with earlier head` requires consistency proof (ADR-007). If the server is down: verify against saved head + any mirror.
 - **Receipt-freeness (non-claim):** The receipt contains nothing that proves content. The *ballot randomness* is deleted from the client after Cast (never persisted) so the voter cannot later prove their choice; the Test path is the only time randomness is revealed (discarded ballots). Copy never claims coercion resistance (`nc3`).
@@ -600,7 +600,7 @@ Per-REQ verification above; plus: Playwright flows for V1–V10, O1–O10 (QV-11
 
 | ID | Proposal | Rationale |
 |---|---|---|
-| QV-ADR-P10-1 | Adopt 100-bit Crockford-base32 grouped display for **Election ID** and **Ballot code**, full hash always available | Human-comparable, localizable (ASCII), second-preimage margin |
+| QV-ADR-P10-1 | Adopt 100-bit Crockford-base32 grouped display for **Election ID**, and ≥ 130-bit prefix display for **Ballot code** (conformed to QV-16 §5.12.1), full hash always available | Human-comparable, localizable (ASCII), second-preimage margin |
 | QV-ADR-P10-2 | Verifier ships a built-in known-bad **canary sample** (QV-34 §9) and UIs must offer a self-test | Defends against fake verifiers saying "OK" |
 | QV-ADR-P10-3 | Spoiled (test) ballots are posted to the board by default (voter may opt out) and cannot later be cast | Makes audit statistics observable (check 11) |
 | QV-ADR-P10-4 | `translate="no"` on review/receipt regions plus banner on detected auto-translation | Prevent third-party disclosure of selections |

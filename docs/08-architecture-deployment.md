@@ -322,7 +322,7 @@ Same binary with `--multi-tenant`. Tenant = organization, addressed by hostname 
 | Item | Minimum | Recommended |
 |---|---|---|
 | Server host | 1 vCPU, 512 MiB RAM, 2 GiB disk, Linux x64/arm64 (Raspberry Pi 4 OK), also macOS/Windows for dev | 2 vCPU, 2 GiB, SSD |
-| Node (non-SEA) | `>=22.13` (`node:sqlite` unflagged) | 24 LTS |
+| Node (non-SEA) | `>=22.16` (`node:sqlite` unflagged, `backup()`; QV-ADR-014) | 24 LTS |
 | Browsers | Evergreen Chrome/Edge >= 137, Firefox >= 129, Safari >= 17 `[UNVERIFIED: confirm WebCrypto Ed25519 floor in QV-19 test matrix]`; older browsers use a pure-noble fallback path | |
 | Offline participation | Not required for voting; **required** for verification (offline verifier page, trustee air-gap) | |
 
@@ -489,7 +489,7 @@ Retention/deletion obligations (QV-06) apply to the operator's copy; the public 
 
 ## 13. Proposed ADRs
 
-- **QV-ADR-P08-1 — Node baseline moves to 24 LTS.** ADR-003 names Node 22; Node 24 is now active LTS and 22 is in maintenance. Proposal: `engines: ">=22.13"`, CI on 22 and 24, SEA built on 24, switch minimum to 24 once 22 reaches EOL.
+- **QV-ADR-P08-1 — Node baseline moves to 24 LTS.** ADR-003 names Node 22; Node 24 is now active LTS and 22 is in maintenance. Resolved by QV-ADR-014 (`engines: ">=22.16"`); original proposal: `engines: ">=22.13"`, CI on 22 and 24, SEA built on 24, switch minimum to 24 once 22 reaches EOL.
 - **QV-ADR-P08-2 — Split-origin client as a supported posture** (§6, QV-19): client bundle may be hosted independently of the board.
 - **QV-ADR-P08-3 — Per-tenant SQLite file isolation** with optional per-tenant processes.
 - **QV-ADR-P08-4 — Signed-request authentication, no sessions** for organizer/trustee APIs.

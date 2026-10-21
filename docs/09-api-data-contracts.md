@@ -91,7 +91,7 @@ Cross-org access is impossible: the session’s `org_id` must equal the election
 ### 4.1 Base, media types, encodings
 - Base path `/api/v1`; health endpoints `/healthz`, `/readyz` outside it. HTTPS only (QV-ADR-009); `.onion` deployments serve HTTP over Tor with the same paths.
 - `Content-Type: application/json; charset=utf-8` unless stated. Signed checkpoints: `text/plain; charset=utf-8` (C2SP signed note). Export bundles: `application/x-tar`.
-- **Bytes** → base64url without padding (`b64u`); except consistency/inclusion proof hashes, which use standard base64 to match tlog tooling (QV-18 §7.3). **Integers** are JSON numbers ≤ 2^53−1; larger values as decimal strings. **Times** are RFC 3339 UTC (`2026-11-02T18:04:11Z`) in JSON; the log's own header uses unix seconds. **IDs** are 26-char lowercase base32.
+- **Bytes** → base64url without padding (`b64u`); except consistency/inclusion proof hashes, which use standard base64 to match tlog tooling (QV-18 §7.3). **Layering (QV-ADR-019):** these b64u rules apply to the API/transport layer only; protocol artifact bodies are QV-JSON per QV-16 §5.5 (fixed-length lower-case hex inside the body), and entry `header`/`body` are carried as their exact canonical bytes in b64u. **Integers** are JSON numbers ≤ 2^53−1; larger values as decimal strings. **Times** are RFC 3339 UTC (`2026-11-02T18:04:11Z`) in JSON; the log's own header uses unix seconds. **IDs** are 26-char lowercase base32.
 - Request bodies ≤ 1.1 MiB (entries ≤ 1 MiB + framing). Unknown JSON members in requests → `400 UNKNOWN_FIELD` (strict, catches typos); members prefixed `x-` are ignored. **Responses may gain members**; clients ignore unknown members.
 - Responses include `QV-API-Version: 1.0`, `X-Request-Id` (random, not derived from client data), `Cache-Control` per class (below), `X-Content-Type-Options: nosniff`.
 
@@ -534,7 +534,7 @@ Shared definitions (`$defs`) — abbreviated; complete files live in `packages/p
     "ElectionState": {"type": "object", "required": ["election_id", "phase", "tree_size", "witnessed", "integrity"],
       "properties": {
         "election_id": {"$ref": "common.json#/$defs/Id"},
-        "phase": {"enum": ["SETUP", "CEREMONY", "SETUP_KEYED", "READY", "OPEN", "CLOSED", "TALLIED", "AUDIT", "ARCHIVED", "CANCELLED", "ABORTED"]},
+        "phase": {"enum": ["SETUP", "CEREMONY", "SETUP_KEYED", "READY", "OPEN", "PAUSED", "CLOSED", "TALLYING", "STALLED", "TALLIED", "CHALLENGED", "AUDIT", "ARCHIVED", "INVALIDATED", "CANCELLED", "ABORTED"]},
         "tree_size": {"type": "integer"}, "witnessed": {"type": "boolean"},
         "witness_quorum": {"type": "object", "properties": {"required": {"type": "integer"}, "have": {"type": "integer"}}},
         "manifest_hash": {"$ref": "common.json#/$defs/Hash32"},

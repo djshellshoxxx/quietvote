@@ -46,7 +46,7 @@ Cryptographic object encodings (QV-16: stored as opaque `BLOB`); HTTP surface (Q
 | QV-28-REQ-008 | Columns of class P2/P3 shall be envelope-encrypted at the application layer (§9) except hashes of high-entropy secrets (P3-hash). | Must | Raw file scan finds no P2 plaintext (test with sentinel emails). | T |
 | QV-28-REQ-009 | Each election shall have its own data-encryption key (DEK) wrapped by an instance key-encryption key (KEK); deleting the wrapped DEK shall crypto-erase all P2/P3 data of that election. | Must | After DEK delete, decrypt attempts fail; sentinel unrecoverable. | T |
 | QV-28-REQ-010 | Migrations shall be forward-only, checksummed, transactional, preceded by an online backup, and shall never modify existing `log_entry`/`merkle_node`/`checkpoint` rows. A verification of log root before/after is mandatory. | Must | Migration test harness compares roots on golden fixtures for every version. | T |
-| QV-28-REQ-011 | A backup and restore procedure shall exist with RPO ≤ 5 min and RTO ≤ 1 h for OPEN elections (§10), using `node:sqlite` `backup()` and independent mirrors; restored data shall pass `qv verify` before serving. | Must | DR drill in CI with fault injection. | T |
+| QV-28-REQ-011 | A backup and restore procedure shall exist with RPO ≤ 5 min and RTO ≤ 1 h for OPEN elections (§10), using `node:sqlite` `backup()` and independent mirrors; restored data shall pass `qv-verify` before serving. | Must | DR drill in CI with fault injection. | T |
 | QV-28-REQ-012 | Backups shall be encrypted (age recipients configured by the operator) before leaving the host; the server shall refuse to start a remote-backup target without encryption configured. | Must | Backup artifact is not valid SQLite header; decrypts with test identity. | T |
 | QV-28-REQ-013 | Retention and deletion jobs shall implement §11 exactly, including refusal to delete before QV-18-REQ-031 conditions, and shall emit operator-audit records without PII. | Must | Time-travel tests. | T |
 | QV-28-REQ-014 | An organizer-triggered **election export** shall produce the public bundle (QV-18 §12) plus an optional organizer-private operator bundle (§12) from a consistent snapshot, without blocking appends > 100 ms p99. | Must | Load test; bundles verify. | T |
@@ -56,7 +56,7 @@ Cryptographic object encodings (QV-16: stored as opaque `BLOB`); HTTP surface (Q
 | QV-28-REQ-018 | Storage access shall go through a `Store` port interface (read-model/write-model separation) so another engine can be substituted without changing protocol code. | Could | Interface in code; contract tests. | R |
 | QV-28-REQ-019 | The control DB shall hold no election content other than the registry row needed to locate and authorize access. | Must | Schema review. | R |
 | QV-28-REQ-020 | `PRAGMA integrity_check` and `qv self-audit` (QV-18-REQ-054) shall run on schedule (default 6 h, quick check hourly) and on start after unclean shutdown. | Should | Corruption test detected. | F |
-| QV-28-REQ-021 | The package `engines` field shall require Node.js ≥ 22.16 (module-level `backup()`), and startup shall assert `sqlite_version()` supports STRICT tables (≥ 3.37). | Must | Startup refuses older runtimes with a clear error. | T |
+| QV-28-REQ-021 | The package `engines` field shall be `>=22.16` (module-level `backup()`; Node 22 and 24 both supported and CI-tested, QV-ADR-014), and startup shall assert `sqlite_version()` supports STRICT tables (≥ 3.37). | Must | Startup refuses older runtimes with a clear error. | T |
 
 ## 5. What the server stores — and never stores
 
@@ -187,7 +187,7 @@ CREATE TABLE election_registry (        -- P0/P4
   election_id TEXT PRIMARY KEY CHECK (length(election_id)=26),
   org_id      TEXT NOT NULL REFERENCES org(org_id) ON DELETE RESTRICT,
   db_path     TEXT NOT NULL UNIQUE,     -- relative to $QV_DATA
-  state       TEXT NOT NULL CHECK (state IN ('DRAFT','SETUP','CEREMONY','READY','OPEN','CLOSED','TALLIED','AUDIT','ARCHIVED','CANCELLED','ABORTED','DELETED','IMPORTED')),
+  state       TEXT NOT NULL CHECK (state IN ('DRAFT','SETUP','CEREMONY','SETUP_KEYED','READY','OPEN','PAUSED','CLOSED','TALLYING','STALLED','TALLIED','CHALLENGED','AUDIT','ARCHIVED','INVALIDATED','CANCELLED','ABORTED','DELETED','IMPORTED')),
   access      TEXT NOT NULL DEFAULT 'public' CHECK (access IN ('public','link')),
   title       TEXT NOT NULL,            -- mirrors manifest title (P0) for listing
   dek_wrapped BLOB,                     -- P3: DEK wrapped by KEK; NULL after crypto-erase

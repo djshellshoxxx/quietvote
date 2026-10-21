@@ -103,12 +103,12 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
     failures.push(seq === undefined ? { rule, detail } : { seq, rule, detail });
   };
   const verdict = (extra: Partial<Verdict> = {}): Verdict => {
-    const redacted = bundle.entries.filter((e) => e.body === null).length;
+    const redacted = Array.isArray(bundle.entries) ? bundle.entries.filter((e) => e.body === null).length : 0;
     const partial = redacted > 0 || opts.resolveAuthorKey === undefined;
     return {
       integrity: failures.length > 0 ? 'FAILED' : partial ? 'PARTIAL' : 'VERIFIED',
       witnessed: { have: 0, k: 0, latest: false }, redacted, failures, warnings,
-      manifestHash: undefined, pinnedCheckpoint: undefined, treeSize: bundle.entries.length, ...extra,
+      manifestHash: undefined, pinnedCheckpoint: undefined, treeSize: 0, ...extra,
     };
   };
 
@@ -159,6 +159,7 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
       if (i === 0) manifestHash = toHex(h.bodyDigest);
     });
     const n = tree.size;
+    if (n === 0) fail('QV_BOARD_BAD_BUNDLE', 'log is empty (no manifest)');
     if (opts.expectedManifestHash && manifestHash !== toHex(opts.expectedManifestHash)) fail('QV_BOARD_BAD_BUNDLE', 'manifest hash differs from expected');
 
     const root = tree.root();

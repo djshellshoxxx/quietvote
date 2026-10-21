@@ -36,7 +36,7 @@ flowchart LR
   M[Mirrors / witnesses] -->|pull STH, consistency| A
   B[Backup target (encrypted, offsite)] <-- A
 ```
-Minimum hardware (Phase 1, ≤ 10,000 voters/election): 1 vCPU, 1 GB RAM, 20 GB SSD, Linux x86_64/arm64, Node.js 22 LTS (ADR-003). Reference distribution: a container image (rootless, read-only rootfs, non-root UID) and a systemd unit; both reproducible and signed (ADR-010).
+Minimum hardware (Phase 1, ≤ 10,000 voters/election): 1 vCPU, 1 GB RAM, 20 GB SSD, Linux x86_64/arm64, Node.js 22 (≥ 22.16) or 24 LTS (ADR-003 as amended by QV-ADR-014). Reference distribution: a container image (rootless, read-only rootfs, non-root UID) and a systemd unit; both reproducible and signed (ADR-010).
 
 ### 4.2 Provisioning steps (checklist)
 1. Obtain release artifact + signed release manifest; verify signature with the project release key (QV-OQ-12-1: key distribution) and the reproducible-build hash (ADR-010).

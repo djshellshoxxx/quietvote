@@ -128,7 +128,7 @@ Milestones: **v0.1** M1+M4+M2 + CLI demo; **v0.5** full CLI election end-to-end;
 
 | ID | Requirement | Priority | Acceptance criteria | Verification |
 |---|---|---|---|---|
-| QV-01-REQ-001 | The repository shall implement exactly modules M1–M11 as separate npm workspace packages with the dependency edges of §4 and no others. | Must | CI dependency-cruiser check passes; adding a forbidden edge fails the build | CI test |
+| QV-01-REQ-001 | The repository shall implement modules M1–M11 as logical modules with the dependency edges of §4 and no others, packaged as the eight npm workspace packages of QV-08 §5 (mapping: M1→`crypto`; M2, M3, M5, M7 core→`protocol`; M4→`board`; M6→`trustee`; M7 standalone verifier→`verifier`; M8, M10 server parts→`server`; M9→`web`; organizer/voter CLI and export tooling→`cli`; M11→`test-vectors/`, `scripts/`, CI). | Must | CI dependency-cruiser check passes; adding a forbidden edge fails the build | CI test |
 | QV-01-REQ-002 | M1 shall have zero in-repo imports and be the only importer of `@noble/*`. | Must | Lint rule fires on violating import | CI |
 | QV-01-REQ-003 | M7 (verifier) shall not import M8 or any server-only code and shall run offline from an export bundle. | Must | Verifier passes full-election test with network disabled and `coordinator-api` package absent | Integration test |
 | QV-01-REQ-004 | M8 shall store no plaintext ballots, trustee shares, or voter secret keys and shall not persist client IP addresses. | Must | Schema review + test that DB dump contains none of: test marker plaintext, share bytes, IPs | Security test |

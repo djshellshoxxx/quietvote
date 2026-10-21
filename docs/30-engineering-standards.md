@@ -42,7 +42,7 @@ quietvote/
   SECURITY.md  CONTRIBUTING.md  CODE_OF_CONDUCT.md  GOVERNANCE.md  LICENSE (AGPL-3.0-or-later)  DCO
 ```
 
-Package conventions: `"type": "module"`, `"exports"` map with a single public entry (plus the named `./verify` subpath where QV-08 D5 requires), `"files"` whitelist, `"sideEffects": false` for `crypto|protocol|board`, `"engines": {"node": ">=22.13"}`. File names `kebab-case.ts`; one exported concept per file where practical; tests in `test/` mirroring `src/`.
+Package conventions: `"type": "module"`, `"exports"` map with a single public entry (plus the named `./verify` subpath where QV-08 D5 requires), `"files"` whitelist, `"sideEffects": false` for `crypto|protocol|board`, `"engines": {"node": ">=22.16"}`. File names `kebab-case.ts`; one exported concept per file where practical; tests in `test/` mirroring `src/`.
 
 ## 5. TypeScript and ESLint rules
 
@@ -276,7 +276,7 @@ A change is done when **all** hold:
 | QV-30-REQ-028 | Generated references (error codes, config, CLI, API) shall be drift-checked. | Should | `git diff --exit-code` after generation. | CI |
 | QV-30-REQ-029 | Definition of done (§13) shall be a PR-template checklist; maintainers shall not merge with unchecked items. | Must | Template present; sample audit of 10 PRs per quarter. | Review |
 | QV-30-REQ-030 | Performance budgets (bench regression <= 20%, client bundle <= 120 KB gzip voting path) shall gate releases. | Must | Bench and size job. | CI |
-| QV-30-REQ-031 | The test matrix shall run on Node 22 and 24 and on Linux, macOS, Windows. | Must | CI matrix. | CI |
+| QV-30-REQ-031 | The test matrix shall run on Node 22 (≥ 22.16) and Node 24 (QV-ADR-014) and on Linux, macOS, Windows. | Must | CI matrix. | CI |
 | QV-30-REQ-032 | Process-level handlers shall terminate on unhandled rejection/exception. | Should | Integration test. | Test |
 | QV-30-REQ-033 | CLI and trustee tools shall never accept secrets via argv and shall read passphrases without echo. | Must | Integration test greps process args; TTY test. | Test |
 | QV-30-REQ-034 | Public claim language shall be restricted to the claims register approved by a security reviewer. | Should | Docs-lint checks forbidden phrases ("unhackable", "anonymous voting" without qualifier). | CI, review |
