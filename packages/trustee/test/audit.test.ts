@@ -30,7 +30,9 @@ test('TR-01: a cast ballot re-wrapped as a trustee-mode spoil under a new code (
     c.marker('election-close');
     await c.syncAll();
     assert.notEqual(H(code), H(b.code));
-    await rejects(c.act(1, (t) => t.releaseSpoil(c.bundle(), [H(code)])), 'CIPHERTEXT_WAS_CAST');
+    // Refused either by the relay's own ciphertext check (CIPHERTEXT_WAS_CAST) or, once the protocol log analysis excludes a
+    // re-wrapped spoil (CP-01, PR crypto-protocol), earlier as NOT_SPOILED: both mean nothing is decrypted.
+    await assert.rejects(c.act(1, (t) => t.releaseSpoil(c.bundle(), [H(code)])), (e: unknown) => e instanceof TrusteeError && ['CIPHERTEXT_WAS_CAST', 'NOT_SPOILED'].includes(e.code));
     // nothing was recorded as released
     const t = await Trustee.open(c.path(1), PASS, c.deps.get(1)!);
     assert.equal(t.data.out.spoil?.[H(code)], undefined);
@@ -39,7 +41,7 @@ test('TR-01: a cast ballot re-wrapped as a trustee-mode spoil under a new code (
   }
 });
 
-test('TR-02: tally release from CONFIRMED/DRILLED (election-open never imported) works instead of ILLEGAL_TRANSITION', async () => {
+test('TR-02: tally release before the trustee imported election-open is refused cleanly (WRONG_STATE), then works after import', async () => {
   const c = new Ceremony({ n: 3, t: 2, seed: 'audit-tr02', voters: 6 });
   await c.setup();
   try {
@@ -49,6 +51,9 @@ test('TR-02: tally release from CONFIRMED/DRILLED (election-open never imported)
     c.marker('election-close');
     const before = await Trustee.open(c.path(1), PASS, c.deps.get(1)!);
     assert.equal(before.state, 'CONFIRMED');
+    await rejects(c.act(1, (t) => t.releaseTally(c.bundle())), 'WRONG_STATE');
+    assert.equal((await Trustee.open(c.path(1), PASS, c.deps.get(1)!)).state, 'CONFIRMED', 'refusal changes no state');
+    await c.sync(1); // import the public log slice: now the trustee knows the election opened
     const pk = await c.act(1, (t) => t.releaseTally(c.bundle()));
     assert.equal(pk.round, 'tally-share');
     assert.equal((await Trustee.open(c.path(1), PASS, c.deps.get(1)!)).state, 'RELEASED');

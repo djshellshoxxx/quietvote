@@ -662,9 +662,6 @@ export class Trustee {
       return this.packet('tally-share', [prior]);
     }
     if (this.d.state !== 'TALLYING') {
-      // TR-02: a trustee that never imported election-open is still CONFIRMED/DRILLED; the verified log shows the election
-      // ran, so pass through STANDBY (the transition observe() would have made) instead of failing ILLEGAL_TRANSITION.
-      if (this.d.state === 'CONFIRMED' || this.d.state === 'DRILLED') this.go('STANDBY');
       this.go('TALLYING');
       await this.save();
     }
