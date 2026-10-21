@@ -123,6 +123,7 @@ export function witnessStatus(cp: Checkpoint, policy: WitnessPolicy, maxTimestam
   const valid = new Map<string, number>();
   const nonPolicy: string[] = [];
   const unsupported: string[] = [];
+  const usedKeys = new Set<string>(); // one key = one witness, even if a policy lists it under several names
   for (const l of cp.lines) {
     if (l.name === cp.origin) continue;
     const w = policy.witnesses.find((x) => x.name === l.name);
@@ -145,6 +146,12 @@ export function witnessStatus(cp: Checkpoint, policy: WitnessPolicy, maxTimestam
       nonPolicy.push(l.name);
       continue;
     }
+    const kid = b64(w.publicKey);
+    if (usedKeys.has(kid)) {
+      nonPolicy.push(l.name);
+      continue;
+    }
+    usedKeys.add(kid);
     valid.set(w.name, ts);
   }
   const witnessed = policy.quorum >= 1 && valid.size >= policy.quorum;

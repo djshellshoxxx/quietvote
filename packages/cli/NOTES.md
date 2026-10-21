@@ -38,3 +38,16 @@ pick option 1 with the verifier package extended to the needed flags, which is a
 
 **Test status at time of writing.** `npm run typecheck` exit 0; `npm test -w @quietvote/cli` 17/17 pass (after `npm ci --ignore-scripts`;
 the first run without installed workspace links failed to resolve `@quietvote/crypto`, which is an environment issue, not this finding).
+
+## Audit hardening (docs/audit/board-cli.md, 2026-10-21; AI-assisted, not independent)
+
+Behaviour changes:
+- `qv board verify <board-bundle>` reports at most PARTIAL (exit 3) unless `--log-key` is given; the bundle's own log key is self-attested (BC-01).
+- New `qv board verify --witness-policy <file>` (`{quorum, none_acknowledged, witnesses:[{name, alg, pk_b64}]}`) supplies the witness policy
+  out of band. Without it the bundle's copy is used and flagged "self-attested" (BC-02: default unchanged because the existing contract treats
+  `--log-key` + `--author-key` as a pass; recommended owner decision: make the policy flag mandatory for a pass).
+- `keygen --force` forces mode 0600 on the open descriptor (a pre-existing 0644 file no longer receives the secret) and refuses symlinks
+  (O_NOFOLLOW); without `--force` the file must not exist (O_EXCL) (BC-03).
+- `qv ballot encrypt` / `qv ballot audit` accept `--manifest-hash <hex>`; a mismatch is exit 1 before any envelope is written. `ballot encrypt`
+  always prints (and `--json` returns) the manifest hash, noting when it was not pinned (BC-04).
+- Non-object JSON passed to `ballot audit` / as a key file is an input/usage error, not exit 70 (BC-05).

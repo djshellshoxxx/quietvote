@@ -103,7 +103,7 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
     failures.push(seq === undefined ? { rule, detail } : { seq, rule, detail });
   };
   const verdict = (extra: Partial<Verdict> = {}): Verdict => {
-    const redacted = Array.isArray(bundle.entries) ? bundle.entries.filter((e) => e.body === null).length : 0;
+    const redacted = Array.isArray(bundle?.entries) ? bundle.entries.filter((e) => e?.body === null).length : 0; // total even for a null bundle
     const partial = redacted > 0 || opts.resolveAuthorKey === undefined;
     return {
       integrity: failures.length > 0 ? 'FAILED' : partial ? 'PARTIAL' : 'VERIFIED',

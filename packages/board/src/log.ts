@@ -57,6 +57,7 @@ export class BoardLog {
         break;
       }
     }
+    if (!this.leavesMatchHeaders()) this.quarantine('stored leaf hashes do not match stored headers');
     // Rollback / corruption guard (REQ-012, REQ-053, REQ-054): every stored checkpoint must match the tree.
     for (const cp of o.store.listCheckpoints()) {
       if (cp.size > this.tree.size || !bytesEqual(this.tree.root(cp.size), cp.root)) {
@@ -64,6 +65,19 @@ export class BoardLog {
         break;
       }
     }
+  }
+
+  /** The tree is built from stored leaf hashes; they must equal H(0x00 || header) of the stored entries (REQ-054). */
+  private leavesMatchHeaders(): boolean {
+    const n = this.store.size();
+    const hashes = this.store.leafHashes(0, n);
+    if (hashes.length !== n) return false;
+    for (let i = 0; i < n; i++) {
+      const e = this.store.getEntry(i);
+      const lh = hashes[i];
+      if (!e || e.seq !== i || !lh || !bytesEqual(hashLeaf(e.headerBytes), lh)) return false;
+    }
+    return true;
   }
 
   get status(): { state: LogState; reason: string } {
@@ -158,6 +172,8 @@ export class BoardLog {
     if (!cur.ok) return cur;
     const good: string[] = [];
     for (const line of lines) {
+      // exactly one signature line: anything else (embedded newlines) could smuggle unauthenticated lines into the stored note
+      if (line.indexOf('\n') !== -1 && line.indexOf('\n') !== line.length - 1) continue;
       const cand = parseCheckpoint(stored.note + (line.endsWith('\n') ? line : line + '\n'));
       if (!cand.ok) continue;
       const before = witnessStatus(cur.value, policy).valid;
@@ -213,8 +229,9 @@ export class BoardLog {
     const t = MerkleTree.fromLeafHashes(this.store.leafHashes(0, this.store.size()));
     const okRoot = t.size === this.tree.size && bytesEqual(t.root(), this.tree.root());
     const okCps = this.store.listCheckpoints().every((c) => c.size <= t.size && bytesEqual(c.root, t.root(c.size)));
-    if (!okRoot || !okCps) this.quarantine('self-audit mismatch');
-    return okRoot && okCps;
+    const okLeaves = this.leavesMatchHeaders();
+    if (!okRoot || !okCps || !okLeaves) this.quarantine('self-audit mismatch');
+    return okRoot && okCps && okLeaves;
   }
 
   /** Redact a body (leaf unchanged). Caller (server) enforces retention policy. */

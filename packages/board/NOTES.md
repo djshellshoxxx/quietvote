@@ -43,3 +43,13 @@ Where QV-18 is ambiguous or depends on QV-16 (not yet written), the safest readi
     `tally_result` is refused. Witness gates: `election_open` lower bound is `roll_commit` else `joint_key`; `election_close` is now a hard
     gate up to `tally_aggregate`, or up to `tally_result` when no aggregate exists. `grammarStep` has a third optional `body` argument.
     Server (not edited here) should pass nothing new: `BoardLog.append` supplies the body itself.
+
+14. **Audit hardening (docs/audit/board-cli.md, 2026-10-21; AI-assisted, not independent).**
+    - `BoardLog` (constructor and `selfAudit`) now also recomputes `H(0x00 || headerBytes)` for every stored entry and compares it with the stored
+      leaf hash and `seq`; a mismatch quarantines the log (BC-06). Before, only the stored leaf hashes were re-hashed into the tree.
+    - `attachCosignatures` accepts exactly one signature line per input string; strings with embedded newlines are skipped, so unauthenticated
+      lines cannot be persisted next to a valid cosignature (BC-07).
+    - `witnessStatus` counts one witness per distinct public key: a key listed under two names yields one valid cosignature (BC-08).
+    - `checkBrokenPromise` and `verifyLog` are total on hostile receipts / a null bundle (return a Result / FAILED) (BC-09, BC-10).
+    - Known property, not changed: `verifyInclusion` does not bind the claimed `size` beyond tree shape; size and root are bound by the signed
+      checkpoint, so always verify against a checkpoint's (size, root) pair.

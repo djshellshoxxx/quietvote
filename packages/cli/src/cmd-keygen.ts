@@ -1,7 +1,6 @@
-import { writeFileSync } from 'node:fs';
 import { ed25519Keypair } from '@quietvote/crypto';
 import { InputError, UsageError, needFlag, needPositional, parseArgs, type Parsed } from './args.ts';
-import { PASSPHRASE_FLAGS, getPassphrase, hex, printJson, readFile } from './common.ts';
+import { PASSPHRASE_FLAGS, getPassphrase, hex, printJson, readFile, writeSecretFile } from './common.ts';
 import { EXIT, type Io } from './io.ts';
 import { DEFAULT_PARAMS, PLAIN_FORMAT, keyIdOf, parseContainer, parseKeyJson, serialize, unwrapSeed, wrapSeed, type KdfParams } from './keyfile.ts';
 
@@ -41,7 +40,7 @@ export async function cmdKeygen(argv: string[], io: Io): Promise<number> {
     file = serialize(await wrapSeed(seed, pass, io.rng, prm));
   }
   try {
-    writeFileSync(out, file, { mode: 0o600, flag: p.has('force') ? 'w' : 'wx' });
+    writeSecretFile(out, file, p.has('force'));
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
     io.err(code === 'EEXIST' ? `${out} exists; use --force to overwrite\n` : `cannot write ${out}: ${code ?? 'error'}\n`);
@@ -55,8 +54,9 @@ export async function cmdKeygen(argv: string[], io: Io): Promise<number> {
 
 /** Loads a protected (QVKEY1) or unprotected voter key; the passphrase is asked only for the protected form. */
 export async function loadVoterKey(path: string, p: Parsed, io: Io): Promise<{ seed: Uint8Array; publicKey: Uint8Array }> {
-  const j = parseKeyJson(new TextDecoder().decode(readFile(path))) as { format?: unknown; public_key?: unknown; seed?: unknown; kdf?: unknown };
-  if (typeof j === 'object' && j !== null && j.kdf !== undefined) {
+  const j = parseKeyJson(new TextDecoder().decode(readFile(path))) as { format?: unknown; public_key?: unknown; seed?: unknown; kdf?: unknown } | null;
+  if (typeof j !== 'object' || j === null || Array.isArray(j)) throw new UsageError(`${path} is not a voter key file`);
+  if (j.kdf !== undefined) {
     const c = parseContainer(j);
     const pass = await getPassphrase(p, io, `passphrase for key ${c.keyId}: `, false, false);
     if (pass === undefined) throw new UsageError('this key file is passphrase-protected: use --passphrase-file or --passphrase-stdin, or run on a terminal');

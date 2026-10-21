@@ -47,7 +47,12 @@ export function checkBrokenPromise(
   path: readonly Uint8Array[],
   logPk: Uint8Array,
 ): Result<EquivocationKind> {
-  const msg = promiseMessage(receipt.origin, receipt.seq, receipt.leafHash, receipt.sequencedAt, receipt.checkpointDeadline);
+  let msg: Uint8Array;
+  try {
+    msg = promiseMessage(receipt.origin, receipt.seq, receipt.leafHash, receipt.sequencedAt, receipt.checkpointDeadline);
+  } catch {
+    return err('QV_BOARD_BAD_RECEIPT', 'malformed receipt'); // checkers are total: out-of-range integers etc. are a Result, not a throw
+  }
   if (!ed25519Verify(logPk, receipt.promiseSig, msg)) return err('QV_BOARD_BAD_RECEIPT', 'promise signature invalid');
   const cp = signedNote(note, logPk);
   if (!cp.ok) return cp;
