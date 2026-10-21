@@ -1,6 +1,6 @@
 # Repository and Packages
 
-> **Draft – unaudited software.**
+> **Draft – unaudited software.** Status as of **2026-10-21**.
 
 Layout target: spec [30 Engineering standards](https://github.com/djshellshoxxx/quietvote/blob/main/docs/30-engineering-standards.md) section 4. Packages: spec 08 section 5.
 
@@ -10,26 +10,28 @@ Layout target: spec [30 Engineering standards](https://github.com/djshellshoxxx/
 |---|---|---|
 | `package.json` | npm workspaces (`packages/*`), scripts | Present |
 | `tsconfig.base.json`, `tsconfig.json` | Strict TypeScript settings | Present |
-| `packages/` | All workspaces (below) | Present, mostly scaffold |
-| `test-vectors/` | Language-neutral test vectors ([[Testing and Conformance]]) | Empty |
-| `scripts/` | Repo tooling | Empty |
-| `docs/` | Specifications and decision log | Present |
-| `CONTRIBUTING.md`, `SECURITY.md`, `README.md` | Project files | Present |
-| `.github/`, ESLint config, `LICENSE`, `DCO` | Planned in spec 30 | Not yet in repo |
+| `packages/` | All workspaces (below) | Present. Every package has source and a `NOTES.md` or `README.md`. |
+| `test-vectors/` | Language-neutral test vectors ([[Testing and Conformance]]) | `v1/` and `schema/` present. Candidate status. |
+| `scripts/` | Repo tooling: `lint-claims.mjs` (public-claims lint), `licence-snapshot.mjs` (dependency licence report) | Present |
+| `docs/` | Specifications, decision log, plan, reports | Present. Claims register in `docs/claims/`, licence snapshot in `docs/reports/`. |
+| `CONTRIBUTING.md`, `SECURITY.md`, `README.md`, `LICENSE`, `DCO` | Project files | Present |
+| `.github/workflows/ci.yml` | CI: typecheck and tests on three operating systems and two Node versions; pin check; non-blocking claims lint | Present. No DCO check yet. |
+| `.github/scripts/check-action-pins.mjs` | Checks that every GitHub Action is pinned to a full commit SHA | Present |
+| ESLint config | Planned in spec 30 | Not yet in repo |
 
 ## Packages
 
-| Package | Name | Current state |
+| Package | Name | Current state (2026-10-21) |
 |---|---|---|
-| `crypto` | `@quietvote/crypto` | Hash (SHA-256/512) and Ed25519 helpers; one smoke test |
-| `board` | `@quietvote/board` | Byte helpers, entry format, Merkle tree and inclusion verification (no tests yet) |
-| `protocol` | `@quietvote/protocol` | Scaffold |
-| `server` | `@quietvote/server` | Scaffold |
-| `web` | `@quietvote/web` | Scaffold |
-| `cli` | `@quietvote/cli` | Scaffold |
-| `trustee` | `@quietvote/trustee` | Scaffold |
-| `verifier` | `@quietvote/verifier` | Scaffold |
+| `crypto` | `@quietvote/crypto` | ristretto255 wrappers, exponential ElGamal, Schnorr and CDS-style proofs, Feldman sharing, share encryption, strict JSON parsing, Ed25519. 49 tests pass. |
+| `protocol` | `@quietvote/protocol` | Manifest and roll, distributed key generation, ballot build and verify, Benaloh spoil, ballot-log checks, tally and partial decryption, election verification. 163 tests pass. Spec errata in `NOTES.md`. |
+| `board` | `@quietvote/board` | Merkle log, entry encoding, checkpoints, inclusion and consistency checks, receipts, bundle export, equivocation checks. 46 tests pass. |
+| `server` | `@quietvote/server` | HTTP service (no third-party dependencies), SQLite-backed board and control store, admission checks, event stream, webhooks, rate limits. 65 of 70 tests pass; 5 webhook tests fail. |
+| `web` | `@quietvote/web` | Browser client (framework-free TypeScript), key handling, ballot flow, receipts, i18n catalogs, static build with CSP and SRI, offline verifier page. 74 unit tests pass. Playwright e2e is separate. |
+| `cli` | `@quietvote/cli` | `qv` command: keygen, election and ballot commands, verify, board commands. 17 tests pass. Imports the verifier in-process (layering issue, see `packages/cli/NOTES.md`). |
+| `trustee` | `@quietvote/trustee` | `qv-trustee`: key ceremony state machine, air-gapped log and packet files, sealed bundle. 40 tests pass, all with simulated parties. |
+| `verifier` | `@quietvote/verifier` | `qv-verify`: offline verification into a named-check report, canary self-test. 13 of 16 tests pass; 3 board-layer V4 tests fail. |
 
 Each package has a `README.md` that points to the specs. Conventions: ESM (`"type": "module"`), a single public `exports` entry, and `sideEffects: false` for crypto.
 
-Dependency rules and layering: [[Architecture Overview]].
+Dependency rules and layering: [[Architecture Overview]]. The layering rule is not enforced by CI in this checkout.
