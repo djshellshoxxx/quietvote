@@ -11,9 +11,16 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "test": "node --test --test-reporter=spec \"test/**/*.test.ts\""
+    "test": "node --test --test-reporter=spec \"test/**/*.test.ts\"",
+    "build": "node src/build/cli.ts",
+    "e2e": "node e2e/run.ts"
   },
   "devDependencies": {
     "esbuild": "0.28.2"
+  },
+  "dependencies": {
+    "@quietvote/board": "*",
+    "@quietvote/crypto": "*",
+    "@quietvote/protocol": "*"
   }
 }

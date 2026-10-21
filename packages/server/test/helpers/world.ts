@@ -119,7 +119,7 @@ export class World {
     if (o.key) {
       headers['authorization'] = signRequest(o.key.secretKey, o.key.publicKey, method, path, this.audience, bytes, o.ts ?? this.nowSec, o.nonce ?? this.rng.bytes(16));
     }
-    const r = await fetch(this.base + path, { method, headers, ...(bytes.length ? { body: bytes } : {}) });
+    const r = await fetch(this.base + path, { method, headers, ...(bytes.length ? { body: Buffer.from(bytes) } : {}) });
     const text = await r.text();
     let json: unknown;
     try {
