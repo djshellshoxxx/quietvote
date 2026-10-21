@@ -9,7 +9,7 @@ function collectYamlFiles(directory) {
     const path = join(directory, name);
     if (statSync(path).isDirectory()) {
       collectYamlFiles(path);
-    } else if (/\\.ya?ml$/i.test(name)) {
+    } else if (/\.ya?ml$/i.test(name)) {
       files.push(path);
     }
   }
@@ -19,9 +19,9 @@ collectYamlFiles(workflowRoot);
 
 const failures = [];
 for (const file of files) {
-  const lines = readFileSync(file, 'utf8').split(/\\r?\\n/);
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/);
   lines.forEach((line, index) => {
-    const match = line.match(/^\\s*uses:\\s*([^\\s#]+)/);
+    const match = line.match(/^\s*uses:\s*([^\s#]+)/);
     if (!match || match[1].startsWith('./')) return;
 
     const reference = match[1].split('@')[1];
@@ -32,7 +32,7 @@ for (const file of files) {
 }
 
 if (failures.length > 0) {
-  console.error(failures.join('\\n'));
+  console.error(failures.join('\n'));
   process.exitCode = 1;
 } else {
   console.log(`Verified SHA pins for ${files.length} workflow file(s).`);
