@@ -2,6 +2,7 @@
 
 **For members and organizers**
 - [[Home]]
+- [[How It Works In 5 Minutes]]
 - [[What is QuietVote]]
 - [[Privacy and Guarantees]]
 - [[Voter Guide]]

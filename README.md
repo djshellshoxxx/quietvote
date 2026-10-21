@@ -6,6 +6,15 @@ QuietVote is a proposed platform for organizations that want members to make col
 
 QuietVote is at the **specification and early implementation stage**. This repository defines the questions, capabilities, and assurance work that must be settled before implementation, and it contains initial code for the cryptographic, protocol, and bulletin-board layers. It does not yet claim to provide anonymous voting, cryptographic verifiability, or production-ready election software.
 
+## What is QuietVote?
+
+- QuietVote is a tool that lets a group vote in secret and still check that the result is right.
+- It is for clubs, co-ops, unions, open-source groups and other voluntary groups.
+- Your choice is locked away. Nobody can read it alone, not even the server.
+- Anyone can check the final count, so you do not have to trust the people who run it.
+- It is an unaudited draft, not ready for real votes. In version 1, others can see who voted, but not how.
+- It does not protect you from someone watching you vote, a hacked phone, or being forced to vote a certain way.
+
 ## Product direction
 
 QuietVote aims to support voluntary governance where:

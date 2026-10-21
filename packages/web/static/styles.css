@@ -1,0 +1,23 @@
+:root{--bg:#fff;--fg:#14213d;--muted:#4a5568;--accent:#0b5cad;--accent-fg:#fff;--border:#8a94a6;--err:#9b1c1c;--focus:#b45309;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10151f;--fg:#eef2f8;--muted:#b6c0d0;--accent:#7db7f5;--accent-fg:#0a1220;--border:#7a8599;--err:#ff9b9b;--focus:#fbbf24}}
+@media (prefers-contrast:more){:root{--border:currentColor;--muted:var(--fg)}}
+:root[data-contrast]{--bg:#000;--fg:#fff;--muted:#fff;--accent:#ffff00;--accent-fg:#000;--border:#fff;--focus:#00ffff}
+body{margin:0;background:var(--bg);color:var(--fg);font:1.125rem/1.6 system-ui,sans-serif;padding-inline:max(16px,calc(50% - 360px))}
+.sr-only{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%)}
+.skip{position:absolute;inset-inline-start:8px;inset-block-start:-100px;background:var(--bg);padding:8px}.skip:focus{inset-block-start:8px}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+main{scroll-margin-block-start:4rem;padding-block:1rem}main:focus{outline:none}
+.btn{display:inline-block;min-block-size:48px;min-inline-size:48px;padding:.5rem 1.25rem;margin-block:.25rem;margin-inline-end:.5rem;border:2px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font:inherit;cursor:pointer;text-decoration:none}
+.btn.primary{background:var(--accent);color:var(--accent-fg)}.btn[disabled]{opacity:.55;cursor:not-allowed}
+.field{margin-block:1rem}.field label{display:block;font-weight:600}.field input,.field select,.field textarea{inline-size:100%;box-sizing:border-box;min-block-size:44px;font:inherit;padding:.4rem;border:2px solid var(--border);background:var(--bg);color:var(--fg)}
+.hint{color:var(--muted);font-size:.95rem}.step{font-weight:700;color:var(--muted)}
+.error{border-inline-start:6px solid var(--err);padding-inline-start:1rem}.banner{border:2px solid var(--border);padding:.5rem}
+.row{display:flex;flex-wrap:wrap;gap:.5rem}.row.equal>*{flex:1 1 14rem}
+.code{font-family:ui-monospace,monospace;overflow-wrap:anywhere;font-weight:700}
+.choice{display:block;min-block-size:48px;padding-block:.5rem}
+fieldset{border:2px solid var(--border);margin-block:1rem}
+table{border-collapse:collapse;inline-size:100%}th,td{border:1px solid var(--border);padding:.4rem;text-align:start}
+.tabs{display:flex;flex-wrap:wrap;gap:1rem;list-style:none;padding:0}
+@media (prefers-reduced-motion:no-preference){progress{transition:opacity .2s}}
+@media print{.skip,nav,.btn{display:none}}
