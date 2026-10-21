@@ -36,3 +36,21 @@ jobs:
         run: node .github/scripts/check-action-pins.mjs
       - run: npm ci --ignore-scripts
       - run: npm run check
+
+  # Non-blocking: reports banned or overstated public claims (docs/claims/banned-phrases.txt).
+  # Findings do not fail the workflow; see docs/claims/claims-register-v0.md.
+  claims-lint:
+    name: claims lint (non-blocking, node 22, ubuntu)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Lint public claims (non-blocking)
+        continue-on-error: true
+        run: node scripts/lint-claims.mjs
