@@ -169,3 +169,7 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
   `reveal_digest` commits to the reveal (zero digest = trustee mode, commits to nothing). New vector set
   `protocol/benaloh/private-audit.json` (operation `benaloh.private_audit`, QV-10/QV-34), runners in `vectors.test.ts` and `qv vectors check`.
 * Unaudited; not for real elections.
+* **TR-01 (trustee audit)**: `analyzeBallotLog` now returns `castAlphas` (every `a` of every cast envelope in the log, valid or not;
+  `collectAlphas`). `verifyElection` fails `chk.benaloh.spoiled` with ALARM `E_SPOILED_CODE_CAST` when a trustees-mode spoil in the tally shares
+  any `a` with a cast envelope: spoils are not chain-checked and proofs bind only (ctx, voter), so a voter could re-wrap a cast ballot's
+  ciphertexts under a new code (`supersedes`) and have trustees decrypt it. Test: `tally.test.ts` (fails without the check).
