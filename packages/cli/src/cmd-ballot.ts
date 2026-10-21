@@ -5,7 +5,7 @@ import {
   type CastEnvelope, type Reveal, type Selections, type SpoilEnvelope,
 } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs } from './args.ts';
-import { PASSPHRASE_FLAGS, electionContext, hex, isHex, printJson, readJson } from './common.ts';
+import { PASSPHRASE_FLAGS, electionContext, hex, isHex, pinnedHash, printJson, readJson } from './common.ts';
 import { loadVoterKey } from './cmd-keygen.ts';
 import { EXIT, type Io } from './io.ts';
 
@@ -36,7 +36,7 @@ function parseSelections(specs: string[], contestIds: string[]): Selections {
 }
 
 export async function cmdBallotEncrypt(argv: string[], io: Io): Promise<number> {
-  const p = parseArgs(argv, { election: 'value', key: 'value', select: 'multi', intent: 'value', supersedes: 'value', out: 'value', 'audit-out': 'value', 'publish-reveal': 'bool', json: 'bool', ...PASSPHRASE_FLAGS });
+  const p = parseArgs(argv, { election: 'value', key: 'value', select: 'multi', intent: 'value', supersedes: 'value', out: 'value', 'audit-out': 'value', 'manifest-hash': 'value', 'publish-reveal': 'bool', json: 'bool', ...PASSPHRASE_FLAGS });
   needPositional(p, 0, 'ballot encrypt (options only)');
   const intent = p.get('intent') ?? 'cast';
   if (intent !== 'cast' && intent !== 'spoil') throw new UsageError('--intent must be cast or spoil');
@@ -49,7 +49,7 @@ export async function cmdBallotEncrypt(argv: string[], io: Io): Promise<number> 
   const supersedes = p.get('supersedes') ?? NO_SUPERSEDES;
   if (!isHex(supersedes, 32)) throw new UsageError('--supersedes must be 64 lower-case hex digits');
   const key = await loadVoterKey(needFlag(p, 'key'), p, io);
-  const ec = await electionContext(needFlag(p, 'election'));
+  const ec = await electionContext(needFlag(p, 'election'), pinnedHash(p));
   if (!ec.rollSet.has(hex(key.publicKey))) throw new FailError('this voter key is not on the election roll');
   const ids = ec.manifest.contests.map((c) => c.id);
   const sel = parseSelections(p.all('select'), ids);
@@ -71,9 +71,9 @@ export async function cmdBallotEncrypt(argv: string[], io: Io): Promise<number> 
     if (auditOut !== undefined) rmSync(auditOut, { force: true });
     throw e;
   }
-  if (p.has('json')) printJson(io, { intent, ballot_code: hex(b.code), envelope: out, ...(auditOut === undefined ? {} : { audit_file: auditOut }), blank_contests: blank });
+  if (p.has('json')) printJson(io, { intent, manifest_hash: hex(ec.params.mh), ballot_code: hex(b.code), envelope: out, ...(auditOut === undefined ? {} : { audit_file: auditOut }), blank_contests: blank });
   else {
-    io.out(`ballot code: ${hex(b.code)}\nintent: ${intent}\nenvelope: ${out}\n`);
+    io.out(`manifest hash: ${hex(ec.params.mh)}\nballot code: ${hex(b.code)}\nintent: ${intent}\nenvelope: ${out}\n`);
     if (auditOut !== undefined) io.out(`audit file: ${auditOut} (mode 0600)\n`);
   }
   if (blank.length > 0) io.err(`note: no selection given for ${blank.join(', ')}; those contests are cast blank\n`);
@@ -85,9 +85,9 @@ export async function cmdBallotEncrypt(argv: string[], io: Io): Promise<number> 
 }
 
 export async function cmdBallotAudit(argv: string[], io: Io): Promise<number> {
-  const p = parseArgs(argv, { election: 'value', ballot: 'value', json: 'bool' });
+  const p = parseArgs(argv, { election: 'value', ballot: 'value', 'manifest-hash': 'value', json: 'bool' });
   needPositional(p, 0, 'ballot audit (options only)');
-  const ec = await electionContext(needFlag(p, 'election'));
+  const ec = await electionContext(needFlag(p, 'election'), pinnedHash(p));
   const parsed = readJson(needFlag(p, 'ballot'));
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new InputError('the ballot file is not a JSON object');
   const j = parsed as { format?: unknown; envelope?: unknown; reveal?: unknown; intent?: unknown };
@@ -112,8 +112,9 @@ export async function cmdBallotAudit(argv: string[], io: Io): Promise<number> {
   }
   const ok = checks.every((c) => c.ok);
   const code = v.ok ? hex(v.value.code) : undefined;
-  if (p.has('json')) printJson(io, { ok, ballot_code: code ?? null, selections: ok ? reveal.selections : null, checks });
+  if (p.has('json')) printJson(io, { ok, manifest_hash: hex(ec.params.mh), ballot_code: code ?? null, selections: ok ? reveal.selections : null, checks });
   else {
+    io.out(`manifest hash: ${hex(ec.params.mh)}\n`);
     for (const c of checks) io.out(`${c.ok ? 'ok  ' : 'FAIL'} ${c.name}${c.detail === undefined ? '' : `: ${c.detail}`}\n`);
     if (code !== undefined) io.out(`ballot code: ${code}\n`);
     if (ok) for (const [cid, s] of Object.entries(reveal.selections)) io.out(`selection ${cid}: ${s.length === 0 ? '(blank)' : s.join(', ')}\n`);

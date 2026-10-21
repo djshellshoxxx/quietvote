@@ -20,12 +20,12 @@ usage:
             [--no-passphrase] [--kdf-memory-kib <n>] [--kdf-iterations <n>] [--force] [--json]
                                    create a voter key; seed and passphrase never come from argv; the key file is
                                    passphrase-protected (QVKEY1, Argon2id) unless --no-passphrase
-  qv ballot encrypt --election <bundle> --key <keyfile> [--select contest=opt[,opt]]... --out <file>
+  qv ballot encrypt --election <bundle> --key <keyfile> [--manifest-hash <hex>] [--select contest=opt[,opt]]... --out <file>
                     [--intent cast|spoil] [--supersedes <hex>] [--audit-out <file>] [--publish-reveal]
                     [--passphrase-file <f> | --passphrase-stdin] [--json]
-  qv ballot audit --election <bundle> --ballot <audit-file|envelope> [--json]
+  qv ballot audit --election <bundle> --ballot <audit-file|envelope> [--manifest-hash <hex>] [--json]
   qv board verify <board-bundle|election-bundle> [--log-key <hex>] [--manifest-hash <hex>] [--author-key <hex>]...
-                    [--pin-file <f>] [--json]
+                    [--witness-policy <file>] [--pin-file <f>] [--json]
   qv election inspect <bundle> [--json]
   qv vectors check [dir] [--strict] [--json]
 

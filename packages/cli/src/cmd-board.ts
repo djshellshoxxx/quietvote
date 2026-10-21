@@ -1,13 +1,13 @@
-import { bundleFromJson, verifyLog, type VerifyOptions } from '@quietvote/board';
+import { bundleFromJson, verifyLog, type VerifyOptions, type WitnessPolicy } from '@quietvote/board';
 import { authorKeyId } from '@quietvote/board';
 import { hexToBytes, parseQvJson } from '@quietvote/crypto';
 import { verifyBundle } from '@quietvote/verifier';
 import { InputError, UsageError, needPositional, parseArgs } from './args.ts';
-import { isHex, printJson, readFile } from './common.ts';
+import { isHex, printJson, readFile, readJson } from './common.ts';
 import { EXIT, type Io } from './io.ts';
 
 export async function cmdBoardVerify(argv: string[], io: Io): Promise<number> {
-  const p = parseArgs(argv, { 'log-key': 'value', 'manifest-hash': 'value', 'pin-file': 'value', 'author-key': 'multi', json: 'bool' });
+  const p = parseArgs(argv, { 'log-key': 'value', 'manifest-hash': 'value', 'pin-file': 'value', 'witness-policy': 'value', 'author-key': 'multi', json: 'bool' });
   const [file] = needPositional(p, 1, 'board verify <board-bundle|election-bundle>');
   const data = readFile(file!);
   let j: unknown;
@@ -62,6 +62,7 @@ export async function cmdBoardVerify(argv: string[], io: Io): Promise<number> {
   if (logKey !== undefined) opts.logPublicKey = logKey;
   if (manifestPin !== undefined) opts.expectedManifestHash = manifestPin;
   if (pinned !== undefined) opts.pinned = pinned;
+  if (p.get('witness-policy') !== undefined) opts.witnessPolicy = loadWitnessPolicy(p.get('witness-policy')!);
   if (authorKeys.length > 0) {
     const keys = new Map(authorKeys.map((pk) => {
       return [Buffer.from(authorKeyId('ed25519', pk)).toString('hex'), pk] as const;
@@ -69,9 +70,33 @@ export async function cmdBoardVerify(argv: string[], io: Io): Promise<number> {
     opts.resolveAuthorKey = (h) => keys.get(Buffer.from(h.author).toString('hex'));
   }
   const v = verifyLog(b.value, opts);
+  // The log key inside a bundle is attacker-controlled: whoever forged the log also ships the key that verifies it.
+  // Without --log-key (from the manifest-verified source) a clean result is only PARTIAL, never a pass.
+  if (logKey === undefined && v.integrity === 'VERIFIED') {
+    v.integrity = 'PARTIAL';
+    if (!v.warnings.some((w) => /self-attested/.test(w))) v.warnings.push('log key taken from bundle (self-attested); pass --log-key');
+  }
   if (p.has('json')) printJson(io, v);
   else io.out(boardText(v.integrity, v.treeSize, v.witnessed, v.redacted, v.failures, v.warnings));
   return v.integrity === 'FAILED' ? EXIT.fail : v.integrity === 'PARTIAL' ? EXIT.incomplete : EXIT.ok;
+}
+
+/** Out-of-band witness policy file: {quorum, none_acknowledged, witnesses:[{name, alg, pk_b64}]}; anything malformed is an input error. */
+function loadWitnessPolicy(path: string): WitnessPolicy {
+  const j = readJson(path) as { quorum?: unknown; none_acknowledged?: unknown; witnesses?: unknown } | null;
+  const bad = (m: string): never => { throw new InputError(`--witness-policy ${path}: ${m}`); };
+  if (typeof j !== 'object' || j === null || Array.isArray(j)) return bad('not a JSON object');
+  if (typeof j.quorum !== 'number' || !Number.isSafeInteger(j.quorum) || j.quorum < 0) return bad('quorum must be a non-negative integer');
+  if (typeof j.none_acknowledged !== 'boolean') return bad('none_acknowledged must be a boolean');
+  if (!Array.isArray(j.witnesses)) return bad('witnesses must be an array');
+  const witnesses = j.witnesses.map((w: unknown): WitnessPolicy['witnesses'][number] => {
+    const x = w as { name?: unknown; alg?: unknown; pk_b64?: unknown } | null;
+    if (typeof x !== 'object' || x === null || typeof x.name !== 'string' || (x.alg !== 'ed25519' && x.alg !== 'mldsa44') || typeof x.pk_b64 !== 'string') return bad('malformed witness entry');
+    const pk = Buffer.from(x.pk_b64, 'base64');
+    if (pk.toString('base64') !== x.pk_b64) return bad('witness pk_b64 is not canonical base64');
+    return { name: x.name, alg: x.alg, publicKey: new Uint8Array(pk) };
+  });
+  return { quorum: j.quorum, noneAcknowledged: j.none_acknowledged, witnesses };
 }
 
 /** The log key an election bundle's manifest binds (`bb.log_pk`), or undefined when the manifest does not carry one. */

@@ -73,3 +73,11 @@ Regression tests: `test/audit-regressions.test.ts` (one test per finding, 12 tes
 `selftest command`), the same two known base failures as before the change (vectors/verifier simulation against QV-ADR-015 election-open
 binding; not touched here). `node --test packages/cli/test/audit-regressions.test.ts`: 12/12 pass. Typecheck: no errors in `packages/cli`.
 
+
+**Merge reconciliation (audit BC-01/02/04).**
+- `board verify <board bundle>` without `--log-key` downgrades a clean result to PARTIAL (exit 3): the bundle's own log key is self-attested.
+  A bundle whose key is pinned with `--log-key` can still VERIFY (exit 0). Election bundles keep the existing check against `bb.log_pk`.
+- `board verify --witness-policy <file>` supplies the witness policy out of band (`{quorum, none_acknowledged, witnesses:[{name, alg, pk_b64}]}`);
+  a malformed or missing file is an input error (exit 4), never a pass.
+- `ballot encrypt` / `ballot audit` accept `--manifest-hash` (mismatch: exit 1, nothing written; bad hex: exit 2) and always print the
+  manifest hash (`manifest hash:` line, `manifest_hash` in JSON).
