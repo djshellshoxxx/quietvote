@@ -57,6 +57,12 @@ export interface ManifestForm {
   electionIdHex: string;
 }
 
+/** `datetime-local` value (or any date string) -> UTC ISO seconds, or undefined when it is not a valid date (never throws). */
+export function isoUtc(v: string): string | undefined {
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString().replace('.000Z', 'Z');
+}
+
 export type OrgProblem = 'E-ORG-QUORUM' | 'E-ORG-TRUSTEES' | 'E-ORG-MANIFEST';
 export type BuildResult = { ok: true; manifest: Manifest; warnings: string[] } | { ok: false; code: OrgProblem; detail: string };
 

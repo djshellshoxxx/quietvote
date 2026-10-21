@@ -131,7 +131,12 @@ export async function deriveElectionContext(entries: readonly Rec[], expectManif
     else closeSeq ??= seq;
   }
   const rr = m.roll.root;
-  const tally = tallies[0];
+  // W5: only a tally signed under ctx by a manifest coordinator key, for this ctx, counts (the verifier does the same).
+  const tally = tallies.find((x) => {
+    const b = x.rec?.body;
+    const sg = x.rec?.sig;
+    return typeof b === 'object' && b !== null && b.ctx === H(dkg.ctx) && sg !== undefined && m.coordinator.keys.includes(sg.key) && verifySig(dkg.ctx, 'tally', b, sg);
+  });
   const phase: Phase = tally ? 'tallied' : closeSeq !== undefined ? 'closed' : openSeq !== undefined ? 'open' : 'ready';
   const ctx: ElectionContext = {
     params, manifest: m, manifestHashHex: H(mh), warnings: mv.value.warnings, phase, rollSize, rollRootHex: rr ?? rcs[0]?.body.root,

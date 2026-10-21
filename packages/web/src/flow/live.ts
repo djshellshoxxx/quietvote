@@ -137,7 +137,9 @@ export class LiveElection {
 
   private async readOnce(): Promise<void> {
     const t = this.t;
-    const from = t.records.length === 0 ? 0 : Math.max(...t.records.map((r) => r.seq)) + 1;
+    let top = -1;
+    for (const r of t.records) if (r.seq > top) top = r.seq; // no spread: a long log would exceed the argument limit
+    const from = top + 1;
     const page = await t.api.allEntries(t.apiId, from);
     const fresh = page.entries.filter((e) => e.seq >= from).map((e) => ({ seq: e.seq, record: entryRecord(e) }));
     if (fresh.length === 0) return;

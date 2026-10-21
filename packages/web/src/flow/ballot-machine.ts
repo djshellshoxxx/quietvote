@@ -42,7 +42,8 @@ export type BallotEvent =
   | { type: 'AUDIT_FAILED'; error: string }
   | { type: 'AUDIT_CONFIRM'; matches: boolean }
   | { type: 'NEW_SEAL' }
-  | { type: 'RETRY_CAST' };
+  | { type: 'RETRY_CAST' }
+  | { type: 'LOCK' };
 
 export const initialBallotState = (): BallotState => ({ kind: 'selecting', selections: {}, attempt: 0, spoiled: [] });
 
@@ -87,6 +88,12 @@ export function reduce(s: BallotState, e: BallotEvent): BallotState {
     case 'RETRY_CAST':
       // Retrying after an unknown delivery resends the SAME bytes (idempotent), never a new ballot.
       return s.kind === 'failed' && s.retryCast && s.sealed !== undefined ? { kind: 'casting', selections: s.selections, sealed: s.sealed, spoiled: s.spoiled } : s;
+    case 'LOCK':
+      // Auto-lock while a sealed ballot is shown but not yet cast/tested: its randomness is gone, so back to review with a new
+      // attempt (never a cast; a casting/failed submission keeps its already-signed bytes).
+      return s.kind === 'sealed' || s.kind === 'sealing'
+        ? { kind: 'reviewing', selections: s.selections, attempt: (s.kind === 'sealed' ? s.sealed.attempt : s.attempt) + 1, spoiled: s.spoiled }
+        : s;
     case 'AUDIT_DONE':
       return s.kind === 'auditing' ? { kind: 'audited', selections: s.selections, sealed: s.sealed, spoiled: [...s.spoiled, s.sealed.code], posted: e.posted } : s;
     case 'AUDIT_FAILED':
@@ -95,7 +102,8 @@ export function reduce(s: BallotState, e: BallotEvent): BallotState {
       return s.kind === 'audited' ? { ...s, matches: e.matches } : s;
     case 'NEW_SEAL':
       // Back to review with the same selections; the attempt counter moves so the new randomness (and code) differ.
-      return s.kind === 'audited' || (s.kind === 'failed' && !s.retryCast)
+      // A failed CAST (sealed ballot not spoiled) may have been recorded despite the error (e.g. a board alarm): no new seal then.
+      return s.kind === 'audited' || (s.kind === 'failed' && !s.retryCast && (s.sealed === undefined || s.spoiled.includes(s.sealed.code)))
         ? { kind: 'reviewing', selections: s.selections, attempt: (s.kind === 'audited' ? s.sealed.attempt : (s.sealed?.attempt ?? 0)) + 1, spoiled: s.spoiled }
         : s;
   }
