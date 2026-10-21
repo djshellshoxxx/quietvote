@@ -12,7 +12,7 @@ import {
   adjudicateDkg, NO_SUPERSEDES, type DkgInput, type ElectionBundle, type Manifest, type MarkerBody, type MarkerSeqs,
 } from '../../src/index.ts';
 import {
-  bundleOf, buildManifest, castBallot, clone, closeElection, defaultContests, kp, publishTally, setup, spoilBallot, type Faults, type Sim,
+  bundleOf, buildManifest, castBallot, clone, closeElection, defaultContests, kp, multiSign, publishTally, setup, spoilBallot, type Faults, type Sim,
 } from '../helpers/sim.ts';
 import { generateLogLayer } from './loglayer.ts';
 
@@ -472,6 +472,27 @@ export async function generateAll(): Promise<Map<string, string>> {
     { id: 'non-canonical-hex', mut: (b) => { const s = entries(b, (x) => x.intent === 'cast')[1]!.entry.body.contests[0].sel[0]; s.a = s.a.toUpperCase(); }, checks: ['chk.ballots.valid', 'chk.encoding.canonical', 'chk.tally.aggregate'], codes: ['E_SCHEMA', 'E_COUNTED_ROOT'], verdict: 'FAIL' },
     { id: 'unknown-field-in-tally', mut: (b) => { tallyBody(b).extra = true; }, checks: ['chk.encoding.canonical'], codes: ['E_SCHEMA'], verdict: 'FAIL' },
     { id: 'tally-wrong-ctx', mut: (b) => { tallyBody(b).ctx = '11'.repeat(32); }, checks: ['chk.tally.aggregate'], codes: ['E_CTX'], verdict: 'FAIL' },
+    // QV-ADR-015 election-open binding: each mutant re-signs the open marker (scope ctx) so only the reference is wrong
+    ...(() => {
+      const openMut = (patch: (o: Record<string, any>, b: ElectionBundle) => void) => (b: ElectionBundle): void => {
+        const e = entries(b, (x) => x.body?.name === 'election-open')[0]!;
+        const body = { ...e.entry.body } as Record<string, any>;
+        patch(body, b);
+        e.entry = multiSign(tiny, tiny.params!.ctx, body as never);
+      };
+      const bind = { checks: ['chk.time.window'], codes: ['E_MARKERS'], verdict: 'FAIL' };
+      const seqOf = (b: ElectionBundle, pred: (e: Record<string, any>) => boolean): number => entries(b, pred)[0]!.seq;
+      return [
+        { id: 'open-roll-ref-forward', mut: openMut((o, b) => { o.roll_commit_seq = closeSeq(b); }), ...bind },
+        { id: 'open-joint-key-ref-forward', mut: openMut((o, b) => { o.joint_key_seq = closeSeq(b); }), ...bind },
+        { id: 'open-roll-ref-absent', mut: openMut((o) => { delete o.roll_commit_seq; }), ...bind },
+        { id: 'open-binding-fields-absent', mut: openMut((o) => { delete o.roll_commit_seq; delete o.joint_key_seq; delete o.manifest_hash; }), ...bind },
+        { id: 'open-roll-ref-wrong-record', mut: openMut((o, b) => { o.roll_commit_seq = seqOf(b, (x) => x.body?.name === 'dkg-r3-close'); }), ...bind },
+        { id: 'open-roll-ref-nonexistent', mut: openMut((o) => { o.roll_commit_seq = 99999; }), ...bind },
+        { id: 'open-joint-key-ref-mismatch', mut: openMut((o, b) => { o.joint_key_seq = seqOf(b, (x) => x.body?.name === 'dkg-r3-close'); }), ...bind },
+        { id: 'open-manifest-hash-mismatch', mut: openMut((o) => { o.manifest_hash = '22'.repeat(32); }), ...bind },
+      ];
+    })(),
   ];
   const mutDir = f('mutations');
   for (const m of mutants) {

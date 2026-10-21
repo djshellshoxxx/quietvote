@@ -465,6 +465,8 @@ Constraints: JSON only (no CBOR in v1) for reviewability; vectors reflect QV-16 
 
 ## 18. Approval and change history
 
+**VERSION-IMPACTING CHANGE (QV-ADR-015, 2026-10-21): `election-open` binding.** The `election-open` marker now carries `(manifest_hash, joint_key_seq, roll_commit_seq)` and a `roll-commit` record precedes it in every election log. All election bundles (`elections/tiny-yesno-3v`, `small-approval-20v`, `log-layer-4v`), all derived mutations and the canary changed bytes (log seqs after `dkg-final` shift by one); primitive vectors are unchanged. Eight mutants were added (`mutations/open-*`: forward, absent, wrong-record, nonexistent and mismatched refs, missing fields, manifest_hash mismatch), each expecting `chk.time.window` fail and `E_MARKERS`, verdict FAIL. Independent verifiers that predate this change reject the new open marker and must be updated (see `packages/protocol/NOTES.md` X-40). QV-34's `v1` tag should not be treated as frozen until the owner decides whether this is v1 or v1.1.
+
 | Reviewer | Decision | Date | Notes |
 |---|---|---|---|
 | Project owner | Pending | — | Draft authored 2026-10-21 |

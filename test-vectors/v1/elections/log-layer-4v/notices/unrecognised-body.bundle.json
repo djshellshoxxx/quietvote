@@ -376,19 +376,39 @@
       "entry": {
         "body": {
           "proto": "qv1-r255-sha2",
-          "type": "marker",
-          "name": "election-open"
+          "type": "roll-commit",
+          "root": "7026db1d685ea08a411a2d08dd9d889fc84eb87bbdca2e26ed530ca74c4e1915",
+          "size": 4
         },
         "sigs": [
           {
             "key": "00b40e73c2dba4560644ef9328d1426142637dfb9710d65cb1d0948ca5fa628a",
-            "sig": "c43f448c9f3c2a3372dceb854bd6cab026114be416a9ba3e228c251206133505115ae586d39392ae5a65b5d47850facd48a02a57647e929c89ad91fef6219b09"
+            "sig": "b306ea2843cd50d70f4c185b9e825f2acac828d9255c2df1bea83c536a981a0d2e65e67b1b87fd59287b0af8828fc7c3b415bd829944250230c2254f348eae07"
           }
         ]
       }
     },
     {
       "seq": 16,
+      "entry": {
+        "body": {
+          "proto": "qv1-r255-sha2",
+          "type": "marker",
+          "name": "election-open",
+          "manifest_hash": "967917f6ab3a20456681bd3ce95550ecabfa53c748aec990083743f3949fae19",
+          "joint_key_seq": 14,
+          "roll_commit_seq": 15
+        },
+        "sigs": [
+          {
+            "key": "00b40e73c2dba4560644ef9328d1426142637dfb9710d65cb1d0948ca5fa628a",
+            "sig": "da16ca51e1d7d26ae8c005b468e9c6e4cff0a3b9e73d9ed37001ca285e8d6227e1443e18ce19013491ac21867f3c3b7097cc484a027e970aa58442115d23c00a"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 17,
       "entry": {
         "intent": "cast",
         "body": {
@@ -442,7 +462,7 @@
       }
     },
     {
-      "seq": 17,
+      "seq": 18,
       "entry": {
         "intent": "cast",
         "body": {
@@ -496,7 +516,7 @@
       }
     },
     {
-      "seq": 18,
+      "seq": 19,
       "entry": {
         "intent": "cast",
         "body": {
@@ -550,7 +570,7 @@
       }
     },
     {
-      "seq": 19,
+      "seq": 20,
       "entry": {
         "intent": "cast",
         "body": {
@@ -604,7 +624,7 @@
       }
     },
     {
-      "seq": 20,
+      "seq": 21,
       "entry": {
         "intent": "cast",
         "body": {
@@ -658,7 +678,7 @@
       }
     },
     {
-      "seq": 21,
+      "seq": 22,
       "entry": {
         "body": {
           "proto": "qv1-r255-sha2",
@@ -675,7 +695,7 @@
       }
     },
     {
-      "seq": 22,
+      "seq": 23,
       "entry": {
         "body": {
           "proto": "qv1-r255-sha2",
@@ -691,7 +711,7 @@
       }
     },
     {
-      "seq": 23,
+      "seq": 24,
       "entry": {
         "body": {
           "proto": "qv1-r255-sha2",

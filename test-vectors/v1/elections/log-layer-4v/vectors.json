@@ -34,20 +34,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 20,
-              "leaf_hash": "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
-              "sequenced_at": 1793000020,
-              "checkpoint_deadline": 1793000050,
-              "promise_sig": "ShYQ3/6iT05pprXV1LFHnysxHaCSWPyK8W33l8T9h2ZtMOTWD5lL6kXxzEuR8gC7RJWxSPEdNsZv6bDesev5AA==",
+              "seq": 21,
+              "leaf_hash": "9YgGYO6fFvUvBODh+3x1KPRGfukBVp3P1EQv0e5YGqw=",
+              "sequenced_at": 1793000021,
+              "checkpoint_deadline": 1793000051,
+              "promise_sig": "+5rVLZloVTYeQvxgFxs32pJolj4IRxbl2coQPmdCRNJlWKxpHZZnZhOJCowcQurPcW5x6JRIU7Ip8y4P6lvnDQ==",
               "inclusion": {
-                "tree_size": 23,
+                "tree_size": 24,
                 "path": [
-                  "4RE7MNRK85uZKZa4huP0cIBhA9jbBKQn26tIoifsk+8=",
-                  "alRoFqFV6Vx27soylubMdn6jW65YL3//nNPM6Uesk/o=",
-                  "z2sxpkiVQI2AksdcXU2mP7zfeCuMrZkFxez9gnwfbFM=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "LMO/gb0T1QQUrAnZtgp1fJ4W+LpIsHjHBNZwzm/2JzE=",
+                  "8TXq6RgZa+UjyVCJnmKlGDSp3lq2EqhAfg6qy8kqhq4=",
+                  "VYm0uPofDayaH+4WyUwQuaC1G7bWthnu3YruvXKFLp0=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
               }
             },
             "voter": "632ac970c55017ae415f2742fcdb3f6905df555df5ec29dbabe17059e493eb83"
@@ -55,30 +55,30 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 18,
-              "leaf_hash": "sBQ03cKyD/54NTpzvQoVwRTk1rzXOtBa3EDxrQvQQ3I=",
-              "sequenced_at": 1793000018,
-              "checkpoint_deadline": 1793000048,
-              "promise_sig": "Ydngx9C9BZOyOU9M5x1EklQxtNs/qeLJR1zep9u6GrORoOw/XoACty66D2oh7EDN64dkzmWSwWj5DO4OQIj8Dw==",
+              "seq": 19,
+              "leaf_hash": "S8kLK9g03xjdoi80CMxTOIrhLq4r9/Ymrh5qaPNAGTs=",
+              "sequenced_at": 1793000019,
+              "checkpoint_deadline": 1793000049,
+              "promise_sig": "H5Xnez5ApQSuP6CpDWRqXV8MWcPAr90gZKom5WvWHyGAVf/QdmJEAG41Ic2VSOgU2fOzJrGW11O/SOL1NtrBCw==",
               "inclusion": {
-                "tree_size": 21,
+                "tree_size": 22,
                 "path": [
-                  "R8/qgFtNnW6vuZoIOlKVGoxPQghm7MQRqn0X+XEbPw4=",
-                  "p8kynRxqrXrG9ubymT/z6pCgcz2PFUEfVN1NjDtAa84=",
-                  "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "uefA72l1PfMymYDm68JSa4Caop+ShFM8Q7G7iDGROEg=",
+                  "Ji5qpVsJPK5Sg2rz2MSWYHfjAmN70pL5Iyife8JSilk=",
+                  "M5OyFGTdVhM4kWw0DmRaC4TfsPQkXOnlqbDMlJina2Q=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n"
               }
             },
             "voter": "bf52c03edf2dcedd5c385ff125c5d6429e01bf14541ea5c68113acc15007a7f1"
           }
         ],
         "observed": [
-          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
         ]
       },
       "expect": {
@@ -121,10 +121,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n"
             ]
           }
         }
@@ -167,7 +167,7 @@
           "path": "elections/log-layer-4v/board.json"
         },
         "observed": [
-          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n"
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n"
         ]
       },
       "expect": {
@@ -250,10 +250,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jYwYgP4TgmVr85pf8EP40sl2W5DJ1xKahF9XJio/ylyo2A4ZZWjQ59RoDefa5U6JiHWXYQxnaeshArMgZuuPLQQQ=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY9MrNlZpNePdPrMRtuL/txPFpDWpGDsPp79HVzp5rcKO/EWJ66P8fNcKrLNDlpswqbhcr9r3ELBjU+VdXqzYLAs=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jYx3+X3aptqk/VteR7OjXhaMt94yfBjAgV1gl33O8MXKqa+wYl5RyVo0IZT3FSOphcJ2gEYIiyiHaVsS+LMumxgk=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jYxhcKvN1HkBt4+Rb2C6Rr9oZUgS8LMLt28siAUmFY7NC2wnYHdaqHxSr8hk19os9n/VQUF+n1CSYXXVXdc+PAA4=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY7jHFFfQ+Qw+L8+RuskdgSLjYEtLaQAoYUZYIQf8GPMvmNMvATQSd+gs0PGZgZ8XMXQKB/YAX2z/RipUKpPvfAg=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY/MoFzhvMJaye5jKbARLwtJBRUl8cT3ETBoFJbigzhfntJXn5IoRudocdEK1veIMQXSnlJwv9FtTNxgjQ3CVVAU=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY1LgamIO4DJAAwgP9Njs/kt7cLTFccVy9rs6ZtGp27jzhcHso3aqTvGFgGxI9DJkEXw466+jCPQKq/KbnikwcQg=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY+Ker3U2eIMu9CSeiWLGpO66OyuWKmWmrZ3BoNaca1ctGUqhw6w8rlveU6+DGXOtLBdwZvLLTrxeW8FUH5TA/A4=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -284,10 +284,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nAAAARApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nAAAAG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -316,9 +316,9 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n"
             ]
           }
         }
@@ -411,11 +411,11 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\n7MrFx6+S+nGSQordRw8NuW6FkOFsN0pxYAhm6XP38xI=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xKMMsl6f0JMrS4NaFK9ZWypdeXHRb7AZCZMRVo3500tNaqG+HGrdY6g2S9l8EC2zCxRXVbhhNk4Ps+wxYwWIAE=\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\n6co9hVDtWNDazYpY7n3vk2zhRVpi3fowoTElwrevqm8=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny86FsZFeffqfRe2rwkYyQBQKE16nhoPJ/wA7sf7XzDeiVBiUMSNIbjnwhOhdH8+jAD8mjJ/daIHunHwTanx0X/AQ=\n"
             ]
           }
         }
@@ -445,7 +445,7 @@
           "path": "elections/log-layer-4v/board.json"
         },
         "observed": [
-          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\n7MrFx6+S+nGSQordRw8NuW6FkOFsN0pxYAhm6XP38xI=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xKMMsl6f0JMrS4NaFK9ZWypdeXHRb7AZCZMRVo3500tNaqG+HGrdY6g2S9l8EC2zCxRXVbhhNk4Ps+wxYwWIAE=\n"
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\n6co9hVDtWNDazYpY7n3vk2zhRVpi3fowoTElwrevqm8=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny86FsZFeffqfRe2rwkYyQBQKE16nhoPJ/wA7sf7XzDeiVBiUMSNIbjnwhOhdH8+jAD8mjJ/daIHunHwTanx0X/AQ=\n"
         ]
       },
       "expect": {
@@ -512,7 +512,7 @@
           "path": "elections/log-layer-4v/adv-board.json"
         },
         "observed": [
-          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
         ]
       },
       "expect": {
@@ -540,7 +540,7 @@
           "path": "elections/log-layer-4v/adv-board.json"
         },
         "observed": [
-          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+          "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n"
         ]
       },
       "expect": {
@@ -568,10 +568,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n— w3 JoDrmQAAAABq5vGAZRNape7Pml22DIOzpRKirwRUGa47oHE5C5nVW32+/wOyESPGNBFOEZWMc9JtgUaT3kK91krKzitwwDSuSvbTCw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n— w3 JoDrmQAAAABq8OMMAVp0RI3NcPOpxot+ngqUc52Gb3glwHuvqxB1QxezlTQvcQavq4WcP8ycWOqjpx/NWThIyDkT/711BQ0QB79pBw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n— w3 JoDrmQAAAABq8ONI8MJkpiSyOYmdQGotJq5XZcpC0Cpy5aVLHhijyfvr/YnhuIqnEbWF6s8NUKcELhwUI7UTlW8BL0VhK0j4oWdaAA==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n— w3 JoDrmQAAAABq5vGAwmxf7QDua4nmDQI19xjNanDGAk5eGg7FAtcRxC1rxZZ6UMHEuepJ/vOWKQR7xEDMEXIDh8RrYB8IpLqpIKLGBw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n— w3 JoDrmQAAAABq8OMMvgHSHk/D0vVuSoKGINnwxDB8KtACj0VOHHOCX0NSCPYSekRBkzz0V6iiwePqzOAfc038cbKJjRCTp0k1G7EPBA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n— w3 JoDrmQAAAABq8ONIAYR00qY1RIRhoV/zIbtGPxFL0rJbGz6PYUHUWepGSIYPi/chl+Zxpuw+g6oM6IdNNFj8gl0a/jUIgQ7ezswgAA==\n"
             ]
           }
         }
@@ -614,10 +614,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -647,10 +647,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 2BB/dQAAAABq8OMMjuXa0fOQoQQZpyoh1nWssENnEw0pe6HCkifi9bT+4+ECdGPtF/DzDm0T04j3LHSgrwH3c4HQDpF0eyyqE64XCg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 2BB/dQAAAABq8OMMgvtdBF+Mqm1C4//V9dhx8DP7GxDe/7Ss+wDUH2YHvQ8vdFGRQo96ukPVKXlMjQFyS5d4HRZbwKTv4EHbt4f/CQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -680,10 +680,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w1 7y0PGQAAAABq5vGBNnY7UnVx5FOXUfpEZLCbgwQJNhWV7EaFRx6t8BWeMestcI6VKpsoz4lfyUgoARaSIpdLFa1UZooe3h3DN6TxAA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w1 7y0PGQAAAABq5vGB80Mr9HW92ImvxxCy20s+DxhgVorALwiUmBi/G1eSVILLvZjoyDZBR/NTpTAFPfHou83qWmRwkUEYJr4GKkzYCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -713,10 +713,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w9 Pf5efgAAAABq5vGAazVCwsRZmspHFt9tizeg0oUPTGfJhYmXI5Vl8sPF5xsffAeZuJMBYHbe+9F6N0RUB+CV28olmiLpD5YE32dIBA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w9 Pf5efgAAAABq5vGAdgltWTTYAqX/sTjqVn1qThyCVRrII5dibIXo+uS+laTHAXKxua1GtrOCo/6NV49T4HiHd7/UI4JaF89yW7e0Dg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -746,10 +746,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -779,10 +779,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMNTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMNoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -812,10 +812,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq8Qnf9GPV4GxQOZmQaTIW43GohbNuGVYnvl7nfvHWNTAAq6FDkXrs0mpB/JI+Yg2g+H1iPL9T6F4r4ufOQxILTny8CQ==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq8QnffUd5KyJQ56b3a90F7pUJgpzLfnL6100lKC//Gd1jlggZNs3r6U9tsnt9HrqJCYPQgF9JR1/4VBSQVKXtFizdDg==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -846,10 +846,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w3 JoDrmQAAAABq8OMMAVp0RI3NcPOpxot+ngqUc52Gb3glwHuvqxB1QxezlTQvcQavq4WcP8ycWOqjpx/NWThIyDkT/711BQ0QB79pBw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w3 JoDrmQAAAABq8OMMvgHSHk/D0vVuSoKGINnwxDB8KtACj0VOHHOCX0NSCPYSekRBkzz0V6iiwePqzOAfc038cbKJjRCTp0k1G7EPBA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -879,10 +879,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OP9s9ESmS+Gchl9o1dkLZ04fECHebtTxVyVuKMQA9XJlktTLGxI/j2U0LfYbNOP0JZLNfinqiF8BLcxjSrQD9C0DA==\n— w2 a2FBQwAAAABq8OP9J9aIEFNo9iVTYn/dOH5zV9XISR8DI31BeM5Y5RL6g5Js9erZ1gPydJIZgTyjmdG+JsPKqN48mj9dcjYH1p7DDA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8QX49jSyBT8ok8/jeSedoZpmzn8RfVjd3VgD5yYLF8vxWuvEVrWtsIfRGNfmgL+yXp15UqT3BaGx4P7LdHAS40W9CA==\n— w2 a2FBQwAAAABq8QX4jzdKspZIhH7VG10dRbAv6KsGhAiGnLS8TyNPAGPaSX3qYkh2lL/kLD0cdQAdKEyXRMHnZPK1d8NrhmdCUmZbCA==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OP9GwUWANAyeGvapRfhnd0ZtWhLbdb8AadcF1lWq1GUYXwGaYJ3n3gH799EpptKrm4hlrAF049uJMjf0mq0oouRAg==\n— w2 a2FBQwAAAABq8OP9AqITCpYVviMOajLNHtgVV+fBSAtWQ+iH2jSIO67XjfcPJTrTB/YMIZO+ep2Y5YI93qKuuzQcxREDNcNBXq+vBw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8QX4rm13xu4SB7T3cnR8aqvBsnYeXfWuMPx+w8m0s6eY6LY4qRBo+aFwu8d7jf77exxanXAyJp7bpx1xjemE9ppXBQ==\n— w2 a2FBQwAAAABq8QX4eX82+zZ97+jvOCNMRAcigGrmiZK+vtsN7g40ctnMWWh97r6Dwnxxzs3rpRqQ6sMOUsYZsK6v0sLwpV+m/7PiAA==\n"
             ]
           }
         }
@@ -912,10 +912,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5v+a6FvQXCKw8CrE+MgQN6b4mOkEh+HsrgEwePWheNOhbJPHYPa1aXWF8jyPD8Ida7PlLmaPEz+wqvQOKepX4k3QCw==\n— w2 a2FBQwAAAABq5v+aIdyL5Ydsll+SUaUNfQBqiOsAF3ecom04wcEoY55OKpi/OVgA3sFHA4AnC8fymu2Yx7qE3r5XknL0BgLItkswCA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq75FQpUopzZzyN0kIR8XbADOraTZGCE7/9LeiJMqNT6w1s8G0hFRsuQ3x0ojL95W30llPob0lCreeeN8TtPMdhS0xAQ==\n— w2 a2FBQwAAAABq75FQHsSQ/UCfXfzbAIj8pKYdm1/g65M+aIet/nBc3P1t9vctrGHnGAQbEE25f8NeI9qcU9vKdLtporxp05HFkNFaDQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5v+a+/LeRP6lWk1DRMg11DxzS/O0XtMgMsCIxEnKHqeaXFGoD70q5kYvMxC+ZqRi5/5K6FurHw0yENHg3cJNsBk3Cg==\n— w2 a2FBQwAAAABq5v+aCat9HstfINdhiuqL1Nh9AUNXp9Jbvtfb8nqd33zJk78Qr8mJ4PPliWgDoNf+QME8hvSLryHiBXziheASYkjvCQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq75FQN0Lr54BAWLgviC/N0rsmD4I8He8MW4uMB8VUT1m8003I3nrP/a3rlRZhShJTiCbFqYsngJ8NKXFyPzN6SFxXBg==\n— w2 a2FBQwAAAABq75FQ/D6vNc/UagK4W96ll41L7oLEHSFWW/PyWSGM6b/TCMQQeEgPwbwIOdpXs/jGU/FOIRrJwb/gK45GySssYnOXAw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -945,10 +945,10 @@
           "path": "elections/log-layer-4v/board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5v5jx1HM0mh8SlgpZViCReg0P/3OY79tRc+RlWZrPevKEl9QVoA/6QfcknBg/Q4vreApsVdsoOvD4lGGTBrdIHOwBw==\n— w2 a2FBQwAAAABq5v5jYHCkQkmYm4xf1AHu54O4UUyQJCcVENR9MvE6S543XhgAdLWkG/wnq1PSNaA0k5DwUqX2gyoMf+i9QqDB3w43Dg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w1 7y0PGQAAAABq8OMMymQzJX+1drBDB3sqEoRh3cLH1/8fZOUUWGpDqPpf9GVtF0Ab7Eg+ElvjGLXZiD67/F3NXaHml/vC0S0z1YqKAA==\n— w2 a2FBQwAAAABq8OMMTSKH3eWvQRt0LCDUc7l5aDzmFtTAsAWIM+RFrAXzK8RgL1W+OO+Lfn50t6BkagNhQtOWobALNqVhT5ZahlhPAg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5v5jTFonQkfn7C38g3q3RXATMP2IeXpHv7DAr+H/ld8qUk8mt2K4oeBhCv4ozPNmuJfowtPuQHXQOIccctTuNP3zBw==\n— w2 a2FBQwAAAABq5v5jtY6LBxJ6kwCZUeiryA/Sit6qstqX838fSkgwNjSIdXWAt2lMvL0CYESv8nnOfdYty3up22D2NEfmMYAlcPBBBw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w1 7y0PGQAAAABq8OMMUxnI5P0QRBDI4UztnKQQ8+ifUhKGHFfbAQV7ZVg/0lSm/VwZ07dupZpPX5g86X998cpfTsC4s7/3wu/i9M1TCg==\n— w2 a2FBQwAAAABq8OMMoWwa5dhFG4KSziWpsQCaxeMJrzOn7bWaH2vJPaMwNaV/0tTchMC2A79sI55mLZ4GEAGVfZTMVjhepGH3DaOuDQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
             ]
           }
         }
@@ -981,20 +981,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 18,
-              "leaf_hash": "sBQ03cKyD/54NTpzvQoVwRTk1rzXOtBa3EDxrQvQQ3I=",
-              "sequenced_at": 1793000018,
-              "checkpoint_deadline": 1793000048,
-              "promise_sig": "Ydngx9C9BZOyOU9M5x1EklQxtNs/qeLJR1zep9u6GrORoOw/XoACty66D2oh7EDN64dkzmWSwWj5DO4OQIj8Dw==",
+              "seq": 19,
+              "leaf_hash": "S8kLK9g03xjdoi80CMxTOIrhLq4r9/Ymrh5qaPNAGTs=",
+              "sequenced_at": 1793000019,
+              "checkpoint_deadline": 1793000049,
+              "promise_sig": "H5Xnez5ApQSuP6CpDWRqXV8MWcPAr90gZKom5WvWHyGAVf/QdmJEAG41Ic2VSOgU2fOzJrGW11O/SOL1NtrBCw==",
               "inclusion": {
-                "tree_size": 21,
+                "tree_size": 22,
                 "path": [
-                  "R8/qgFtNnW6vuZoIOlKVGoxPQghm7MQRqn0X+XEbPw4=",
-                  "p8kynRxqrXrG9ubymT/z6pCgcz2PFUEfVN1NjDtAa84=",
-                  "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "uefA72l1PfMymYDm68JSa4Caop+ShFM8Q7G7iDGROEg=",
+                  "Ji5qpVsJPK5Sg2rz2MSWYHfjAmN70pL5Iyife8JSilk=",
+                  "M5OyFGTdVhM4kWw0DmRaC4TfsPQkXOnlqbDMlJina2Q=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n"
               }
             },
             "voter": "bf52c03edf2dcedd5c385ff125c5d6429e01bf14541ea5c68113acc15007a7f1"
@@ -1042,20 +1042,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 17,
-              "leaf_hash": "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
-              "sequenced_at": 1793000017,
-              "checkpoint_deadline": 1793000047,
+              "seq": 18,
+              "leaf_hash": "uefA72l1PfMymYDm68JSa4Caop+ShFM8Q7G7iDGROEg=",
+              "sequenced_at": 1793000018,
+              "checkpoint_deadline": 1793000048,
               "promise_sig": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "inclusion": {
-                "tree_size": 23,
+                "tree_size": 24,
                 "path": [
-                  "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
-                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
-                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "S8kLK9g03xjdoi80CMxTOIrhLq4r9/Ymrh5qaPNAGTs=",
+                  "Ji5qpVsJPK5Sg2rz2MSWYHfjAmN70pL5Iyife8JSilk=",
+                  "S4vFcTOIyPqfgU+9TUHGp+6HO5qDI4bavcEJ1B0bNkw=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
               }
             },
             "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246"
@@ -1089,20 +1089,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 18,
-              "leaf_hash": "sBQ03cKyD/54NTpzvQoVwRTk1rzXOtBa3EDxrQvQQ3I=",
-              "sequenced_at": 1793000018,
-              "checkpoint_deadline": 1793000048,
-              "promise_sig": "/eFBfDJqyfXLbdo5cMmhLX0ehiRwK7hgkT0B1VNapwSOzSmWvDsS6gu6xv//6n7nsvda+z3sAuEnlKWnmSEgDA==",
+              "seq": 19,
+              "leaf_hash": "S8kLK9g03xjdoi80CMxTOIrhLq4r9/Ymrh5qaPNAGTs=",
+              "sequenced_at": 1793000019,
+              "checkpoint_deadline": 1793000049,
+              "promise_sig": "Mk9u7j/qWpf06GgfUkHk8y59Yq1GsEdqCowdPEj5Yav+cyxkBw1071Z8R1bWjfP2d5VLxu6/naBQLXrf0hGCBw==",
               "inclusion": {
-                "tree_size": 21,
+                "tree_size": 22,
                 "path": [
-                  "R8/qgFtNnW6vuZoIOlKVGoxPQghm7MQRqn0X+XEbPw4=",
-                  "p8kynRxqrXrG9ubymT/z6pCgcz2PFUEfVN1NjDtAa84=",
-                  "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "uefA72l1PfMymYDm68JSa4Caop+ShFM8Q7G7iDGROEg=",
+                  "Ji5qpVsJPK5Sg2rz2MSWYHfjAmN70pL5Iyife8JSilk=",
+                  "M5OyFGTdVhM4kWw0DmRaC4TfsPQkXOnlqbDMlJina2Q=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY9MrNlZpNePdPrMRtuL/txPFpDWpGDsPp79HVzp5rcKO/EWJ66P8fNcKrLNDlpswqbhcr9r3ELBjU+VdXqzYLAs=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m uD0jY/MoFzhvMJaye5jKbARLwtJBRUl8cT3ETBoFJbigzhfntJXn5IoRudocdEK1veIMQXSnlJwv9FtTNxgjQ3CVVAU=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n"
               }
             },
             "voter": "bf52c03edf2dcedd5c385ff125c5d6429e01bf14541ea5c68113acc15007a7f1"
@@ -1168,18 +1168,19 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 20,
-              "leaf_hash": "QotR1aBxZKOnrkc1NrY0z6wJvxVnrduZ2lX43FUSoMQ=",
-              "sequenced_at": 1793000020,
-              "checkpoint_deadline": 1793000050,
-              "promise_sig": "ShYQ3/6iT05pprXV1LFHnysxHaCSWPyK8W33l8T9h2ZtMOTWD5lL6kXxzEuR8gC7RJWxSPEdNsZv6bDesev5AA==",
+              "seq": 21,
+              "leaf_hash": "9YgGYO6fFvUvBODh+3x1KPRGfukBVp3P1EQv0e5YGqw=",
+              "sequenced_at": 1793000021,
+              "checkpoint_deadline": 1793000051,
+              "promise_sig": "+5rVLZloVTYeQvxgFxs32pJolj4IRxbl2coQPmdCRNJlWKxpHZZnZhOJCowcQurPcW5x6JRIU7Ip8y4P6lvnDQ==",
               "inclusion": {
-                "tree_size": 21,
+                "tree_size": 22,
                 "path": [
-                  "z2sxpkiVQI2AksdcXU2mP7zfeCuMrZkFxez9gnwfbFM=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "LMO/gb0T1QQUrAnZtgp1fJ4W+LpIsHjHBNZwzm/2JzE=",
+                  "VYm0uPofDayaH+4WyUwQuaC1G7bWthnu3YruvXKFLp0=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n— w2 a2FBQwAAAABq5w2gKqU5blaLLbcjFOkmVmcF8BV9JLh20BW84ZkvRxXvAUIzDj3o+M2GU0RSsan9iiDMZ1+NenE19Zrtpp1uEJX2AQ==\n— w3 JoDrmQAAAABq5w2g+0zgndj8TpY5X/gf5E9nlo13AY8dRBKDe8vgQB+FReWYOXD8i4eV67aJwJGCshr9ZF0rdCusnYyR5F4hHiZ7BA==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n— w2 a2FBQwAAAABq5w2gCLLmMrIwDwM2pTdSd+vClH8vdZ5waVBQustJ/RLst60C0ljxJFx6NbY5EmihYpwfCxywMnMRu4Nigp+YcZQyDg==\n— w3 JoDrmQAAAABq5w2gE5uFgmyj5zq5OWVBw2uBbs9Wlm//L4MVBlf8/CuLoACub+m6JdArhDog1NnN2kbhGDiVnMj0d5qbCOAxX5moCg==\n"
               }
             },
             "voter": "632ac970c55017ae415f2742fcdb3f6905df555df5ec29dbabe17059e493eb83"
@@ -1215,19 +1216,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 22,
-              "leaf_hash": "alRoFqFV6Vx27soylubMdn6jW65YL3//nNPM6Uesk/o=",
-              "sequenced_at": 1793000022,
-              "checkpoint_deadline": 1793000052,
-              "promise_sig": "m0u/06J42EivCvQyggAJM5TRBOoLAuPxHbO5cPmZAIgOaBLo32a6nuGQ4WVlhp2OAp94oeK46YtlCTeZbQ8cDg==",
+              "seq": 23,
+              "leaf_hash": "whC31tvzte1JDOhn5TfCn5GFm3atlwLXNE2UzExM+w4=",
+              "sequenced_at": 1793000023,
+              "checkpoint_deadline": 1793000053,
+              "promise_sig": "24hKOAZsbX4p25NuOoBq5yDZcxUCNcI/pQGwfhONpV23HMJW86t/i9gVBopcYhO//ouJSkfDQitob6fRzIY1Dg==",
               "inclusion": {
-                "tree_size": 23,
+                "tree_size": 24,
                 "path": [
-                  "3r6N0zLlfRhTGKxDkQMM59nu8dT/ZzWTxVrMf4Wr8WU=",
-                  "z2sxpkiVQI2AksdcXU2mP7zfeCuMrZkFxez9gnwfbFM=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "sp1jWtcqFyxrm5BUVPZr+BsBJ8ausOhTPA4hZcUcdIU=",
+                  "M5OyFGTdVhM4kWw0DmRaC4TfsPQkXOnlqbDMlJina2Q=",
+                  "VYm0uPofDayaH+4WyUwQuaC1G7bWthnu3YruvXKFLp0=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
               }
             },
             "voter": "632ac970c55017ae415f2742fcdb3f6905df555df5ec29dbabe17059e493eb83"
@@ -1262,20 +1264,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 16,
-              "leaf_hash": "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
-              "sequenced_at": 1793000016,
-              "checkpoint_deadline": 1793000046,
-              "promise_sig": "57aLWRuN0uZYnAdwOxggb6vryIw7kST66oX590CBInVhBCZQ1Yk3+Bbm/YFHuiildBcUCgYV2f/TWyFEheEzAg==",
+              "seq": 17,
+              "leaf_hash": "ek37DSatSutmxGHNQ1tUYQsBZwmsbB3fvjxGGztwhi8=",
+              "sequenced_at": 1793000017,
+              "checkpoint_deadline": 1793000047,
+              "promise_sig": "XDpUEwFNkk9oDYBMpsqef3k106/PJ4HNORDZwrGyVadCDRJlVoE0+5xP6agTMMNI2UxLeUvc6PJ/MfnzID1mDA==",
               "inclusion": {
-                "tree_size": 23,
+                "tree_size": 24,
                 "path": [
-                  "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
-                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
-                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "KB/VbdAlgYq2jmG5s89iYGpGsqT4wl49pZgAkAr1GqM=",
+                  "QQJgwBsR73YkOq4an+gW4dVq0udsQK2DbJ4eFr/JHEI=",
+                  "S4vFcTOIyPqfgU+9TUHGp+6HO5qDI4bavcEJ1B0bNkw=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
               }
             },
             "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246"
@@ -1310,20 +1312,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 16,
-              "leaf_hash": "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
-              "sequenced_at": 1793000016,
-              "checkpoint_deadline": 1793000046,
-              "promise_sig": "57aLWRuN0uZYnAdwOxggb6vryIw7kST66oX590CBInVhBCZQ1Yk3+Bbm/YFHuiildBcUCgYV2f/TWyFEheEzAg==",
+              "seq": 17,
+              "leaf_hash": "ek37DSatSutmxGHNQ1tUYQsBZwmsbB3fvjxGGztwhi8=",
+              "sequenced_at": 1793000017,
+              "checkpoint_deadline": 1793000047,
+              "promise_sig": "XDpUEwFNkk9oDYBMpsqef3k106/PJ4HNORDZwrGyVadCDRJlVoE0+5xP6agTMMNI2UxLeUvc6PJ/MfnzID1mDA==",
               "inclusion": {
-                "tree_size": 23,
+                "tree_size": 24,
                 "path": [
-                  "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
-                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
-                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "KB/VbdAlgYq2jmG5s89iYGpGsqT4wl49pZgAkAr1GqM=",
+                  "QQJgwBsR73YkOq4an+gW4dVq0udsQK2DbJ4eFr/JHEI=",
+                  "S4vFcTOIyPqfgU+9TUHGp+6HO5qDI4bavcEJ1B0bNkw=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
               }
             },
             "voter": "632ac970c55017ae415f2742fcdb3f6905df555df5ec29dbabe17059e493eb83"
@@ -1331,20 +1333,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 16,
-              "leaf_hash": "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
-              "sequenced_at": 1793000016,
-              "checkpoint_deadline": 1793000046,
-              "promise_sig": "57aLWRuN0uZYnAdwOxggb6vryIw7kST66oX590CBInVhBCZQ1Yk3+Bbm/YFHuiildBcUCgYV2f/TWyFEheEzAg==",
+              "seq": 17,
+              "leaf_hash": "ek37DSatSutmxGHNQ1tUYQsBZwmsbB3fvjxGGztwhi8=",
+              "sequenced_at": 1793000017,
+              "checkpoint_deadline": 1793000047,
+              "promise_sig": "XDpUEwFNkk9oDYBMpsqef3k106/PJ4HNORDZwrGyVadCDRJlVoE0+5xP6agTMMNI2UxLeUvc6PJ/MfnzID1mDA==",
               "inclusion": {
-                "tree_size": 23,
+                "tree_size": 24,
                 "path": [
-                  "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
-                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
-                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "KB/VbdAlgYq2jmG5s89iYGpGsqT4wl49pZgAkAr1GqM=",
+                  "QQJgwBsR73YkOq4an+gW4dVq0udsQK2DbJ4eFr/JHEI=",
+                  "S4vFcTOIyPqfgU+9TUHGp+6HO5qDI4bavcEJ1B0bNkw=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
               }
             },
             "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246"
@@ -1379,20 +1381,20 @@
           {
             "receipt": {
               "origin": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m",
-              "seq": 17,
-              "leaf_hash": "43oDQXTM5LZY9IMzuqf4qCfp+0yEwTxmAhURKwQDM7Q=",
-              "sequenced_at": 1793000017,
-              "checkpoint_deadline": 1793000047,
-              "promise_sig": "o9vgoH5TmUXIjZ+NC98/Qd7S2NrQ0m9I4sT3amV6j9JQWFVjyo3gQ5/ad/6A7BghhjxiGJo05f+aAC2XulWvAw==",
+              "seq": 18,
+              "leaf_hash": "uefA72l1PfMymYDm68JSa4Caop+ShFM8Q7G7iDGROEg=",
+              "sequenced_at": 1793000018,
+              "checkpoint_deadline": 1793000048,
+              "promise_sig": "UOQNhRtlq6w2TzAsXqH0JaiwU5aQm3ivMirbDwD+SJOOubN1gGAulFDq0Ztj8R99yxBEISTYssgB5wnBdZRhDg==",
               "inclusion": {
-                "tree_size": 23,
+                "tree_size": 24,
                 "path": [
-                  "3gOUgJ+HR13gqHIXW49Ry098R8W08gbsFTMDJCFlgGE=",
-                  "/wDpX39VTwrD+2Od70K+GRLMhKImIhlvep1LcJcqRVQ=",
-                  "pAlbbmZxc2/UqUJFLl8/2HIlmDSMC4NnFTk7KzzUSyM=",
-                  "YGKOXxZMYakGyu1R+tiIa96m61KaC+oLE2X9QxibLjE="
+                  "S8kLK9g03xjdoi80CMxTOIrhLq4r9/Ymrh5qaPNAGTs=",
+                  "Ji5qpVsJPK5Sg2rz2MSWYHfjAmN70pL5Iyife8JSilk=",
+                  "S4vFcTOIyPqfgU+9TUHGp+6HO5qDI4bavcEJ1B0bNkw=",
+                  "SMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA="
                 ],
-                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nAquGo3cIVo5no3AiaxUi0Pp7J+5Pwg+OT0jqAzEDlDY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88TmjVEGNAkrvWvd42CVWkErywBG91E8xqNMttylUG4/fn6nsaFnfx5PjyNDCDbpUmbf6GzVcjR9F8sqYX8s7g8=\n— w1 7y0PGQAAAABq8ONI+H1wXrdPUoyB/Uj6PVoz/c6z4QqXIazwljV3SAvgHtwxKtbRM4RBc7Jb+HRQmwxEi5t0TaeWlhXPKePC2yW9BQ==\n— w2 a2FBQwAAAABq8ONIdNFq1vQKx+XkCZjwX44nIKltLxdZ2UUhI7K75v0gUvTXX+0/zAvWleqSdRkOmB5l5rJmM6sJnRTXkRQg/Or5Dg==\n"
+                "checkpoint_note": "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzLNRH3ocGWAvE0rMFYKXDL1YaXBnabOSAhhk+zI+wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81NS0Ht0eusj5oRgvrm0LiPuW8kXZcTQMApSMyDAYQFW5jn/u6zQseTuqZlKKsxowNUPUPkWWTtNfsLlI7TfYQA=\n— w1 7y0PGQAAAABq8ONIlqDQH/kt2xtLCAulogDq2nd7snHfzKp5XRePYVf6bGRRtvJfrzsgeeDplhCPcTBMzMQrdg4WrAY144/CIrYaCw==\n— w2 a2FBQwAAAABq8ONIWp3tPVtmMoGL3CY2rC/8WH7Ak7xwrbRzGJGc83kpYwW78sCv+ip/Vw+DgwK1XBcQJPBh48270u7wC65Y4dacAw==\n"
               }
             },
             "voter": "75877a1dd500c37634e089d583ad61e3e03296cb69f0b8f52fe0f84821bfa246",
@@ -1465,10 +1467,10 @@
           "path": "elections/log-layer-4v/notices/waiver-before-open.board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\n2xtc+bcanpsPLSHNvNycFCY+uZp5j7BgDL+24nenhUc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8y1LmHrPC2FYxde/L3JvzN8JFw7RzyX2w2foh1vYLYJQjC+O2segovweWT9/5NLMa/xXR+E3Xw74H/Ex0e6mogs=\n— w1 7y0PGQAAAABq5vGAWEhwGv4o+hnAN2P1mKWtx9sBDQNRg/jgdffobzXejzNAebZsFiRVlvgfZ2P+dlf46AHi6v6wFyhsa+98MJSaDA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\npkUnvotMOVo6MbWaNQGF5PcnnXhb4D83FEF6xTOL1u0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny80gzwvtZueloFuGSyxYXSSBVYdRnnWamI/z53vyw7I7+1of8nf7SCDRRgu/mebHSLrZwDysLRqNfJUNxuGIFtwU=\n— w1 7y0PGQAAAABq5w2g6Nt2EWKtpKAXyjG9lP6AYkgUvxjOnNkT06TCqnWK86D7tspLrw8faG0RD59nagVzXGSNWfZ4PmAxv5qi6qV1BA==\n— w2 a2FBQwAAAABq5w2g8x4KqVLI16n+4Nj0QS9iJP8vS6QuarySsU/kti0MDSC7lYmUsj9tQ/FO1gVMu04ggSqHvcfc6kgWdOMBqCaQAw==\n— w3 JoDrmQAAAABq5w2gAoHeC2yjqLqCrv/knpOmqjguRZb3htylh9kzrP11b9GbiITKO/ZGZaRarWlMKUEKoeXJu/SRqLOmG0TavbU1AA==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nexes6e2GVekfuHwJt7NsI3uj6g7M5VHXs8568k1Dl8I=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81W53DmsmEE0UsK6P5udCHORaqD9EEWKE6QJE98EqWhul+Y9WcEmRr0lNHmB5wBSPGhKjEyAd3s+lV9GjsOH5Ac=\n— w1 7y0PGQAAAABq8OMMRablnU3QP9WPrgcYDClaHSqBcVYYHWvZjnYY8RJuK/VX/UYltChnMTvY/9ftN4PSwS6DcxKoHy0M6b6YFDkxCQ==\n— w2 a2FBQwAAAABq8OMM6oFcC3CfdoNKvgn07RoKEfCwZc/L75OQ2YWjl+31FpxtYgQ656czPxc7o5/uh5py7bJU7aItrp6XZFKkM2u+Aw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\n2UUSksYqAz8MW4cRIFxxuO/mxyk1NH1LlVm+Dyq8zt4=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82Y+vEgG7FmhsRTvfHGWn39uk0fdEMKdXDhwIpM7NO1WPzTvNE8syr/PE/TxJQdQ7wtQamPpdrVa8WdWgXAEJgY=\n— w1 7y0PGQAAAABq8ONI80YKRHXCugTcR9Xk3zCNZppPu7FXkLC9dk6twtJ5CqFAqIeJcAl57j84Psf7k7yK+FY6k2EXvyxGYI4X7+O2AA==\n— w2 a2FBQwAAAABq8ONIRAKGYnLBYNePSEQYDjFSg0BfBDJSUsjBfhO2gvRDCi4jkcsLz3n1gr5H/0g1yfJDPNeX+mOdun2qkO4uQ7owCw==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n17\nVWiGD0UPpvLqcn2Xyo/Hvw4Om4DPe5qDv2HGRCa5dVo=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8y/D4StQNn53Q+VErANNcsNIUojG+6f4odmOGcwzizMSFYU2hJnhP1H0p2XLzidXpWgW4kqGAojXTeS4QXL3gQk=\n— w1 7y0PGQAAAABq5vGAyzF51ece71TgZQ/o3xmUTHiRx9Mz4PtjFya6MaHC7eXTXbu+ZS8WoMvBuGrcab5q1RznJG0iW/kPxskQgn4TAQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nB8UN0ChYkQAaXK2oP2BITGOxM93gH6GO0b0ICv8/3Ak=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8zqJTyIRHI/GaerGv34uP3vTX04HV81bm3+6FpDQ7PvIaPBF4U970KGShW3A9EGRCiOa2/4pG74oYqpS+ftAYAY=\n— w1 7y0PGQAAAABq5w2grqtPtwq1suA29Q8TiHiq9BmXQiTACjVh8rpkP+SXUCpplI18r5Ir7hbEEKgENlEfiYa/umZthQt4WBng8KFxBA==\n— w2 a2FBQwAAAABq5w2giUb4GpcttMYcESG30jdVjbAG1qXlL/mcmPaur/ArPGPGAq+QQwZQ4fMi9MClGSX4cNzJGSvBBj561JtxsVcCCg==\n— w3 JoDrmQAAAABq5w2gIMJkwnTn+EdlhGQYa0RMHuxVCagAjLhaM3XA9MeVO/ZaJk4jtp78o1zm+GH/pcLOoMr8JWPE9inQniNDr56QAA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nisMMDw/NYxGrQ11uzH6Ur8LHxrNW3kx0Z2nI9CKuUsI=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8zH49m22GfJzNw8h7lUtAiU6NXJ6I8wlQRBHFqp+thx9J/wo7Q4sQKaVeQmXQzf+8bSR/D9DhagnrBFpPTeINA8=\n— w1 7y0PGQAAAABq8OMMnO4k1M+KUVWaLudI2YU3P25CV4ND1sl4/OAg1ehJoJW4NJlTDl9hxfyO3aUC82pOH5ru6tNLgHHi3GAJoKAzAw==\n— w2 a2FBQwAAAABq8OMMvJ7x656JOU01U7c0mtD6p1SNHYin/4B3XIU1jlrkyoC52QvdEB5l4WDPgBF6oRU4SvJzZRQCh833zBKO8j6VCw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n25\nszBPR2fvE3BrM7QUn1/Rsi70GdVrgQdCzHFljmNI3bU=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8ze+Wqul+BQgBYwuhXms+GzUf3wPcZB9uXPsHKkMggIRjfxiZsLD+LLTW+xN1MqiA/51bPF4WLl2bqHpvd/dugc=\n— w1 7y0PGQAAAABq8ONI/AWXvbOFlr6GuunC3XgnhYBeQWeccbmbBFZOTPCkzmfAcbmZtGA+wI5d2lUVB+JlF5/Rtsn1gn85IgHx5D19Bg==\n— w2 a2FBQwAAAABq8ONIl9PLHcy5rW8th0dYqURUfXyMxZd+w5RDJH7u67l7nuPlrdMMtBfguxU7CQS9xAgDo9ZTB3bcc0iv4M6CHh2oDA==\n"
             ]
           }
         }
@@ -1501,10 +1503,10 @@
           "path": "elections/log-layer-4v/notices/waiver-after-close.board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n21\nEaQYRApM5bfTudU5wV3eAlVBxWccfw/vYT8igDRpnIc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xqkuI5svEjMI4xnmYGxQ1MCMR/wsWMJSBm8kSSF3bli4iUx17QYx2BWOt3d5uDXEUft+UscWGzLJHSgegYrmwY=\n— w1 7y0PGQAAAABq5w2gETzQwWFj0f6+vvgWC6Kpwcy6iHIk538BKx5VU4ePAD3fqIU471ywfaLF6tAwNdf5o58QqhNON8HvQ0wOQZd/BQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nw6Tu66Bm9p/krfg6yrKM/2CBwc02SC6QBJBBFrO/wvQ=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny89haAK3Go0CIXlYOIMcmhhM9a430MZtP0IBH4dR4flspUkYt0DtM6H+H+dywDrAiS7TW3yDfRApp9VzlsYkmpQw=\n— w3 JoDrmQAAAABq8OMMAVp0RI3NcPOpxot+ngqUc52Gb3glwHuvqxB1QxezlTQvcQavq4WcP8ycWOqjpx/NWThIyDkT/711BQ0QB79pBw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nwSLGc+nidIWubUse/fT0PegZ/1wO9ITgPSt3HMIcndc=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xGWrXPc8JKGEQngwSzJOav5gZ7APaOpGsHtRDpmTmSKQs8vD977QElO3iP5p9hoTcIIeBz/5aR432NF253ywA4=\n— w1 7y0PGQAAAABq8ONIa7W+R4u0CDqK0wVbULIdNYOh/TIlA2jcpve0QQuTlEarImsI7bBL0HE/plurG3Qkhf/l1i6uUr0hq5X5HthfDg==\n— w2 a2FBQwAAAABq8ONIp8x13KXOzP/5Tt+DHWViyj9K5P42EnYNV77tRZnG3h3ZcyakPXdGnbpeVp3m58y6UjET3lIT2la447EzzyU4CA==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\ncYIuG5dD7leAv9VoKrP3NoMma1SRfimUUqU6/2y00I0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny81MkuvN4LRbr7lym2CQj46eg+lMDNAuEYVqEtSaDQlvJKDXBdFBJl702FCqCbTFZETsm2RjLHpii52CNL6c9qwk=\n— w1 7y0PGQAAAABq5w2gZIxRquzVtm/qmM0oPhZ8/Ako0swfapP+BmI+pYn4f7TmmsWc3iOvvyylPrVdD9hUa3O09UH0cihfz4p0zFY/DA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n5AJeMMXcUJbRlptUeqQQkT1zoZte207ChXM7pwSq3bs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny88j3TmVNJJv8FrhJkNRtXtCf9f6kv1VH7P4QQrH/1LTZgkCvd1cRqvkUjI94xtiPJu3hDm1hpQuQQ1w39ZCCTws=\n— w3 JoDrmQAAAABq8OMMvgHSHk/D0vVuSoKGINnwxDB8KtACj0VOHHOCX0NSCPYSekRBkzz0V6iiwePqzOAfc038cbKJjRCTp0k1G7EPBA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n25\noHBCvkDceAf6jZWzAVGYMdki2ZPtHJnBeWqBigeertE=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8/23fe1WmXIzS2OGW5QRSQxRv/L5qzq7VvrmeO9UQk+2Tsvkc+4I3d1dnxDS/xYZbvcQ7N+KZBmXJn4Fq2s0igA=\n— w1 7y0PGQAAAABq8ONI4bX9r5sufqQMZ2/lx7Icr+kvSJkkLc4eGO//tbChKR/t9jlXsJo6shTYNeWbqjXy4hdKFEg/6jfA5rsDTomQBQ==\n— w2 a2FBQwAAAABq8ONIoZk21L1VFAugsUxuBDgnrrPLpUN9rUxXceov8HqLf0LDdzPHCTSE0MtRwtqVyyuWBdHVki7fWDs3JnK68xcgBQ==\n"
             ]
           }
         }
@@ -1537,10 +1539,10 @@
           "path": "elections/log-layer-4v/notices/waiver-with-quorum-field.board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\n37uGfAGRdJPOhusTIFeASx8HGCHs+gnpKbrNEwbeg7o=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+ru93n6N0MJGEZ5VKZLArl5/JAR1dgrKYTJDhAYDGEE3BfDsUt+kZK8xLmwoSvbm8QZcJp8wDhPVLK3IKtXCA4=\n— w1 7y0PGQAAAABq5vGAbiAfBdfGAFBzV8Y/aJSaQCZTqHdtt5FI8+VRKt255Ikf3lKHjJN2Lkv4rsRNZ1vw4I//4UUPSWhgQ1NfEXiQCw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nZh3AFbA+NJMjBJNSbsPGDoYLtjyMXWLlQR2FFxcU4yg=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny86JSGifjvRI3MbxAw53MnwSpscEkFNtTlQbftRjkaBSjUa3l5FRa3nOtG/s5o9ezYAPVcF/AMVHuo3ogX6yn1Aw=\n— w1 7y0PGQAAAABq5w2g5u7ghb1z/jauXxmcQ0FJRwT7nTjKhdUEpz6QsPXAnS7dbvojbmKJS7Uocrsvpl566MGlyp4tQ7m5LmM5Cs2JBA==\n— w2 a2FBQwAAAABq5w2gT2RrRQxviFD9i2atE7XqltzJ4IgiURYInTntuCR86XZRVWu4+mBLRCzxci3x1DTNJHGxwtHt/xIflpMe4XBzBg==\n— w3 JoDrmQAAAABq5w2g9zSwOQphuiLJ0XzI6bS28S1WPLbVW8rjBql6RdUHXELvi9rvYfE45nkd1X7xqRJvjihM7XMG96jCphc1HYe2Bg==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nF2o4KGMjroRAdpl8xtFIu2PCQTEocHuhDMOh+EZK0eY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xOz2sqXRKqPqTLCgPymkAd5yVF59YUE2/nFMIRTflOAceRm1CEQvRlOydk0P+GCIlwmLvndQQeQupRqG0jQ9Qg=\n— w1 7y0PGQAAAABq8OMM19x91IoqQRjNGgBUXjWNBMlKug/iWkfTMhEz9z6w4DEOjQo2Fjd+eSG0FcTLJvjF2zIi8HrLbJeT2p8MeOQkCA==\n— w2 a2FBQwAAAABq8OMMTxXKUKMUAkzMd+on+0j2IN5XuLnHsOEOqzoVq76HyYpy3sVF614jHN0UIUmSfljrBAnRLX7or9kIzkT/JliMDw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\ndIfq+bxjQSy0i/Rd0nf+u2zdPx0F1k2vA8b32LzRB5Y=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8z1Hg1PYspBpbFeSvURiTjlHSl1e/wCbs5Hn1ZPcxHocGsIBmALqHUpTei6YHNHyCju6qkfC68B2+fc3og8c+gk=\n— w1 7y0PGQAAAABq8ONIxe6HtB+rkKLpIOv+alSJEaodheSKKEd5FBUku/EzEIQtzNF1hBkizCtuibZj9qJ73RO+9PM5TlyF4k+mYVwDAw==\n— w2 a2FBQwAAAABq8ONIoruTKXGoVjyWrav496PII6WaShNb7/DLpkOdTg1ZjnNDSjhCQ3BcjuphUoK0w/BtDVMj5A6iO4ep0RbrIAeWCA==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n17\n1a/4g8v3ErVmakEd+XRXE7L5HOfnaCx7vq5MvB2KjuY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8/Ll7xQwSfAsSvTGN1xam+PbAClm+JdN6XjWDfuoZC1H3NVpwurpv/pBzcIfl637Fp8GbIOsf+waM7gHyejmLgY=\n— w1 7y0PGQAAAABq5vGA3EEuJumPgZXumfRUVzzXVhvhb2dhha7Wps8RsZkEPF5M7wJTbOz2aYuF3f8N98RikNK5eODgN/y5lULU8Cg1Aw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nOm27/q6pbZoObaUobq0M1vFRgk3ZPb46IyzQVQAAMpk=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny85veaD2zKynXYNbo5E5Co7BRFle42JFq/CDCOf6iR08rdixZAl5OWZAh0/KSDT7k+1njRWCum0YwDFCdl6Dp5gM=\n— w1 7y0PGQAAAABq5w2gi9BaqCTBFYEq8N0+IBNtDFF7NbglBYmoHv/pdC6knhQQQu2hoa+Js/HB8XB+g2y9a/6oIgcTqgYra8hMhm30Cg==\n— w2 a2FBQwAAAABq5w2gsydB2cr6l0VtkP9/2dbOc/PwtHuwCtON1jr3AGYkGffzy9R2q9Mwrf1GGuRBpmzIXbhey6ZBjp5M65h+VrptBw==\n— w3 JoDrmQAAAABq5w2gKKc2J78SvGHWMHt9z5ptg8puo7bdPmoi6+AlUrZ8v2HGO2vqM64HBkte7fQhn+kvBvsGtOm6K99npN+SeU7LDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nRrruHC+RAdBTr1CnWXBvhLv0j3XHLKM1oVUj86LN+bY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8wSzdHxy1/x8veyzZjqqzUyxuZIf/N7uDO5FiqDCCsH7QhEGXEWdSKWoYsKel2cTI78JsscVVpRLLiLm2Pd4XAk=\n— w1 7y0PGQAAAABq8OMMYhBcrR55E4k7IWf0Q8PUMkjnpEBqs/YAfMgCmBDsRWn1L0NXG89TcNVyU+J7lqTTkWkASNYJyjJVlWocQ1WoCg==\n— w2 a2FBQwAAAABq8OMMNuvMa0tWZVOjhuMksN4A6cNqRIFRHChAdkGhUgycH9OtoChPsmDjZQpE4Whp7WapgK4zmRJhwfFb2tPjWbD4Dw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n25\nBOh3eVNfTSpW0IBMIQ/QKHEvwu67s+L73xct70NkW6c=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xn7iJyqGD5fb2DQJusc8kkluqANocJPUh5xYoZjoS23iRjomDj1iySxMFSW3xXwXxfSCbfQHnBSYADo/VyoCQE=\n— w1 7y0PGQAAAABq8ONIf+vTvzVYMlY8cmfjQZqyJhZvCFVHi5rVs368G9ujPZfhDwhCr7+QqTzdFHwUHXiENNMHw+/zfA5y89Zc/YhkAQ==\n— w2 a2FBQwAAAABq8ONIYCbaigICZZEyZWlO2+BRHr3ekK+a3EjPHvIK65PJF9xNlur2p7G4QhZSfh2r8OUuY0Z7MD/g5Zp0dDV+YLvwDw==\n"
             ]
           }
         }
@@ -1693,10 +1695,10 @@
           "path": "elections/log-layer-4v/notices/extension-before-close.board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n22\nTKJVfke85PkoKU4kQriyr6Jgo3CXrPOO3HEHoIodGAM=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny869GVOryhqYRios+WrIDF8c8ZV1ixSCLesXLxboIDNCPkpdztxztKLNPIC1EoJkneCZrlrI2zlA11p9QC+RZ+wA=\n— w1 7y0PGQAAAABq5w2gP8eIJKMCdOSAi2m7hP1BcRu6qf8RwG8IfDBr/y4VKRTkEIEMmHxGMsQub2m+lRUJGfj/UmDmtbnX2XzqR3AjCw==\n— w2 a2FBQwAAAABq5w2gqGJt9+CkcB8Z0Iuu/+LKYWdCIDAvc1WExu55x3ueeYb5pc8FPCfTDxPIMln00coBElayx1RoA9zPUXJjxv1JCw==\n— w3 JoDrmQAAAABq5w2gu4dYOeXasg65amvpPom4/Ekg8j808oj9dOqh9TdGc02pZkRoZ5cbfqgUTftdd5IuJ0tGBIKtfFhqdLSWjFp4Aw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\nT1g/OIyBh2pzZhCQmDmHjDwB9rTyNhLWvbQGwgjjFcA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny899ZMPMbyiLA3NQIa573WUHfyviZgyXX7APRiQKd7IgwTePitpYZsCnszsOq09XeOaN+eHgs5PJQM/hv6KLzxww=\n— w1 7y0PGQAAAABq8OP9EaG5ViaHw1Z2OZwm1UykdFFjrDe4wO7xxDS9ALuKY/UpGVe+3WGWBzbaE50vIubi4qpXYrqXUFriUaO5jnvdAA==\n— w2 a2FBQwAAAABq8OP9TtfbjYZDRvz7g/Qlb/6XQ8wXnSYasWhUuLK5EVoXkDGQBxXFvZT7oYdSLuKOzBcoB5Zz8RYjYMg4qhmAPJmqBw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nz2ztgBYcvLaxQ7vxDuB3pJYHpi7ZgYDHuwM0klBqKP8=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny80yJZweajAbKfACPENQIp4sngt2LGCphXXS5Wvpp2VjX9gHlz/WlvefOJAMnu0HHiCZfyVMWbxbKsNHm1FRdZwg=\n— w1 7y0PGQAAAABq8QX4M2vJUhlDA5I7ZuFmMe7AORD+2osnud8f+PQ0Jca0lgfkCWmZUJnrp3MujBGXIEJzvGMg4iptuLM2Hxksb1y7DA==\n— w2 a2FBQwAAAABq8QX4MeKpu0hZru/IrxVC8sxkO8Ks0pf9R1MiejyWsRlOCXCPGuEY9XvW5ZkUZT/gRHrqlu09cguh4v9GqqFFoNnOBw==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n4PB12ozpo3T4tqmMJfIOd15Yi544LcKNIAmzslv9pK0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny855D6TyLUxGFmCSxCs4qX4MH2/PuL9KMrwKXY9N4WQ5JEZAMWR0rGv000cEmdF1SpEz8mMjJE9RxxUbLRAXRmQA=\n— w1 7y0PGQAAAABq5w2gTLnKfWpoy6S49rj6gVwl5Ljvmtiq9IbyZ0Fi+hAg/lSFKN4D131ten8htvseBHFOTJdGQJKNz6+pR9ojlL7/Dg==\n— w2 a2FBQwAAAABq5w2gqW4OR8pNFpw4GZCz9lHW3Xc1S1YsUac+sdJlOeGPprFwSeYYdyxClWmhcFQWbYZhZzY3tk7JcsY1sGr2iHabDg==\n— w3 JoDrmQAAAABq5w2gph/xjR8NoRh3v4Cbv+lXkM0dIgPfSsci3D01Kfp2vWruxLuxqhpWioBdAhlegnS8d7cTCoXeFB20gKOqtr8rCA==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nkPC0GE/tnM/yEgj4sEbFUhoGtlyod7FKS9ATCLmtCa0=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny80CfWthr6xlHZHi5n55E9+udOLvIhasFBhCYSixmRaoloRklmKZZY4YLjMS0gRLlCrba0AgawHN+voXN1/AXjwY=\n— w1 7y0PGQAAAABq8OP9QmCjs9lcCVpbz0jRW/BV3LU61jk2S094AZVY4M6g/cnnJlsyHII6Fm4M36nvmvBeuB+neqtI12yT0d/rj7x/Aw==\n— w2 a2FBQwAAAABq8OP99qdAs6ZXRdoBihJtu4vkLM9+mGxB2uQlRjTL7g4pMQhCVC6/vGVYST6jNW+Iu4eEXmrn6lsRzDwMyAc0S3jWCw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n25\nVyLf3rKR9TUzgzpHoKgrAGgSABpAz1htPejEJ9eW7qY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny87VIHlYQRA7us60wKX6Zl7qk7BU962k3F+Ns5ZDGvelAZCqcpT2j5NEb1D5M03qvqpB/n7PPbBx3F2+vJJiatg4=\n— w1 7y0PGQAAAABq8QX4yP7mRu7Wix5InpoF4Q+tPdj3lXXuZl7BWTSobot4fo4plbmfobrIiBl3twcEj2dngK8FO7wpo/gE3rwdvxCkCQ==\n— w2 a2FBQwAAAABq8QX41MkMZmy/JEDc4izoj8PIPbXLQZv+KOyrWzTECV92+UmTOAcGCpsQmRPNBT6Mi6rvCGYwFa5Ulrf4oKlOZYveAA==\n"
             ]
           }
         }
@@ -1757,10 +1759,10 @@
           "path": "elections/log-layer-4v/notices/pause-resume.board.json",
           "replace": {
             "checkpoints": [
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n15\nxMqQxZP7KaFUajERF2xerxSYbT0Xv+eFi0dDYKJEvac=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8+GL8h+dy5aT1zh52eRSc3+Fy6qZR/2LUy7lA6rgFBkuSV3iMQMrzqSpzKn8x9pQE+AppRVyDpTNYirFldIVogk=\n— w1 7y0PGQAAAABq5vGA9UDrhgp1F+hkdhPdASLQ9Q7a2IB4lLR50aLmLPtxIaIFS6RuTqUKtTEb30mld17PwfIp++GZRExGiROjYQw/Cg==\n— w2 a2FBQwAAAABq5vGAZGr35fasmgvA69h8uovMEhHqwJAfyMbdaxjZu1+NtWIrAwRlP/i5tMuVv5K/tbs0m/cpIC1svvf9wQN4mA9KBQ==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n23\n6WmbO7LHDXgbonEPUC4R+E0n3d6w6wB5DGLAa04SDOs=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8xFs7sieMFFJY4h+UlBzTOIDoLDHhyDvfXYR3M0fhYOaSPo6jrpx7UEIsA2kR7h/l04fqGzfWDlZcJRByVJfegs=\n— w1 7y0PGQAAAABq5w2g6cSpcTL8soIVjyTOGDwOh9P5Wsip2jPa/H5qgY7QJa6cr+6eCUWcq+BZugsEFrs9byLrHQ9IecPu0NNnPj+PBg==\n— w2 a2FBQwAAAABq5w2g5ze4xlH7Ba9qYySyzcL/CywgNTTBDscyabEZF+CbkZH/bTe5dLYJ8jMgTjcHeaZmZcwiT6QzzujxARtZn5E5Bw==\n— w3 JoDrmQAAAABq5w2g9hn4bAxQbE3B0zcTpA9BxgQN5lCYGCO9/5oiZO67VITmwIZbNytJ4BUivZdiyTnOleRwOUXTubJ9ylwPavzJBw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nzdEwWKh9Bpx6Pg/gM2gupMjtTKfkgXSB62qv71cDRGY=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny85dHedDGxFUXp16fyjHvTteumuzRyOodSF6dkgWOdyYlvghiMPA8QSurQYvRTNWEWurDCM2Sr+Z+0XemVU/4zQo=\n— w1 7y0PGQAAAABq8OP9kStOit/imbDXB6h/BmatH5NVnS6+MF/Z3ArJKLVrwXdGqD9dqZdPmw4OfGHABeThCdZ+GnUGKCxQcJZUfiZyCw==\n— w2 a2FBQwAAAABq8OP9GFJ8coif4iqbyFyxp6VGmhNAFFLaT7TCp3iDV7UR27TGq6hgtkeO7TBNBw/S/oEsHN6/w6mTA6zCX2HKSOA9Dw==\n",
-              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n25\nXePS7z5LjXbX8fTdfFL0C2LjfaLTTiVbEAktUcH1l6Q=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8wCQHwFZf1yKw+8cgFVZ5lwGydj3TvhQi4PK4Ut2gsCc1S+/S7+P0AGjKS+4yVCyhwz65WUy1RxwAsYnAf6YTwg=\n— w1 7y0PGQAAAABq8QX4BvpqSWUP5WmgB8yZB5Zp7qdaCVvoKzqWiKbLzOLCVs7iKTZKkZfMN7rLIRHnsgf4KfgXytYTRMABVHftnqi4AQ==\n— w2 a2FBQwAAAABq8QX4y8bkdmdxgqtPijir3yc/5bD3GrhJElH/S6ZPUBFln6aFCQvGjcsC1Acqwavg4A9m3B6IgSVNbHyxGNouAdEJDg==\n"
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n16\nSMfPy5gUaa9qZ/AC+NUFOIWfLlN86KXa+GEWYecydEA=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny82mD7bUsLBkI/spFKeTNsF7AAUSd8CXYw55N8WS8c9kXH2nFcc4kVwnaE9qjoLLvkJWJ9ixSoxKRtp8XfYNt+AE=\n— w1 7y0PGQAAAABq5vGAUeaG6+1iEMZqERbN3er6c6Gn0ZxkRUPnzHUl4Wsu5v3UkrZfZNeFW+p2km4R+rUQQcLjpr66zj0DgSdvDdGQCw==\n— w2 a2FBQwAAAABq5vGAUHQ6QEnVsGcFO19WdWG6ebJ04aMvBWefXZ9NFqvv6yud8IQ1AriJZPqYF5aG91J5HdPsViYn5ao0QogdlmuVDw==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n24\nWjLaaxpKJdQ3ndYHQUuTQ3mMiJ2oFeZ50s4DihIOEMg=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny83aweRd0AadRNJEr21ELZ9UM7JfpoxffXCvI1NT6AmfHy4HaOgarNfjzWkyEiS3IJkGj4qpbBLJSCzyNxE962A0=\n— w1 7y0PGQAAAABq5w2gnO8gMUPA68BUS5Q19PLjqvju60ZuOOYUiyffsml023xxeSWnn83SvAX2se7r991eECqX11wgf/1424GxpCflDA==\n— w2 a2FBQwAAAABq5w2gmVWJyexnpmrfFSSx6npseDNwARg1igEPa2TK5NRHIKN5DZkWZ0sdI2QqebImH2GdsZoXQ0Gy2o6k58ntdo9fDQ==\n— w3 JoDrmQAAAABq5w2gpTL1uTr7MpbXu6x5pFYxuqpGEqP3xmxx0ew8Xh2wSxEtnu1y4BzJuxB+mfp+xqVWgk2L4lxBX9J4i9fs2pzLCg==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n25\nAuigB69BhyHyf/ZMjcprn7pMx6vGyYaki/Esjpm8KM8=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny851mVnQni0eTnUd5ONoqDP8svG49YShLkDK2tpv+E8Vy+XqE9jWBg4KselEjpz7UnK6kXfb8k/QnSmisMzPkUQc=\n— w1 7y0PGQAAAABq8OP9hr1h/8XpC+YH56S3juK1N3IZ3iPXsYGlEMVkyAbGiYD+NeVlIy2Z4ctIl3Uugj4bEb7PPLa69ZjY8rAlxV9ECw==\n— w2 a2FBQwAAAABq8OP9sNSNvYP5eS18iDhL5lEUEnNb41LCL7plTG2OQD9aXLnnJbTVPFdC5WBw5U+YbNrWeqdlFECqGGsA48rTVoOJBQ==\n",
+              "quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m\n26\nlbFwisRnBrKoKU3iTKoi6A857N3UT7ecoVQKEt6hGEw=\n\n— quietvote/v1/qy36yq4th5cyvlw4wnzwytpd2m n2ny8x2cpwI7DD02YW94AEG4Ea9e1fgw+g02RaQY37LdLblS6c8rXIR5FtPh+BT1IyOIDKF69Kd68uM08ttMRDxS5gg=\n— w1 7y0PGQAAAABq8QX4snS0WlR/5bfM5vGbvuqI4mr5+1BMOpoZwily35fgGL2i6Y82DsSWMxtdcsc2aKvN43yUJsDuh27mfaA4a0pUAw==\n— w2 a2FBQwAAAABq8QX4e3eNuuCZLiM6Qn4Ua6i9J2ym1IxugezeW9AG6N+4zAnbNUTrKQN6GkjKRLs2xcIEc/xwrZdZx61FgoOrj2YFAg==\n"
             ]
           }
         }

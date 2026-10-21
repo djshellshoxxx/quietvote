@@ -169,12 +169,42 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 * `KeyId` (QV-09) is undefined in QV-16/QV-30; this code identifies keys by 32-byte Ed25519 public key hex everywhere.
 * QV-05 mapping says V13 (steward/operator authorisation, control entries of QV-ADR-022) has no Appendix C step: not implemented
   or verified here (no `pause/resume/invalidate` entries are parsed; they would be reported as unknown record types, class L).
-* QV-ADR-015 says roll binding is enforced "by `election_open` and verifier checks V2/V5"; `election_open` is only a marker here
-  (it does not carry `(manifest_hash, joint_key_seq, roll_commit_seq)`).
+* ~~`election_open` is only a marker~~ RESOLVED, see **[X-40]** below.
 * QV-ADR-019 (log entries as exact canonical bytes with base64url transport) is a `board`/`server` concern; the verifier takes
   parsed JSON (strict parse available via `verifyElectionText`) and re-canonicalises bodies.
 * QV-ADR-024 vendoring of `@noble/*` not done (dependency pinned by lockfile only); `packages/protocol/package.json` does not list
   `@quietvote/crypto` (workspace symlink resolves it; adding it needs a lockfile refresh).
+
+## !! VERSION-IMPACTING CHANGE: election-open binding (QV-ADR-015), X-40
+
+* **[X-40] `election-open` now carries `(manifest_hash, joint_key_seq, roll_commit_seq)`** and a `roll-commit` record is mandatory
+  before it (docs/18 §5 sequence: `... joint_key, roll_commit, election_open`). The marker body gains three fields
+  (`manifest_hash` hex32, `joint_key_seq`, `roll_commit_seq` = log `seq` values), signed under scope `ctx` as before; builder
+  `electionOpenBody()` in `records.ts`. Schema: optional on `marker`, but **required on `election-open`, forbidden on every other
+  marker** (`E_SCHEMA`, class L). Verifier (`verify.ts`), fail closed with `E_MARKERS` (F), `chk.time.window` = fail:
+  missing field; `manifest_hash` != manifest hash; either ref >= the open's own seq (forward/self); `joint_key_seq` != seq of the
+  accepted `dkg-final` marker; `roll_commit_seq` not a validly coordinator-signed `roll-commit` record; or the referenced
+  roll-commit root/size differs from the supplied roll. (No new error code invented: reuses `E_MARKERS`; `E_ROLL` would also be defensible for the last case.)
+  An election with no `roll-commit` record can no longer reach PASS even if the manifest embeds `roll.root` (static-roll mode
+  still allowed for the manifest, but the log must carry the commit that the open binds).
+* **Vector impact (deliberate, existing bytes changed):** the sim (`test/helpers/sim.ts`) now emits `roll-commit` then the bound
+  `election-open`, so every election bundle changed (`elections/tiny-yesno-3v`, `small-approval-20v`, `log-layer-4v`), every
+  mutation derived from them, and the canary; all seq numbers after `dkg-final` shifted by one. Primitive vectors are
+  byte-identical. Added by addition: 8 mutants `mutations/open-*` (roll ref forward/absent/wrong-record/nonexistent, joint-key
+  ref forward/mismatch, all fields absent, manifest_hash mismatch). Regenerated with
+  `node --experimental-strip-types packages/protocol/test/vecgen/write.ts`; the zero-diff regen test is green against the new bytes.
+* **Downstream consumers must update:** `packages/{trustee,board,cli}` and `packages/verifier` and `verifier-py` (all outside this
+  task) build/parse `election-open` without these fields; they will be rejected (`E_MARKERS`) by this verifier until updated.
+  `verifier-py` (not edited) rejects the new open marker with `E_SCHEMA`.
+* **Server** (`election.ts`): `election_open` is rejected (422 `E_MARKERS`) unless all three refs are present and equal the server's
+  own `manifest_hash`, `dkg-final` entry seq and `roll_commit` entry seq (so absent/forward/mismatched refs never enter the log).
+  The server does not author the open (the coordinator signs it); `World.open()` in the server tests builds the bound marker.
+* **Record sequence (docs/16 vs docs/18) and `tally_aggregate`:** docs/18 lists `roll_commit` before `election_open` (now emitted
+  and required). docs/18 also lists a `tally_aggregate` entry before `tally_result`, but QV-16 defines **no** such record: the
+  verifier recomputes the aggregate from the counted ballots, and the `tally` record carries `counted_root` and the aggregate
+  proof inputs. AMBIGUOUS, so protocol deliberately does NOT emit a `tally-aggregate` record (it would be an unknown type, class L,
+  in every verifier, and QV-16 has no body for it). The server's own `tally-aggregate` record (`server/src/records.ts`) stays a
+  board-level derived record; if QV-16 later defines it, add it between `election-close` and `tally`.
 
 ## R-01 §11.2 attacks-to-test coverage
 
