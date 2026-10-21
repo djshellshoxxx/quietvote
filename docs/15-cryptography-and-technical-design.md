@@ -1,4 +1,4 @@
-# QV-15 — Cryptography and Technical Design
+# QV-16 — Cryptography and Technical Design
 
 **Module ID:** `ballot-engine` / cross-cutting  
 **Status:** Framework with candidate architecture; no protocol or implementation choice is approved  
