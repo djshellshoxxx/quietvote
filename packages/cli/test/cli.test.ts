@@ -10,6 +10,9 @@ const hexOf = (b: Uint8Array): string => Buffer.from(b).toString('hex');
 
 // ---------------------------------------------------------------- argument parsing
 
+// Windows has no POSIX file modes.
+const POSIX = process.platform !== 'win32';
+
 test('args: flags, = form, repeated multi, terminator, errors', () => {
   const p = parseArgs(['a', '--x', '1', '--m=2', '--m', '3', '--b', '--', '--notflag'], { x: 'value', m: 'multi', b: 'bool' });
   assert.deepEqual(p.positional, ['a', '--notflag']);
@@ -113,7 +116,7 @@ test('keygen: protected QVKEY1 by default (argon2id), unlock round trip, wrong p
   assert.equal(a.code, 0, a.err);
   assert.match(a.out, new RegExp(`voter public key: ${want}`));
   assert.match(a.out, /QVKEY1, argon2id/);
-  assert.equal(statSync(k1).mode & 0o777, 0o600);
+  if (POSIX) assert.equal(statSync(k1).mode & 0o777, 0o600);
   const c = JSON.parse(readFileSync(k1, 'utf8'));
   assert.equal(c.kdf, 'argon2id');
   assert.equal(c.aead, 'A256GCM');
@@ -162,7 +165,7 @@ test('keygen: interactive prompt (confirmed), stdin seed, random seed, unprotect
   assert.equal(plain.code, 0);
   assert.equal(JSON.parse(plain.out).protected, false);
   assert.match(plain.err, /NOT passphrase-protected/);
-  assert.equal(statSync(join(dir, 'plain.json')).mode & 0o777, 0o600);
+  if (POSIX) assert.equal(statSync(join(dir, 'plain.json')).mode & 0o777, 0o600);
   const plain2 = await qv(['keygen', '--out', join(dir, 'plain2.json'), '--no-passphrase', '--json'], { rng: streamRng('two') });
   assert.notEqual(JSON.parse(plain.out).public_key, JSON.parse(plain2.out).public_key);
   assert.equal((await qv(['keygen', '--out', join(dir, 'x.json'), '--no-passphrase', '--passphrase-stdin'])).code, 2);
@@ -203,7 +206,7 @@ test('ballot: spoil with private reveal audits OK on a second invocation; tamper
   assert.equal(e.code, 0, e.err);
   const info = JSON.parse(e.out);
   assert.match(info.ballot_code, /^[0-9a-f]{64}$/);
-  assert.equal(statSync(audit).mode & 0o777, 0o600);
+  if (POSIX) assert.equal(statSync(audit).mode & 0o777, 0o600);
   assert.match(e.err, /test selections only/);
   const envJson = JSON.parse(readFileSync(env, 'utf8'));
   assert.equal(envJson.intent, 'spoil');

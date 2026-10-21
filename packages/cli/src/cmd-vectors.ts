@@ -1,6 +1,6 @@
 // `qv vectors check`: runs the test-vectors/v1 conformance corpus (QV-34) against this build.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   LABELS, QvCryptoError, baseMul, bytesToHex, canonicalize, cdsVerify, decVerify, dhVerify, ed25519Keypair, ed25519Sign, ed25519Verify,
@@ -122,6 +122,7 @@ const UNSUPPORTED = new Set(['dkg.adjudicate']);
 
 interface Row { file: string; id: string; ok: boolean; detail?: string }
 
+const posix = (p: string): string => p.split(sep).join('/');
 const walk = (dir: string): string[] => readdirSync(dir).sort().flatMap((n) => (statSync(join(dir, n)).isDirectory() ? walk(join(dir, n)) : [join(dir, n)]));
 const rdJson = (p: string): Any => JSON.parse(readFileSync(p, 'utf8'));
 
@@ -148,13 +149,13 @@ export async function cmdVectorsCheck(argv: string[], io: Io): Promise<number> {
     add('MANIFEST.json', f.path, existsSync(fp) && H(sha256(readFileSync(fp))) === f.sha256, 'sha256 differs or file missing');
   }
   for (const f of walk(root)) {
-    const rel = relative(root, f);
+    const rel = posix(relative(root, f));
     if (rel !== 'MANIFEST.json') add('MANIFEST.json', `${rel} listed`, listed.has(rel), 'file not listed in MANIFEST.json');
   }
 
   // 2. Known-answer and negative vectors.
-  for (const f of walk(v1).filter((x) => x.endsWith('.json') && !/\/(elections|mutations|canary)\//.test(x))) {
-    const rel = relative(v1, f);
+  for (const f of walk(v1).filter((x) => x.endsWith('.json') && !/\/(elections|mutations|canary)\//.test(posix(x)))) {
+    const rel = posix(relative(v1, f));
     const file = rdJson(f) as { operation: string; format_version?: number; vectors: { id: string; input: Any; expect: { ok: boolean; output?: unknown; error?: string } }[] };
     const ids = file.vectors.map((v) => v.id);
     add(rel, 'envelope', file.format_version === 1 && new Set(ids).size === ids.length, 'format_version != 1 or duplicate vector ids');
