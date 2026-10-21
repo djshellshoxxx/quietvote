@@ -4,7 +4,7 @@ import {
   G, IDENTITY, ORDER, baseMul, cdsProve, cdsVerify, ctSum, decProve, decVerify, dhProve, dhVerify, elgamalDecryptToPoint,
   elgamalEncrypt, h256, hs, limitProve, limitVerify, pointAdd, pointMul, pointSub, pokProve, pokVerify, scalarAdd,
   scalarMul, scalarRandomNonZero, scalarSub, shareKeyProve, shareKeyVerify, spoilDecProve, spoilDecVerify, streamRng,
-  utf8, u8, pointToBytes, constantRng, type CdsStatement, type Ciphertext, type Point, type Scalar, type CdsProof,
+  utf8, pointToBytes, constantRng, type CdsStatement, type Ciphertext, type Scalar, type CdsProof,
   type LimitStatement, type DecStatement,
 } from '../src/index.ts';
 
@@ -56,7 +56,7 @@ test('CDS: every statement field is bound (Frozen-Heart style per-field mutation
     ['alpha', { ...st, ct: { A: other, B: st.ct.B } }],
     ['beta', { ...st, ct: { A: st.ct.A, B: pointAdd(st.ct.B, G) } }],
   ];
-  for (const [name, m] of muts) assert.ok(!cdsVerify(m.ctx === st.ctx ? m : m, proof), `mutated ${name} accepted`);
+  for (const [name, m] of muts) assert.ok(!cdsVerify(m, proof), `mutated ${name} accepted`);
   assert.ok(cdsVerify(st, proof));
   // each proof scalar is bound
   for (const k of ['c0', 's0', 'c1', 's1'] as const) {
@@ -214,7 +214,7 @@ test('decryption with a failed RNG still never repeats the nonce across differen
   const p1 = decProve({ ctx, cid: 'c', oid: 'a', j: 1, Yj, A: ct1.A, B: ct1.B }, sj, dead);
   const p2 = decProve({ ctx, cid: 'c', oid: 'b', j: 1, Yj, A: ct2.A, B: ct2.B }, sj, dead);
   // same u would give s1 - s2 = (c1 - c2) * sj; check that responses do not leak sj that way
-  const leaked = scalarMul(scalarSub(p1.proof.s, p2.proof.s), BigInt(1)) ;
+  const leaked = scalarSub(p1.proof.s, p2.proof.s);
   const cdiff = scalarSub(p1.proof.c, p2.proof.c);
   assert.notEqual(leaked, scalarMul(cdiff, sj));
 });
@@ -224,5 +224,4 @@ test('ElGamal homomorphism and decryption', () => {
   const sum = ctSum(cts);
   assert.ok(elgamalDecryptToPoint(sum, x).equals(baseMul(3n)));
   assert.throws(() => elgamalEncrypt(K, 1, 0n));
-  void u8;
 });

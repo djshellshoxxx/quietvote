@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   G, IDENTITY, ORDER, QvCryptoError, baseMul, bytesToHex, canonicalize, combineShares, decodeUtf8Strict, decryptShare,
-  decryptShareWithDh, dlogSolve, dlogTable, encryptShare, feldmanCommit, feldmanEval, feldmanVerifyShare, hexToBytes,
+  decryptShareWithDh, dlogSolve, dlogTable, encryptShare, feldmanCommit, feldmanEval, feldmanVerifyShare,
   h256, jcs, lagrangeAtZero, parseQvJson, pointMul, polyEval, publicKeyShare, reconstructSecret, scalarAdd,
-  scalarRandomNonZero, streamRng, utf8, vecrng, pointSum, type Scalar,
+  scalarRandomNonZero, streamRng, utf8, vecrng, pointSum, pointFromBytes, type Scalar,
 } from '../src/index.ts';
 
 const rng = streamRng('misc');
@@ -81,9 +81,8 @@ test('share cipher: round trip, binding to (i,j), tamper and DH-reveal decryptio
   const bad = { ...pkg, ct: pkg.ct.slice() };
   bad.ct[0] = bad.ct[0]! ^ 1;
   await assert.rejects(decryptShare(mh, 1, 2, e, bad));
-  const S = pointMul(baseMul(0n + 0n) .equals(IDENTITY) ? G : G, 1n); void S;
   // DH reveal: S = [e]R
-  const R = (await import('../src/index.ts')).pointFromBytes(pkg.R);
+  const R = pointFromBytes(pkg.R);
   assert.equal(await decryptShareWithDh(mh, 1, 2, pointMul(R, e), pkg), y);
 });
 
@@ -164,5 +163,4 @@ test('parse then canonicalize is idempotent for random structures (property)', (
     assert.equal(canonicalize(parseQvJson(c)), c);
     assert.equal(c, c.normalize('NFC'));
   }
-  void hexToBytes;
 });
