@@ -46,3 +46,6 @@ when re-run, so a crash at any point is resumable (tests reopen the bundle for e
 
 ## Not done
 Network/outbox, localhost UI, `qv-ceremony` image, dealer mode, `trustee_accept` PoP entry, reminders, Shamir backup of passphrase.
+
+## Windows file permissions (known gap)
+POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"group-accessible" refusal there, and the tests guard the mode assertions with a platform check. On Windows a trustee bundle is protected only by its passphrase-based encryption, not by an ACL check. Trustees should keep bundles in a user-private directory. Track as a hardening task (NTFS ACL verification).

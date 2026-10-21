@@ -30,10 +30,13 @@ before(async () => {
 });
 after(() => f.c.cleanup());
 
+// Windows has no POSIX file modes; src/fsutil.ts skips the mode check there (bundle stays passphrase-sealed).
+const POSIX = process.platform !== 'win32';
+
 test('bundle at rest: mode 0600, no plaintext key material anywhere on disk, nothing secret in public output (QV-17-REQ-020/030)', async () => {
   for (const i of f.c.honest()) {
     const p = f.c.path(i);
-    assert.equal(statSync(p).mode & 0o777, 0o600);
+    if (POSIX) assert.equal(statSync(p).mode & 0o777, 0o600);
     const t = await f.c.act(i, async (x) => x);
     const sk = skI.get(i)!;
     const canaries = [sk, hexToBytes(sk, 32), t.data.sk_sign, hexToBytes(t.data.sk_sign, 32), 'sk_i', 'sk_sign', PASS];
@@ -53,9 +56,11 @@ test('wrong passphrase -> exit 50; permissive mode -> refused (exit 60); tampere
   writeFileSync(p, g, { mode: 0o600 });
   await assert.rejects(Trustee.open(p, PASS, deps), { code: 'BAD_PASSPHRASE' });
   writeFileSync(p, raw, { mode: 0o600 });
-  chmodSync(p, 0o644);
-  await assert.rejects(Trustee.open(p, PASS, deps), (e: { code?: string; exitCode?: number }) => e.code === 'BAD_PERMISSIONS' && e.exitCode === 60);
-  chmodSync(p, 0o600);
+  if (POSIX) {
+    chmodSync(p, 0o644);
+    await assert.rejects(Trustee.open(p, PASS, deps), (e: { code?: string; exitCode?: number }) => e.code === 'BAD_PERMISSIONS' && e.exitCode === 60);
+    chmodSync(p, 0o600);
+  }
   assert.equal((await Trustee.open(p, PASS, deps)).state, 'RELEASED');
   await assert.rejects(Trustee.keygen(p, PASS, deps), { code: 'BUNDLE_EXISTS' });
 });
@@ -80,7 +85,7 @@ test('backup + restore: a restored bundle can release the same share; counted as
   await assert.rejects(t.backup(f.c.path(2), bpass), { code: 'BACKUP_SAME_FILE' });
   const { epoch } = await t.backup(bk, bpass);
   assert.equal(epoch, 1);
-  assert.equal(statSync(bk).mode & 0o777, 0o600);
+  if (POSIX) assert.equal(statSync(bk).mode & 0o777, 0o600);
   assert.deepEqual(anyFileContains(dir, hexToBytes(skI.get(2)!, 32)), []);
   assert.equal(t.status().backup_made, true);
   await assert.rejects(Trustee.restore(bk, 'wrong', join(dir, 'x.qvtb'), 'new pass', f.c.deps.get(2)!), { code: 'BAD_PASSPHRASE' });
