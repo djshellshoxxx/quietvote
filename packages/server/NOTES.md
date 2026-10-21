@@ -208,3 +208,16 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   when the client vanishes before attach, pre-auth upload reservation, duplicate witness keys in `cfg.witnesses`).
 * **Webhook receivers** should reject deliveries whose `QV-Webhook-Timestamp` is outside their own window (e.g. +-5 min), compare the `v1=` signature in
   constant time, dedupe on `QV-Webhook-Id`, and take the event type from the signed body (the `QV-Webhook-Event` header is not signed).
+
+## Trustees-mode spoil shares (QV-ADR-020)
+* **Endpoints** (not board log records; QV-16 closed list): `POST /api/v1/elections/{id}/spoil-shares` (class W, `auth: none`, the record authenticates itself, max 1 MiB) takes a
+  `spoil-share` record signed by manifest trustee `j` under scope = ctx (`201 accepted`, `200 duplicate` for a byte-identical replay, `409` for a different record from the same
+  trustee for the same code). `GET .../spoil-shares` lists `{code, trustees[]}`; `?code=<hex32>` returns the stored signed records.
+* **Admission** (`ElectionRuntime.addSpoilShare`, under the append mutex): manifest `spoil_trustee_decrypt` true; election closed (409 `WRONG_PHASE` before close and after `tally_result`);
+  schema; body ctx; trustee signature; trustee completed key confirmation; code is an analysed spoil (`an.spoiled`, so re-wrapped/cast codes are 404); not reveal-mode (zero `reveal_digest`);
+  `spoil_seq` equals the spoil's log seq; exactly one share per option; every share DLEQ-verified with `spoilDecVerify`. Per-trustee `writeKey` rate limit, taken only after the signature verifies (an anonymous caller cannot exhaust a trustee's bucket).
+* **Storage**: election DB migration 4 `spoil_share(code, j, spoil_seq, record, received_at)`, PK `(code, j)`. Old DBs migrate forward; nothing else changed.
+* **Tally**: `buildTallyDraft` includes a trustees-mode spoil only when `decryptSpoiled` finds >= t valid distinct-trustee sets, publishing exactly the t lowest-index valid sets
+  as `spoiled[].shares`. Consequence: a draft fetched before the t-th share of some spoil arrives will be refused by `vTally` (byte-exact recomputation); re-fetch the draft.
+  A trustees-mode spoil with < t shares is silently omitted from the tally (verifier then sees fewer `spoiled` entries; decide operationally whether to wait).
+* Tests: `test/spoil-shares.test.ts`; `World` gained `spoilTrustees`, `analysis()`, `spoilShareRecord()`, `postSpoilShare()`.

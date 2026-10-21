@@ -52,3 +52,10 @@ Not examined: crypto and board package internals, the proof verifiers and projec
 
 - `npm test -w @quietvote/server`: 82 tests, 82 pass (71 existing + 11 in `test/audit.test.ts`).
 - `npm run typecheck`: no errors in `packages/server`. The repo-wide run reports one unrelated error in `packages/board/test/audit.test.ts` (unused import), outside this scope and not touched.
+
+## Addendum: trustees-mode spoil shares (QV-ADR-020), AI-assisted, not independent audit
+New unauthenticated-by-session endpoint `POST /api/v1/elections/{id}/spoil-shares` (non-log, self-authenticating trustee-signed record). Reviewed: author must be manifest trustee `j`
+with a valid signature under scope ctx; wrong ctx, cast/unknown/reveal-mode codes, wrong `spoil_seq`, missing/duplicate/forged shares, repeat posts, pre-close and post-tally posts are
+refused (tests in `packages/server/test/spoil-shares.test.ts`). DoS bound: 1 MiB body cap, schema caps shares at 4096, exact-coverage check before proof verification, per-trustee
+rate limit, one row per (code, trustee) so storage is bounded by spoils x n. No new findings of severity >= medium. Info: a trustees-mode spoil with < t shares is omitted from the
+published tally rather than blocking it; a draft fetched before a late share is refused by `vTally` until re-fetched. Not run end to end against a hostile multi-process deployment.
