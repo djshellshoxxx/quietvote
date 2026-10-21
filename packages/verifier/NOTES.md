@@ -59,6 +59,9 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
    The production-dependency closure is `@noble/*` via crypto. No second implementation exists (G4 still open).
 8. `verifyElection` also returns `jointKey` and `ctx` (hex) now (two optional fields added to `VerificationReport`) so the CLI can build ballots.
 
+## Audit changes (docs/audit/web-verifier.md)
+* `verifyWithSelfTest` recomputes `reportHash` after it changes the verdict/caveats (it used to leave the hash of the pre-self-test report). A corpus that cannot be loaded or run now yields self-test failed and verdict FAIL (it used to throw); `qv-verify --selftest` exits 1 in that case. New option `corpusText` (test hook).
+
 ## Known gaps
 
 * No worker threads / resumable verification (QV-11 scale row); no HTML offline page (the offline `verifier.html` is built by

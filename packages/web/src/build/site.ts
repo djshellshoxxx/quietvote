@@ -12,8 +12,16 @@ export const PKG = join(here, '..', '..');
 const hashOf = (algo: 'sha256' | 'sha384', data: string | Uint8Array, enc: 'hex' | 'base64'): string => createHash(algo).update(data).digest(enc);
 export const sri = (data: string | Uint8Array): string => `sha384-${hashOf('sha384', data, 'base64')}`;
 
+/** A connect origin is spliced into the CSP and an HTML attribute: only a bare https origin (http for loopback/.onion) is allowed. */
+const ORIGIN_RE = /^(?:https:\/\/[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?|http:\/\/(?:localhost|127\.0\.0\.1|[a-z0-9.-]+\.onion))(?::\d{1,5})?$/;
+export function checkOrigin(o: string): string {
+  if (!ORIGIN_RE.test(o)) throw new Error(`invalid connect origin ${JSON.stringify(o)}: expected a bare https origin`);
+  return o;
+}
+const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
 export function csp(boardOrigins: readonly string[] = []): { header: string; meta: string } {
-  const connect = ["'self'", ...boardOrigins].join(' ');
+  const connect = ["'self'", ...boardOrigins.map(checkOrigin)].join(' ');
   const common = [
     "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' data:", "font-src 'self'", `connect-src ${connect}`,
     "worker-src 'self'", "manifest-src 'self'", "base-uri 'none'", "form-action 'self'", "object-src 'none'",
@@ -56,8 +64,8 @@ export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; version: str
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
-<meta name="qv-version" content="${a.version}">
-<meta name="qv-build" content="${a.buildId}">
+<meta name="qv-version" content="${esc(a.version)}">
+<meta name="qv-build" content="${esc(a.buildId)}">
 <meta name="qv-worker" content="/${a.worker.path}">
 <title>QuietVote</title>
 <link rel="stylesheet" href="/${a.css.path}" integrity="${a.css.integrity}" crossorigin="anonymous">
@@ -79,7 +87,7 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
     },
   };
   const r = await esbuild({ ...common, format: 'iife', entryPoints: ['src/verifier/page.ts'], outdir: 'out', plugins: [stubCatalogs] });
-  const js = new TextDecoder().decode(r.outputFiles![0]!.contents).replace(/<\/script/gi, '<\\/script');
+  const js = new TextDecoder().decode(r.outputFiles![0]!.contents).replace(/<\/script/gi, '<\\/script').replace(/<script/gi, (m) => `<\\x73${m.slice(2)}`).replace(/<!--/g, '<\\x21--');
   const css = 'body{font:1.1rem/1.6 system-ui,sans-serif;max-inline-size:44rem;margin:1rem auto;padding-inline:16px;background:#fff;color:#14213d}@media(prefers-color-scheme:dark){body{background:#10151f;color:#eef2f8}}label{display:block;font-weight:600;margin-block-start:1rem}input,button{font:inherit;min-block-size:44px}:focus-visible{outline:3px solid #b45309;outline-offset:2px}.sr{position:absolute;clip-path:inset(50%);inline-size:1px;block-size:1px}';
   const sh = `sha256-${hashOf('sha256', js, 'base64')}`;
   const st = `sha256-${hashOf('sha256', css, 'base64')}`;

@@ -2,8 +2,8 @@
 // 2 usage, 3 INCOMPLETE, 4 unreadable input.
 import { readFileSync } from 'node:fs';
 import { formatReport } from './format.ts';
-import { runSelfTest, type Corpus } from './canary.ts';
-import { verifyBundle } from './verify.ts';
+import { loadCorpus, runSelfTest, type Corpus } from './canary.ts';
+import { hashReport, verifyBundle } from './verify.ts';
 import type { VerifierReport } from './report.ts';
 
 export const EXIT = { ok: 0, fail: 1, usage: 2, incomplete: 3, input: 4 } as const;
@@ -14,13 +14,21 @@ export interface VerifierIo {
 }
 
 /** Runs the self-test and attaches it; a failing self-test forces FAIL (a broken verifier must not report PASS). */
-export async function verifyWithSelfTest(bundleText: string | Uint8Array, opts: { pinnedManifestHash?: string; skipSelfTest?: boolean; corpus?: Corpus } = {}): Promise<VerifierReport> {
+export async function verifyWithSelfTest(bundleText: string | Uint8Array, opts: { pinnedManifestHash?: string; skipSelfTest?: boolean; corpus?: Corpus; corpusText?: string } = {}): Promise<VerifierReport> {
   const r = await verifyBundle(bundleText, opts.pinnedManifestHash === undefined ? {} : { pinnedManifestHash: opts.pinnedManifestHash });
   if (opts.skipSelfTest !== true) {
-    const st = await runSelfTest(opts.corpus);
-    r.selfTest = { ok: st.ok, control: st.control, total: st.total, rejected: st.rejected, failures: st.failures };
-    if (!st.ok) r.verdict = 'FAIL';
+    try {
+      const st = await runSelfTest(opts.corpus ?? loadCorpus(opts.corpusText));
+      r.selfTest = { ok: st.ok, control: st.control, total: st.total, rejected: st.rejected, failures: st.failures };
+      if (!st.ok) r.verdict = 'FAIL';
+    } catch (e) {
+      // A canary corpus that cannot be loaded or run means the verifier cannot vouch for itself: fail closed.
+      r.selfTest = { ok: false, control: false, total: 0, rejected: 0, failures: [`self-test could not run: ${e instanceof Error ? e.message : 'unknown'}`] };
+      r.verdict = 'FAIL';
+    }
   } else r.caveats.push('canary self-test skipped by request');
+  // The verdict and caveats above changed after the report was sealed: recompute so reportHash matches the content shown.
+  r.reportHash = hashReport(r);
   return r;
 }
 
@@ -45,7 +53,13 @@ export async function verifierMain(argv: string[], io: VerifierIo): Promise<numb
     } else files.push(a);
   }
   if (selftest) {
-    const st = await runSelfTest();
+    let st;
+    try {
+      st = await runSelfTest();
+    } catch (e) {
+      io.err(`self-test could not run: ${e instanceof Error ? e.message : 'error'}\n`);
+      return EXIT.fail;
+    }
     io.out(json ? JSON.stringify(st, null, 2) + '\n' : st.cases.map((c) => `${c.ok ? 'ok  ' : 'FAIL'} ${c.id}: ${c.detail}`).join('\n') + `\nself-test: ${st.ok ? 'ok' : 'FAILED'}\n`);
     return st.ok ? EXIT.ok : EXIT.fail;
   }

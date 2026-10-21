@@ -6,7 +6,7 @@ import { ApiClient } from '../api/client.ts';
 import { ApiError, uxCodeFor } from '../api/errors.ts';
 import { BallotController, lastOwnBallotCode } from '../flow/ballot-controller.ts';
 import { canAudit, canCast } from '../flow/ballot-machine.ts';
-import { deriveElectionContext, type ElectionContext } from '../flow/election.ts';
+import { bindServerLog, deriveElectionContext, type ElectionContext } from '../flow/election.ts';
 import { entryRecord } from '../flow/entries.ts';
 import { parseFragment } from '../flow/invite.ts';
 import { ORGANIZER_SLOT, createKey, importKeyFile, keySlot, recoveryCodeFor, registrationBody, unlockKey } from '../flow/onboarding.ts';
@@ -126,10 +126,12 @@ export function startApp(env: AppEnv): void {
     return box;
   };
   const download = (name: string, text: string, type = 'application/json'): void => {
-    const a = h('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const a = h('a', { href: url, download: name });
     document.body.append(a);
     a.click();
     a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   /** Set by views that can refresh themselves in place when live data arrives (receipt standing, results). */
@@ -201,13 +203,19 @@ export function startApp(env: AppEnv): void {
     if (cached) return cached;
     const api = new ApiClient({ baseUrl: env.apiBase ?? '', readKey });
     const el = await api.election(id);
-    const logPk = b64uDecode(el.log_pk) ?? new Uint8Array(32);
     const all = await api.allEntries(id);
     const records = all.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) }));
     const r = await deriveElectionContext(records);
-    const L: Loaded = { apiId: id, api, origin: el.origin, logPk, title: el.title ?? '', records };
-    if (r.ok) L.ctx = r.value;
-    else L.ctxError = r.detail;
+    const L: Loaded = { apiId: id, api, origin: el.origin, logPk: new Uint8Array(32), title: el.title ?? '', records };
+    if (r.ok) {
+      // Receipts and checkpoints are checked against the manifest's log key and origin, not the server's claim (WV-4).
+      const bound = bindServerLog(r.value.manifest, { logPkB64u: el.log_pk, origin: el.origin });
+      if (bound.ok) {
+        L.ctx = r.value;
+        L.logPk = bound.logPk;
+        L.origin = bound.origin;
+      } else L.ctxError = bound.detail;
+    } else L.ctxError = r.detail;
     loaded.set(id, L);
     return L;
   }

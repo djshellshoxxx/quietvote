@@ -5,7 +5,7 @@ import {
   b64 as stdB64, type EntryHeader,
 } from '@quietvote/board';
 import { bytesToHex, ed25519Sign, jcs, parseQvJson, utf8, type Ed25519Keypair } from '@quietvote/crypto';
-import { signRecordRaw, verifyEnvelope, type ElectionBundle } from '@quietvote/protocol';
+import { logOrigin, signRecordRaw, verifyEnvelope, type ElectionBundle } from '@quietvote/protocol';
 import { b64uDecode, b64uEncode } from '../../src/util/hex.ts';
 import { kp, setup, defaultContests, bundleOf, type Sim, type SimOpts } from '../../../protocol/test/helpers/sim.ts';
 import type { FetchLike } from '../../src/api/client.ts';
@@ -41,7 +41,7 @@ export class FakeBoard {
   constructor(sim: Sim, apiId = 'aaaaaaaaaaaaaaaaaaaaaaaaaa') {
     this.sim = sim;
     this.apiId = apiId;
-    this.origin = `quietvote/v1/${apiId}`;
+    this.origin = logOrigin(sim.manifest); // as the real server: quietvote/v1/<base32 election_id> (QV-18 X-21)
     this.logKey = kp(sim.manifest.title.replace('Test election ', ''), 'log');
     this.author = kp('fake-board', 'author');
     const b = bundleOf(sim);

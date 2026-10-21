@@ -23,7 +23,13 @@ export function parseFragment(hash: string): InviteFragment {
     } else if (k === 'read') {
       if (/^[A-Za-z0-9_-]{16,64}$/.test(v)) out.readKey = v;
     } else if (k === 'board') {
-      const u = safeBoardOrigin(decodeURIComponent(v));
+      let raw: string | undefined;
+      try {
+        raw = decodeURIComponent(v);
+      } catch {
+        raw = undefined; // malformed %-escape in a crafted link: ignore the member, never throw out of routing
+      }
+      const u = raw === undefined ? undefined : safeBoardOrigin(raw);
       if (u !== undefined) out.board = u;
     }
   }
