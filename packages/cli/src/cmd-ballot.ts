@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { rmSync, writeFileSync } from 'node:fs';
 import { canonicalize } from '@quietvote/crypto';
 import {
   NO_SUPERSEDES, buildBallot, makeCast, makeSpoil, revealDigest, verifyEnvelope, verifySpoilReveal,
@@ -44,6 +44,8 @@ export async function cmdBallotEncrypt(argv: string[], io: Io): Promise<number> 
   const out = needFlag(p, 'out');
   const auditOut = p.get('audit-out');
   if (intent === 'spoil' && auditOut === undefined) throw new UsageError('--intent spoil needs --audit-out (the reveal is how a second device audits it)');
+  // A cast audit file would hold the selections and the randomness of a counted ballot, so it is never written.
+  if (intent === 'cast' && auditOut !== undefined) throw new UsageError('--audit-out only applies to --intent spoil (a cast ballot writes no audit file)');
   const supersedes = p.get('supersedes') ?? NO_SUPERSEDES;
   if (!isHex(supersedes, 32)) throw new UsageError('--supersedes must be 64 lower-case hex digits');
   const key = await loadVoterKey(needFlag(p, 'key'), p, io);
@@ -57,10 +59,17 @@ export async function cmdBallotEncrypt(argv: string[], io: Io): Promise<number> 
   if (!built.ok) throw new UsageError(`selections rejected: ${built.error}${built.detail === undefined ? '' : ` (${built.detail})`}`);
   const b = built.value;
   const env: CastEnvelope | SpoilEnvelope = intent === 'cast' ? makeCast(ec.params, key.seed, b) : makeSpoil(ec.params, key.seed, b, p.has('publish-reveal') ? 'publish' : 'private');
-  writeOut(out, canonicalize(env) + '\n', false, io);
+  // Both or neither: the audit file is written first, and it is removed again if the envelope cannot be written, so a
+  // failure never leaves an envelope or audit file behind without the other.
   if (auditOut !== undefined) {
     const reveal: Reveal = { xi: hex(b.xi), selections: b.selections };
     writeOut(auditOut, JSON.stringify({ format: AUDIT_FORMAT, ctx_prefix: hex(ec.params.ctx).slice(0, 16), envelope: env, reveal }) + '\n', true, io);
+  }
+  try {
+    writeOut(out, canonicalize(env) + '\n', false, io);
+  } catch (e) {
+    if (auditOut !== undefined) rmSync(auditOut, { force: true });
+    throw e;
   }
   if (p.has('json')) printJson(io, { intent, ballot_code: hex(b.code), envelope: out, ...(auditOut === undefined ? {} : { audit_file: auditOut }), blank_contests: blank });
   else {
@@ -79,7 +88,9 @@ export async function cmdBallotAudit(argv: string[], io: Io): Promise<number> {
   const p = parseArgs(argv, { election: 'value', ballot: 'value', json: 'bool' });
   needPositional(p, 0, 'ballot audit (options only)');
   const ec = await electionContext(needFlag(p, 'election'));
-  const j = readJson(needFlag(p, 'ballot')) as { format?: unknown; envelope?: unknown; reveal?: unknown; intent?: unknown };
+  const parsed = readJson(needFlag(p, 'ballot'));
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new InputError('the ballot file is not a JSON object');
+  const j = parsed as { format?: unknown; envelope?: unknown; reveal?: unknown; intent?: unknown };
   const env = (j.format === AUDIT_FORMAT ? j.envelope : j) as { intent?: unknown; body?: unknown; reveal_digest?: unknown; reveal?: Reveal } | undefined;
   const reveal = (j.format === AUDIT_FORMAT ? j.reveal : env?.reveal) as Reveal | undefined;
   if (env === undefined || typeof env !== 'object' || env === null) throw new InputError('no envelope found in the ballot file');

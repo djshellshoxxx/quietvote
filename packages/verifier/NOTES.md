@@ -73,6 +73,10 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
   placeholder `bb.log_id` (836ff184...c213) that is not SHA-256 of `logOrigin(manifest)` (X-21), so `E_LOG_BINDING` on any board export
   built for them. Left unchanged (zero-diff). Tests build their own conformant elections instead; new vectors would be the fix.
 * Test helpers `test/helpers/{sim,board}.ts` are copies of `packages/protocol/test/helpers` (test-only), with the protocol import
+  changed and one addition: a `witnessPolicy` option on `buildBoard` (board.ts). Re-synced after QV-ADR-015 (`election-open` carries
+  manifest_hash, joint_key_seq, roll_commit_seq; sim order is dkg-final, roll-commit, election-open; `electionOpenBody` imported from the
+  protocol package); the local roll-commit workaround is gone. Re-sync by hand; regenerate `canary/corpus.json` with
+  `node packages/verifier/scripts/build-corpus.ts` whenever test-vectors change.
   changed and two additions: a roll-commit before election-open, and a `witnessPolicy` option on `buildBoard`. Re-sync by hand.
 
 ## CLI (`packages/cli`, binary `qv`)

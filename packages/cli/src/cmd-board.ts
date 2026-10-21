@@ -22,13 +22,34 @@ export async function cmdBoardVerify(argv: string[], io: Io): Promise<number> {
     if (!isHex(v, n)) throw new UsageError(`--${name} must be ${n * 2} lower-case hex digits`);
     return hexToBytes(v);
   };
+  // Every hex flag is checked before a bundle kind is chosen, so both kinds reject malformed input the same way (exit 2).
+  const logKey = p.get('log-key') === undefined ? undefined : keyHex('log-key', p.get('log-key')!, 32);
+  const manifestPin = p.get('manifest-hash') === undefined ? undefined : keyHex('manifest-hash', p.get('manifest-hash')!, 32);
+  const authorKeys = p.all('author-key').map((a) => keyHex('author-key', a, 32));
 
   if (o.format === undefined && o.manifest !== undefined) {
-    // Election bundle with a `board` export: trust anchors come from the verified manifest.
-    const r = await verifyBundle(data, { extraAuthorKeys: p.all('author-key'), ...(pinned === undefined ? {} : { pinnedCheckpoint: pinned }) });
+    // Election bundle with a `board` export: trust anchors come from the verified manifest. The pins the caller gives are
+    // checked against that manifest: a different manifest hash or log key is a verification failure, not a partial result.
+    const boundLogKey = boundLogKeyOf(o.manifest);
+    const unverifiable = (reason: string, failed: boolean): number => {
+      io.err(`${file}: ${reason}\n`);
+      if (p.has('json')) printJson(io, { integrity: failed ? 'FAILED' : 'INCOMPLETE', reason });
+      return failed ? EXIT.fail : EXIT.incomplete;
+    };
+    if (p.get('log-key') !== undefined && boundLogKey !== p.get('log-key')) {
+      return unverifiable('--log-key does not match the log key in the bundle manifest (bb.log_pk)', true);
+    }
+    const r = await verifyBundle(data, {
+      extraAuthorKeys: p.all('author-key'),
+      ...(p.get('manifest-hash') === undefined ? {} : { pinnedManifestHash: p.get('manifest-hash')! }),
+      ...(pinned === undefined ? {} : { pinnedCheckpoint: pinned }),
+    });
+    // A pinned hash that the manifest does not meet means no board verdict applies to the expected election.
+    if (p.get('manifest-hash') !== undefined && r.checks.V1.status !== 'pass') {
+      return unverifiable(`--manifest-hash does not match the bundle manifest (V1 ${r.checks.V1.status})`, true);
+    }
     if (r.board === undefined) {
-      io.err(`${file}: no usable board export (V4: ${r.checks.V4.notes.join('; ') || 'not run'})\n`);
-      return r.verdict === 'FAIL' ? EXIT.fail : EXIT.incomplete;
+      return unverifiable(`no usable board export (V4: ${r.checks.V4.notes.join('; ') || 'not run'})`, r.verdict === 'FAIL');
     }
     if (p.has('json')) printJson(io, r.board);
     else io.out(boardText(r.board.integrity, r.board.treeSize, r.board.witnessed, r.board.redacted, r.board.failures, r.board.warnings));
@@ -38,13 +59,11 @@ export async function cmdBoardVerify(argv: string[], io: Io): Promise<number> {
   const b = bundleFromJson(j);
   if (!b.ok) throw new InputError(`${file} is not a board bundle: ${b.error.message}`);
   const opts: VerifyOptions = {};
-  if (p.get('log-key') !== undefined) opts.logPublicKey = keyHex('log-key', p.get('log-key')!, 32);
-  if (p.get('manifest-hash') !== undefined) opts.expectedManifestHash = keyHex('manifest-hash', p.get('manifest-hash')!, 32);
+  if (logKey !== undefined) opts.logPublicKey = logKey;
+  if (manifestPin !== undefined) opts.expectedManifestHash = manifestPin;
   if (pinned !== undefined) opts.pinned = pinned;
-  const authors = p.all('author-key');
-  if (authors.length > 0) {
-    const keys = new Map(authors.map((a) => {
-      const pk = keyHex('author-key', a, 32);
+  if (authorKeys.length > 0) {
+    const keys = new Map(authorKeys.map((pk) => {
       return [Buffer.from(authorKeyId('ed25519', pk)).toString('hex'), pk] as const;
     }));
     opts.resolveAuthorKey = (h) => keys.get(Buffer.from(h.author).toString('hex'));
@@ -53,6 +72,12 @@ export async function cmdBoardVerify(argv: string[], io: Io): Promise<number> {
   if (p.has('json')) printJson(io, v);
   else io.out(boardText(v.integrity, v.treeSize, v.witnessed, v.redacted, v.failures, v.warnings));
   return v.integrity === 'FAILED' ? EXIT.fail : v.integrity === 'PARTIAL' ? EXIT.incomplete : EXIT.ok;
+}
+
+/** The log key an election bundle's manifest binds (`bb.log_pk`), or undefined when the manifest does not carry one. */
+function boundLogKeyOf(manifest: unknown): string | undefined {
+  const k = (manifest as { body?: { bb?: { log_pk?: unknown } } } | null)?.body?.bb?.log_pk;
+  return typeof k === 'string' ? k : undefined;
 }
 
 function boardText(
