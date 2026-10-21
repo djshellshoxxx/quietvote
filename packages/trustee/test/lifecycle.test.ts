@@ -178,13 +178,14 @@ test('destroy: needs coordinator audit-close and the typed title; erases bundle 
   assert.equal(anyFileContains(dir, canary).length, 0);
 
   const ctx = c.ctx!;
-  const body: AuditCloseBody = { proto: PROTO_ID, type: 'audit-close', ctx: H(ctx), closed_at: '2026-12-01T00:00:00Z' };
+  const body: AuditCloseBody = { proto: PROTO_ID, type: 'audit-close', ctx: H(ctx), closed_at: '2026-12-20T00:00:00Z' };
   const mk = (sk = c.coord.secretKey, pk = c.coord.publicKey, b = body): MultiSignedRecord<AuditCloseBody> => ({ body: b, sigs: [signRecordRaw(sk, pk, ctx, 'audit-close', b)] });
   const title = c.manifest.title;
   const t = await c.act(i, async (x) => x);
-  // clock in tests is 2026-11-02: audit-close dated 2026-12-01 is in the future
+  // the election closes 2026-11-08 (manifest voting_close); this trustee's clock is 2026-12-02, so an audit-close dated 2026-12-20 is in the future
+  for (const d of c.deps.values()) d.now = () => new Date('2026-12-02T00:00:00Z');
   await assert.rejects(t.destroy(mk(), title), { code: 'AUDIT_WINDOW_OPEN' });
-  const okBody: AuditCloseBody = { ...body, closed_at: '2026-11-01T00:00:00Z' };
+  const okBody: AuditCloseBody = { ...body, closed_at: '2026-11-09T00:00:00Z' };
   const t2 = await c.act(i, async (x) => x);
   await assert.rejects(t2.destroy(mk(c.coord.secretKey, c.coord.publicKey, okBody), 'wrong title'), (e: { code?: string; exitCode?: number }) => e.code === 'CONFIRMATION_MISMATCH' && e.exitCode === 10);
   const rogue = ed25519Keypair(sha256(utf8('rogue')));
