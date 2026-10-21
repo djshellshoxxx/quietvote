@@ -1,8 +1,9 @@
 // Deriving the election context (manifest, joint key K, ctx, phase) from the public log, the way a verifier does
 // (QV-16 App. C steps 1-6). The client never trusts server-provided K: it re-runs the DKG adjudication itself.
-import { bytesToHex, pointToBytes } from '@quietvote/crypto';
+import { bytesToHex, hexToBytes, pointToBytes } from '@quietvote/crypto';
+import { b64uDecode } from '../util/hex.ts';
 import {
-  adjudicateDkg, manifestHash, rollRoot, validateManifest, verifyMultiSig, verifySig,
+  adjudicateDkg, logOrigin, manifestHash, rollRoot, validateManifest, verifyMultiSig, verifySig,
   type CommitBody, type ComplaintBody, type DealingBody, type ElectionParams, type ErrorCode, type Manifest, type MarkerBody,
   type MarkerSeqs, type MultiSignedRecord, type RollCommitBody, type SharesBody, type SignedRecord, type TallyBody,
 } from '@quietvote/protocol';
@@ -149,4 +150,18 @@ export function checkRoll(rollHex: readonly string[], expectedRootHex: string | 
   const rr = rollRoot(rollHex);
   const rootOk = rr.ok && (expectedRootHex === undefined || H(rr.value) === expectedRootHex);
   return { onRoll: rootOk && rollHex.includes(myPkHex), rootOk };
+}
+
+/**
+ * The log key and origin the client trusts for receipts and checkpoints are the ones in the signature-verified manifest
+ * (`bb.log_pk`, `logOrigin`), never the server's own claim. A server that answers with a different key or origin
+ * (so it could mint receipts for ballots it drops) is rejected; the returned values are the manifest's.
+ */
+export function bindServerLog(m: Manifest, server: { logPkB64u: string; origin: string }): { ok: true; logPk: Uint8Array; origin: string } | { ok: false; detail: string } {
+  const logPk = hexToBytes(m.bb.log_pk, 32);
+  const claimed = b64uDecode(server.logPkB64u);
+  if (claimed === undefined || claimed.length !== 32 || !claimed.every((b, i) => b === logPk[i])) return { ok: false, detail: 'the server names a log key that is not the one in the signed manifest' };
+  const origin = logOrigin(m);
+  if (server.origin !== origin) return { ok: false, detail: 'the server names a log origin that is not the one in the signed manifest' };
+  return { ok: true, logPk, origin };
 }

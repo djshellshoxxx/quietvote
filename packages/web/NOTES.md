@@ -25,6 +25,11 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
 * Sealing runs in a Worker via a Trusted Types policy `qv-default` (script URL only); falls back in-thread.
 * Under hash-pinned CSP the standalone verifier page has inline script/style by spec (QV-19 section 7); index.html has none.
 
+## Audit changes (docs/audit/web-verifier.md)
+* WV-4: the client now trusts the manifest's `bb.log_pk` and `logOrigin(manifest)` (`bindServerLog`), not the server's `log_pk`/`origin`; a mismatch makes the election fail to load (`E-ORG-MANIFEST` box). `test/helpers/fake-board.ts` now uses the conformant origin.
+* WV-3: `parseFragment` ignores a malformed `%` escape instead of throwing. WV-5: `csp()`/`headersFile()` reject any connect origin that is not a bare https origin (http only for localhost/127.0.0.1/.onion); `version`/`build` meta values are HTML-escaped; the inline verifier script has `<script` and `<!--` escaped.
+* Offline `verifier.html` page: file-size bound, any exception is shown as FAIL, unknown check keys fall back to the raw key, an Election ID mismatch is also announced in the live region. Blob URLs for downloads are revoked.
+
 ## Gaps
 * es/fr/de/pt-BR/ar have complete message tables (`src/i18n/catalogs/*.ts`), drafted by an AI model and not native-reviewed. They stay unoffered (only `en`) until each locale's `review` map holds a hash for every guarantee key; the matching-review path is tested in `test/i18n-catalogs.test.ts`. RTL CSS is logical-only; the ar layout has not been checked visually.
 * Messages are parsed at runtime (REQ-062 wants precompile). No lazy chunks (single bundle ~94 kB gzip); no import-map integrity (inline script).
