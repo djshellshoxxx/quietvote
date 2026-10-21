@@ -32,3 +32,14 @@ Where QV-18 is ambiguous or depends on QV-16 (not yet written), the safest readi
 12. **Not implemented here** (server/network concerns): tlog-witness HTTP flow, rate limits, retention jobs, gossip transport,
     `witness_conflict` and `missing_consistency` evidence (needs transcripts); the `fork`, `inconsistent`, `broken_promise`
     checkers are in `equivocation.ts`. `created_at` skew is enforced at admission only (offline verifiers ignore it).
+
+13. **Grammar vs protocol log (QV-ADR-015, QV-16 §5.15, QV-17 §tally).** The board required `roll_commit` before `election_open` and
+    `tally_aggregate` before `tally_result`/`decryption_share`; the protocol log emits neither in those cases and every tallied log failed
+    `QV_BOARD_GRAMMAR`. Spec reading: ADR-015 makes the manifest `roll.root` an alternative to `roll_commit` (static-roll mode; if both
+    exist they must match, enforced by the protocol layer `E_ROLL`), and QV-16/QV-17 have verifiers and trustees recompute the aggregate
+    (`tally_aggregate` "if present"). Board changed: `GrammarState.staticRoll` is set from the manifest body (JCS JSON `roll.root` is a string;
+    anything unparsable means "not static", i.e. `roll_commit` stays required); `election_open` then does not need `roll_commit`
+    (`joint_key` is still required); `decryption_share` and `tally_result` need `election_close` only; a `tally_aggregate` after
+    `tally_result` is refused. Witness gates: `election_open` lower bound is `roll_commit` else `joint_key`; `election_close` is now a hard
+    gate up to `tally_aggregate`, or up to `tally_result` when no aggregate exists. `grammarStep` has a third optional `body` argument.
+    Server (not edited here) should pass nothing new: `BoardLog.append` supplies the body itself.

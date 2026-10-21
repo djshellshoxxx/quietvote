@@ -5,14 +5,14 @@ import {
 } from '@quietvote/crypto';
 import {
   PROTO_ID, S, adjudicateDkg, analyzeBallotLog, check, dkgDeal, dkgFinalShare, dkgKeyconf, dkgMakeComplaint, dkgMakeShares,
-  dkgReceiveShare, manifestHash, rollRoot, shareToHex, signRecord, trusteeDecryptTally, validateManifest, verifyElection,
+  dkgReceiveShare, ballotCode, manifestHash, rollRoot, shareToHex, signRecord, trusteeDecryptSpoiled, trusteeDecryptTally, validateManifest, verifyElection,
   verifyMultiSig, verifySig, countedRoot, obj, hex as hexS, int, lit, str, arr,
-  type Aggregate, type ComplaintBody, type DealerSecret, type KeyconfBody, type LogEntry,
+  type Aggregate, type BallotBody, type ComplaintBody, type DealerSecret, type KeyconfBody, type LogEntry,
   type Manifest, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type SignedRecord,
 } from '@quietvote/protocol';
 import {
   encodeBundle, readBundle, tombstonePath, writeBundle,
-  type BundleData, type CompromiseBody, type KeyDestructionBody, type KeycheckBody, type TallyShareBody, type VaultDeps,
+  type BundleData, type CompromiseBody, type KeyDestructionBody, type KeycheckBody, type SpoilShareBody, type TallyShareBody, type VaultDeps,
 } from './bundle.ts';
 import { computeR1, markerBody, markerSeq, mergeEntries, takeDkg, uniqueBy, type ImportReport } from './ceremonylog.ts';
 import { TrusteeError } from './errors.ts';
@@ -27,11 +27,13 @@ const sc = (h: string): Scalar => scalarFromBytes(hexToBytes(h, 32));
 const hx = (s: Scalar): string => H(scalarToBytes(s));
 const PT = (h: string): Point => pointFromBytes(hexToBytes(h, 32), { nonIdentity: true });
 
+/** Upper bound on ballot codes per spoil request (bounds the work a requester can force per call). */
+export const MAX_SPOIL_REQUEST = 64;
 export const PACKET_FORMAT = 'qv-ceremony-packet/v1';
 export const LOG_FORMAT = 'qv-ceremony-log/v1';
 export const OVERRIDE_UNWITNESSED = 'RELEASE-WITHOUT-WITNESSED-CHECKPOINT';
 
-export type PacketRound = 'r1-commit' | 'r1-dealing' | 'r2-shares' | 'r3-complaints' | 'r4-keyconf' | 'drill-keycheck' | 'tally-share' | 'compromise-report';
+export type PacketRound = 'r1-commit' | 'r1-dealing' | 'r2-shares' | 'r3-complaints' | 'r4-keyconf' | 'drill-keycheck' | 'tally-share' | 'spoil-share' | 'compromise-report';
 export interface Packet {
   round: PacketRound;
   /** Canonical bytes (QV-JSON) ready to write as a `.qvp` file. */
@@ -82,6 +84,11 @@ const tallyShareSchema = obj({
   shares: arr(obj({ contest: str(64), opt: str(66), M: hexS(32), c: hexS(32), s: hexS(32) }), 1, 4096),
 });
 export const tallyShareRecordSchema = S.signed(tallyShareSchema);
+const spoilShareSchema = obj({
+  proto: lit(PROTO_ID), type: lit('spoil-share'), ctx: hexS(32), j: int(1, 32), code: hexS(32), spoil_seq: int(0, 1 << 30),
+  shares: arr(obj({ contest: str(64), opt: str(66), M: hexS(32), c: hexS(32), s: hexS(32) }), 1, 4096),
+});
+export const spoilShareRecordSchema = S.signed(spoilShareSchema);
 
 type Dep = VaultDeps;
 
@@ -473,13 +480,11 @@ export class Trustee {
   // ------------------------------------------------------------------ tally
 
   /**
-   * QV-17-REQ-040: verifies the election log, recomputes the aggregate ciphertexts itself and releases a signed partial
-   * decryption of exactly those. There is no parameter through which a ciphertext can be supplied.
+   * Shared gate for every release (tally and spoil): full log verification, key binding, election window and witnessed
+   * checkpoint, then the trustee's own recomputation of the ballot analysis. Nothing supplied by the caller is decrypted.
    */
-  async releaseTally(electionBundle: unknown, opts: { claimed?: ReadonlyMap<string, ReadonlyMap<string, Aggregate>>; witnessed?: boolean; override?: string } = {}): Promise<Packet> {
+  private async verifiedElection(electionBundle: unknown, opts: { witnessed?: boolean; override?: string }, what: string) {
     const { m, mh, i } = this.mf();
-    if (this.d.out.release !== undefined) return this.packet('tally-share', [this.d.out.release]);
-    this.need('CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING');
     const dv = this.d.derived;
     if (dv === undefined || this.d.sk_i === undefined) throw new TrusteeError('STATE', 'NO_KEY', 'no election share in this bundle');
     const ctx = this.ctxBytes()!;
@@ -519,7 +524,7 @@ export class Trustee {
     // 4. witnessed checkpoint (QV-17-REQ-041)
     if (m.bb.witness_quorum > 0 && opts.witnessed !== true) {
       if (opts.override !== OVERRIDE_UNWITNESSED) throw new TrusteeError('REFUSED', 'NOT_WITNESSED', `the checkpoint is not witnessed to quorum ${m.bb.witness_quorum}`);
-      this.d.overrides.push({ what: 'released tally share without witnessed checkpoint', at: this.deps.now().toISOString() });
+      this.d.overrides.push({ what: `${what} without witnessed checkpoint`, at: this.deps.now().toISOString() });
     }
     // 5. recompute the counted set and the aggregates ourselves
     const p = { manifest: m, mh, K: adj.value.K, ctx };
@@ -527,11 +532,23 @@ export class Trustee {
     if (!rollRoot(b.roll).ok) throw new TrusteeError('VERIFY', 'LOG_VERIFICATION_FAILED', 'roll invalid');
     const voter = b.log.filter((e) => typeof e.entry === 'object' && e.entry !== null && 'intent' in e.entry).map((e) => ({ seq: e.seq, raw: e.entry }));
     const an = analyzeBallotLog(p, rollSet, voter, open, close);
+    return { p, an, dv, i, ctx, sk: sc(this.d.sk_i), rollSize: b.roll.length, voter };
+  }
+
+  /**
+   * QV-17-REQ-040: verifies the election log, recomputes the aggregate ciphertexts itself and releases a signed partial
+   * decryption of exactly those. There is no parameter through which a ciphertext can be supplied.
+   */
+  async releaseTally(electionBundle: unknown, opts: { claimed?: ReadonlyMap<string, ReadonlyMap<string, Aggregate>>; witnessed?: boolean; override?: string } = {}): Promise<Packet> {
+    const { i } = this.mf();
+    if (this.d.out.release !== undefined) return this.packet('tally-share', [this.d.out.release]);
+    this.need('CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING');
+    const { p, an, dv, ctx, sk, rollSize } = await this.verifiedElection(electionBundle, opts, 'released tally share');
     if (this.d.state !== 'TALLYING') {
       this.go('TALLYING');
       await this.save();
     }
-    const res = trusteeDecryptTally(p, { j: i, sj: sc(this.d.sk_i), Yj: PT(dv.Yj) }, an.counted, opts.claimed, b.roll.length, this.deps.rng);
+    const res = trusteeDecryptTally(p, { j: i, sj: sk, Yj: PT(dv.Yj) }, an.counted, opts.claimed, rollSize, this.deps.rng);
     if (!res.ok) {
       this.go('STANDBY');
       await this.save();
@@ -549,6 +566,61 @@ export class Trustee {
     this.go('RELEASED');
     await this.save();
     return this.packet('tally-share', [this.d.out.release]);
+  }
+
+  // ------------------------------------------------------------------ spoil decryption (QV-ADR-020 "trustees" mode)
+
+  /**
+   * QV-16 §5.13.4 / QV-ADR-020: releases a signed, proof-carrying partial decryption of spoiled ballots named by code.
+   * Same gate as the tally (verified log, key binding, closed election, witnessed checkpoint). The caller supplies only
+   * ballot codes: the ciphertext is always taken from the trustee's own analysis of the log. Refused, atomically for the
+   * whole request, unless every code is (a) a verified spoil record in trustee mode (`reveal_digest` = 0, manifest
+   * `spoil_trustee_decrypt`), (b) never cast (no cast envelope anywhere in the log carries it, even an invalid one, and it
+   * is not in the counted set) and (c) not already released by this share (SPOIL_REPLAY).
+   */
+  async releaseSpoil(electionBundle: unknown, codes: readonly string[], opts: { witnessed?: boolean; override?: string } = {}): Promise<Packet> {
+    this.mf();
+    this.need('CONFIRMED', 'DRILLED', 'STANDBY', 'TALLYING', 'RELEASED');
+    if (codes.length === 0 || codes.length > MAX_SPOIL_REQUEST || new Set(codes).size !== codes.length) throw new TrusteeError('USAGE', 'BAD_SPOIL_REQUEST', `1..${MAX_SPOIL_REQUEST} distinct ballot codes required`);
+    for (const c of codes) if (!/^[0-9a-f]{64}$/.test(c)) throw new TrusteeError('USAGE', 'BAD_SPOIL_REQUEST', 'ballot code must be 64 lowercase hex characters');
+    const done = this.d.out.spoil ?? {};
+    // Replay is rejected before any log work: a code is released at most once per share.
+    for (const c of codes) if (done[c] !== undefined) throw new TrusteeError('REFUSED', 'SPOIL_REPLAY', `ballot ${c} was already released by this share`);
+    const { p, an, dv, i, ctx, sk, voter } = await this.verifiedElection(electionBundle, opts, 'released spoil share');
+    if (p.manifest.spoil_trustee_decrypt !== true) throw new TrusteeError('REFUSED', 'SPOIL_MODE_OFF', 'the manifest does not enable trustee spoil decryption');
+    const castCodes = new Set<string>(an.counted.map((c) => c.code));
+    for (const { raw } of voter) {
+      const e = raw as { intent?: unknown; body?: BallotBody };
+      if (e.intent === 'cast' && e.body !== undefined) {
+        try {
+          castCodes.add(H(ballotCode(p.ctx, e.body)));
+        } catch {
+          // an undecodable cast cannot carry a requested code; the schema check in the verified analysis already flagged it
+        }
+      }
+    }
+    const key = { j: i, sj: sk, Yj: PT(dv.Yj) };
+    const records: SignedRecord<SpoilShareBody>[] = [];
+    for (const c of codes) {
+      if (castCodes.has(c)) throw new TrusteeError('REFUSED', 'BALLOT_WAS_CAST', `ballot ${c} was cast; a cast ballot is never decrypted`);
+      const rec = an.spoiled.get(c);
+      if (rec === undefined) throw new TrusteeError('REFUSED', 'NOT_SPOILED', `no verified spoil record with ballot code ${c}`);
+      const res = trusteeDecryptSpoiled(p, key, rec, this.deps.rng);
+      if (!res.ok) throw new TrusteeError('REFUSED', res.error === 'E_TRUSTEE_REFUSE' ? 'NOT_TRUSTEE_MODE' : res.error, res.detail);
+      const shares: SpoilShareBody['shares'] = [];
+      for (const [k, sp] of res.value) {
+        const [contest, opt] = k.split('/') as [string, string];
+        const x = shareToHex(key.j, sp);
+        shares.push({ contest, opt, M: x.M, c: x.c, s: x.s });
+      }
+      records.push(this.sign(ctx, { proto: PROTO_ID, type: 'spoil-share', ctx: dv.ctx, j: key.j, code: c, spoil_seq: rec.seq, shares }));
+    }
+    // Persist the replay guard before the shares leave this function.
+    const out = (this.d.out.spoil ??= {});
+    for (const r of records) out[r.body.code] = r;
+    this.note(`released spoil shares for ${codes.length} ballot(s)`);
+    await this.save();
+    return this.packet('spoil-share', records);
   }
 
   // ------------------------------------------------------------------ backup / destroy / misc

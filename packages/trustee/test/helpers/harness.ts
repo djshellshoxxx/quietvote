@@ -6,9 +6,9 @@ import {
   type Ed25519Keypair, type Point, type Rng,
 } from '@quietvote/crypto';
 import {
-  NO_SUPERSEDES, PROTO_ID, adjudicateDkg, buildBallot, dkgDeal, dkgMakeComplaint, dkgMakeShares, expectedLogId, logOrigin, makeCast, manifestHash, rollRoot,
+  NO_SUPERSEDES, PROTO_ID, adjudicateDkg, buildBallot, dkgDeal, dkgMakeComplaint, dkgMakeShares, expectedLogId, logOrigin, makeCast, makeSpoil, manifestHash, rollRoot,
   signRecord, signRecordRaw,
-  type DealerSecret, type DkgOutcome, type LogEntry, type Manifest, type MarkerBody, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type Selections,
+  type DealerSecret, type DkgOutcome, type LogEntry, type Manifest, type MarkerBody, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type Selections, type SpoilMode,
 } from '@quietvote/protocol';
 import { computeR1, takeDkg, markerSeq } from '../../src/ceremonylog.ts';
 import { Trustee, LOG_FORMAT, type Packet } from '../../src/trustee.ts';
@@ -42,6 +42,8 @@ export interface Options {
   malicious?: Record<number, Behaviour>;
   witnessQuorum?: number;
   minCounted?: number;
+  /** manifest.spoil_trustee_decrypt (QV-ADR-020) */
+  spoilDecrypt?: boolean;
 }
 
 export function mkDeps(seed: string): VaultDeps {
@@ -113,7 +115,7 @@ export class Ceremony {
       n, t: this.o.t, coordinator: { keys: [H(this.coord.publicKey)], m: 1 },
       ballots: { max_per_voter: 4, max_spoils_per_voter: 4 },
       bb: { log_id: '', log_pk: H(kp(seed, 'log').publicKey), witness_quorum: this.o.witnessQuorum ?? 0 },
-      privacy_ack: true, ...(this.o.minCounted !== undefined ? { min_counted_ballots: this.o.minCounted } : {}),
+      privacy_ack: true, ...(this.o.spoilDecrypt === true ? { spoil_trustee_decrypt: true } : {}), ...(this.o.minCounted !== undefined ? { min_counted_ballots: this.o.minCounted } : {}),
     };
     // QV-16 bb.log_id = SHA-256(log origin) (protocol X-21); the origin depends only on election_id.
     this.manifest.bb.log_id = expectedLogId(logOrigin(this.manifest));
@@ -234,6 +236,21 @@ export class Ceremony {
     const b = buildBallot(this.params(o), v.secretKey, v.publicKey, NO_SUPERSEDES, sel, this.rng, 0);
     if (!b.ok) throw new Error(`build ${b.error}`);
     this.push(makeCast(this.params(o), v.secretKey, b.value));
+  }
+  /** Builds a ballot without posting it. */
+  build(o: DkgOutcome, voterIdx: number, sel: Selections, attempt = 0) {
+    const v = this.voters[voterIdx]!;
+    const b = buildBallot(this.params(o), v.secretKey, v.publicKey, NO_SUPERSEDES, sel, this.rng, attempt);
+    if (!b.ok) throw new Error(`build ${b.error}`);
+    return b.value;
+  }
+  /** Posts a spoil record for a built ballot; returns its hex ballot code. */
+  spoil(o: DkgOutcome, voterIdx: number, b: ReturnType<Ceremony['build']>, mode: SpoilMode = 'trustees'): string {
+    this.push(makeSpoil(this.params(o), this.voters[voterIdx]!.secretKey, b, mode));
+    return H(b.code);
+  }
+  castBuilt(o: DkgOutcome, voterIdx: number, b: ReturnType<Ceremony['build']>): void {
+    this.push(makeCast(this.params(o), this.voters[voterIdx]!.secretKey, b));
   }
   bundle(): { manifest: MultiSignedRecord<Manifest>; manifest_hash: string; roll: string[]; log: LogEntry[] } {
     return { manifest: this.mrec, manifest_hash: H(this.mh), roll: this.rollHex, log: this.log };

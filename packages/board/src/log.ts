@@ -52,7 +52,7 @@ export class BoardLog {
     for (let i = 0; i < o.store.size(); i++) {
       const e = o.store.getEntry(i);
       const h = e ? decodeHeader(e.headerBytes) : undefined;
-      if (!h?.ok || grammarStep(this.grammar, h.value.type) !== undefined) {
+      if (!h?.ok || grammarStep(this.grammar, h.value.type, e?.body ?? null) !== undefined) {
         this.quarantine('stored log fails grammar/parse on load');
         break;
       }
@@ -105,7 +105,7 @@ export class BoardLog {
     const now = this.o.clock();
     if (Math.abs(h.createdAt - now) > (this.o.maxClockSkew ?? 86400)) return err('QV_BOARD_CLOCK_SKEW', 'created_at outside tolerated skew');
     const g = copyGrammar(this.grammar);
-    const gErr = grammarStep(g, h.type);
+    const gErr = grammarStep(g, h.type, body);
     if (gErr !== undefined) return err('QV_BOARD_GRAMMAR', gErr);
     const leafHash = hashLeaf(headerBytes);
     const stored: StoredEntry = { seq, headerBytes, body, leafHash, sequencedAt: now, nonceKey: key };

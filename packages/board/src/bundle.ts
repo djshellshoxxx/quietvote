@@ -148,7 +148,7 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
       const h = c.value;
       headers.push(h);
       if (e.body === null && !redactedSeqs.has(i)) fail('QV_BOARD_BODY_DIGEST', 'body missing but redaction not recorded', i);
-      const ge = grammarStep(g, h.type);
+      const ge = grammarStep(g, h.type, e.body);
       if (ge !== undefined) fail('QV_BOARD_GRAMMAR', ge, i);
       const nk = nonceKey(toHex(h.author), h.type, toHex(h.authorNonce));
       if (seenNonce.has(nk)) fail('QV_BOARD_NONCE_REUSE', 'duplicate (author,type,nonce)', i);
@@ -236,13 +236,14 @@ export function verifyLog(bundle: LogBundle, opts: VerifyOptions = {}): Verdict 
         }
       };
       const first = (t: string): number | undefined => seqOf.get(t)?.[0];
-      const roll = first('roll_commit');
+      const roll = first('roll_commit') ?? first('joint_key'); // static-roll mode (QV-ADR-015) has no roll_commit
       const open = first('election_open');
       const close = first('election_close');
       const agg = first('tally_aggregate');
       const res = first('tally_result');
       if (open !== undefined && roll !== undefined) gate('election_open', open, roll + 1, open, true);
-      if (close !== undefined) gate('election_close', agg ?? close, close, agg ?? Number.MAX_SAFE_INTEGER, agg !== undefined);
+      const end = agg ?? res; // the aggregate is recomputed, not posted, when tally_aggregate is absent
+      if (close !== undefined) gate('election_close', end ?? close, close, end ?? Number.MAX_SAFE_INTEGER, end !== undefined);
       if (res !== undefined) gate('tally_result', res, res + 1, Number.MAX_SAFE_INTEGER, false);
     }
 

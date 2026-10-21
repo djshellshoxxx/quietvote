@@ -30,6 +30,7 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   commit|reveal|shares|verify|finalize|drill --bundle F [--out F.qvp]
   confirm --bundle F --compared-with 2,3 [--words "w1 .. w6"] [--out F]
   tally-release --bundle F --election F.json [--claimed F] [--override-unwitnessed PHRASE] [--out F]
+  spoil-release --bundle F --election F.json --codes HEX[,HEX...] [--override-unwitnessed PHRASE] [--out F]
   status --bundle F | abort --bundle F --reason T | restart --bundle F
   backup --bundle F --to F2 [--backup-passphrase-file F] | restore --from F2 --bundle F [--backup-passphrase-file F]
   destroy --bundle F --audit-close F --confirm "<election title>"
@@ -140,6 +141,12 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
         }
         const ov = o.get('override-unwitnessed');
         await emit(await t.releaseTally(await jsonOf(need('election')), { ...(claimed === undefined ? {} : { claimed }), ...(ov === undefined ? {} : { override: ov }) }), { state: t.state });
+        return 0;
+      }
+      case 'spoil-release': {
+        const t = await open();
+        const ov = o.get('override-unwitnessed');
+        await emit(await t.releaseSpoil(await jsonOf(need('election')), need('codes').split(',').map((c) => c.trim()), ov === undefined ? {} : { override: ov }), { state: t.state });
         return 0;
       }
       case 'status': {

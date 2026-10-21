@@ -57,3 +57,20 @@ POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"g
 * Open spec point (not decided here): QV-18 REQ-001 and QV-28 literally write `<election_id>` as 32 lowercase hex. The board, server
   and protocol all use the 26-char base32 form, and the board rejects hex. Changing the encoding is a spec-owner decision.
 * `test/origin.test.ts` pins the origin derivation. The harness sets `bb.log_id = expectedLogId(logOrigin(manifest))`.
+
+## Spoil-decryption relay (QV-ADR-020 "trustees" mode)
+* `Trustee.releaseSpoil(electionBundle, codes)` / CLI `spoil-release --codes HEX[,HEX]` returns a `spoil-share` packet: per code one signed
+  `SpoilShareBody` (`cp-dec-spoil` proofs, `spoil_seq`). Verify and combine with `decryptSpoiled` from `@quietvote/protocol`
+  (`spoilShareRecordSchema` validates records). The requester supplies ballot codes only; ciphertexts come from the trustee's own analysis.
+* Same gate as the tally (full log verification, key binding, election-close present, witnessed checkpoint or typed override). Also refused:
+  manifest without `spoil_trustee_decrypt` (`SPOIL_MODE_OFF`); code without a verified spoil record (`NOT_SPOILED`); spoil that is not in
+  trustee mode (`reveal_digest` != 0, `NOT_TRUSTEE_MODE`); any code that appears in a cast envelope anywhere in the log, valid or not, or in
+  the counted set (`BALLOT_WAS_CAST`; a cast ballot is never decryptable); malformed/duplicate/oversize (>`MAX_SPOIL_REQUEST` = 64) requests.
+  A request is all-or-nothing.
+* Replay: each code is released at most once per share (`SPOIL_REPLAY`); the signed record is kept in the sealed bundle (`out.spoil`).
+  Trade-off: a lost response cannot be re-fetched from the trustee; the requester must keep the packet. Re-serving the stored record would be a
+  safe alternative if operators prefer idempotence.
+* Works in states CONFIRMED/DRILLED/STANDBY/TALLYING/RELEASED; does not change state. Tally log gate was factored into `verifiedElection`.
+* Needs from protocol (not done here): none blocking. Nice to have: a `spoil-share` record type + `collectSpoilShares` in protocol so the
+  coordinator/verifier need not use trustee-local types, and publishing into the tally record's `spoiled[].shares` (types exist).
+* Unaudited; not for real elections.
