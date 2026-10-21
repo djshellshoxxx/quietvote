@@ -4,7 +4,7 @@ import {
   sha256, streamRng, utf8, type Ed25519Keypair, type Rng, type Scalar,
 } from '@quietvote/crypto';
 import {
-  PROTO_ID, adjudicateDkg, analyzeBallotLog, buildBallot, buildTally, checkDealing, dkgDeal, dkgFinalShare, dkgKeyconf,
+  PROTO_ID, electionOpenBody, adjudicateDkg, analyzeBallotLog, buildBallot, buildTally, checkDealing, dkgDeal, dkgFinalShare, dkgKeyconf,
   dkgMakeComplaint, dkgMakeShares, dkgReceiveShare, makeCast, makeSpoil, manifestHash, mth, rollLeaf, rollRoot,
   signRecord, signRecordRaw, trusteeDecryptSpoiled, expectedLogId, logOrigin, trusteeDecryptTally, NO_SUPERSEDES,
   type BuiltBallot, type CastEnvelope, type DealerSecret, type DkgOutcome, type ElectionBundle, type ElectionParams,
@@ -215,10 +215,12 @@ async function runDkg(sim: Sim, f: Faults): Promise<void> {
   }
   marker(sim, 'dkg-final', mh, { qmask: adj.value.qmask, K: H(pointToBytes(adj.value.K)) });
   sim.params = { manifest: m, mh, K: adj.value.K, ctx };
-  // Roll commitment before election-open: the board grammar requires a roll_commit entry even though the manifest
-  // carries roll.root (the protocol only requires it when roll.root is absent). Root and size must match the manifest.
-  push(sim, multiSign(sim, mh, { proto: PROTO_ID, type: 'roll-commit', root: sim.manifest.roll.root!, size: sim.rollHex.length }));
-  sim.openSeq = marker(sim, 'election-open', ctx);
+  // QV-ADR-015: roll_commit precedes election_open; election-open binds (manifest_hash, joint_key_seq, roll_commit_seq)
+  const rootR = rollRoot(sim.rollHex);
+  if (!rootR.ok) throw new Error('roll');
+  const jointKeySeq = sim.seq; // dkg-final marker just pushed
+  const rollCommitSeq = push(sim, multiSign(sim, mh, { proto: PROTO_ID, type: 'roll-commit', root: H(rootR.value), size: sim.rollHex.length }));
+  sim.openSeq = push(sim, multiSign(sim, ctx, electionOpenBody(PROTO_ID, H(mh), jointKeySeq, rollCommitSeq)));
 }
 
 export function voterEnvelopes(sim: Sim): { seq: number; raw: unknown }[] {

@@ -119,14 +119,14 @@ test('backups: consistent online snapshots, private files, checksummed manifest,
   assert.equal(job.state, 'done', JSON.stringify(job));
   assert.equal(job.result_ref, `backups/${r1.json.job_id}`);
   const dir = join(w.dir, job.result_ref);
-  assert.equal(statSync(dir).mode & 0o777, 0o700);
+  if (process.platform !== 'win32') assert.equal(statSync(dir).mode & 0o777, 0o700); // POSIX modes do not exist on Windows
   const man = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8'));
   assert.equal(man.format, 'qv-backup/v1');
   assert.ok(man.files.some((f: any) => f.name === 'control.sqlite'));
   assert.ok(man.files.length >= 5, 'control + every election');
   for (const f of man.files) {
     assert.equal(createHash('sha256').update(readFileSync(join(dir, f.name))).digest('hex'), f.sha256);
-    assert.equal(statSync(join(dir, f.name)).mode & 0o777, 0o600);
+    if (process.platform !== 'win32') assert.equal(statSync(join(dir, f.name)).mode & 0o777, 0o600);
     const d = new DatabaseSync(join(dir, f.name), { readOnly: true });
     assert.equal((d.prepare('PRAGMA quick_check').get() as any).quick_check, 'ok');
     d.close();
@@ -209,7 +209,9 @@ test('self-audit: clean log passes; a tampered body is found at its seq, the log
   const clearPath = `/api/v1/admin/elections/${id()}/quarantine/clear`;
   const refused = await A('POST', clearPath, { ack: found.result.incident, verified_against: ['witness:w1'] });
   assert.equal(refused.status, 409);
-  assert.match(refused.json.detail, /self-audit still fails \(BODY_DIGEST at seq 1\)|cannot be re-opened/);
+  // The flipped byte lands in a different field per run (keys are random), so a fresh replay refuses in one of three
+  // ways: audit failure, no re-open, or replay-time quarantine. All three refuse the clear (409); the follow-up below proves it is only lifted once the body is restored.
+  assert.match(refused.json.detail, /self-audit still fails \(BODY_DIGEST at seq 1\)|cannot be re-opened|still inconsistent after a fresh replay/);
   // restore the body: the clear now succeeds and appends resume
   const fix = new DatabaseSync(dbPath);
   fix.prepare('UPDATE log_entry SET body=? WHERE seq=1').run(orig);
