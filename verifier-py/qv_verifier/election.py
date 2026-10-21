@@ -47,7 +47,8 @@ _RECORD_KEYS = {
     "dkg-shares": ({"proto", "type", "i", "shares"}, set()),
     "dkg-complaint": ({"proto", "type", "accuser", "accused", "S", "c", "s"}, set()),
     "dkg-keyconf": ({"proto", "type", "j", "c", "s"}, set()),
-    "marker": ({"proto", "type", "name"}, {"qmask", "K"}),
+    "marker": ({"proto", "type", "name"}, {"qmask", "K", "manifest_hash", "joint_key_seq", "roll_commit_seq"}),
+    "roll-commit": ({"proto", "type", "root", "size"}, set()),
     "tally": ({"proto", "type", "ctx", "n_counted", "counted_root", "decrypters", "contests", "results"},
               {"spoiled"}),
 }
@@ -197,6 +198,31 @@ def _stop(st: State, *checks: str) -> None:
 ALL_AFTER_MANIFEST = [c for c in CHECKS if c != "chk.manifest.hash"]
 
 
+def _open_binding_error(
+    open_seq: int, ob: dict, mh: bytes, mk: dict[str, int], by_seq: dict[int, dict],
+    roll_root_hex: str | None, roll_size: int, coord: dict,
+) -> str | None:
+    """QV-ADR-015: election-open binds (manifest_hash, joint_key_seq, roll_commit_seq). Returns the reason it fails, or None.
+
+    Mirrors packages/protocol/src/verify.ts. Every reference must name the right EARLIER record (fail closed).
+    """
+    if "manifest_hash" not in ob or "joint_key_seq" not in ob or "roll_commit_seq" not in ob:
+        return "election-open lacks manifest_hash/joint_key_seq/roll_commit_seq"
+    if ob["manifest_hash"] != mh.hex():
+        return "election-open manifest_hash differs from the manifest hash"
+    jk, rc = ob["joint_key_seq"], ob["roll_commit_seq"]
+    if not isinstance(jk, int) or not isinstance(rc, int) or jk >= open_seq or rc >= open_seq:
+        return "election-open references a record that is not earlier in the log"
+    if jk != mk.get("dkg-final"):
+        return "election-open joint_key_seq does not point at the dkg-final marker"
+    en = by_seq.get(rc)
+    if en is None or en["body"].get("type") != "roll-commit" or not _coordinator_ok(mh, en["body"], en.get("sigs"), coord):
+        return "election-open roll_commit_seq does not point at a valid roll-commit record"
+    if en["body"]["root"] != roll_root_hex or en["body"]["size"] != roll_size:
+        return "the roll-commit bound by election-open does not match the supplied roll"
+    return None
+
+
 def _verify(bundle: dict, st: State, out: dict) -> None:
     # ------------------------------------------------ C1 manifest and parameters
     env = bundle.get("manifest")
@@ -228,9 +254,11 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     coord = m["coordinator"]
     if not _coordinator_ok(mh, m, env["sigs"], coord):
         st.add("chk.manifest.sig", "E_MANIFEST_SIG", True, "fewer than m valid coordinator signatures")
+    roll_root_hex: str | None = None
     try:
         roll_pks = [bytes.fromhex(x) for x in roll_hex]
         root, _ = merkle.roll_root(roll_pks)
+        roll_root_hex = root.hex()
         if "root" in m["roll"] and root.hex() != m["roll"]["root"]:
             raise QVError("E_ROLL", "roll root differs from manifest")
     except (QVError, ValueError, TypeError) as e:
@@ -342,6 +370,10 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     for s, en in opens[:1] + closes[:1]:
         if not _coordinator_ok(ctx, en["body"], en.get("sigs"), coord):
             st.add("chk.time.window", "E_SIG", True, f"seq {s}: window marker signature")
+    if opens:
+        bind_err = _open_binding_error(opens[0][0], opens[0][1]["body"], mh, mk, dict(records), roll_root_hex, len(roll_hex), coord)
+        if bind_err is not None:
+            st.add("chk.time.window", "E_MARKERS", True, bind_err)
     if not opens or not closes or not opens[0][0] < closes[0][0]:
         st.add("chk.time.window", "E_TIME_WINDOW", True, "open/close markers missing or misordered")
         open_seq, close_seq = 0, -1
