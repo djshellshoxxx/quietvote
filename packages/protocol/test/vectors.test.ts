@@ -249,7 +249,7 @@ test('MANIFEST.json lists every vector file with matching SHA-256', () => {
   for (const e of m.files) assert.equal(H(sha256(readFileSync(join(ROOT, e.path)))), e.sha256, e.path);
   const listed = new Set(m.files.map((e) => e.path));
   for (const f of walk(ROOT)) {
-    const rel = f.slice(ROOT.length + 1);
+    const rel = relative(ROOT, f).replaceAll('\\', '/');
     if (rel !== 'MANIFEST.json') assert.ok(listed.has(rel), `${rel} not in MANIFEST`);
   }
 });
