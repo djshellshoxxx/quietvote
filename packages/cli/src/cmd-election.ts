@@ -43,5 +43,6 @@ export async function cmdElectionInspect(argv: string[], io: Io): Promise<number
     L.push('This is a description, not a verification. Run `qv verify` for a verdict.');
     io.out(L.join('\n') + '\n');
   }
-  return EXIT.ok;
+  // The description is still printed, but a bundle whose manifest hash does not match its own manifest is a failure.
+  return info.manifest_hash_matches_bundle ? EXIT.ok : EXIT.fail;
 }

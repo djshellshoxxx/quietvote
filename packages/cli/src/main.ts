@@ -12,6 +12,7 @@ export const VERSION = '0.1.0';
 export const HELP = `qv ${VERSION}: QuietVote command line (offline-friendly, no dependencies)
 
 usage:
+  qv --version                     print the version
   qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>]
                                    verify an election bundle (V1..V14); runs the canary self-test first
   qv selftest [--json]             run only the canary self-test
@@ -64,9 +65,14 @@ export async function run(argv: string[], io: Io): Promise<number> {
       return await entry(rest, io);
     }
     const [sub, ...args] = rest;
-    if (sub === undefined || sub === '--help') {
+    if (sub === undefined) {
+      // A missing subcommand is a usage error: the usage text goes to stderr, like the top-level case.
+      io.err(HELP);
+      return EXIT.usage;
+    }
+    if (sub === '--help') {
       io.out(HELP);
-      return sub === undefined ? EXIT.usage : EXIT.ok;
+      return EXIT.ok;
     }
     const fn = Object.hasOwn(entry, sub) ? entry[sub] : undefined;
     if (fn === undefined) throw new UsageError(`unknown command "${a} ${sub}"`);

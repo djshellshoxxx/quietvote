@@ -339,9 +339,10 @@ test('self-audit detects store corruption', () => {
 test('redaction leaves tree and proofs untouched', () => {
   const { log, store } = newLog();
   prelude(log);
+  assert.ok(add(log, 'ballot').r.ok);
   const before = toHex(log.root());
-  assert.ok(log.redact(1).ok);
-  assert.equal(store.getEntry(1)?.body, null);
+  assert.ok(log.redact(5).ok);
+  assert.equal(store.getEntry(5)?.body, null);
   assert.equal(toHex(log.root()), before);
   assert.equal(log.redact(99).ok, false);
 });

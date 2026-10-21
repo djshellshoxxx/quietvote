@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { lstatSync, unlinkSync, writeFileSync, type Stats } from 'node:fs';
 import { ed25519Keypair } from '@quietvote/crypto';
 import { InputError, UsageError, needFlag, needPositional, parseArgs, type Parsed } from './args.ts';
 import { PASSPHRASE_FLAGS, getPassphrase, hex, printJson, readFile } from './common.ts';
@@ -18,6 +18,26 @@ function intFlag(p: Parsed, name: string, dflt: number): number {
   if (v === undefined) return dflt;
   if (!/^[0-9]{1,9}$/.test(v)) throw new UsageError(`--${name} must be a positive integer`);
   return Number(v);
+}
+
+/**
+ * Writes a new key file with mode 0600. `--force` replaces the old file rather than writing into it: an existing file keeps its
+ * old permissions and a symlink would send the seed to its target, so the old entry is removed first and never followed.
+ */
+function writeKeyFile(out: string, data: string, force: boolean): void {
+  if (force) {
+    let st: Stats | undefined;
+    try {
+      st = lstatSync(out);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+    }
+    if (st !== undefined) {
+      if (st.isSymbolicLink()) throw new InputError(`${out} is a symbolic link; refusing to write a key through it`);
+      unlinkSync(out);
+    }
+  }
+  writeFileSync(out, data, { mode: 0o600, flag: 'wx' });
 }
 
 export async function cmdKeygen(argv: string[], io: Io): Promise<number> {
@@ -41,8 +61,12 @@ export async function cmdKeygen(argv: string[], io: Io): Promise<number> {
     file = serialize(await wrapSeed(seed, pass, io.rng, prm));
   }
   try {
-    writeFileSync(out, file, { mode: 0o600, flag: p.has('force') ? 'w' : 'wx' });
+    writeKeyFile(out, file, p.has('force'));
   } catch (e) {
+    if (e instanceof InputError) {
+      io.err(`${e.message}\n`);
+      return EXIT.input;
+    }
     const code = (e as NodeJS.ErrnoException).code;
     io.err(code === 'EEXIST' ? `${out} exists; use --force to overwrite\n` : `cannot write ${out}: ${code ?? 'error'}\n`);
     return EXIT.input;
