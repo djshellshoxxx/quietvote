@@ -30,7 +30,7 @@ export interface BallotAnalysis {
   findings: Finding[];
   castSeen: number;
   spoilSeen: number;
-  /** Every ElGamal `a` (alpha) hex appearing in ANY cast envelope of the log, valid or not (TR-01: spoil relays must never decrypt these). */
+  /** Every ElGamal `a` (alpha) of every envelope-valid cast in the window (counted or not). Valid casts only: proofs bind (ctx, voter), so another voter cannot plant a copy. */
   castAlphas: Set<string>;
   checkFailures: { ballotsValid: boolean; ballotsLatest: boolean; window: boolean; benaloh: boolean; encoding: boolean };
 }
@@ -56,15 +56,25 @@ export function analyzeBallotLog(
   let castSeen = 0;
   let spoilSeen = 0;
   const castAlphas = new Set<string>();
+  const castCodes = new Set<string>();
 
   for (const { seq, raw } of entries) {
-    const r = verifyEnvelope(p, roll, raw);
+    let r = verifyEnvelope(p, roll, raw);
     const intent = (raw as { intent?: string } | null)?.intent;
-    if (intent === 'cast') {
-      castSeen++;
-      collectAlphas((raw as { body?: unknown }).body, castAlphas);
-    }
+    if (intent === 'cast') castSeen++;
     else if (intent === 'spoil') spoilSeen++;
+    // P4 (REQ-015): the voter signature covers reveal_digest, not the attached reveal. A voter-signed spoil whose attached reveal
+    // fails its digest is still a signed statement that this code was audited: register it (so the code can never be counted),
+    // but raise the alarm and fail chk.benaloh.spoiled.
+    if (!r.ok && r.error === 'E_SPOIL_MISMATCH' && intent === 'spoil' && Object.hasOwn(raw as object, 'reveal')) {
+      const { reveal: _bad, ...bare } = raw as Record<string, unknown>;
+      const r2 = verifyEnvelope(p, roll, bare);
+      if (r2.ok) {
+        cf.benaloh = false;
+        add('E_SPOIL_MISMATCH', seq, `${r.detail ?? 'reveal invalid'}; the signed spoil still spoils its code`, 'ALARM');
+        r = r2;
+      }
+    }
     if (!r.ok) {
       if (r.error === 'E_SCHEMA' || r.error === 'E_PARSE' || r.error === 'E_VERSION') cf.encoding = false;
       if (r.error === 'E_SPOIL_MISMATCH') cf.benaloh = false;
@@ -95,7 +105,22 @@ export function analyzeBallotLog(
       }
       if (!spoiled.has(code)) spoiled.set(code, { seq, code, voter: r.value.voter, env });
     } else {
+      collectAlphas(r.value.env.body, castAlphas);
+      castCodes.add(code);
       casts.push({ seq, v: { voter: r.value.voter, code: r.value.code, env: r.value.env } });
+    }
+  }
+
+  // CP-01/TR-01: a spoil is only ever a test ballot. One that shares ciphertexts with a valid cast (re-wrapped under another
+  // `supersedes`, so it has a different code) would let a published/decrypted spoil expose a cast ballot: reject it.
+  for (const [code, rec] of [...spoiled]) {
+    const mine = new Set<string>();
+    collectAlphas(rec.env.body, mine);
+    // Same code as a cast is the plain 'spoiled code cast' case handled below (the cast is excluded, the spoil stays).
+    if (!castCodes.has(code) && [...mine].some((a) => castAlphas.has(a))) {
+      spoiled.delete(code);
+      cf.benaloh = false;
+      add('E_SPOILED_CODE_CAST', rec.seq, 'spoil shares ciphertexts with a cast ballot (re-wrapped); excluded (CP-01/TR-01)', 'ALARM');
     }
   }
 

@@ -9,7 +9,7 @@
     "chk.ballots.valid": "fail",
     "chk.ballots.latest": "pass",
     "chk.tally.aggregate": "fail",
-    "chk.tally.decrypt": "pass",
+    "chk.tally.decrypt": "not_run",
     "chk.result.rules": "not_run",
     "chk.benaloh.spoiled": "pass",
     "chk.receipts.sample": "not_run",

@@ -25,7 +25,9 @@ export function ed25519IsStrictPoint(bytes: Uint8Array): boolean {
     const P = ed25519.Point.fromBytes(bytes, false);
     const re = P.toBytes();
     for (let i = 0; i < 32; i++) if (re[i] !== bytes[i]) return false;
-    return !P.isSmallOrder();
+    // Torsion-free too (CP-04): with a mixed-order A or R the cofactored equation noble checks differs from the
+    // cofactorless one QV-16 describes; honest keys and signatures are always torsion-free.
+    return !P.isSmallOrder() && P.isTorsionFree();
   } catch {
     return false;
   }
