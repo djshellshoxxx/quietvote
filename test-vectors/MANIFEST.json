@@ -2,7 +2,7 @@
   "protocol_version": "qv1",
   "generator": "vecgen@0.1.0",
   "signature": "unsigned (release job signs)",
-  "merkle_root_sha256_rfc9162": "ebe68a246ffe1339aa4ee3674f05621259e3b60a6b080c6532d7486d0b23c1ff",
+  "merkle_root_sha256_rfc9162": "c8e55ab18943bb80830a356caab4983229b2816673fc42899ad3245f74e8ed53",
   "files": [
     {
       "path": "README.md",
@@ -287,6 +287,10 @@
     {
       "path": "v1/protocol/ballot/ballot-verify.json",
       "sha256": "eb2217bee6fa644c79f240487ec9257cbbb2ee7819b844e63a11b2c3b8f12297"
+    },
+    {
+      "path": "v1/protocol/benaloh/private-audit.json",
+      "sha256": "65c044611c43df4cda62e105cc3af43638ea1abb3e37175828c5cc9f6a677735"
     },
     {
       "path": "v1/protocol/benaloh/spoil-reveal.json",

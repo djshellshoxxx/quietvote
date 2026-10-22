@@ -1,5 +1,5 @@
 import { bytesToHex, jcs, parseQvJson, pointToBytes, type Point } from '@quietvote/crypto';
-import { aggregate, analyzeBallotLog, countedRoot, type Finding, type FindingClass } from './ballotlog.ts';
+import { aggregate, analyzeBallotLog, collectAlphas, countedRoot, type Finding, type FindingClass } from './ballotlog.ts';
 import { ballotCode, type ElectionParams } from './ballot.ts';
 import { adjudicateDkg, verifyKeyconf, type DkgOutcome, type MarkerSeqs } from './dkg.ts';
 import {
@@ -567,6 +567,17 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
         let set = sets.get(s.j);
         if (set === undefined) sets.set(s.j, (set = new Map()));
         set.set(shareKey(s.contest, s.opt), pr.value);
+      }
+      const rewrap = (() => {
+        const mine = new Set<string>();
+        collectAlphas(rec.env.body, mine);
+        for (const a of mine) if (an.castAlphas.has(a)) return true;
+        return false;
+      })();
+      if (rewrap) {
+        R.checks['chk.benaloh.spoiled'] = 'fail';
+        F('E_SPOILED_CODE_CAST', 'trustee-mode spoil shares ciphertexts that also appear in a cast envelope (TR-01)', undefined, 'ALARM');
+        continue;
       }
       const ok = m.spoil_trustee_decrypt === true && rec.env.reveal_digest === '00'.repeat(32);
       const dr = ok ? decryptSpoiled(p, dkg.Y, decrypters, { code: sp.code, body: rec.env.body }, sets) : null;

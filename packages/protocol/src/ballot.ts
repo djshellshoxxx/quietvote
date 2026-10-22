@@ -280,3 +280,18 @@ export function verifySpoilReveal(p: ElectionParams, body: BallotBody, reveal: R
   }
 }
 
+
+/**
+ * Voter-side audit of a spoil (QV-10 private audit, QV-ADR-020): the posted envelope verifies, the reveal reproduces the posted
+ * ballot, and `reveal_digest` commits to this reveal (trustee-mode spoils carry the zero digest and commit to nothing).
+ */
+export function auditSpoil(p: ElectionParams, roll: ReadonlySet<string>, env: unknown, reveal: Reveal): Result<{ code: Uint8Array }> {
+  const v = verifyEnvelope(p, roll, env);
+  if (!v.ok) return v;
+  if (v.value.env.intent !== 'spoil') return err('E_SPOIL_MISMATCH', 'envelope is not a spoil');
+  const s = verifySpoilReveal(p, v.value.env.body, reveal);
+  if (!s.ok) return s;
+  const rd = v.value.env.reveal_digest;
+  if (rd !== '00'.repeat(32) && H(revealDigest(p.ctx, reveal)) !== rd) return err('E_SPOIL_MISMATCH', 'reveal_digest does not commit to this reveal');
+  return ok({ code: v.value.code });
+}

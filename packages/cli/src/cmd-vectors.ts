@@ -8,7 +8,7 @@ import {
   sha256, sha512, type Label,
 } from '@quietvote/crypto';
 import {
-  ballotCode, binderFor, castDigest, deriveXi, encryptBallot, evaluateContest, manifestHash, rollLeaf, rollRoot, validateManifest,
+  auditSpoil, ballotCode, binderFor, castDigest, deriveXi, encryptBallot, evaluateContest, manifestHash, rollLeaf, rollRoot, validateManifest,
   verifyEnvelope, verifySpoilReveal, type ElectionParams, type Manifest,
 } from '@quietvote/protocol';
 import { pokVerify } from '@quietvote/crypto';
@@ -102,6 +102,10 @@ const runners: Record<string, Runner> = {
   'benaloh.verify_spoiled': (i) => {
     const r = verifySpoilReveal(params(i.params), i.body, i.reveal);
     return r.ok ? { reproduced: true } : err(r.error);
+  },
+  'benaloh.private_audit': (i) => {
+    const r = auditSpoil(params(i.params), new Set<string>(i.roll), i.envelope, i.reveal);
+    return r.ok ? { audited: true, ballot_code_hex: H(r.value.code) } : err(r.error);
   },
   'rules.evaluate': (i) => ({ result: evaluateContest({ quorum: i.manifest_quorum ?? undefined } as Manifest, i.contest, new Map(Object.entries(i.counts as Record<string, number>)), i.participation, i.roll_size) }),
   'ballot.encrypt': (i) => {

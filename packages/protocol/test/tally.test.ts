@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { baseMul, bytesToHex, decProve, ctSum, elgamalEncrypt, pointAdd, scalarRandomNonZero, streamRng, G } from '@quietvote/crypto';
 import {
-  aggregate, analyzeBallotLog, decryptAggregates, shareKey, trusteeDecryptSpoiled, trusteeDecryptTally, verifyElection,
+  aggregate, analyzeBallotLog, ballotCode, makeSpoil, verifyEnvelope, decryptAggregates, shareKey, trusteeDecryptSpoiled, trusteeDecryptTally, verifyElection,
   type ShareSet,
 } from '../src/index.ts';
-import { bundleOf, castBallot, closeElection, defaultContests, publishTally, setup, spoilBallot, trusteeKeyFor, voterEnvelopes } from './helpers/sim.ts';
+import { bundleOf, push, castBallot, closeElection, defaultContests, publishTally, setup, spoilBallot, trusteeKeyFor, voterEnvelopes } from './helpers/sim.ts';
 
 const H = bytesToHex;
 const contests = defaultContests().filter((c) => c.id !== 'chair' && c.id !== 'topics');
@@ -123,4 +123,24 @@ test('BSGS miss / count above V is a failure, never zero (R-01 #14)', async () =
   // V large enough for each count, but the per-contest sum bound (limit 1 x V = 9 < 18) still fails
   assert.ok(!ok.ok && ok.error === 'E_DLOG_RANGE' && /sum bound/.test(ok.detail ?? ''));
   void H;
+});
+
+test('TR-01: a trustees-mode spoil that re-wraps a cast ballot\'s ciphertexts is flagged, never PASS', async () => {
+  const sim = await setup({ seed: 'tally-spoil-rewrap', n: 3, t: 2, voters: 4, contests: [contests[1]!], spoilTrustees: true });
+  for (let i = 0; i < 3; i++) castBallot(sim, i, { board: ['p', 'q'] });
+  const { built } = castBallot(sim, 3, { board: ['r'] });
+  const p = sim.params!;
+  const v = sim.voters[3]!;
+  const body = structuredClone(built.body);
+  body.supersedes = '11'.repeat(32); // spoils are not chain-checked; proofs bind only (ctx, voter)
+  const rewrapped = { ...built, body, code: ballotCode(p.ctx, body) };
+  const spoil = makeSpoil(p, v.secretKey, rewrapped, 'trustees');
+  assert.ok(verifyEnvelope(p, new Set(sim.rollHex), spoil).ok, 'precondition: the re-wrapped spoil is a valid envelope');
+  push(sim, spoil);
+  sim.built.push(rewrapped);
+  closeElection(sim);
+  publishTally(sim, [2, 3], { spoilTrustees: true });
+  const rep = await verifyElection(bundleOf(sim));
+  assert.equal(rep.checks['chk.benaloh.spoiled'], 'fail');
+  assert.ok(rep.findings.some((f) => f.code === 'E_SPOILED_CODE_CAST' && /TR-01/.test(f.detail ?? '')), JSON.stringify(rep.findings));
 });
