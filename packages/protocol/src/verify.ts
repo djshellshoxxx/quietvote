@@ -342,6 +342,12 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   }
 
   // ---- roll commitment when the manifest carries none (QV-ADR-015)
+  // Every valid coordinator-signed roll commitment must agree on both root and size.
+  // Otherwise a coordinator could present inconsistent eligibility snapshots to observers.
+  if (rollCommits.some((c) => c.body.root !== rootHex || c.body.size !== rollHex.length)) {
+    F('E_ROLL', 'coordinator-signed roll-commit conflicts with the supplied roll');
+    return done();
+  }
   if (m.roll.root === undefined) {
     const rc = rollCommits[0];
     if (rc === undefined) {
@@ -419,6 +425,13 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   if (open === undefined || close === undefined) {
     F('E_MARKERS', 'election-open/close marker missing; ballots cannot be windowed', undefined, 'I');
     R.checks['chk.time.window'] = 'not_run';
+    return done();
+  }
+  // Roll commitments are setup records: none may be appended after voting opens.
+  // Checking every commitment also prevents a late duplicate from being ignored.
+  if (rollCommits.some((c) => c.seq >= open.seq)) {
+    F('E_ROLL', 'roll-commit must precede election-open');
+    R.checks['chk.time.window'] = 'fail';
     return done();
   }
   if (!(mk['dkg-final'] < open.seq && open.seq < close.seq)) {
