@@ -17,6 +17,7 @@ trust wording remain in place. No runtime code changed for this milestone.
 - Local working branch: `feature/ordinary-ux-20261024`.
 - Published source work branch: `checkpoint/quietvote-ordinary-ux-20261024`.
 - Confirmed main: `019f4e789be2ff38a5fb2d348c3b225cc87cf296`; main is unchanged.
+- Software-artwork README milestone: `9dfd02c6f831d885921a9f4d390a2aee1898ccb0`.
 - Earlier ordinary shell checkpoint:
   `9c63458f7c0386f851f9d9617e731cd9b91ecfa8`.
 - Published catalog/literal-lint milestone:
@@ -155,4 +156,14 @@ receipt below for its commit and remote readback.
 
 ## Software-artwork publication receipt
 
-<!-- Complete after publishing and verifying the work-branch SHA. -->
+Commit `9dfd02c6f831d885921a9f4d390a2aee1898ccb0` added the README label and
+updated this handoff. The outgoing-version scan used detect-secrets 1.5.0 with
+default plugins/filters and `--all-files --no-verify`: one outgoing commit, two
+blob versions, zero potential findings. The push fast-forwarded the ordinary
+work branch from `b827c645b3ec5d2887fd1c3f2af823dfffd37b54`; `git ls-remote`
+returned the exact `9dfd02c6f831d885921a9f4d390a2aee1898ccb0` SHA for that branch
+and main remained `019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
+
+This receipt was finalized in a subsequent documentation-only checkpoint. Resolve
+the live branch head with `git ls-remote` before resuming; the README label commit
+above is unchanged. No implementation or tests changed for the receipt update.
