@@ -1,5 +1,7 @@
 # QuietVote
 
+**Software artwork:** an experimental software and documentation project exploring private decision-making for voluntary groups.
+
 **A private, verifiable decision-making tool for voluntary groups.**
 
 QuietVote is a proposed platform for organizations that want members to make collective decisions without publishing each person's ballot. It is intended for groups such as cooperatives, member associations, unions, collectives, and online communities. The project explores how a group can verify that eligible members participated, prevent duplicate voting, and audit the result while keeping individual choices private.

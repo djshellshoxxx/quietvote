@@ -4,6 +4,14 @@ This is the restart entry point for Claude or another agent. Repository ownershi
 is **only `djshellshoxxx/quietvote`**. Preserve all local changes before doing work;
 CLASSifiedisRUPTed, Circula and Unaltered are outside this task.
 
+## Latest project-label milestone
+
+The README project overview now labels QuietVote as **software artwork**, describing
+it as an experimental software and documentation project. This is a descriptive
+label; it does not change the AGPL-3.0-or-later license or remove provider,
+security, or legal requirements. Existing purpose, experimental status, safety and
+trust wording remain in place. No runtime code changed for this milestone.
+
 ## Exact refs and known checkpoints
 
 - Local working branch: `feature/ordinary-ux-20261024`.
@@ -139,3 +147,12 @@ is not independent security acceptance.
 
 The receipt-only documentation checkpoint uses the same tested implementation.
 Continue to secret-check outgoing versions and read back each work-branch push.
+
+The software-artwork milestone is documentation-only. The README links were
+checked locally and `git diff --check` passed; implementation checks were not rerun
+because no implementation files changed. See the software-artwork publication
+receipt below for its commit and remote readback.
+
+## Software-artwork publication receipt
+
+<!-- Complete after publishing and verifying the work-branch SHA. -->
