@@ -29,7 +29,7 @@ import { ballotCodeDisplay, electionIdOf, sameElectionId, spokenForm } from '../
 import { b64uDecode, b64uEncode } from '../util/hex.ts';
 import { Announcer, add, clear, h, nextId, type Child } from './dom.ts';
 import { electionPath, parseRoute, type Route } from './route.ts';
-import { shouldHandleNavigation } from './navigation.ts';
+import { isCurrentPage, shouldHandleNavigation } from './navigation.ts';
 
 export interface AppEnv {
   root: HTMLElement;
@@ -105,14 +105,15 @@ export function startApp(env: AppEnv): void {
     say.say(t('qv.device.cleared'));
     return true;
   };
-  const link = (href: string, text: string, cls = ''): HTMLElement =>
-    h('a', { href, class: cls, onclick: (e: Event) => {
+  const link = (href: string, text: string, cls = '', current?: Route): HTMLElement =>
+    h('a', { href, class: cls, 'aria-current': current && isCurrentPage(href, current) ? 'page' : undefined, onclick: (e: Event) => {
       if (!shouldHandleNavigation(e as MouseEvent)) return;
       e.preventDefault();
       go(href);
     } }, text);
   const STEPS: MessageKey[] = ['qv.step.check', 'qv.step.key', 'qv.step.choose', 'qv.step.send'];
-  const stepper = (n: number): HTMLElement => h('p', { class: 'step' }, t('qv.step.of', { current: n, total: 4, name: t(STEPS[n - 1]!) }));
+  const stepper = (n: number): HTMLElement => h('ol', { class: 'steps', 'aria-label': t('qv.shell.stepOf', { current: n, total: STEPS.length }) },
+    ...STEPS.map((key, i) => h('li', { 'aria-current': i + 1 === n ? 'step' : undefined }, t(key))));
   const more = (...kids: Child[]): HTMLElement => h('details', {}, h('summary', {}, t('qv.vote.moreDetails')), ...kids);
   const heading = (text: string, lvl = 1): HTMLElement => h(`h${lvl}`, { tabindex: -1, class: 'step-heading' }, text);
   const btn = (text: string, on: () => void, o: { primary?: boolean; disabled?: boolean; id?: string } = {}): HTMLElement =>
@@ -205,7 +206,9 @@ export function startApp(env: AppEnv): void {
 
   function render(title: string, ...kids: Child[]): void {
     repaint = undefined;
-    document.title = t('qv.shell.titleNoElection', { step: title });
+    const current = parseRoute(location.pathname);
+    const election = current.name === 'election' ? loaded.get(current.id)?.ctx?.manifest.title : undefined;
+    document.title = election === undefined ? t('qv.shell.titleNoElection', { step: title }) : t('qv.shell.title', { step: title, election });
     clear(main);
     add(main, kids);
     const hd = main.querySelector('.step-heading') as HTMLElement | null;
@@ -244,7 +247,7 @@ export function startApp(env: AppEnv): void {
   async function route(): Promise<void> {
     const r: Route = parseRoute(location.pathname);
     if (r.name !== 'election') stopLive();
-    nav.replaceChildren(link('/', t('qv.nav.home')), link('/new', t('qv.nav.create')), link('/verify', t('qv.nav.verify')), link('/help', t('qv.shell.helpLink')));
+    nav.replaceChildren(link('/', t('qv.nav.home'), '', r), link('/new', t('qv.nav.create'), '', r), link('/verify', t('qv.nav.verify'), '', r), link('/help', t('qv.shell.helpLink'), '', r));
     try {
       if (r.name === 'home') return home();
       if (r.name === 'help') return helpView();
@@ -320,7 +323,7 @@ export function startApp(env: AppEnv): void {
     startLive(L);
     const sub = r.view;
     const tabs = h('ul', { class: 'tabs' }, ...(['overview', 'rules', 'key', 'vote', 'receipt', 'results'] as const).map((v) =>
-      h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results' } as const)[v])))));
+      h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results' } as const)[v]), '', r))));
     const head = [electionHeader(L), tabs, liveLine];
     if (L.ctx === undefined) return render('Election', ...head, errorBox('E-ORG-MANIFEST', { detail: L.ctxError ?? '' }));
     const ctx = L.ctx;
@@ -331,7 +334,7 @@ export function startApp(env: AppEnv): void {
       const confirmed = settings.confirmed[r.id] === true;
       const msg = h('div', { role: 'status' });
       const setC = async (v: boolean): Promise<void> => { await env.storage.putSettings({ ...settings, confirmed: { ...settings.confirmed, [r.id]: v } }); };
-      return render(ctx.manifest.title, ...head, stepper(1), heading(ctx.manifest.title), h('p', {}, t('qv.election.invited')),
+      return render(t('qv.nav.home'), ...head, stepper(1), heading(ctx.manifest.title), h('p', {}, t('qv.election.invited')),
         h('p', {}, t('qv.election.opens', { when: fmt(ctx.manifest.voting_open) })), h('p', {}, t('qv.election.closes', { when: fmt(ctx.manifest.voting_close) })),
         h('p', {}, t('qv.election.contests', { count: ctx.manifest.contests.length }), ' · ', t('qv.election.roll', { count: ctx.rollSize })),
         confirmed ? h('p', {}, t('qv.election.v1.confirmed')) : h('section', {}, h('p', {}, t('qv.election.v1.ask')),
@@ -701,7 +704,7 @@ export function startApp(env: AppEnv): void {
   // ---------------------------------------------------------------- shell
   const skip = h('a', { href: '#main', class: 'skip', onclick: (e: Event) => { e.preventDefault(); main.focus(); } }, t('qv.shell.skip'));
   const header = h('header', {}, h('p', { class: 'brand' }, t('qv.app.name')), nav, h('p', {}, link('/help', t('qv.shell.helpLink')), ' · ', link('/e', t('qv.shell.privacyLink'))));
-  const footer = h('footer', {}, h('p', {}, t('qv.shell.footer.build', { version: env.build.version, build: env.build.id })), h('p', {}, h('a', { href: '/verify' }, t('qv.shell.footer.verifyPage'))));
+  const footer = h('footer', {}, h('p', {}, t('qv.shell.footer.build', { version: env.build.version, build: env.build.id })), h('p', {}, h('a', { href: '/verify' }, t('qv.shell.footer.verifyPage')), ' · ', h('a', { href: 'https://github.com/djshellshoxxx/quietvote' }, t('qv.shell.footer.source'))));
   clear(env.root);
   add(env.root, [skip, h('p', { class: 'banner', role: 'note' }, t('qv.banner.experimental')), header, main, footer, polite, urgent,
     h('noscript', {}, t('qv.shell.noscript'))]);

@@ -47,3 +47,32 @@ PR mutations, uploads, deployment, releases or credentials. Existing guarantee
 copy and translation review gates remain outside this change. Tests are ordinary
 regressions, never independent security acceptance. Local files and commits are
 ephemeral until separately approved publication.
+
+## Continuation from 8f9fb75 (same ordinary work)
+
+Preserve the original browser evidence and unchecked browser gate. Inventory the
+existing Help/About/wiki/navigation/accessibility/localization requirements;
+record implemented, partial, human-review, browser and scope-boundary statuses
+with source references. Do not expand into unrelated features or blocked work.
+
+1. Reuse navigation worker (only `ui/navigation.ts` and its test): a pure current
+   page matcher over existing routes, including overview aliases and unknown
+   paths. Integrator adds `aria-current="page"` to existing global/tab links.
+2. Reuse documentation worker (only `docs/TRANSLATING.md` and README doc link):
+   improve contributor/reviewer guidance from QV-13/T-314. Human locale decisions
+   stay pending; no draft translation or review map is changed.
+3. Integrator adds the existing, specified source-code footer link using its
+   existing catalog key (QV-10 section 5.3), election-aware document titles
+   (C-SHELL), and ordered step semantics with the current step marked (C-STEPPER).
+   No routes, state transitions, verifier links or guarantees change.
+4. Integrator records requirement-to-evidence inventory, reruns focused ordinary
+   tests/typecheck/build, and commits the small changes locally.
+5. Produce a source-only Git archive outside the checkout, with exact HEAD/tree,
+   archive/file hashes, restore instructions and a locally verified extraction.
+   Verify restored source and focused checks; keep artifact-local evidence. No
+   dependencies, build output, Git metadata, credentials or companion files go
+   in the archive. It remains local/ephemeral and is never uploaded.
+
+The same Chromium binary is present and no different supported ordinary-browser
+path is evident. Do not rerun the failed browser command. Browser, visual and AT
+acceptance remain unverified; tests and source inspection do not replace them.

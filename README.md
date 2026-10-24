@@ -50,10 +50,12 @@ QuietVote is initially scoped for **internal decisions in voluntary organization
 
 Start with the [specification index](docs/SPEC-INDEX.md), which tracks each specification, dependencies, status, and open decisions. The [project charter](docs/00-project-charter.md) records the current product intent. The [capability map](docs/01-capability-map.md) proposes module boundaries and build order. Use the [spec template](docs/templates/SPEC-TEMPLATE.md) when expanding a module into an implementation-ready contract.
 
+Web translation contributors can use the [translation workflow and review checklist](docs/TRANSLATING.md).
+
 ## Current status
 
 **Stage:** Specification drafted; early implementation  
-**Implementation:** Initial code exists in all eight packages (`crypto`, `protocol`, `board`, `server`, `trustee`, `verifier`, `cli`, `web`), plus a second-verifier skeleton in `verifier-py/`. All of it is **unaudited** and incomplete; the known gaps are listed in each `packages/*/NOTES.md`. The typecheck failed on the most recent re-run (2026-10-21).  
+**Implementation:** Initial code exists in all eight packages (`crypto`, `protocol`, `board`, `server`, `trustee`, `verifier`, `cli`, `web`), plus a second-verifier skeleton in `verifier-py/`. All of it is **unaudited** and incomplete; the known gaps are listed in each `packages/*/NOTES.md`. Fresh local ordinary UI check results and their limits are recorded in the [2026-10-24 requirement inventory](docs/handoffs/2026-10-24-ordinary-inventory.md).<br>
 **Specification status:** Drafted; decisions and acceptance criteria remain to be completed  
 **Use:** **Not for real elections.** Do not rely on this software for any real decision.  
 **Release status:** No release

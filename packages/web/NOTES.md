@@ -24,6 +24,19 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   copy/catalog/chart/navigation tests and the web build passed. The full election/verifier browser suite was not run.
   No locale messages, guarantee strings or review records were edited. Draft translations remain unoffered.
 
+### Ordinary continuation
+* Existing global and election-tab links now expose `aria-current="page"` and a weight/underline treatment for the
+  current route. Matching uses the existing route parser; trailing slashes and the overview alias are equivalent.
+* The existing step indicator is a native ordered list with one `aria-current="step"` item and localized progress
+  label. This changes presentation only; it does not create step routes or alter state transitions.
+* Election page titles include the already-loaded election name (QV-13 C-SHELL). The footer includes the specified
+  source-code repository link using the existing catalog label (QV-10 section 5.3).
+* README links the expanded contributor/reviewer translation checklist. Per-locale style and terminology decisions
+  remain pending qualified human review; no catalogs, review gates or guarantee copy changed.
+* The original failed browser evidence above still applies. Chromium was not rerun in this continuation: no materially
+  different supported ordinary-browser path was identified. See `docs/handoffs/2026-10-24-ordinary-inventory.md`
+  for requirement status and evidence, including incomplete items. No browser/AT or security acceptance is implied.
+
 ## Decisions and deviations
 * Added `argon2idKdf*` to `packages/crypto` (the only `@noble` importer). Web depends on workspace crypto/protocol/board; esbuild 0.28.2 pinned (dev).
 * Voter-facing copy follows the plain-language rules (<= 20 words/sentence, banned jargon; `test/copy.test.ts`). Normative QV-10 section 7
