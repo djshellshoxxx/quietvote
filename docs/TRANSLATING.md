@@ -42,6 +42,22 @@ All five catalog tables currently exist, but their review maps are empty. Do not
 
 ## Checks and generated copy
 
+The ordinary web-app build precompiles the English source table and all five
+locale catalogs in `packages/web/src/build/precompile.ts`. The ICU parser runs
+while the build loads these tables, so malformed catalog syntax fails the
+build. Exact plain-text messages are registered as direct string formatters;
+messages with ICU structure are emitted as AST-backed formatter wrappers that
+use the existing ICU evaluator. The bundled app runtime looks up those
+precompiled formatters and throws if a message was not registered. It does not
+parse or evaluate arbitrary message source at runtime, so any runtime-selected
+message must come from a table included during the build.
+
+The source/test translator in `packages/web/src/i18n/index.ts` retains its
+parse-and-evaluate path. The esbuild precompile plugin is not attached to the
+standalone verifier build; that path is excluded from this ordinary app-build
+description. This documents the implemented app path, not a claim that every
+repository artifact is parser-free or that all of QV-13 REQ-062 is complete.
+
 The bounded extraction/literal check is available from the repository root:
 
 ```sh
@@ -53,8 +69,10 @@ The JSON includes source catalog metadata, direct static references, dynamic
 references, unknown IDs, literal findings and explicit exclusions. The check
 covers `main.ts`, `ui/app.ts`, `ui/dom.ts` and `ui/charts.ts`. It excludes the
 restricted `verifyView` block and standalone verifier files. Dynamic references
-are reported separately; a passing scoped check is not repository-wide extraction
-or approval of excluded copy. The web test command runs this check first.
+are reported separately. These exclusions and dynamic references mean this is
+partial REQ060/061 coverage; a passing scoped check is not repository-wide
+extraction or approval of excluded copy. The web test command runs this check
+first.
 
 Edit the locale catalog, not generated copy. To regenerate the English copy reference after an authorized English source-copy change, run from the repository root:
 

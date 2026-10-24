@@ -6,6 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build as esbuild, type BuildOptions } from 'esbuild';
 import { EN } from '../i18n/en.ts';
+import { precompileI18nPlugin } from './precompile.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const PKG = join(here, '..', '..');
@@ -127,7 +128,7 @@ export async function buildSite(outDir: string, opts: { version?: string; connec
   // Code splitting: dynamic import() boundaries (translated catalogs, results chart) become chunks next to the entry. esbuild names
   // chunks by content hash, so imports between files stay valid; the entry is renamed by its own hash below and imports its chunks
   // by relative path (all live in assets/; esbuild names shared chunks `chunk-<hash>.js`). Chunks are listed in asset-manifest.json like every other asset.
-  const app = await esbuild({ ...common, splitting: true, chunkNames: '[name]-[hash]', entryPoints: { app: 'src/main.ts' }, outdir: 'out' });
+  const app = await esbuild({ ...common, splitting: true, chunkNames: '[name]-[hash]', entryPoints: { app: 'src/main.ts' }, outdir: 'out', plugins: [precompileI18nPlugin()] });
   const worker = await esbuild({ ...common, entryPoints: { 'seal-worker': 'src/worker/seal-worker.ts' }, outdir: 'out' });
   const css = readFileSync(join(PKG, 'static', 'styles.css'));
   const entry = app.outputFiles!.find((f) => /[\\/]app\.js$/.test(f.path));

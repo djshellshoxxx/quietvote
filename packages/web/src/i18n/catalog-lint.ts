@@ -85,7 +85,8 @@ export function lintLiterals(files: Readonly<Record<string, string>>): ScanResul
         if (COPY_ATTRS.has(attrName)) inspectLiteral(node.initializer, `literal ${attrName} attribute`);
       }
       if (ts.isTemplateExpression(node) && containsTranslator(node) && !ts.isBinaryExpression(node.parent) && !ts.isCallExpression(node.parent)) inspectLiteral(node, 'literal text embedded with translated message');
-      if (ts.isPropertyAccessExpression(node) && (node.name.text === 'textContent' || (node.name.text === 'title' && ts.isIdentifier(node.expression) && node.expression.text === 'document')) && ts.isBinaryExpression(node.parent) && node.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken) inspectLiteral(node.parent.right, `literal ${node.name.text} assignment`);
+      if (ts.isPropertyAccessExpression(node) && (node.name.text === 'textContent' || node.name.text === 'innerText' || (node.name.text === 'title' && ts.isIdentifier(node.expression) && node.expression.text === 'document')) && ts.isBinaryExpression(node.parent) && (node.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken || node.parent.operatorToken.kind === ts.SyntaxKind.PlusEqualsToken)) inspectLiteral(node.parent.right, `literal ${node.name.text} assignment`);
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression) && node.expression.expression.text === 'document' && node.expression.name.text === 'createTextNode' && node.arguments[0]) inspectLiteral(node.arguments[0], 'literal document.createTextNode() text');
       if (ts.isBinaryExpression(node) && (node.operatorToken.kind === ts.SyntaxKind.PlusToken || node.operatorToken.kind === ts.SyntaxKind.PlusEqualsToken)) {
         if (containsTranslator(node.left) || containsTranslator(node.right)) {
           inspectLiteral(node.left, 'literal concatenated with translated message');
@@ -98,6 +99,7 @@ export function lintLiterals(files: Readonly<Record<string, string>>): ScanResul
         inspectLiteral(child, ts.isTemplateExpression(child) && containsTranslator(child) ? 'literal text embedded with translated message' : 'literal DOM text child');
       }
       function inspectLiteral(value: ts.Node, reason: string): void {
+        value = unwrap(value);
         if (isString(value)) addFinding(file, source, value, reason, value.text);
         else if (ts.isArrayLiteralExpression(value)) value.elements.forEach((x) => inspectLiteral(x, reason));
         else if (ts.isConditionalExpression(value)) { inspectLiteral(value.whenTrue, reason); inspectLiteral(value.whenFalse, reason); }
@@ -116,6 +118,11 @@ export function lintLiterals(files: Readonly<Record<string, string>>): ScanResul
   exclusions.sort((a, b) => a.file.localeCompare(b.file) || a.name.localeCompare(b.name));
   const unique = findings.filter((x, i) => i === 0 || x.file !== findings[i - 1]!.file || x.line !== findings[i - 1]!.line || x.reason !== findings[i - 1]!.reason || x.text !== findings[i - 1]!.text);
   return { findings: unique, exclusions };
+}
+
+function unwrap(node: ts.Node): ts.Node {
+  while (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isTypeAssertionExpression(node) || ts.isNonNullExpression(node) || ts.isSatisfiesExpression(node)) node = node.expression;
+  return node;
 }
 
 function isString(node: ts.Node): node is ts.StringLiteral | ts.NoSubstitutionTemplateLiteral {

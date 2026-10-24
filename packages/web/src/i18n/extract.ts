@@ -41,5 +41,6 @@ export function extractReferences(files: Readonly<Record<string, string>>): { st
 }
 
 export function unknownReferences(refs: readonly MessageReference[], catalog: Readonly<Record<string, unknown>>): MessageReference[] {
-  return refs.filter((r) => !(r.key in catalog));
+  const known = new Set(Object.keys(catalog));
+  return refs.filter((r) => !known.has(r.key));
 }

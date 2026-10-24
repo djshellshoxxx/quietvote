@@ -11,6 +11,8 @@ test('reference extraction is deterministic and separates dynamic keys', () => {
   assert.deepEqual(refs.static.map((x) => [x.file, x.key]), [['a.ts', 'qv.a.ok'], ['b.ts', 'bad key'], ['b.ts', 'qv.a.ok'], ['b.ts', 'qv.b.ok']]);
   assert.deepEqual(refs.dynamic.map((x) => x.expression), ['key']);
   assert.deepEqual(unknownReferences(refs.static, { 'qv.a.ok': {} }).map((x) => x.key), ['bad key', 'qv.b.ok']);
+  const inherited = Object.create({ 'qv.a.ok': {} }) as Record<string, unknown>;
+  assert.deepEqual(unknownReferences(refs.static, inherited).map((x) => x.key), ['qv.a.ok', 'bad key', 'qv.a.ok', 'qv.b.ok']);
 });
 
 test('catalog validation catches key, schema, ICU and maxLength errors', () => {
@@ -41,6 +43,13 @@ test('literal lint catches visible text, copy attributes and translated concaten
     document.title = 'Voting';
     el.setAttribute('aria-describedby', 'hint-id');
     el.setAttribute('aria-label', 'Accessible name');
+    h('p', {}, (('Wrapped child' as string)!));
+    el.textContent += (' appended text ' as const);
+    el.innerText = ((\`Inner text\`) satisfies string);
+    document.createTextNode((('Created text' as string)!));
+    el.textContent += dynamicText;
+    el.innerText = dynamicText;
+    document.createTextNode(dynamicLabel);
     function verifyView(){ h('button', {}, 'Excluded secret text'); }
   ` });
   assert.deepEqual(result.findings.map((x) => [x.reason, x.text]), [
@@ -55,6 +64,10 @@ test('literal lint catches visible text, copy attributes and translated concaten
     ['literal render title', 'Election'],
     ['literal title assignment', 'Voting'],
     ['literal aria-label attribute', 'Accessible name'],
+    ['literal DOM text child', 'Wrapped child'],
+    ['literal textContent assignment', ' appended text '],
+    ['literal innerText assignment', 'Inner text'],
+    ['literal document.createTextNode() text', 'Created text'],
   ]);
   assert.deepEqual(result.exclusions.map((x) => x.reason), ['restricted block excluded by scan scope']);
 });

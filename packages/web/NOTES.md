@@ -50,6 +50,21 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   routing, authority and validation behavior are preserved. New es/fr/de/pt-BR/ar entries are machine drafts, unreviewed
   and unoffered. Spanish `Error` is an explicit cognate for the new title, not an untranslated placeholder.
 
+### Ordinary app ICU precompilation
+* The app-only esbuild plugin parses English and all five draft tables at build time. Exact plain-text messages use
+  direct string formatters; ICU/quote-normalized messages use build-emitted AST formatter wrappers with the existing
+  evaluator. The emitted ordinary app has no ICU parser or eval/Function fallback. Source/test `index.ts` and `icu.ts`
+  are unchanged, and the plugin is not attached to the standalone verifier build.
+* Lazy catalogs register their build-compiled formatters only when imported. Existing offer/review gates and source
+  lookup/fallback rules are unchanged. Runtime-created messages must have a formatter included at build time; arbitrary
+  string compilation is intentionally absent from the app path. No translated locale is newly offered.
+* Fixture tests execute emitted ESM and compare all 487 messages in all six catalogs against source formatting, plus
+  fallback/missing-message, plural/select, bidi, malformed ICU and canonical module-resolution cases. App-only tests
+  verify repeated output bytes, parser-marker absence and the existing gzip limits. CLI tests verify JSON, cwd and errors.
+* Fresh combined evidence: typecheck, scoped i18n check, 42 focused tests and build passed. Build `335206de1931` is
+  190.1 KiB gzip for all JS, 92.9 KiB for the entry, below unchanged 200/110 KiB test limits. Browser/AT/contrast/RTL
+  acceptance remains unverified. Full security suites and the excluded browser-verifier tranche were not run.
+
 ## Decisions and deviations
 * Added `argon2idKdf*` to `packages/crypto` (the only `@noble` importer). Web depends on workspace crypto/protocol/board; esbuild 0.28.2 pinned (dev).
 * Voter-facing copy follows the plain-language rules (<= 20 words/sentence, banned jargon; `test/copy.test.ts`). Normative QV-10 section 7

@@ -52,6 +52,8 @@ Start with the [specification index](docs/SPEC-INDEX.md), which tracks each spec
 
 Web translation contributors can use the [translation workflow and review checklist](docs/TRANSLATING.md).
 
+For the latest ordinary catalog/app-build checkpoint, commands, ownership and remaining gates, use the [restart handoff](docs/handoffs/QUIETVOTE-NEXT.md).
+
 ## Current status
 
 **Stage:** Specification drafted; early implementation  
