@@ -60,6 +60,10 @@ Do not treat placeholder requirements or proposed capability boundaries as appro
 6. **Accessible participation:** accommodate assistive technology, low-bandwidth use, and different devices.
 7. **Incremental assurance:** do not claim anonymity or election integrity until the protocol and implementation have been independently reviewed.
 
+## Wiki
+
+Wiki source pages are in [docs/wiki/](docs/wiki/Home.md): a map of the specification set, the decision process and the codebase status. The specifications in `docs/` remain the authority.
+
 ## Contributing
 
 The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md) when available.
