@@ -26,5 +26,5 @@
 - [x] Migrate feasible ordinary literals, keep source/draft tables and COPY consistent.
 - [x] Prove build-time formatter equivalence and parser-free ordinary app output within existing budgets.
 - [x] Integrate checks/build without changing verifier behavior or locale review gates.
-- [ ] Fresh regressions/typecheck, source scan, coherent commits and verified checkpoint pushes.
-- [ ] Record exact evidence, remaining dynamic/excluded scope and browser/human-review gaps.
+- [x] Fresh regressions/typecheck, source scan, coherent commits and verified checkpoint pushes.
+- [x] Record exact evidence, remaining dynamic/excluded scope and browser/human-review gaps in docs/handoffs/QUIETVOTE-NEXT.md.

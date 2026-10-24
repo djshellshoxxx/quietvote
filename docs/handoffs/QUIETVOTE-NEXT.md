@@ -14,11 +14,12 @@ CLASSifiedisRUPTed, Circula and Unaltered are outside this task.
 - Published catalog/literal-lint milestone:
   `2cd93689ffabfdad40a768b5458873af3fb5f443` (29 focused tests, typecheck/build;
   one outgoing commit/20 blob versions scanned with zero potential secrets).
-- The implementation commit containing this handoff adds ordinary-app ICU
-  precompilation and stronger CLI/app-build checks. Resolve its exact source SHA
-  with `git log -1 --format=%H -- packages/web/src/build/precompile.ts`, and read
-  the remote work ref before continuing. The publication receipt below is updated
-  after the remote SHA has been read back; do not infer publication from local files.
+- Published ICU/app-build implementation milestone:
+  `5435bba332d1436d2471d9d1d54fe5ea1859fd37` (42 focused tests, typecheck/lint/build;
+  one outgoing commit/14 blob versions scanned with zero potential secrets).
+  The remote work ref was read back at this exact SHA. A following documentation
+  commit records this receipt without changing implementation. Read the live ref
+  before continuing; do not infer later publication from local files alone.
 
 ## Fresh resumption and remote reconciliation
 
@@ -85,11 +86,11 @@ Those failures were not waived; final checks passed. No browser command was reru
 
 ## Ordered remaining work / blockers
 
-1. Finish the publication receipt for the implementation checkpoint: secret-scan
-   all outgoing source versions, fast-forward only the work branch and read back
-   the exact remote SHA. Never force-push or overwrite another team's work.
-2. The defined ordinary catalog/app-build implementation is complete when that
-   checkpoint is verified. Dynamic references remain reported rather than fully
+1. The implementation checkpoint is published and verified at the exact SHA above.
+   On restart, check local edits and the live work ref before editing. Never
+   force-push or overwrite another team's work.
+2. The defined ordinary catalog/app-build implementation is complete. Dynamic
+   references remain reported rather than fully
    data-flow-resolved; excluded scopes are not accepted by a green lint result.
    Do not invent unrelated features to keep workers busy.
 3. Qualified native/second/back-translation review, approved locale terminology,
@@ -122,6 +123,19 @@ of election readiness, independent security acceptance or WCAG conformance occur
 
 ## Publication receipt
 
-The implementation checkpoint publication is recorded in the next documentation
-update after its remote SHA is verified. Until then, rely on the exact known
-published `2cd9368` above and inspect the live work ref.
+`git push origin HEAD:refs/heads/checkpoint/quietvote-ordinary-ux-20261024`
+fast-forwarded `2cd9368` to
+`5435bba332d1436d2471d9d1d54fe5ea1859fd37`. A fresh `git ls-remote --heads origin`
+returned that exact work-branch SHA and unchanged main
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The working tree was clean afterward.
+
+Publication hygiene: detect-secrets 1.5.0, default plugins/filters, all 14 new
+source blob versions in the one outgoing implementation commit, zero potential
+findings. `--no-verify` disabled credential-verification network calls. Temporary
+scan tooling had disappeared on environment resumption; it was reinstalled only
+under `/tmp` and the scan passed before pushing. No source, credentials or
+security settings were changed to resolve that local tooling issue. This scan
+is not independent security acceptance.
+
+The receipt-only documentation checkpoint uses the same tested implementation.
+Continue to secret-check outgoing versions and read back each work-branch push.
