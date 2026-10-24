@@ -10,6 +10,7 @@
 - [[Trustee Guide]]
 - [[Auditor and Verifier Guide]]
 - [[FAQ]]
+- [[Accessibility and Help]]
 - [[Glossary]]
 
 **For developers**

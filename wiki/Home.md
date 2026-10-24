@@ -19,7 +19,7 @@ Read [[How It Works In 5 Minutes]] first. It explains the whole idea with a simp
 | Curious about what is and is not protected | [[What is QuietVote]] and [[Privacy and Guarantees]] |
 | A developer or reviewer | [[Developer Home]] |
 
-Quick answers are in [[FAQ]]. Hard words are explained in [[Glossary]].
+Quick answers are in [[FAQ]]. Accessibility guidance and display settings are in [[Accessibility and Help]]. Hard words are explained in [[Glossary]].
 
 ## Important
 
