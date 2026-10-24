@@ -9,6 +9,21 @@ Framework-free TypeScript SPA (QV-19). `npm run build -w @quietvote/web` -> `dis
 lock, storage), `src/api`, `src/i18n` (ICU subset, catalog, locales), `src/ui` (DOM views), `src/build`, `src/verifier`, `src/worker`.
 All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. `COPY.md` is generated from the catalog.
 
+## Ordinary Help and navigation changes (2026-10-24)
+* Help now exposes the existing catalog's Colour theme selector (Follow my device, Light, Dark). Explicit themes set
+  `data-theme`; automatic removes it and follows the device. Native controls use the matching `color-scheme`.
+* Theme and High contrast controls read their current document attributes when Help is revisited. Contrast overrides
+  the chosen palette while enabled. Preferences last for this page session; a full reload restores device defaults.
+* Internal links use SPA routing only for unmodified primary clicks. Modified/non-primary/already-cancelled clicks
+  retain browser behavior. `test/navigation.test.ts` covers the click predicate.
+* `node packages/web/e2e/help.ts` is a separate Help/Home-only smoke runner with empty in-memory storage. It checks
+  display controls, computed palettes, navigation and focus in light/dark device modes. `QV_CHROMIUM` selects the binary.
+  **Not verified in the saved environment:** Chromium returned no DOM; a minimal static-page diagnostic also timed out
+  (DBus/font/runtime errors were reported; root cause not established). This is no browser or accessibility acceptance.
+* Fresh checks on this work: repository typecheck, the smoke runner's separate TypeScript check, 22 focused
+  copy/catalog/chart/navigation tests and the web build passed. The full election/verifier browser suite was not run.
+  No locale messages, guarantee strings or review records were edited. Draft translations remain unoffered.
+
 ## Decisions and deviations
 * Added `argon2idKdf*` to `packages/crypto` (the only `@noble` importer). Web depends on workspace crypto/protocol/board; esbuild 0.28.2 pinned (dev).
 * Voter-facing copy follows the plain-language rules (<= 20 words/sentence, banned jargon; `test/copy.test.ts`). Normative QV-10 section 7

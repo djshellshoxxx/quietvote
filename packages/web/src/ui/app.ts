@@ -29,6 +29,7 @@ import { ballotCodeDisplay, electionIdOf, sameElectionId, spokenForm } from '../
 import { b64uDecode, b64uEncode } from '../util/hex.ts';
 import { Announcer, add, clear, h, nextId, type Child } from './dom.ts';
 import { electionPath, parseRoute, type Route } from './route.ts';
+import { shouldHandleNavigation } from './navigation.ts';
 
 export interface AppEnv {
   root: HTMLElement;
@@ -105,7 +106,11 @@ export function startApp(env: AppEnv): void {
     return true;
   };
   const link = (href: string, text: string, cls = ''): HTMLElement =>
-    h('a', { href, class: cls, onclick: (e: Event) => { e.preventDefault(); go(href); } }, text);
+    h('a', { href, class: cls, onclick: (e: Event) => {
+      if (!shouldHandleNavigation(e as MouseEvent)) return;
+      e.preventDefault();
+      go(href);
+    } }, text);
   const STEPS: MessageKey[] = ['qv.step.check', 'qv.step.key', 'qv.step.choose', 'qv.step.send'];
   const stepper = (n: number): HTMLElement => h('p', { class: 'step' }, t('qv.step.of', { current: n, total: 4, name: t(STEPS[n - 1]!) }));
   const more = (...kids: Child[]): HTMLElement => h('details', {}, h('summary', {}, t('qv.vote.moreDetails')), ...kids);
@@ -273,8 +278,16 @@ export function startApp(env: AppEnv): void {
   }
 
   function helpView(): void {
-    const contrast = h('input', { type: 'checkbox', onchange: (e: Event) => document.documentElement.toggleAttribute('data-contrast', (e.target as HTMLInputElement).checked) });
+    const root = document.documentElement;
+    const contrast = h('input', { type: 'checkbox', checked: root.hasAttribute('data-contrast'), onchange: (e: Event) => root.toggleAttribute('data-contrast', (e.target as HTMLInputElement).checked) });
+    const theme = h('select', { onchange: (e: Event) => {
+      const value = (e.target as HTMLSelectElement).value;
+      if (value === 'auto') root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', value);
+    } }, ...(['auto', 'light', 'dark'] as const).map((value) =>
+      h('option', { value, selected: value === (root.getAttribute('data-theme') ?? 'auto') }, t(`qv.help.theme.${value}`))));
     render(t('qv.help.title'), heading(t('qv.help.title')), h('p', {}, t('qv.help.keyboard')), h('p', {}, t('qv.help.screenReader')),
+      field(t('qv.help.theme'), theme),
       h('label', {}, contrast, ' ', t('qv.help.contrast')), h('p', { class: 'hint' }, t('qv.help.contrastHelp')),
       h('h2', {}, t('qv.help.about')), h('p', {}, t('qv.help.aboutBody')), h('h2', {}, t('qv.help.howVerifier')), h('p', {}, t('qv.help.howVerifierBody')),
       h('h2', {}, t('qv.help.report')), h('p', {}, t('qv.help.reportBody')), h('p', {}, t('qv.phish.neverask')));
