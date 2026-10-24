@@ -18,3 +18,13 @@
 - [x] Translation contribution/reviewer guidance; keep locales draft.
 - [x] Fresh focused tests, typecheck/build and local commits.
 - [x] Record source-only archive/restore contract. Actual artifact hashes and extraction/check results are recorded beside the generated archive in its verification receipt.
+
+## Catalog tooling and precompilation
+
+- [x] Confirm clean published checkpoint and unchanged main; reuse two disjoint workers.
+- [x] Extract catalog references, validate source schema and add ordinary literal lint.
+- [x] Migrate feasible ordinary literals, keep source/draft tables and COPY consistent.
+- [ ] Prove build-time formatter equivalence and parser-free ordinary app output within existing budgets.
+- [ ] Integrate checks/build without changing verifier behavior or locale review gates.
+- [ ] Fresh regressions/typecheck, source scan, coherent commits and verified checkpoint pushes.
+- [ ] Record exact evidence, remaining dynamic/excluded scope and browser/human-review gaps.

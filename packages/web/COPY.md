@@ -27,6 +27,11 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.shell.done`: Done
 - `qv.shell.title`: {step} — {election} — QuietVote
 - `qv.shell.titleNoElection`: {step} — QuietVote
+- `qv.shell.notFoundTitle`: 404
+- `qv.shell.errorTitle`: Error
+- `qv.shell.electionTitle`: Election
+- `qv.shell.adminTitle`: Admin
+- `qv.shell.unsupportedBrowser`: This browser can’t vote here. Use a newer browser or the command-line voter.
 
 ## Banners and status
 
@@ -513,6 +518,9 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.org.publishResume`: Publishing stopped before it finished. Press Publish election again to continue from the same point.
 - `qv.org.published`: Election published. Its ID is {id}.
 - `qv.org.publishInvites`: Invitation links are shown once. Save them before you leave this page.
+- `qv.org.trusteeFormat`: name, signing key hex
+- `qv.org.logPublicKeyLabel`: Log public key (hex)
+- `qv.org.invalidDate`: invalid date
 
 ## Help
 

@@ -254,10 +254,10 @@ export function startApp(env: AppEnv): void {
       if (r.name === 'verify') return verifyView();
       if (r.name === 'create') return await createView();
       if (r.name === 'election') return await electionView(r);
-      render('404', heading(t('qv.election.notFound')));
+      render(t('qv.shell.notFoundTitle'), heading(t('qv.election.notFound')));
     } catch (e) {
       const ux = e instanceof ApiError && e.code === 'NOT_FOUND' ? null : uxCodeFor(e);
-      render('Error', ux === null ? heading(t('qv.election.notFound')) : errorBox(ux, {}, e instanceof ApiError ? e.requestId : undefined));
+      render(t('qv.shell.errorTitle'), ux === null ? heading(t('qv.election.notFound')) : errorBox(ux, {}, e instanceof ApiError ? e.requestId : undefined));
     }
   }
 
@@ -325,7 +325,7 @@ export function startApp(env: AppEnv): void {
     const tabs = h('ul', { class: 'tabs' }, ...(['overview', 'rules', 'key', 'vote', 'receipt', 'results'] as const).map((v) =>
       h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results' } as const)[v]), '', r))));
     const head = [electionHeader(L), tabs, liveLine];
-    if (L.ctx === undefined) return render('Election', ...head, errorBox('E-ORG-MANIFEST', { detail: L.ctxError ?? '' }));
+    if (L.ctx === undefined) return render(t('qv.shell.electionTitle'), ...head, errorBox('E-ORG-MANIFEST', { detail: L.ctxError ?? '' }));
     const ctx = L.ctx;
     const settings = await env.storage.getSettings();
     if (sub === 'overview') {
@@ -354,7 +354,7 @@ export function startApp(env: AppEnv): void {
     if (sub === 'vote') return voteView(L, ctx, head);
     if (sub === 'receipt') return await receiptView(L, ctx, head);
     if (sub === 'results') return await resultsView(L, ctx, head);
-    return render('Admin', ...head, heading(t('qv.nav.admin')), h('p', {}, t('qv.org.nopeek')), h('p', {}, t('qv.org.export')));
+    return render(t('qv.shell.adminTitle'), ...head, heading(t('qv.nav.admin')), h('p', {}, t('qv.org.nopeek')), h('p', {}, t('qv.org.export')));
   }
 
   function keyView(L: Loaded, ctx: ElectionContext, head: Child[], token: Uint8Array | undefined): void {
@@ -678,7 +678,7 @@ export function startApp(env: AppEnv): void {
     render(t('qv.nav.create'), heading(t('qv.org.title')), h('p', {}, t('qv.org.keyHelp')), org ? null : h('p', {}, t('qv.org.keyTitle')),
       field(t('qv.org.name'), title), field(t('qv.org.template'), tpl), field(t('qv.org.question'), q), field(t('qv.org.options'), opts),
       field(t('qv.org.opens'), opens), field(t('qv.org.closes'), closes), field(t('qv.org.roll'), rollT, t('qv.org.rollHelp')),
-      field(t('qv.org.trustees'), trustees, 'name, signing key hex'), field(t('qv.org.threshold'), tt), field('Log public key (hex)', logPk),
+      field(t('qv.org.trustees'), trustees, t('qv.org.trusteeFormat')), field(t('qv.org.threshold'), tt), field(t('qv.org.logPublicKeyLabel'), logPk),
       h('p', {}, t('qv.org.translateWarn')), h('p', {}, t('qv.org.freeze')),
       btn(t('qv.org.freezeConfirm'), () => {
         clear(out);
@@ -690,7 +690,7 @@ export function startApp(env: AppEnv): void {
         const tl = trustees.value.split(/\r?\n/).filter(Boolean).map((l) => { const [n, k] = l.split(','); return { name: (n ?? '').trim(), signPkHex: (k ?? '').trim().toLowerCase() }; });
         const opensIso = isoUtc(opens.value);
         const closesIso = isoUtc(closes.value);
-        if (opensIso === undefined || closesIso === undefined) return void add(out, [errorBox('E-ORG-MANIFEST', { detail: 'invalid date' })]);
+        if (opensIso === undefined || closesIso === undefined) return void add(out, [errorBox('E-ORG-MANIFEST', { detail: t('qv.org.invalidDate') })]);
         const form: PublishForm = { title: title.value, contests: [{ template: tpl.value as Template, question: q.value, options: opts.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean), k: 1 }],
           opensIso: opensIso, closesIso: closesIso, maxBallots: 8, quorumCount: 0, trustees: tl, t: Number(tt.value) };
         const res = buildManifest({ ...form, coordinatorPkHex: '00'.repeat(32), logPkHex: logPk.value.trim(), origin: location.origin, rollHex: roll.keys, electionIdHex: bytesToHex(systemRng.bytes(16)) });

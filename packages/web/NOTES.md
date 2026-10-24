@@ -37,6 +37,19 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   different supported ordinary-browser path was identified. See `docs/handoffs/2026-10-24-ordinary-inventory.md`
   for requirement status and evidence, including incomplete items. No browser/AT or security acceptance is implied.
 
+### Catalog extraction and literal-copy lint
+* `npm run i18n:check -w @quietvote/web` validates English entry metadata/ICU, checks static catalog references, and
+  flags ordinary DOM text, titles, field hints, copy attributes and literal/translation concatenation in the bounded UI
+  scan. The web test script runs it before unit tests. `i18n:extract` (or the CLI's `--json`) emits catalog metadata,
+  static/dynamic references, findings and explicit exclusions as JSON. TypeScript is existing build-time tooling only.
+* Scope: `main.ts`, `ui/app.ts`, `ui/dom.ts`, `ui/charts.ts`; `verifyView` and standalone verifier files are excluded
+  under this task's restrictions. Dynamic translator expressions are reported, not claimed statically resolved. This is
+  a scoped REQ-060/061 check, not proof that every string in the repository has been extracted.
+* The seven reported ordinary literals (four document titles, browser fallback, organizer field label/hint) now use
+  source IDs. The existing invalid-date detail and initial app HTML copy also use catalog text. English wording,
+  routing, authority and validation behavior are preserved. New es/fr/de/pt-BR/ar entries are machine drafts, unreviewed
+  and unoffered. Spanish `Error` is an explicit cognate for the new title, not an untranslated placeholder.
+
 ## Decisions and deviations
 * Added `argon2idKdf*` to `packages/crypto` (the only `@noble` importer). Web depends on workspace crypto/protocol/board; esbuild 0.28.2 pinned (dev).
 * Voter-facing copy follows the plain-language rules (<= 20 words/sentence, banned jargon; `test/copy.test.ts`). Normative QV-10 section 7

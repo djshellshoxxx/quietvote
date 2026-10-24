@@ -42,6 +42,20 @@ All five catalog tables currently exist, but their review maps are empty. Do not
 
 ## Checks and generated copy
 
+The bounded extraction/literal check is available from the repository root:
+
+```sh
+npm run i18n:check -w @quietvote/web
+node packages/web/scripts/i18n-check.ts --json > /tmp/quietvote-i18n-extraction.json
+```
+
+The JSON includes source catalog metadata, direct static references, dynamic
+references, unknown IDs, literal findings and explicit exclusions. The check
+covers `main.ts`, `ui/app.ts`, `ui/dom.ts` and `ui/charts.ts`. It excludes the
+restricted `verifyView` block and standalone verifier files. Dynamic references
+are reported separately; a passing scoped check is not repository-wide extraction
+or approval of excluded copy. The web test command runs this check first.
+
 Edit the locale catalog, not generated copy. To regenerate the English copy reference after an authorized English source-copy change, run from the repository root:
 
 ```sh

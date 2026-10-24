@@ -76,3 +76,34 @@ with source references. Do not expand into unrelated features or blocked work.
 The same Chromium binary is present and no different supported ordinary-browser
 path is evident. Do not rerun the failed browser command. Browser, visual and AT
 acceptance remain unverified; tests and source inspection do not replace them.
+
+## Catalog tooling and precompilation continuation
+
+Start from the published `9c63458f7c0386f851f9d9617e731cd9b91ecfa8` checkpoint;
+keep the original archive unchanged. Remote checkpoint branch is
+`checkpoint/quietvote-ordinary-ux-20261024`, and main is `019f4e7`.
+
+1. Catalog-tooling worker owns only new extraction/lint/CLI/fixture-test files.
+   Use TypeScript ASTs to inventory catalog references, validate source metadata,
+   flag confidently ordinary DOM copy literals/concatenation, and report dynamic
+   references/excluded blocks honestly. No blanket suppression of ordinary gaps.
+2. Integrator migrates clearly ordinary literals to stable source IDs and draft
+   locale entries where required, regenerates COPY.md, and adds check scripts.
+   No guarantee copy, locale review records or offer gates change. Any inseparable
+   trust/security copy is reported as a boundary, not silently accepted by lint.
+3. Precompilation worker owns only new build-plugin/runtime/test files. Prove
+   equivalent catalog formatting using build-time parsing and emitted functions,
+   with no runtime parser/eval or dependency change. Integrator attaches the
+   plugin ONLY to the ordinary app build; standalone verifier paths are excluded.
+   Retain the existing JS size limits, lazy locale behavior and source/test API.
+4. Integrator verifies each coherent slice with focused regressions, typecheck,
+   lint/extraction and app/build metrics; review and secret-scan outgoing source,
+   commit and fast-forward the existing checkpoint work branch, then read remote
+   SHA back. No main merge, force push, release, deployment or credential change.
+5. Update exact evidence and remaining requirements. Do not rerun Chromium,
+   offer unreviewed locales, add a premature language picker, or resume the
+   restricted crypto/nonce/export-role/trust/authority/browser-verifier work.
+
+The two existing inexpensive workers have disjoint new-file ownership; one
+integrator owns all existing-file integration and publication. Acceptance is
+ordinary source/build evidence, never security/browser/AT acceptance.

@@ -70,6 +70,7 @@ test('catalogs: every translated message parses as ICU and keeps the English pla
 
 /** Real cognates that are correct in the target language and therefore identical to the English source. */
 const COGNATES: Readonly<Record<string, readonly string[]>> = {
+  es: ['qv.shell.errorTitle'], // "Error" is the ordinary noun in both Spanish and English.
   fr: ['qv.results.option', 'qv.org.question'],
   de: ['qv.key.passphrase', 'qv.verify.findings', 'qv.results.option'],
 };

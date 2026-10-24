@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build as esbuild, type BuildOptions } from 'esbuild';
+import { EN } from '../i18n/en.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const PKG = join(here, '..', '..');
@@ -67,12 +68,12 @@ export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; version: str
 <meta name="qv-version" content="${esc(a.version)}">
 <meta name="qv-build" content="${esc(a.buildId)}">
 <meta name="qv-worker" content="/${a.worker.path}">
-<title>QuietVote</title>
+<title>${esc(EN['qv.app.name'].message)}</title>
 <link rel="stylesheet" href="/${a.css.path}" integrity="${a.css.integrity}" crossorigin="anonymous">
 <link rel="modulepreload" href="/${a.js.path}" integrity="${a.js.integrity}" crossorigin="anonymous">
 </head>
 <body>
-<div id="app"><p>Loading…</p><noscript><p>Casting needs JavaScript so your ballot can be locked on your device. You can also vote with the command-line tool or ask someone to prepare a ballot file for you.</p></noscript></div>
+<div id="app"><p>${esc(EN['qv.shell.loading'].message)}</p><noscript><p>${esc(EN['qv.shell.noscript'].message)}</p></noscript></div>
 <script type="module" src="/${a.js.path}" integrity="${a.js.integrity}" crossorigin="anonymous"></script>
 </body>
 </html>
