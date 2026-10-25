@@ -298,3 +298,25 @@ permission for a main merge, release, deployment, credentials or security change
    qualified language review remain external acceptance gates. Do not access
    companion projects or resume crypto/nonce, export-role, trust/authority,
    election-verifier or browser-verifier work.
+
+## Verified checkpoint receipt — 2026-10-25
+
+`git push origin HEAD:refs/heads/checkpoint/quietvote-ordinary-ux-20261024`
+fast-forwarded the existing checkpoint from
+`cf4ebf00b78d8f4fa90c0276545370a5d5d05521` to
+`176e82f2cf85f087a5f0b2c021306cf9e299a562`. A fresh `git ls-remote` returned that
+exact SHA for the checkpoint and left main at
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The final pre-push scan at the
+published SHA covered five outgoing commits and nine blob versions using
+detect-secrets 1.5.0 default plugins/filters with `--all-files --no-verify`;
+there were zero potential findings. Outgoing paths were limited to this handoff,
+`packages/web/src/flow/live.ts`, `packages/web/src/i18n/icu.ts`, and the two new
+focused tests.
+
+Workflow inspection found only read-only CI for pull requests, pushes to `main`,
+and merge groups; no deployment/release job exists, and the checkpoint push did
+not trigger that workflow. No merge was attempted: the branch's full ancestry is
+not compatible with the restricted review boundary noted above. The local
+follow-up documentation commit that records this receipt must be independently
+scanned and fast-forwarded to the same checkpoint; resolve the final live SHA
+before resuming.
