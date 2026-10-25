@@ -290,9 +290,9 @@ permission for a main merge, release, deployment, credentials or security change
 2. Check the live checkpoint and main refs. The checkpoint source is ordinary UX,
    scoped live-refresh cancellation and localized number formatting; no election
    readiness is claimed.
-3. Reconcile the live checkpoint, rescan outgoing source versions including this
-   handoff update, push only as a fast-forward to the existing checkpoint branch,
-   then record exact push and remote readback SHAs in a follow-up receipt.
+3. The source and handoff are now published on the existing checkpoint branch.
+   Resolve the current local and remote heads before continuing; keep subsequent
+   source checkpoints secret-scanned and fast-forward only.
 4. Continue only ordinary UX, documentation, localization presentation and
    benign application lifecycle work. Browser/AT/contrast/RTL/reflow/zoom and
    qualified language review remain external acceptance gates. Do not access
@@ -317,6 +317,10 @@ Workflow inspection found only read-only CI for pull requests, pushes to `main`,
 and merge groups; no deployment/release job exists, and the checkpoint push did
 not trigger that workflow. No merge was attempted: the branch's full ancestry is
 not compatible with the restricted review boundary noted above. The local
-follow-up documentation commit that records this receipt must be independently
-scanned and fast-forwarded to the same checkpoint; resolve the final live SHA
-before resuming.
+follow-up documentation commit `1d44e29d3b3b1792e100768d783e42d04f34ddcd`
+recorded the receipt. Its outgoing scan covered one commit and one blob version
+with zero potential findings. The push fast-forwarded the checkpoint from
+`176e82f2cf85f087a5f0b2c021306cf9e299a562`; remote readback returned the exact
+`1d44e29d3b3b1792e100768d783e42d04f34ddcd` SHA and main remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. Resolve the live branch head before
+resuming because this handoff records the preceding receipt commit.
