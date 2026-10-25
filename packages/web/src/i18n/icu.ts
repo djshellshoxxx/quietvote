@@ -202,9 +202,12 @@ export function evaluate(nodes: readonly Node[], args: Args, o: FormatOptions, h
       }
       case 'num': {
         const v = Number(need(n.name));
-        const opts: Intl.NumberFormatOptions = n.style === 'percent' ? { style: 'percent', maximumFractionDigits: 1 } : n.style === 'integer' ? { maximumFractionDigits: 0 } : {};
-        const loc = n.style === 'latn' ? withLatn(o.locale) : o.locale;
-        out += new Intl.NumberFormat(loc, opts).format(v);
+        const opts: Intl.NumberFormatOptions =
+          n.style === 'percent' ? { style: 'percent', maximumFractionDigits: 1 }
+            : n.style === 'integer' ? { maximumFractionDigits: 0 }
+              : n.style === 'latn' ? { numberingSystem: 'latn' }
+                : {};
+        out += new Intl.NumberFormat(o.locale, opts).format(v);
         break;
       }
       case 'date': {
@@ -238,10 +241,6 @@ export function evaluate(nodes: readonly Node[], args: Args, o: FormatOptions, h
     }
   }
   return out;
-}
-
-function withLatn(locale: string): string {
-  return locale.includes('-u-') ? locale : `${locale}-u-nu-latn`;
 }
 
 export function format(src: string, args: Args, o: FormatOptions): string {

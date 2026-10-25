@@ -69,13 +69,13 @@ export class LiveElection {
     });
   }
 
-  /** Stops the stream and any pending refresh. Safe to call twice. */
+  /** Stops the stream and queued refreshes; an in-flight read is ignored on completion. Safe to call twice. */
   close(): void {
     this.closed = true;
     clearTimeout(this.timer);
     this.timer = undefined;
     this.conn?.close();
-    for (const w of this.waiters.splice(0)) w();
+    if (!this.running) for (const w of this.waiters.splice(0)) w();
   }
 
   /** Resolves when no refresh is running or queued (tests, and "settled" UI). */
@@ -141,6 +141,7 @@ export class LiveElection {
     for (const r of t.records) if (r.seq > top) top = r.seq; // no spread: a long log would exceed the argument limit
     const from = top + 1;
     const page = await t.api.allEntries(t.apiId, from);
+    if (this.closed) return;
     const fresh = page.entries.filter((e) => e.seq >= from).map((e) => ({ seq: e.seq, record: entryRecord(e) }));
     if (fresh.length === 0) return;
     // entries must continue the log without a gap or repeat, otherwise reload from the start next time rather than guess
@@ -148,6 +149,7 @@ export class LiveElection {
     t.records.push(...fresh);
     const before = t.ctx;
     const r = await deriveElectionContext(t.records);
+    if (this.closed) return;
     if (r.ok) {
       t.ctx = r.value;
       t.ctxError = undefined;
