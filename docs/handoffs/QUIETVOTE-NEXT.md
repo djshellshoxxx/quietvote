@@ -213,3 +213,81 @@ The worktree commit is local only. Browser/AT/contrast/RTL/reflow/zoom evidence,
 qualified human translation review and restricted crypto/nonce, export-role,
 trust/authority, and verifier work remain as described above. No companion
 repository was accessed.
+
+## Current validation and checkpoint readiness — 2026-10-25
+
+This section supersedes the preceding local-only status. The local implementation
+commit is `a57879538e3ddb19c3eb5b517e2528ba69353221` on
+`feature/ordinary-ux-20261024`, after the published checkpoint
+`cf4ebf00b78d8f4fa90c0276545370a5d5d05521`. It stages candidate log records and
+derives context before committing them to the active view; if the view closes
+during derivation, records and callbacks are discarded. The HTTP read still runs
+to completion because the current API read has no abort signal. ICU `number, latn`
+sets the `Intl.NumberFormat` numbering-system option so it overrides a locale
+`nu` extension while ordinary number styles retain the locale default.
+
+The independent ordinary diff review found the close-during-derivation partial
+commit edge. A new regression reproduced it before the fix; candidate records are
+now committed only after derivation finishes and the view remains open. The red
+test observed `[ { seq: 0, record: undefined } ]` where the closed target should
+remain `[]`. One read-only review worker completed; the root integrator owns edits
+and integration. No excluded verification/security modules were reviewed.
+
+Latest checks after the additional lifecycle fix:
+
+```sh
+node --test packages/web/test/live-lifecycle.test.ts packages/web/test/icu-number.test.ts packages/web/test/precompile.test.ts
+npm run typecheck
+git diff --check
+```
+
+Results: **8 tests passed**, zero failures/cancellations/skips; typecheck and diff
+check passed. The test run exercises source and compiled formatter behavior and an
+esbuild test fixture. No full suite, production build, browser, AT, contrast, RTL,
+reflow/zoom or human translation review was performed. Original pre-fix failures
+are preserved in the prior continuation section above.
+
+### Publication and merge decision
+
+The owner's newer instruction authorizes a tested source checkpoint. The intended
+source target is `djshellshoxxx/quietvote`, branch
+`checkpoint/quietvote-ordinary-ux-20261024`, last read at
+`cf4ebf00b78d8f4fa90c0276545370a5d5d05521`. The local implementation SHA before
+this handoff update is `a57879538e3ddb19c3eb5b517e2528ba69353221`. Main was read at
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
+
+Merge candidate assessment recorded before any merge action: source is the entire
+`feature/ordinary-ux-20261024` branch at implementation commit
+`a57879538e3ddb19c3eb5b517e2528ba69353221`; target would be `main` at
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The source ancestry includes web
+triage `e9d4cd3416371c2c825ee855c5f84f39c4a53b2d`, which merges the web-verifier
+line `e1421698626a4defd744a50ed2f9337066793d6e` and audit-QA ancestry. That broad
+baseline has not passed the required review under this task's exclusions. A merge
+to main is therefore not appropriate; **no merge command was attempted**. Keep
+main unchanged.
+
+Before publication, inspect workflow triggers for deployment/release side effects,
+review the complete outgoing diff, scan outgoing source versions for secrets and
+private data, and confirm the target ref is still an ancestor. If those checks
+pass, fast-forward only the named checkpoint branch, then read back its exact SHA
+and main's SHA. Never force-push or mutate a PR. The prior no-push instruction was
+superseded by the owner's newer explicit checkpoint request; do not infer any
+permission for a main merge, release, deployment, credentials or security changes.
+
+### Resume steps
+
+1. In the same QuietVote checkout, run `git status --short --branch` and
+   `git rev-parse HEAD`; preserve edits. At this point the implementation commit is
+   `a57879538e3ddb19c3eb5b517e2528ba69353221`; this handoff has a later docs-only
+   local commit, so resolve the live local SHA rather than assuming it.
+2. Check the live checkpoint and main refs. The checkpoint source is ordinary UX,
+   scoped live-refresh cancellation and localized number formatting; no election
+   readiness is claimed.
+3. Complete the listed workflow/diff/secret/private-data checks and publish only
+   as a fast-forward to the existing checkpoint branch. Record exact push and
+   remote readback SHAs in a follow-up receipt.
+4. Continue only ordinary UX, documentation, localization presentation and
+   benign application lifecycle work. Browser/AT/contrast/RTL/reflow/zoom and
+   qualified language review remain external acceptance gates. Do not access
+   companion projects or resume crypto/nonce, export-role, trust/authority,
+   election-verifier or browser-verifier work.
