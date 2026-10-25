@@ -252,13 +252,14 @@ are preserved in the prior continuation section above.
 The owner's newer instruction authorizes a tested source checkpoint. The intended
 source target is `djshellshoxxx/quietvote`, branch
 `checkpoint/quietvote-ordinary-ux-20261024`, last read at
-`cf4ebf00b78d8f4fa90c0276545370a5d5d05521`. The local implementation SHA before
-this handoff update is `a57879538e3ddb19c3eb5b517e2528ba69353221`. Main was read at
+`cf4ebf00b78d8f4fa90c0276545370a5d5d05521`. The tested implementation SHA is
+`a57879538e3ddb19c3eb5b517e2528ba69353221`; the local source branch tip before
+this handoff update is `6722599fc316957790ae95717c4a48a1e09ce6e1`. Main was read at
 `019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
 
 Merge candidate assessment recorded before any merge action: source is the entire
-`feature/ordinary-ux-20261024` branch at implementation commit
-`a57879538e3ddb19c3eb5b517e2528ba69353221`; target would be `main` at
+`feature/ordinary-ux-20261024` branch at `6722599fc316957790ae95717c4a48a1e09ce6e1`;
+target would be `main` at
 `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The source ancestry includes web
 triage `e9d4cd3416371c2c825ee855c5f84f39c4a53b2d`, which merges the web-verifier
 line `e1421698626a4defd744a50ed2f9337066793d6e` and audit-QA ancestry. That broad
@@ -266,26 +267,32 @@ baseline has not passed the required review under this task's exclusions. A merg
 to main is therefore not appropriate; **no merge command was attempted**. Keep
 main unchanged.
 
-Before publication, inspect workflow triggers for deployment/release side effects,
-review the complete outgoing diff, scan outgoing source versions for secrets and
-private data, and confirm the target ref is still an ancestor. If those checks
-pass, fast-forward only the named checkpoint branch, then read back its exact SHA
-and main's SHA. Never force-push or mutate a PR. The prior no-push instruction was
+Pre-push checks completed at local tip `6722599fc316957790ae95717c4a48a1e09ce6e1`:
+the only workflow is read-only CI on PRs, `main` pushes and merge groups; a push to
+the checkpoint branch does not trigger it, and no release/deployment workflow is
+present. The outgoing diff contains only the handoff, `flow/live.ts`, `i18n/icu.ts`
+and their two focused tests; no private research packs or user data are included.
+Detect-secrets 1.5.0 scanned four outgoing commits and eight blob versions with
+zero potential findings. These checks included the source before this handoff
+receipt commit; rescan the final outgoing branch versions before push.
+
+After the final scan, fast-forward only the named checkpoint branch and read back
+its exact SHA and main's SHA. Never force-push or mutate a PR. The prior no-push instruction was
 superseded by the owner's newer explicit checkpoint request; do not infer any
 permission for a main merge, release, deployment, credentials or security changes.
 
 ### Resume steps
 
 1. In the same QuietVote checkout, run `git status --short --branch` and
-   `git rev-parse HEAD`; preserve edits. At this point the implementation commit is
-   `a57879538e3ddb19c3eb5b517e2528ba69353221`; this handoff has a later docs-only
-   local commit, so resolve the live local SHA rather than assuming it.
+   `git rev-parse HEAD`; preserve edits. At this point local source tip before this
+   handoff was `6722599fc316957790ae95717c4a48a1e09ce6e1`; resolve the actual live
+   local SHA rather than assuming it.
 2. Check the live checkpoint and main refs. The checkpoint source is ordinary UX,
    scoped live-refresh cancellation and localized number formatting; no election
    readiness is claimed.
-3. Complete the listed workflow/diff/secret/private-data checks and publish only
-   as a fast-forward to the existing checkpoint branch. Record exact push and
-   remote readback SHAs in a follow-up receipt.
+3. Reconcile the live checkpoint, rescan outgoing source versions including this
+   handoff update, push only as a fast-forward to the existing checkpoint branch,
+   then record exact push and remote readback SHAs in a follow-up receipt.
 4. Continue only ordinary UX, documentation, localization presentation and
    benign application lifecycle work. Browser/AT/contrast/RTL/reflow/zoom and
    qualified language review remain external acceptance gates. Do not access
