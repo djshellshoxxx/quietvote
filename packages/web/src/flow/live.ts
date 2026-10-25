@@ -146,10 +146,11 @@ export class LiveElection {
     if (fresh.length === 0) return;
     // entries must continue the log without a gap or repeat, otherwise reload from the start next time rather than guess
     for (let i = 0; i < fresh.length; i++) if (fresh[i]!.seq !== from + i) throw new Error('log entries are not contiguous');
-    t.records.push(...fresh);
     const before = t.ctx;
-    const r = await deriveElectionContext(t.records);
+    const updatedRecords = [...t.records, ...fresh];
+    const r = await deriveElectionContext(updatedRecords);
     if (this.closed) return;
+    t.records.push(...fresh);
     if (r.ok) {
       t.ctx = r.value;
       t.ctxError = undefined;

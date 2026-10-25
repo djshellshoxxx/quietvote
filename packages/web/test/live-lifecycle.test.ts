@@ -49,3 +49,28 @@ test('live close discards a late page without mutating the closed target or noti
   assert.deepEqual(target.records, [], 'a completed response must not update a closed election');
   assert.equal(changes, 0, 'a closed view must not receive a late change callback');
 });
+
+test('live close during context derivation does not commit candidate records', async () => {
+  const { target, resolvePage } = deferredTarget();
+  let live!: LiveElection;
+  let changes = 0;
+  live = new LiveElection(target, { onChange: () => { changes++; } });
+  const entry: EntryView = {
+    seq: 0,
+    type: 'manifest',
+    leaf_hash: 'AA',
+    header_b64u: 'AA',
+    get body_b64u() {
+      queueMicrotask(() => live.close());
+      return null;
+    },
+  };
+  const refresh = live.refresh();
+
+  resolvePage({ entries: [entry], treeSize: 1 });
+  await refresh;
+
+  assert.deepEqual(target.records, [], 'a view closed during derivation must not commit the candidate page');
+  assert.equal(target.ctx, undefined);
+  assert.equal(changes, 0);
+});
