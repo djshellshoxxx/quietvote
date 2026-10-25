@@ -167,3 +167,49 @@ and main remained `019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
 This receipt was finalized in a subsequent documentation-only checkpoint. Resolve
 the live branch head with `git ls-remote` before resuming; the README label commit
 above is unchanged. No implementation or tests changed for the receipt update.
+
+## Local ordinary continuation — 2026-10-25
+
+This section is newer than the earlier implementation-complete note above.
+Starting from local `cf4ebf00b78d8f4fa90c0276545370a5d5d05521`, I made one local
+ordinary implementation commit, `b3b64f331ae76d57fcdca9680e3ebd4e9b56ff91`.
+The published work branch was still `cf4ebf00b78d8f4fa90c0276545370a5d5d05521`
+and main remained `019f4e789be2ff38a5fb2d348c3b225cc87cf296` at the last remote
+read. This continuation does not authorize or perform a source push. The current
+local HEAD includes this handoff update; inspect `git rev-parse HEAD` and `git
+status --short --branch` before resuming.
+
+### Changes and exact regression evidence
+
+- `packages/web/src/flow/live.ts`: `close()` no longer resolves `settled()` while
+  a refresh is active. A page response arriving after close is ignored before it
+  changes records; a close during context derivation also suppresses later state
+  updates and callbacks. The underlying `allEntries` request is not aborted; it
+  may finish, but its late result is discarded. SSE and election derivation logic
+  were not changed.
+- `packages/web/src/i18n/icu.ts`: ICU `number, latn` now passes the explicit
+  `numberingSystem: 'latn'` formatter option. This takes precedence over a locale's
+  `nu` extension and retains the current locale for other formatting. Other number
+  styles continue using the locale-selected numbering system.
+- Reproduced before the fix: `node --test packages/web/test/live-lifecycle.test.ts`
+  failed both tests. Closing a pending refresh resolved `settled()` too early
+  (`true` instead of `false`); a late page appended `{seq: 0, record: undefined}`
+  to the closed target. After the fix both focused tests pass.
+- Reproduced before the number fix: `format('{n, number, latn}', {n: 1234},
+  {locale: 'ar-u-nu-arab'})` emitted Arabic-Indic digits (`١٬٢٣٤`) while the
+  `Intl.NumberFormat(locale, {numberingSystem: 'latn'})` oracle returned `1,234`.
+  A direct check showed the same mismatch with
+  `ar-u-ca-islamic-nu-arab`. The final test covers both locales, the default
+  locale numbering system, and the compiled formatter path.
+- Final focused command: `node --test packages/web/test/live-lifecycle.test.ts
+  packages/web/test/icu-number.test.ts packages/web/test/precompile.test.ts` —
+  **7 passed**, 0 failed/cancelled/skipped. This includes emitted app compiler
+  integration; it is not browser acceptance.
+- `npm run typecheck` passed; `git diff --check` passed. No whole-project test
+  suite, production build, browser, assistive-technology run, or translation
+  review was performed for this continuation.
+
+The worktree commit is local only. Browser/AT/contrast/RTL/reflow/zoom evidence,
+qualified human translation review and restricted crypto/nonce, export-role,
+trust/authority, and verifier work remain as described above. No companion
+repository was accessed.
