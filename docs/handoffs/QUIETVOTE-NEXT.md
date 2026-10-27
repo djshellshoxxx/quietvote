@@ -324,3 +324,29 @@ with zero potential findings. The push fast-forwarded the checkpoint from
 `1d44e29d3b3b1792e100768d783e42d04f34ddcd` SHA and main remained
 `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. Resolve the live branch head before
 resuming because this handoff records the preceding receipt commit.
+
+## UI/locale/accessibility continuation — 2026-10-27
+
+Branch `claude/quietvote-ui-locale-a11y-sltfb3`, started from checkpoint head
+`884f59975bdfcad51d5dac7b77b8bd5ae0d6b067` (re-read live; main still
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`). The close/settled-refresh and `number, latn`
+fixes were inspected and present; not redone. Excluded scope unchanged (crypto/nonce,
+export-role, browser-verifier, guarantee copy, trust/authority, registration).
+
+- Browser route: Playwright + Chromium 1243 preinstalled in this container renders pages
+  (the old `--dump-dom` path still returns an empty DOM). `e2e/help.ts` now uses Playwright:
+  12/12 checks in light and dark device modes.
+- New `e2e/a11y.ts` (Home, Help, not-found, real build + CSP): 45/45 automated checks.
+  It found two real defects, now fixed: first Tab after load skipped the skip link
+  (`render()` stole focus on initial load) and long unbreakable text scrolled at 320px
+  (`body{overflow-wrap:break-word}`).
+- `e2e/run.ts`: stepper assertions updated for the `ol` stepper (the old `getByText('Step N of 4')`
+  could not match after C-STEPPER). The "import key file and unlock" step still fails, also on
+  pre-ordinary base `e9d4cd3`: the FakeBoard stub has no `POST .../registrations` route (404 →
+  E-GEN-UNKNOWN). Not fixed: registration is authority-adjacent; left red, not skipped.
+- i18n extractor: 8 of 14 dynamic references now resolve (object maps, literal ternaries,
+  template patterns); 6 remain reported with reasons. Unknown resolved keys fail the check.
+- Checks: typecheck clean; web unit tests 158/158; `i18n:check` passed.
+
+Automated checks are not WCAG conformance, screen-reader/AT qualification or native
+translation review; those remain human gates. All translations stay unreviewed/unoffered.

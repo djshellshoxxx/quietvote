@@ -1,16 +1,28 @@
 // Ordinary Help/Home presentation smoke test. No election, verifier, API or persistent storage flows.
+// Uses Playwright + Chromium, which are NOT repo dependencies (global install). Skips (exit 0) when either is missing.
 // Run from the repository root: node packages/web/e2e/help.ts
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
-import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { promisify } from 'node:util';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
-const run = promisify(execFile);
-const chromium = process.env.QV_CHROMIUM ?? '/usr/bin/chromium';
+const req = createRequire('/opt/node22/lib/node_modules/');
+let pw: typeof import('playwright');
+try {
+  pw = req('playwright');
+} catch {
+  console.log('help e2e skipped: playwright is not installed');
+  process.exit(0);
+}
+let browser: import('playwright').Browser;
+try {
+  browser = await pw.chromium.launch();
+} catch (e) {
+  console.log('help e2e skipped: chromium cannot be launched:', e instanceof Error ? e.message.split('\n')[0] : e);
+  process.exit(0);
+}
 const browserTest = String.raw`
 import { startApp } from './src/ui/app.ts';
 import { MemoryStorage } from './src/key/storage.ts';
@@ -61,7 +73,7 @@ result.textContent = checks.join('\n');
 document.body.append(result);
 `;
 
-const output = await build({ stdin: { contents: browserTest, resolveDir: resolve('packages/web'), loader: 'js' }, bundle: true, format: 'esm', write: false, logLevel: 'silent' });
+const output = await build({ stdin: { contents: browserTest, resolveDir: fileURLToPath(new URL('..', import.meta.url)), loader: 'js' }, bundle: true, format: 'esm', write: false, logLevel: 'silent' });
 const css = await readFile(new URL('../static/styles.css', import.meta.url));
 const unexpected: string[] = [];
 const server = createServer((req, res) => {
@@ -74,16 +86,19 @@ const server = createServer((req, res) => {
 await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
 const address = server.address();
 assert.ok(address && typeof address !== 'string');
-const scratch = await mkdtemp(join(tmpdir(), 'quietvote-help-'));
 try {
   for (const dark of [false, true]) {
-    const { stdout, stderr } = await run(chromium, ['--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--no-first-run', '--disable-background-networking', `--user-data-dir=${join(scratch, dark ? 'dark' : 'light')}`, ...(dark ? ['--force-dark-mode'] : []), '--virtual-time-budget=1500', '--dump-dom', `http://127.0.0.1:${address.port}/help?dark=${dark}`], { timeout: 30_000, maxBuffer: 2 * 1024 * 1024, env: { ...process.env, XDG_CACHE_HOME: join(scratch, 'cache'), XDG_CONFIG_HOME: join(scratch, 'config') } });
-    const results = /<pre id="help-check-results">([\s\S]*?)<\/pre>/.exec(stdout)?.[1];
-    assert.match(stdout, /data-help-check="pass"/, results ?? (stdout || stderr).slice(-1600));
-    console.log(`${dark ? 'Dark' : 'Light'} device: ${results?.split('\n').length} Help/Home checks passed`);
+    const context = await browser.newContext({ colorScheme: dark ? 'dark' : 'light' });
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${address.port}/help?dark=${dark}`);
+    await page.waitForFunction(() => document.documentElement.dataset.helpCheck !== undefined, undefined, { timeout: 30_000 });
+    const state = await page.evaluate(() => ({ status: document.documentElement.dataset.helpCheck, results: document.getElementById('help-check-results')?.textContent ?? '' }));
+    assert.equal(state.status, 'pass', state.results);
+    console.log(`${dark ? 'Dark' : 'Light'} device: ${state.results.split('\n').length} Help/Home checks passed`);
+    await context.close();
   }
   assert.deepEqual(unexpected, [], 'Only Help/Home test assets may be requested');
 } finally {
+  await browser.close();
   await new Promise<void>((done, reject) => server.close((error) => error ? reject(error) : done()));
-  await rm(scratch, { recursive: true, force: true });
 }
