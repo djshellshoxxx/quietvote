@@ -73,19 +73,27 @@ try {
   page.on('console', (m) => { if ((m.type() === 'error' && !/404/.test(m.text())) || /Content Security|Trusted Type/i.test(m.text())) errors.push(m.text()); });
   page.on('request', (r) => { if (!r.url().startsWith(origin) && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) external.push(r.url()); });
   const base = `${origin}/e/${board.apiId}`;
+  // C-STEPPER: an ordered list named by the progress text, with exactly one item marked aria-current="step".
+  const currentStep = async (n: number, timeout?: number): Promise<void> => {
+    const list = page.getByRole('list', { name: `Step ${n} of 4` });
+    await list.waitFor(timeout === undefined ? {} : { timeout });
+    const items = list.getByRole('listitem');
+    if (await items.count() !== 4) throw new Error('stepper should list 4 steps');
+    if (await list.locator('[aria-current="step"]').count() !== 1 || await items.nth(n - 1).getAttribute('aria-current') !== 'step') throw new Error(`step ${n} should be the only current step`);
+  };
   await step('home shows How this works', async () => {
     await page.goto(origin + '/');
     await page.getByRole('heading', { name: 'How this works' }).waitFor({ timeout: 10000 });
   });
   await step('overview: step indicator and Election ID check', async () => {
     await page.goto(`${base}#inv=AAAAAAAAAAAAAAAAAAAAAA`);
-    await page.getByText('Step 1 of 4').waitFor({ timeout: 20000 });
+    await currentStep(1, 20000);
     await page.getByRole('button', { name: 'Yes, it matches' }).click();
     await page.getByText('Election ID confirmed on this device.').waitFor();
   });
   await step('import key file and unlock', async () => {
     await page.goto(`${base}/key#inv=AAAAAAAAAAAAAAAAAAAAAA`);
-    await page.getByText('Step 2 of 4').waitFor();
+    await currentStep(2);
     await page.getByLabel('Use a key file I saved before').check();
     await page.getByLabel('Key file', { exact: true }).setInputFiles(keyFile);
     await page.getByLabel('Passphrase', { exact: true }).fill(PASS);
@@ -94,7 +102,7 @@ try {
   });
   await step('vote: choose, review, seal; buttons enabled only after the code shows', async () => {
     await page.getByRole('link', { name: 'Vote' }).first().click();
-    await page.getByText('Step 3 of 4').waitFor();
+    await currentStep(3);
     await page.getByText('Your choices stay secret. Everyone can see that you voted.').waitFor();
     await page.getByLabel('YES', { exact: true }).check();
     await page.getByRole('button', { name: 'Review my choices' }).click();
