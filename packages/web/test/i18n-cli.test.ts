@@ -52,6 +52,15 @@ test('i18n CLI emits clean, deterministic JSON with bounded scan metadata', asyn
   }
   assert.ok((references.dynamic as Record<string, unknown>[]).every((ref) => typeof ref.expression === 'string' && ref.expression.length > 0));
 
+  assert.ok(Array.isArray(references.resolved) && references.resolved.length > 0);
+  const catalogKeys = new Set((result.catalog as { key: string }[]).map((e) => e.key));
+  for (const ref of references.resolved as { keys: string[]; patterns: string[]; form: string }[]) {
+    assert.ok(ref.keys.length > 0 && ref.keys.every((k) => catalogKeys.has(k)), 'resolved keys must exist in catalog');
+    assert.ok(Array.isArray(ref.patterns) && typeof ref.form === 'string');
+  }
+  // Only genuinely unresolvable (identifier / call) references remain dynamic, each with a reason.
+  for (const ref of references.dynamic as { reason: string }[]) assert.match(ref.reason, /^(bare identifier|call expression)$/);
+
   assert.deepEqual(result.unknown, []);
   assert.deepEqual(result.catalogIssues, []);
   assert.deepEqual(result.findings, []);
