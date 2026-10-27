@@ -212,13 +212,15 @@ export function startApp(env: AppEnv): void {
     clear(main);
     add(main, kids);
     const hd = main.querySelector('.step-heading') as HTMLElement | null;
-    // Initial page load keeps the browser's start position so the first Tab reaches the skip link (QV-13 C-SHELL);
-    // after navigation, or once the user has focused something, focus moves to the new heading.
-    if (navigated || document.activeElement !== document.body) (hd ?? main).focus();
+    // Until the user navigates or interacts, renders (including async loads) keep the browser's start position so the
+    // first Tab reaches the skip link (QV-13 C-SHELL); afterwards focus moves to the new heading.
+    if (navigated || interacted) (hd ?? main).focus();
     window.scrollTo(0, 0);
   }
 
   let navigated = false;
+  let interacted = false;
+  for (const type of ['keydown', 'pointerdown'] as const) document.addEventListener(type, () => { interacted = true; }, { capture: true, once: true });
   function go(path: string): void {
     navigated = true;
     history.pushState({}, '', path);

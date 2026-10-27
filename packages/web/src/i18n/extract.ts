@@ -52,7 +52,7 @@ function resolveExpression(node: ts.Expression): Resolution {
 
 const patternOf = (alt: Alt): string => alt.map((p) => p ?? '*').join('');
 function patternRegex(pattern: string): RegExp {
-  return new RegExp(`^${pattern.split('*').map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.+')}$`);
+  return new RegExp(`^${pattern.split('*').map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[^.]+')}$`);
 }
 
 function isTranslatorCall(node: ts.CallExpression): boolean {

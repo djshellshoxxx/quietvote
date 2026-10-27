@@ -106,6 +106,8 @@ try {
     await page.getByText('Your choices stay secret. Everyone can see that you voted.').waitFor();
     await page.getByLabel('YES', { exact: true }).check();
     await page.getByRole('button', { name: 'Review my choices' }).click();
+    // An in-place re-render removes the clicked button; focus must land on the new content, not fall back to <body>.
+    if (await page.evaluate(() => document.activeElement === document.body)) throw new Error('focus fell back to body after review render');
     await page.getByRole('button', { name: 'Seal my ballot' }).click();
     await page.getByText('Double-check that this vote says what you chose').waitFor({ timeout: 30000 });
     if (await page.getByRole('button', { name: 'Send my vote' }).isDisabled()) throw new Error('send disabled after code shown');

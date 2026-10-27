@@ -102,7 +102,8 @@ test('ternaries of literals (nested, cast) resolve; unknown branch keys are erro
 test('template literals resolve by prefix/suffix pattern against the catalog', () => {
   const refs = extractReferences({ 'a.ts': "t(`qv.t.${v}`); t(`qv.u.${w}.end` as MessageKey); t(`qv.t.${x ? 'one' : 'two'}`);" }, CAT);
   assert.deepEqual(refs.dynamic, []);
-  assert.deepEqual(refs.resolved.map((r) => r.keys), [['qv.t.one', 'qv.t.two', 'qv.t.two.sub'], ['qv.u.a.end', 'qv.u.b.end'], ['qv.t.one', 'qv.t.two']]);
+  // A wildcard stands for one key segment, so the nested qv.t.two.sub is not swept in.
+  assert.deepEqual(refs.resolved.map((r) => r.keys), [['qv.t.one', 'qv.t.two'], ['qv.u.a.end', 'qv.u.b.end'], ['qv.t.one', 'qv.t.two']]);
   assert.deepEqual(refs.resolved[0]!.patterns, ['qv.t.*']);
   assert.deepEqual(unknownResolvedReferences(refs.resolved, CAT), []);
 });

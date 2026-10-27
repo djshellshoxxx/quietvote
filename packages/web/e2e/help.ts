@@ -1,5 +1,5 @@
 // Ordinary Help/Home presentation smoke test. No election, verifier, API or persistent storage flows.
-// Uses Playwright + Chromium, which are NOT repo dependencies (global install). Skips (exit 0) when either is missing.
+// Uses Playwright + Chromium, which are NOT repo dependencies (global install). Skips (exit 0) when either is missing; QV_REQUIRE_BROWSER=1 makes a skip fail. QV_CHROMIUM overrides the browser binary.
 // Run from the repository root: node packages/web/e2e/help.ts
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -14,14 +14,14 @@ try {
   pw = req('playwright');
 } catch {
   console.log('help e2e skipped: playwright is not installed');
-  process.exit(0);
+  process.exit(process.env.QV_REQUIRE_BROWSER ? 1 : 0);
 }
 let browser: import('playwright').Browser;
 try {
-  browser = await pw.chromium.launch();
+  browser = await pw.chromium.launch(process.env.QV_CHROMIUM ? { executablePath: process.env.QV_CHROMIUM } : {});
 } catch (e) {
   console.log('help e2e skipped: chromium cannot be launched:', e instanceof Error ? e.message.split('\n')[0] : e);
-  process.exit(0);
+  process.exit(process.env.QV_REQUIRE_BROWSER ? 1 : 0);
 }
 const browserTest = String.raw`
 import { startApp } from './src/ui/app.ts';
@@ -90,8 +90,10 @@ try {
   for (const dark of [false, true]) {
     const context = await browser.newContext({ colorScheme: dark ? 'dark' : 'light' });
     const page = await context.newPage();
+    const pageErrors: string[] = [];
+    page.on('pageerror', (e) => pageErrors.push(e.message));
     await page.goto(`http://127.0.0.1:${address.port}/help?dark=${dark}`);
-    await page.waitForFunction(() => document.documentElement.dataset.helpCheck !== undefined, undefined, { timeout: 30_000 });
+    await page.waitForFunction(() => document.documentElement.dataset.helpCheck !== undefined, undefined, { timeout: 30_000 }).catch((e: unknown) => { throw new Error(`Help checks did not finish: ${pageErrors.join('; ') || String(e)}`); });
     const state = await page.evaluate(() => ({ status: document.documentElement.dataset.helpCheck, results: document.getElementById('help-check-results')?.textContent ?? '' }));
     assert.equal(state.status, 'pass', state.results);
     console.log(`${dark ? 'Dark' : 'Light'} device: ${state.results.split('\n').length} Help/Home checks passed`);

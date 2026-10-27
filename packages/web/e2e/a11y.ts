@@ -2,7 +2,7 @@
 // NOT a WCAG conformance claim: these are automated heuristics. They do not replace manual keyboard testing or testing with real
 // assistive technology (screen readers, voice control, switch devices), or review by people with disabilities.
 // No election, vote, key, verifier, receipt or API flows are exercised. Playwright is not a repo dependency; it is loaded from the
-// global install and the script skips (exit 0) when Playwright or Chromium is missing.
+// global install and the script skips (exit 0) when Playwright or Chromium is missing (QV_REQUIRE_BROWSER=1 makes a skip fail; QV_CHROMIUM overrides the binary).
 // Run from the repository root: node packages/web/e2e/a11y.ts
 import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -19,14 +19,14 @@ try {
   pw = req('playwright');
 } catch {
   console.log('a11y skipped: playwright is not installed');
-  process.exit(0);
+  process.exit(process.env.QV_REQUIRE_BROWSER ? 1 : 0);
 }
 let browser: import('playwright').Browser;
 try {
-  browser = await pw.chromium.launch();
+  browser = await pw.chromium.launch(process.env.QV_CHROMIUM ? { executablePath: process.env.QV_CHROMIUM } : {});
 } catch (e) {
   console.log('a11y skipped: chromium cannot be launched:', e instanceof Error ? e.message.split('\n')[0] : e);
-  process.exit(0);
+  process.exit(process.env.QV_REQUIRE_BROWSER ? 1 : 0);
 }
 
 type Page = import('playwright').Page;
@@ -100,7 +100,14 @@ const open = async (page: Page, path: string, base = origin): Promise<void> => {
   await page.locator('main').first().waitFor({ timeout: 10_000 });
   await page.locator('main h1, main h2').first().waitFor({ timeout: 10_000 });
 };
-const newPage = async (o: import('playwright').BrowserContextOptions = {}): Promise<Page> => (await browser.newContext({ viewport: { width: 1280, height: 800 }, ...o })).newPage();
+// Every page records CSP / Trusted Types console reports and uncaught errors, so the final check covers the whole run.
+const errors: string[] = [];
+const newPage = async (o: import('playwright').BrowserContextOptions = {}): Promise<Page> => {
+  const pg = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, ...o })).newPage();
+  pg.on('console', (m) => { if (/Content Security|Trusted Type/i.test(m.text())) errors.push(m.text()); });
+  pg.on('pageerror', (e) => errors.push(e.message));
+  return pg;
+};
 
 // ---------------------------------------------------------------- in-page helpers (serialised into the browser)
 interface Rgba { r: number; g: number; b: number; a: number }
@@ -144,9 +151,6 @@ async function contrastOf(page: Page): Promise<{ min: number; worst: string; n: 
 // ---------------------------------------------------------------- checks
 try {
   const page = await newPage();
-  const errors: string[] = [];
-  page.on('console', (m) => { if (/Content Security|Trusted Type/i.test(m.text())) errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push(e.message));
 
   // landmarks and document language
   for (const p of PAGES) {
@@ -213,7 +217,7 @@ try {
     const outline = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0;
     const shadow = cs.boxShadow !== 'none';
     const r = a.getBoundingClientRect();
-    return { tag: a.tagName.toLowerCase(), text: (a.textContent ?? a.getAttribute('aria-label') ?? '').trim().slice(0, 24), outline, shadow, focusVisible: a.matches(':focus-visible'), w: r.width, h: r.height, key: a.getAttribute('href') ?? a.id ?? a.tagName };
+    return { tag: a.tagName.toLowerCase(), text: (a.textContent ?? a.getAttribute('aria-label') ?? '').trim().slice(0, 24), outline, shadow, focusVisible: a.matches(':focus-visible'), w: r.width, h: r.height, key: (a.dataset.qvTabKey ??= String(document.querySelectorAll('[data-qv-tab-key]').length)) };
   };
   const tabThrough = async (p: Page, fresh = true): Promise<ReturnType<typeof FOCUS_FN>[]> => {
     if (fresh) await p.locator('a.skip').focus();
@@ -304,7 +308,7 @@ try {
         need(seen.length > 0, 'nothing focusable');
         const bad = seen.filter((s) => !(s.outline || s.shadow));
         need(bad.length === 0, `no focus indicator on ${bad.map((b) => b.text).join(', ')}`);
-        const sameColour = await pg.evaluate(() => [...document.querySelectorAll('p, a, h1, label')].filter((e) => { const cs = getComputedStyle(e); return e.getBoundingClientRect().width > 0 && cs.color === getComputedStyle(document.body).backgroundColor && !(e.textContent ?? '').trim() === false; }).length);
+        const sameColour = await pg.evaluate(() => [...document.querySelectorAll('p, a, h1, label')].filter((e) => { const cs = getComputedStyle(e); return e.getBoundingClientRect().width > 0 && cs.color === getComputedStyle(document.body).backgroundColor && (e.textContent ?? '').trim() !== ''; }).length);
         need(sameColour === 0, `${sameColour} elements with text colour equal to page background`);
         if (p.path === '/help') {
           need((await pg.getByLabel('Colour theme').isVisible()) && (await pg.getByLabel('High contrast').isVisible()), 'Help controls not visible');
