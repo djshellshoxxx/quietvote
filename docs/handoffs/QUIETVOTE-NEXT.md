@@ -655,3 +655,18 @@ the fix is not obviously small, the safe fallback is to drop forwarder evidence 
 wrapper's call report as one dynamic reference (`translator wrapper used as a value`): the check
 does not fail on dynamic references, it only loses the "0 unresolved" figure. No shared-broker or ledger
 spend was made or recorded here, and no prompt-cache usage was measured or claimed.
+
+### Publication receipt — dynamic i18n resolution
+
+`git push origin HEAD:refs/heads/checkpoint/quietvote-ordinary-ux-20261024` fast-forwarded the
+checkpoint from `5fb97cb94a2bb1244b406cac2de71a126df0e9ef` (the restart-snapshot commit, preserved)
+to `efe9e4ffac183dc4b33f561f70559c33e4ab0f0d`. An earlier push of `ed505f5` had fast-forwarded it
+from `c35ae44`; a later push attempt was rejected as non-fast-forward because `5fb97cb` had landed,
+and the unpublished review commits were rebased onto it rather than overwriting it. Fresh
+`git ls-remote` after the push: checkpoint `efe9e4f…`, `main`
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`, PR #20 branch
+`e2ee87460eefaf896ddef575b998c83dad84e8dc` (unchanged). detect-secrets 1.5.0
+(`--all-files --no-verify`, default plugins) over every outgoing file version (9 commits, 17 versions
+of the handoff, `extract.ts`, `i18n-check.ts`, `i18n-lint.test.ts`): zero findings; the `ed505f5`
+push was scanned the same way (5 versions, zero). No workflow file changed; this receipt is
+documentation-only.
