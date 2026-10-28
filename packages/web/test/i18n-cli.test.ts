@@ -46,7 +46,9 @@ test('i18n CLI emits clean, deterministic JSON with bounded scan metadata', asyn
   assert.ok(result.references && typeof result.references === 'object' && !Array.isArray(result.references));
   const references = result.references as Record<string, unknown>;
   assert.ok(Array.isArray(references.static));
-  assert.ok(Array.isArray(references.dynamic) && references.dynamic.length > 0);
+  assert.ok(Array.isArray(references.dynamic));
+  // The app's translator wrapper forwards its key parameter; its call sites are the references.
+  assert.deepEqual((references.forwarded as { file: string; expression: string }[]).map((r) => [r.file, r.expression]), [['packages/web/src/ui/app.ts', 'k']]);
   for (const ref of [...references.static, ...references.dynamic] as Record<string, unknown>[]) {
     assert.ok(scopedFiles.has(ref.file as string), `unexpected scan source: ${String(ref.file)}`);
   }

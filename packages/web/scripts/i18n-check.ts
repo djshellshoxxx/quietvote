@@ -29,7 +29,7 @@ if (json) {
   for (const x of scan.exclusions) console.log(`${x.file}: excluded ${x.name}: ${x.reason}`);
   for (const x of scan.findings) console.log(`${x.file}:${x.line}: ${x.reason}: ${JSON.stringify(x.text)}`);
 } else {
-  console.log(`i18n check passed: ${refs.static.length} static reference(s), ${refs.resolved.length} resolved dynamic reference(s), ${refs.dynamic.length} unresolved dynamic reference(s), ${scan.exclusions.length} exclusion(s)`);
+  console.log(`i18n check passed: ${refs.static.length} static reference(s), ${refs.resolved.length} resolved dynamic reference(s), ${refs.dynamic.length} unresolved dynamic reference(s), ${refs.forwarded.length} translator forwarder(s), ${scan.exclusions.length} exclusion(s)`);
 }
 if (!json && !(catalogIssues.length || unknown.length || scan.findings.length)) {
   for (const x of scan.exclusions) console.log(`${x.file}: excluded ${x.name}: ${x.reason}`);

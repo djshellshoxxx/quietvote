@@ -124,3 +124,56 @@ test('unresolvable expressions remain dynamic with a reason', () => {
     ['(missing argument)', 'missing argument'], ["fn('x')", 'call expression'], ['k', 'bare identifier'], ['obj.key', 'unsupported expression'],
   ]);
 });
+
+test('const bindings resolve through their initializer; let, var and shadowed names stay dynamic', () => {
+  const refs = extractReferences({ 'a.ts': [
+    "const key = a ? 'qv.a.x' : 'qv.a.y'; t(key);",
+    "function f() { let m = 'qv.a.x'; t(m); }",
+    "function g() { const key = other; t(key); }",
+    "const a = b; const b = a; t(a);",
+  ].join('\n') }, CAT);
+  assert.deepEqual(refs.resolved.map((r) => [r.line, r.form, r.keys]), [[1, 'binding', ['qv.a.x', 'qv.a.y']]]);
+  assert.deepEqual(refs.dynamic.map((x) => [x.line, x.expression, x.reason]), [[2, 'm', 'bare identifier'], [3, 'key', 'bare identifier'], [4, 'a', 'bare identifier']]);
+});
+
+test('element callbacks over a read-only const array resolve; mutated or escaping arrays stay dynamic', () => {
+  const refs = extractReferences({ 'a.ts': [
+    "const KS: MessageKey[] = ['qv.a.x', 'qv.a.y']; KS.map((k, i) => t(k)); KS.length;",
+    "(['one', 'two'] as const).map((v) => t(`qv.t.${v}`));",
+    "const P = ['qv.a.x']; P.push(z); P.map((k) => t(k));",
+    "const E = ['qv.a.x']; use(E); E.forEach((k) => t(k));",
+    "const S = ['qv.a.x', ...more]; S.map((k) => t(k));",
+    "const Q = ['qv.a.x']; Q.map((x, k) => t(k));",
+  ].join('\n') }, CAT);
+  assert.deepEqual(refs.resolved.map((r) => [r.line, r.form, r.keys, r.patterns]), [
+    [1, 'array-element', ['qv.a.x', 'qv.a.y'], []],
+    [2, 'template-pattern', ['qv.t.one', 'qv.t.two'], []],
+  ]);
+  assert.deepEqual(refs.dynamic.map((x) => [x.line, x.reason]), [[3, 'bare identifier'], [4, 'bare identifier'], [5, 'bare identifier'], [6, 'bare identifier']]);
+});
+
+test('calls to a local single-expression key builder resolve with arguments substituted', () => {
+  const refs = extractReferences({ 'a.ts': [
+    "function box(code: string) { const k = (s: string): MessageKey => `qv.u.${code}.${s}` as MessageKey; t(k('end')); }",
+    "const pick = (c: boolean) => c ? 'qv.a.x' : 'qv.a.y'; t(pick(flag));",
+    "const blk = (s: string) => { return `qv.t.${s}`; }; t(blk('one'));",
+    "t(unknownFn('x'));",
+  ].join('\n') }, CAT);
+  assert.deepEqual(refs.resolved.map((r) => [r.line, r.form, r.keys, r.patterns]), [
+    [1, 'call', ['qv.u.a.end', 'qv.u.b.end'], ['qv.u.*.end']],
+    [2, 'call', ['qv.a.x', 'qv.a.y'], []],
+  ]);
+  assert.deepEqual(refs.dynamic.map((x) => [x.line, x.reason]), [[3, 'call expression'], [4, 'call expression']]);
+  assert.deepEqual(unknownResolvedReferences(refs.resolved, CAT), []);
+});
+
+test('the translator wrapper parameter is a forwarder, not a dynamic reference', () => {
+  const refs = extractReferences({ 'a.ts': [
+    "const t = (k: MessageKey, a?: Args): string => tr.t(k, a);",
+    "const say = (k: MessageKey) => tr.t(k);",
+    "t('qv.a.x');",
+  ].join('\n') }, CAT);
+  assert.deepEqual(refs.forwarded.map((x) => [x.line, x.expression]), [[1, 'k']]);
+  assert.deepEqual(refs.dynamic.map((x) => [x.line, x.expression, x.reason]), [[2, 'k', 'bare identifier']]);
+  assert.deepEqual(refs.static.map((x) => x.key), ['qv.a.x']);
+});

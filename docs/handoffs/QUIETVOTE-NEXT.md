@@ -474,3 +474,64 @@ resolved to `e2ee87460eefaf896ddef575b998c83dad84e8dc`. The pre-push
 detect-secrets 1.5.0 scan covered the four outgoing file versions and found zero
 potential secrets. No workflow file changed. This receipt-only update follows
 the verified source checkpoint; resolve the current branch HEAD on resumption.
+
+## Dynamic i18n reference resolution — 2026-10-28
+
+Start: live `checkpoint/quietvote-ordinary-ux-20261024` at
+`c35ae44ec441fb9b7caa9506addced8f7ebca949` (clean checkout). Live reads before coding:
+`main` `019f4e789be2ff38a5fb2d348c3b225cc87cf296`; PR #20 branch
+`claude/sharp-archimedes-tu76rh` `e2ee87460eefaf896ddef575b998c83dad84e8dc` (active audit,
+not inspected or touched); `claude/quietvote-ui-locale-a11y-sltfb3` still `424110d` (ancestor of the
+checkpoint). `claude/dazzling-cerf-n8ha3g` `d75d4a2` is a 2026-10-21 ancestor of the checkpoint,
+not new work. No PR metadata operation was attempted.
+
+Ready queue (done): the six unresolved dynamic translator references reported by `i18n:check`.
+`packages/web/src/i18n/extract.ts` now resolves, conservatively and only lexically:
+
+- identifiers bound to a `const` with a resolvable initializer (form `binding`; `let`/`var`,
+  destructured, imported, catch/loop and shadowing names stay dynamic);
+- the first parameter of an element callback (`map`, `forEach`, `filter`, …) over a const array
+  literal whose every other use only reads it (form `array-element`; `push`, escape into a call,
+  spreads stay dynamic);
+- calls to a local const single-expression arrow key builder, with arguments substituted
+  (form `call`; block bodies and unknown functions stay dynamic);
+- the translator wrapper `const t = (k) => tr.t(k)` is reported as `references.forwarded`, not as a
+  dynamic reference, because its call sites are the scanned references.
+
+App result: 281 static, 13 resolved (was 8), **0 unresolved** (was 6), 1 forwarder, 0 unknown keys,
+`verifyView` still excluded. The six now resolve to: stepper keys (4), error title/body patterns
+`qv.err.*.title|body` (32 each), privacy not-claimed list (6; guarantee copy **unchanged**, only
+analysed), receipt titles (6). The theme-option template now resolves to its exact 3 keys instead of
+the `qv.help.theme.*` pattern. Tooling only: no app runtime, catalog, copy or locale change.
+
+Regression evidence: the 4 new `i18n-lint` tests and the updated CLI test failed (5 failures)
+against the previous extractor and pass with the change. The CLI test's `dynamic.length > 0`
+snapshot assertion was replaced by an exact forwarder assertion; no assertion was removed otherwise.
+
+| Command (Node v22.22.0) | Result |
+| --- | --- |
+| `npm ci --ignore-scripts --no-audit --no-fund` | passed |
+| `npm run typecheck` | passed |
+| `npm test -w @quietvote/web` (incl. `i18n:check`) | 163/163 passed, 0 failed/skipped |
+| `git diff --check` | passed |
+
+Not rerun (no runtime/UI file changed): Playwright `e2e/help.ts`, `e2e/a11y.ts`, `e2e/run.ts`,
+other workspaces' tests, production build size check outside the web test suite.
+
+Review: one independent read-only reviewer on the extractor diff (see receipt below). Excluded and
+not reviewed: crypto/nonce, export-role/trust anchors, authority, ballot verification, verifiers,
+the stopped browser-verifier tranche, `verifyView`. A wider web-client code/bug review was **not**
+started because PR #20 carries the active web-client audit (B3); doing it here would duplicate it.
+
+Blocked queue (unchanged; revisit only when the dependency changes):
+
+1. Qualified native/back-translation review; RTL visual, assistive-technology, disabled-user and
+   broader usability reviews (human). Translations stay unreviewed, unoffered machine drafts.
+2. Registration UX copy for `REGISTRATION_CLOSED`/`INVITE_*` and `commitRoll` wiring (owner decision).
+3. Guarantee/trust copy, receipt/ballot/verifier guidance, `/verify-client`, QR codes (decisions /
+   excluded scope).
+4. Claims-lint: 11 findings in 5 research/audit docs (paper titles and audit wording); triage or
+   allowlisting is a claims-policy decision, not done here.
+5. Whole-codebase code/bug audit: owned by PR #20; do not duplicate.
+6. Merge to `main`: not appropriate (checkpoint ancestry includes unreviewed web-triage/web-verifier
+   lines); no merge, approval or PR operation under this handoff.
