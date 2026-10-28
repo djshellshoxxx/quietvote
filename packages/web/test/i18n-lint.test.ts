@@ -266,14 +266,19 @@ test('second review: wide single-alternative chains resolve quickly', () => {
 });
 
 function inMemoryProgram(files: Record<string, string>): ts.Program {
-  const host = ts.createCompilerHost({});
-  return ts.createProgram(Object.keys(files), { noLib: true, types: [], strict: true, allowImportingTsExtensions: true, noEmit: true }, {
+  const options: ts.CompilerOptions = { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, types: [], strict: true, allowImportingTsExtensions: true, noEmit: true };
+  const host = ts.createCompilerHost(options);
+  // Test files live at the virtual root; the standard library comes from disk.
+  const program = ts.createProgram(Object.keys(files), options, {
     ...host,
     getCurrentDirectory: () => '/',
-    getSourceFile: (name, version) => (files[bare(name)] === undefined ? undefined : ts.createSourceFile(name, files[bare(name)]!, version)),
-    fileExists: (name) => files[bare(name)] !== undefined,
-    readFile: (name) => files[bare(name)],
+    getSourceFile: (name, version, ...rest) => (files[bare(name)] === undefined ? host.getSourceFile(name, version, ...rest) : ts.createSourceFile(name, files[bare(name)]!, version)),
+    fileExists: (name) => files[bare(name)] !== undefined || host.fileExists(name),
+    readFile: (name) => files[bare(name)] ?? host.readFile(name),
   });
+  const errors = Object.keys(files).flatMap((f) => [...program.getSyntacticDiagnostics(program.getSourceFile(f)), ...program.getSemanticDiagnostics(program.getSourceFile(f))]);
+  assert.deepEqual(errors.map((d) => ts.flattenDiagnosticMessageText(d.messageText, ' ')), [], 'test programs must type-check');
+  return program;
 }
 const bare = (name: string): string => name.replace(/^\//, '');
 const keysOf = (files: Record<string, string>): Record<string, string> => Object.fromEntries(Object.keys(files).map((k) => [k, k]));
@@ -316,4 +321,36 @@ test('third review: a hand-off counts only when the callee is declared in a scan
   const okRefs = extractReferences(ok, CAT, { evidence: translatorEvidence(inMemoryProgram(onlyScanned), keysOf(ok)) });
   assert.deepEqual(okRefs.forwarded.map((x) => [x.file, x.line]), [['a.ts', 4]]);
   assert.deepEqual(okRefs.static.map((x) => x.key), ['qv.a.x']);
+});
+
+test('fourth review: hand-offs need a scanned implementation, a real namespace and a clean type-check', () => {
+  const head = "declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\ntype Fn = (k: string) => string;\n";
+  const u = "export const impl = (o: { t: (k: string) => string }): void => { ['qv.bad'].map(o.t); };\nexport const make = () => ({ render: impl });\nexport const ns = { draw: impl };";
+  const b = "export function draw(env: { t(k: string): string }): string { return env.t('qv.a.x'); }";
+  const cases: [string, string, boolean][] = [
+    ['parameter callee', "import { impl } from './u.ts';\nexport function mount(render: (o: { t: Fn }) => void): void { render({ t }); }\nmount(impl);", false],
+    ['interface method', "import { make } from './u.ts';\ninterface R { render(o: { t: Fn }): void }\nconst r: R = make();\nr.render({ t });", false],
+    ['const alias', "import { impl } from './u.ts';\nconst f = impl;\nf({ t });", false],
+    ['declare-only', "declare function g(o: { t: Fn }): void;\ng({ t });", false],
+    ['object namespace', "import { ns } from './u.ts';\nns.draw({ t });", false],
+    ['scanned function', "import { draw } from './b.ts';\ndraw({ t });", true],
+    ['static namespace', "import * as charts from './b.ts';\ncharts.draw({ t });", true],
+    ['dynamic namespace', "export async function show(): Promise<void> { const charts = await import('./b.ts').catch(() => undefined); if (charts) charts.draw({ t }); }", true],
+  ];
+  for (const [name, body, forwarded] of cases) {
+    const files = { 'a.ts': head + body, 'b.ts': b, 'u.ts': u };
+    const scanned = { 'a.ts': files['a.ts'], 'b.ts': b };
+    const refs = extractReferences(scanned, CAT, { evidence: translatorEvidence(inMemoryProgram(files), keysOf(scanned)) });
+    assert.equal(refs.forwarded.length, forwarded ? 1 : 0, name);
+    assert.deepEqual(refs.dynamic.map((x) => x.reason), forwarded ? [] : ['translator wrapper used as a value'], name);
+  }
+});
+
+test('fourth review: type errors in a scanned file withdraw all evidence', () => {
+  const files: Record<string, string> = { 'a.ts': "declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\ndeclare const m: { t: number };\nexport const n: string = m.t;" };
+  const options: ts.CompilerOptions = { target: ts.ScriptTarget.ES2022, types: [], strict: true, noEmit: true };
+  const host = ts.createCompilerHost(options);
+  const program = ts.createProgram(['a.ts'], options, { ...host, getCurrentDirectory: () => '/', getSourceFile: (n, v, ...r) => (bare(n) === 'a.ts' ? ts.createSourceFile(n, files['a.ts']!, v) : host.getSourceFile(n, v, ...r)), fileExists: (n) => bare(n) === 'a.ts' || host.fileExists(n) });
+  const evidence = translatorEvidence(program, keysOf(files));
+  assert.deepEqual([evidence.primitiveMemberReads.size, evidence.scannedHandOffs.size], [0, 0]);
 });

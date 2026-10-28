@@ -332,12 +332,19 @@ export interface TranslatorEvidence {
 }
 export interface ExtractOptions { evidence?: TranslatorEvidence }
 
+/** Inside a declaration file or under a `declare` modifier: a type, not running code. */
+function isAmbient(node: ts.Node): boolean {
+  if (node.getSourceFile().isDeclarationFile) return true;
+  for (let n: ts.Node | undefined = node; n; n = n.parent) if (ts.canHaveModifiers(n) && ts.getModifiers(n)?.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)) return true;
+  return false;
+}
+
 const PRIMITIVE = ts.TypeFlags.StringLike | ts.TypeFlags.NumberLike | ts.TypeFlags.BigIntLike | ts.TypeFlags.BooleanLike | ts.TypeFlags.ESSymbolLike
   | ts.TypeFlags.Undefined | ts.TypeFlags.Null | ts.TypeFlags.Void | ts.TypeFlags.Never;
 
 /**
  * Build `TranslatorEvidence` with a type checker. `files` maps each scanned file key to its path in `program`, which must
- * have read the same text. Residual assumption: a scanned function receiving `{ t }` does not pass that object on to
+ * have read the same text. Returns no evidence when a scanned file has type errors. Residual assumption: a scanned function receiving `{ t }` does not pass that object on to
  * unscanned code (its own `x.t` reads are checked like any other).
  */
 export function translatorEvidence(program: ts.Program, files: Readonly<Record<string, string>>): TranslatorEvidence {
@@ -345,13 +352,53 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
   const scannedPaths = new Set(Object.values(files).map((p) => program.getSourceFile(p)?.fileName));
   const primitiveMemberReads = new Set<string>();
   const scannedHandOffs = new Set<string>();
-  const declaredInScan = (callee: ts.Expression): boolean => {
-    const node = ts.isPropertyAccessExpression(callee) ? callee.name : callee;
-    let symbol = checker.getSymbolAtLocation(node);
-    if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
-    const decls = symbol?.declarations ?? [];
-    return decls.length > 0 && decls.every((d) => scannedPaths.has(d.getSourceFile().fileName));
+  const inScan = (n: ts.Node): boolean => scannedPaths.has(n.getSourceFile().fileName);
+  const symbolOf = (n: ts.Node): ts.Symbol | undefined => {
+    const symbol = checker.getSymbolAtLocation(n);
+    return symbol && symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
   };
+  // The code that runs, not merely a type: a function with a body or a const function value, never a parameter,
+  // interface/type member, ambient declaration, class method (overridable) or other variable.
+  const implementedInScan = (n: ts.Node): boolean => {
+    const decls = symbolOf(n)?.declarations ?? [];
+    const isFunction = (d: ts.Declaration): boolean => ts.isFunctionDeclaration(d) && !isAmbient(d);
+    const constFunction = (d: ts.Declaration): boolean => ts.isVariableDeclaration(d) && (d.parent.flags & ts.NodeFlags.Const) !== 0 && d.initializer !== undefined
+      && (ts.isArrowFunction(d.initializer) || ts.isFunctionExpression(d.initializer)) && !isAmbient(d);
+    return decls.length > 0 && decls.every((d) => inScan(d) && (isFunction(d) || constFunction(d))) && decls.some((d) => constFunction(d) || (ts.isFunctionDeclaration(d) && d.body !== undefined));
+  };
+  // `x` in `x.f(...)` must be the real namespace of a scanned module: `import * as x` or `const x = await import('…')`.
+  const scannedNamespace = (receiver: ts.Expression): boolean => {
+    if (!ts.isIdentifier(receiver)) return false;
+    const decls = checker.getSymbolAtLocation(receiver)?.declarations ?? [];
+    if (decls.length !== 1) return false;
+    const d = decls[0]!;
+    let specifier: ts.Expression | undefined;
+    if (ts.isNamespaceImport(d)) specifier = d.parent.parent.moduleSpecifier;
+    else if (ts.isVariableDeclaration(d) && (d.parent.flags & ts.NodeFlags.Const) !== 0 && d.initializer) {
+      let e = unwrap(d.initializer);
+      if (ts.isAwaitExpression(e)) e = unwrap(e.expression);
+      // `import(…).catch(() => undefined)` keeps the namespace or yields undefined.
+      if (ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression) && e.expression.name.text === 'catch') {
+        const handler = e.arguments[0];
+        if (e.arguments.length !== 1 || !handler || !ts.isArrowFunction(handler) || ts.isBlock(handler.body) || handler.body.kind !== ts.SyntaxKind.Identifier || (handler.body as ts.Identifier).text !== 'undefined') return false;
+        e = unwrap(e.expression.expression);
+      }
+      if (ts.isCallExpression(e) && e.expression.kind === ts.SyntaxKind.ImportKeyword) specifier = e.arguments[0];
+    }
+    const module = specifier && ts.isStringLiteral(specifier) ? checker.getSymbolAtLocation(specifier) : undefined;
+    const file = module?.declarations?.[0];
+    return file !== undefined && ts.isSourceFile(file) && inScan(file);
+  };
+  const declaredInScan = (callee: ts.Expression): boolean => {
+    const c = unwrap(callee);
+    if (ts.isIdentifier(c)) return implementedInScan(c);
+    return ts.isPropertyAccessExpression(c) && scannedNamespace(unwrap(c.expression)) && implementedInScan(c.name);
+  };
+  // Types are only evidence when the scanned files type-check.
+  for (const path of Object.values(files)) {
+    const source = program.getSourceFile(path);
+    if (source && (program.getSyntacticDiagnostics(source).length || program.getSemanticDiagnostics(source).length)) return { primitiveMemberReads: new Set(), scannedHandOffs: new Set() };
+  }
   for (const [key, path] of Object.entries(files)) {
     const source = program.getSourceFile(path);
     if (!source) throw new Error(`program does not contain ${path}`);
