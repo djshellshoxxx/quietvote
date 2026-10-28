@@ -504,9 +504,10 @@ now resolves, conservatively and lexically:
 - the translator wrapper `const t = (k) => tr.t(k)` is reported as `references.forwarded` only if it
   forwards its first parameter, is not exported, and every `t` use in the scanned files is a direct
   call, a declaration/member name, `x.t(...)`, or proven safe by type-checked evidence: an `x.t`
-  value read whose type is primitive, or `{ t }` passed directly to a function implemented (body or
-  const function) in a scanned file, reached directly or via `import * as ns`/`const ns = await
-  import(…)`, whose receiving parameter is used only as `env.x`. Evidence is withdrawn if a scanned
+  value read whose type is primitive, or `{ t }` in a literal holding only the wrapper and primitive
+  data, passed directly to a function implemented (body or const function) in a scanned file,
+  reached directly or via `import * as ns`/`const ns = await import(…)`, whose receiving parameter
+  is used (in defaults and body, incl. shorthand) only as `env.x`. Evidence is withdrawn if a scanned
   file has diagnostics or `@ts-ignore`/`@ts-expect-error`/`@ts-nocheck`. Otherwise the wrapper's
   call is reported dynamic (`translator wrapper used as a value`).
 - `scripts/i18n-check.ts` builds that evidence with a TypeScript program from
@@ -517,7 +518,7 @@ App result: 281 static, 13 resolved (was 8), **0 unresolved** (was 6), 1 forward
 `qv.err.*.title|body` (32 each), privacy not-claimed list (6; guarantee copy **unchanged**, only
 analysed), receipt titles (6). The theme-option template resolves to its exact 3 keys.
 
-Review history (one independent read-only reviewer, five fix rounds, each finding reproduced by a
+Review history (one independent read-only reviewer, six fix rounds, each finding reproduced by a
 test that failed on the previous commit before the fix):
 
 | Round | Findings | Fix commit |
@@ -527,12 +528,13 @@ test that failed on the previous commit before the fix):
 | 3 | generic/`object`/`{}` types accepted as non-callable; hand-off to unscanned module | `0e14fda` |
 | 4 | callee declaration ≠ implementation (param, interface, alias, `declare`); evidence despite type errors | `d6e6a44` |
 | 5 | `@ts-` suppressions; receiver passing the object on (replaced a documented assumption) | `b436012` |
+| 6 | receiver escape via `{ env }` shorthand, parameter defaults, `this` in a getter/method of the carrier | `6cc194d` |
 
 | Command (Node v22.22.0) | Result |
 | --- | --- |
 | `npm ci --ignore-scripts --no-audit --no-fund` | passed |
 | `npm run typecheck` | passed (it caught two type errors the test runner does not; both fixed) |
-| `npm test -w @quietvote/web` (incl. `i18n:check`) | 176/176 passed, 0 failed/skipped |
+| `npm test -w @quietvote/web` (incl. `i18n:check`) | 177/177 passed, 0 failed/skipped |
 | `git diff --check` | passed |
 
 Not rerun (no runtime/UI file changed): Playwright `e2e/help.ts`, `e2e/a11y.ts`, `e2e/run.ts`,
@@ -643,7 +645,13 @@ after `ed505f5`) was preserved unchanged; the review-round commits were rebased 
 still unpublished. Its "review receipt not present" note is resolved by the review-history
 table in the dynamic i18n section above: the first review found six defects, so `ed505f5`'s
 extractor was not final; the published source after this integration includes five fix rounds.
-That section's results (176/176 web tests, typecheck, `i18n:check`) supersede the snapshot's
+That section's results (177/177 web tests, typecheck, `i18n:check`) supersede the snapshot's
 recorded 163/163 at `ed505f5`. Budget: no paid API request outside this Claude Code session was
-made; one in-session read-only review subagent was used (six passes). No shared-broker or ledger
+made; one in-session read-only review subagent was used (six passes).
+
+Round-6 fixes were not re-reviewed. Every round so far found smaller holes in the type-evidence
+forwarder path (the six resolved references never depended on it). If a further hole is found and
+the fix is not obviously small, the safe fallback is to drop forwarder evidence and let the
+wrapper's call report as one dynamic reference (`translator wrapper used as a value`): the check
+does not fail on dynamic references, it only loses the "0 unresolved" figure. No shared-broker or ledger
 spend was made or recorded here, and no prompt-cache usage was measured or claimed.
