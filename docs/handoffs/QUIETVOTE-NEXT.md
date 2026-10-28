@@ -461,3 +461,16 @@ verification/coverage/audit is reported running; do not duplicate that active
 review. A deep security review was not performed: the earlier crypto/nonce,
 export-role, trust/authority, verifier and browser-verifier exclusions remain in
 force. No security acceptance, real-election readiness or WCAG claim is made.
+
+### Publication receipt
+
+The source and handoff checkpoint was pushed as a fast-forward from
+`424110d90e23dc443aa4498a4340973d3c8cb8b6` to
+`04d4daac3301ed935ae89e2cbcced295e8277d6f` on
+`checkpoint/quietvote-ordinary-ux-20261024`. A fresh `git ls-remote` returned
+that exact checkpoint SHA; `main` remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`, and the external PR #20 branch still
+resolved to `e2ee87460eefaf896ddef575b998c83dad84e8dc`. The pre-push
+detect-secrets 1.5.0 scan covered the four outgoing file versions and found zero
+potential secrets. No workflow file changed. This receipt-only update follows
+the verified source checkpoint; resolve the current branch HEAD on resumption.
