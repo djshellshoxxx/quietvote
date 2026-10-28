@@ -1,0 +1,49 @@
+// B2 audit proof-of-concept (AI-assisted audit, 2026-10-28; report: /home/user/audit/reports/B2-quietvote-server-board.md).
+// NOT an independent audit. Each test ASSERTS THE CURRENT behaviour at SHA 424110d (known findings whose fixes are on unmerged
+// branches); a fix should make it fail. Synthetic data only.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { join } from 'node:path';
+import { ed25519Keypair, sha256 } from '@quietvote/crypto';
+import { BoardLog, MemoryBoardStore, buildEntry, bundleToJson, exportBundle, type EntryType } from '@quietvote/board';
+import { COORD, TINY, qv, tmp, utf8, voterKeyFile, writeJson } from './helpers.ts';
+
+const hexOf = (b: Uint8Array): string => Buffer.from(b).toString('hex');
+
+test('KNOWN BC-01 (PR #11 unmerged) still present: a history re-signed under the bundle\'s own log key verifies with exit 0', async () => {
+  // An operator-controlled log key (not the election's) re-signs a shortened history (the ballot entry is gone).
+  const evilLog = ed25519Keypair(sha256(utf8('b2/evil-log-key')));
+  const origin = 'quietvote/v1/abcdefghijklmnopqrstuvwxyz';
+  const store = new MemoryBoardStore();
+  const log = new BoardLog({ origin, store, secretKey: evilLog.secretKey, publicKey: evilLog.publicKey, clock: () => 1_800_000_000, allowUnverifiedSignatures: true });
+  let n = 0;
+  for (const type of ['manifest', 'ceremony_start', 'joint_key', 'roll_commit', 'election_open', 'election_close'] as EntryType[]) {
+    n++;
+    const e = buildEntry({ origin, type, secretKey: COORD.secretKey, publicKey: COORD.publicKey, nonce: sha256(utf8(`b2n${n}`)).slice(0, 16), createdAt: 1_800_000_000, body: utf8(`b${n}`) });
+    assert.ok(log.append(e.headerBytes, e.body).ok);
+  }
+  assert.ok(log.checkpoint().ok);
+  const b = exportBundle(store, { origin, createdAt: 1_800_000_000, generator: 'b2', policy: { logPublicKey: evilLog.publicKey, witnessPolicy: { quorum: 0, noneAcknowledged: true, witnesses: [] } } });
+  const f = writeJson(tmp(), 'board.json', JSON.parse(JSON.stringify(bundleToJson(b))));
+  const r = await qv(['board', 'verify', f, '--author-key', hexOf(COORD.publicKey)]);
+  assert.equal(r.code, 0, `${r.out}${r.err}`);
+  assert.match(r.out, /BOARD INTEGRITY: VERIFIED/);
+  assert.match(r.out, /log key taken from bundle/);
+});
+
+test('KNOWN BC-05: fixed at this SHA (F3 + strict QV-JSON key parsing): non-object key/ballot files never reach exit 70', async () => {
+  const dir = tmp();
+  for (const v of [null, [], 5, 'x', true]) {
+    const key = writeJson(dir, `k${String(v)}.key`, v);
+    const r = await qv(['ballot', 'encrypt', '--election', TINY, '--key', key, '--select', 'budget=yes', '--out', join(dir, `b${String(v)}.json`)]);
+    assert.notEqual(r.code, 70, `${JSON.stringify(v)} -> ${r.code} ${r.err}`);
+  }
+});
+
+test('KNOWN BC-04 (PR #11 unmerged) still present: ballot encrypt cannot pin the announced manifest hash', async () => {
+  const dir = tmp();
+  const key = voterKeyFile(dir, 0);
+  const r = await qv(['ballot', 'encrypt', '--election', TINY, '--key', key, '--select', 'budget=yes', '--out', join(dir, 'b.json'), '--manifest-hash', '00'.repeat(32)]);
+  assert.equal(r.code, 2);
+  assert.match(r.err, /unknown option --manifest-hash/);
+});
