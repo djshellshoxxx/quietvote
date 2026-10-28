@@ -391,3 +391,73 @@ Not run: `verifier-py` tests (not in CI workflow), live server e2e, AT/screen-re
 Review status: self-review only; **no independent security or accessibility review performed**.
 Human translation review still pending; translations stay unoffered. DCO: commits on this branch
 carry no `Signed-off-by` (an author attestation the agent cannot make); DCO/authorship not established.
+
+## Ordinary shared-header Help link cleanup — 2026-10-28
+
+This work resumed from a clean local checkout at
+`884f59975bdfcad51d5dac7b77b8bd5ae0d6b067`. A live read showed that both the
+ordinary checkpoint and `claude/quietvote-ui-locale-a11y-sltfb3` had advanced to
+`424110d90e23dc443aa4498a4340973d3c8cb8b6`; the checkpoint was a descendant of
+the local source. I fast-forwarded local `feature/ordinary-ux-20261024` to
+`424110d` without discarding work. `main` remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The checkpoint includes PR #19's
+ordinary catalog extraction, navigation/a11y test and FakeBoard/e2e updates.
+
+External ownership check: `claude/sharp-archimedes-tu76rh` still resolves to
+`e2ee87460eefaf896ddef575b998c83dad84e8dc`, matching the supplied status for
+PR #20's active verification/coverage/audit. Do not duplicate or inspect that
+review. GitHub PR metadata queries returned HTTP 403 Forbidden, so status beyond
+the supplied context and live branch SHA is unavailable. The separate locale/a11y
+branch points at the checkpoint commit `424110d`; no separate unmerged ordinary
+change was found in these refs.
+
+The latest NOTES documented a concrete ordinary navigation issue: Help and
+accessibility was linked in both the shared primary navigation and a second
+header paragraph, creating a redundant link/tab stop on every route. Source
+commit `78d3ecd973a448e796b2c6eb613bc8ebb72f36d5` removes only the second Help
+link. The existing shared primary-nav link remains; the Privacy and limits link
+and its destination are unchanged. `packages/web/e2e/help.ts` now asserts exactly
+one `/help` anchor inside the header, and `packages/web/NOTES.md` records the fix.
+This is UI navigation cleanup only; no locale strings, election flow, verifier,
+trust, or security code changed.
+
+An independent read-only requirements inventory found no other clearly safe,
+unowned ordinary feature in the current backlog. Remaining items are gated:
+translation review and RTL/AT checks need qualified human review; registration
+error copy needs an owner decision; broader voter-help items include ballot,
+guarantee, receipt or verifier guidance; offline retry and close behavior can
+affect election lifecycle. Do not invent copy or alter those boundaries to keep
+work moving.
+
+Validation at source commit `78d3ecd`:
+
+- `npm run typecheck` — passed.
+- `npm test -w @quietvote/web` — **159 passed**, 0 failed/skipped; includes
+  `i18n:check` (281 static references, 8 resolved dynamic references, 6 reported
+  unresolved dynamic references, and one explicit `verifyView` exclusion). This
+  is routine package test execution, not an independent security review.
+- `QV_REQUIRE_BROWSER=1 QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/help.ts`
+  — 13/13 Help/Home checks passed in both light and dark device modes.
+- `QV_REQUIRE_BROWSER=1 QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/a11y.ts`
+  — 45/45 automated ordinary-page checks passed. These do not establish WCAG
+  conformance or replace screen-reader/assistive-technology and disabled-user
+  testing.
+- The first Playwright invocation could not find the default cached executable;
+  `/usr/bin/chromium` was present and the existing `QV_CHROMIUM` path succeeded.
+  No old `--dump-dom` path was retried.
+- `git diff --check` passed; one read-only independent diff reviewer found no
+  issue. Two inexpensive read-only workers completed (requirements inventory and
+  exact UI diff review); the integrator owns all edits.
+
+The local implementation is committed but not yet published at this section's
+creation. The remote checkpoint was last read at `424110d` before this change.
+Before publishing, re-read that ref and `main`, ensure the local source remains a
+fast-forward descendant, secret-scan the outgoing source/handoff versions, and
+push only `checkpoint/quietvote-ordinary-ux-20261024`. Read back the exact remote
+SHA. Keep `main` unchanged; no PR merge or approval was attempted.
+
+The requested whole-codebase code/bug audit remains deferred while PR #20's
+verification/coverage/audit is reported running; do not duplicate that active
+review. A deep security review was not performed: the earlier crypto/nonce,
+export-role, trust/authority, verifier and browser-verifier exclusions remain in
+force. No security acceptance, real-election readiness or WCAG claim is made.
