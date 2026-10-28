@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
+import ts from 'typescript';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EN } from '../src/i18n/en.ts';
 import { lintCatalog, lintLiterals } from '../src/i18n/catalog-lint.ts';
-import { extractReferences, unknownReferences, unknownResolvedReferences } from '../src/i18n/extract.ts';
+import { extractReferences, nonCallableMemberReads, unknownReferences, unknownResolvedReferences } from '../src/i18n/extract.ts';
 
 const args = process.argv.slice(2);
 if (args.some((a) => a !== '--json') || args.filter((a) => a === '--json').length > 1) {
@@ -16,7 +17,13 @@ const paths = ['packages/web/src/ui/app.ts', 'packages/web/src/main.ts', 'packag
 const files = Object.fromEntries(paths.map((p) => [p, readFileSync(resolve(root, p), 'utf8')]));
 const catalogIssues = lintCatalog(EN);
 const scan = lintLiterals(files);
-const refs = extractReferences(files, EN);
+// Type-check the scanned files so the forwarder check can tell a numeric `x.t` from a handed-on translator.
+const config = ts.getParsedCommandLineOfConfigFile(resolve(root, 'packages/web/tsconfig.json'), {}, { ...ts.sys, onUnRecoverableConfigFileDiagnostic: (d) => { throw new Error(ts.flattenDiagnosticMessageText(d.messageText, '\n')); } });
+if (!config) throw new Error('cannot read packages/web/tsconfig.json');
+const absolute = Object.fromEntries(paths.map((p) => [p, resolve(root, p)]));
+const program = ts.createProgram(Object.values(absolute), config.options);
+for (const [p, abs] of Object.entries(absolute)) if (program.getSourceFile(abs)?.text !== files[p]) throw new Error(`type-checked text differs from scanned text: ${p}`);
+const refs = extractReferences(files, EN, { nonCallableMemberReads: nonCallableMemberReads(program, absolute) });
 const unknown = [...unknownReferences(refs.static, EN), ...unknownResolvedReferences(refs.resolved, EN)];
 if (json) {
   const catalog = Object.keys(EN).sort().map((key) => ({ key, ...EN[key as keyof typeof EN] }));

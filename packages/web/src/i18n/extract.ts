@@ -24,8 +24,12 @@ const MAX_DEPTH = 16;
 const MAX_ALTS = 1000;
 const TOO_MANY = 'too many alternatives';
 const TOO_DEEP = 'resolution depth exceeded';
+const TOO_LONG = 'resolution step budget exceeded';
+/** Bound on resolution steps per translator call, so pathological sources fail fast instead of stalling the check. */
+const MAX_STEPS = 20_000;
+let steps = 0;
 /** Analysis limits: the value is unbounded, not one unknown key segment, so these never become a template wildcard. */
-const isLimit = (v: Resolution): v is { reason: string } => 'reason' in v && (v.reason === TOO_MANY || v.reason === TOO_DEEP);
+const isLimit = (v: Resolution): v is { reason: string } => 'reason' in v && (v.reason === TOO_MANY || v.reason === TOO_DEEP || v.reason === TOO_LONG);
 /** Failure reason for a wrapping form: a limit propagates as is; other failures take the form's reason. */
 const failure = (v: { reason: string }, reason: string): { reason: string } => (isLimit(v) ? v : { reason });
 /** Array methods that read but never add elements; any other use of an array binding may mutate it. */
@@ -55,35 +59,46 @@ function statementsBinding(stmts: readonly ts.Statement[], text: string, scope: 
 }
 
 /** True when the file declares the name with `var` anywhere; hoisting makes lexical lookup unsound, so give up on it. */
+const varNamesCache = new WeakMap<ts.SourceFile, Set<string>>();
 function hasVarDeclaration(file: ts.SourceFile, text: string): boolean {
-  let found = false;
-  const visit = (n: ts.Node): void => {
-    if (found) return;
-    if (ts.isVariableDeclarationList(n) && (n.flags & ts.NodeFlags.BlockScoped) === 0 && n.declarations.some((d) => declaresName(d.name, text))) found = true;
-    else ts.forEachChild(n, visit);
-  };
-  visit(file);
-  return found;
+  let names = varNamesCache.get(file);
+  if (!names) {
+    const found = new Set<string>();
+    const collect = (name: ts.BindingName): void => {
+      if (ts.isIdentifier(name)) found.add(name.text);
+      else for (const el of name.elements) if (!ts.isOmittedExpression(el)) collect(el.name);
+    };
+    const visit = (n: ts.Node): void => {
+      if (ts.isVariableDeclarationList(n) && (n.flags & ts.NodeFlags.BlockScoped) === 0) for (const d of n.declarations) collect(d.name);
+      ts.forEachChild(n, visit);
+    };
+    visit(file);
+    varNamesCache.set(file, (names = found));
+  }
+  return names.has(text);
 }
 
-/** True when the name is written anywhere under the node: assignment, compound assignment, ++/--, destructuring or for-in/of target. Shadowed names count too. */
+/** True when the expression is written: assignment, compound assignment, ++/--, destructuring or for-in/of target. */
+function isWriteTarget(n: ts.Node): boolean {
+  let c = n;
+  for (let p = n.parent; p; c = p, p = p.parent) {
+    if (ts.isBinaryExpression(p)) return p.left === c && p.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && p.operatorToken.kind <= ts.SyntaxKind.LastAssignment;
+    if (ts.isPrefixUnaryExpression(p) || ts.isPostfixUnaryExpression(p)) return p.operator === ts.SyntaxKind.PlusPlusToken || p.operator === ts.SyntaxKind.MinusMinusToken;
+    if ((ts.isForOfStatement(p) || ts.isForInStatement(p)) && p.initializer === c) return true;
+    // Only climb through destructuring shapes and type-only wrappers; anything else means the value is read.
+    if (!(ts.isArrayLiteralExpression(p) || ts.isObjectLiteralExpression(p) || ts.isShorthandPropertyAssignment(p) || ts.isPropertyAssignment(p) || ts.isSpreadElement(p) || ts.isSpreadAssignment(p)
+      || ts.isParenthesizedExpression(p) || ts.isNonNullExpression(p) || ts.isAsExpression(p) || ts.isTypeAssertionExpression(p) || ts.isSatisfiesExpression(p))) return false;
+    if (ts.isPropertyAssignment(p) && p.name === c) return false;
+  }
+  return false;
+}
+
+/** True when the name is written anywhere under the node. Shadowed names count too. */
 function isAssignedIn(root: ts.Node, text: string): boolean {
   let found = false;
-  const isTarget = (n: ts.Node): boolean => {
-    let c = n;
-    for (let p = n.parent; p; c = p, p = p.parent) {
-      if (ts.isBinaryExpression(p)) return p.left === c && p.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && p.operatorToken.kind <= ts.SyntaxKind.LastAssignment;
-      if (ts.isPrefixUnaryExpression(p) || ts.isPostfixUnaryExpression(p)) return p.operator === ts.SyntaxKind.PlusPlusToken || p.operator === ts.SyntaxKind.MinusMinusToken;
-      if ((ts.isForOfStatement(p) || ts.isForInStatement(p)) && p.initializer === c) return true;
-      // Only climb through destructuring shapes; anything else means the name is read.
-      if (!(ts.isArrayLiteralExpression(p) || ts.isObjectLiteralExpression(p) || ts.isShorthandPropertyAssignment(p) || ts.isPropertyAssignment(p) || ts.isSpreadElement(p) || ts.isSpreadAssignment(p) || ts.isParenthesizedExpression(p))) return false;
-      if (ts.isPropertyAssignment(p) && p.name === c) return false;
-    }
-    return false;
-  };
   const visit = (n: ts.Node): void => {
     if (found) return;
-    if (ts.isIdentifier(n) && n.text === text && isTarget(n)) found = true;
+    if (ts.isIdentifier(n) && n.text === text && isWriteTarget(n)) found = true;
     else ts.forEachChild(n, visit);
   };
   visit(root);
@@ -113,7 +128,8 @@ function findBinding(id: ts.Identifier): Binding | undefined {
 }
 
 /** An arrow callback that cannot reach the array: at most (element, index), so no third `array` parameter. */
-const isClosedElementCallback = (fn: ts.Node | undefined): boolean => fn !== undefined && ts.isArrowFunction(fn) && fn.parameters.length <= 2;
+const isClosedElementCallback = (fn: ts.Node | undefined): boolean =>
+  fn !== undefined && ts.isArrowFunction(fn) && fn.parameters.length <= 2 && fn.parameters.every((p) => ts.isIdentifier(p.name) && !p.dotDotDotToken);
 
 /** True when every use of the name in the binding's scope only reads the array (conservative: shadowed names count too). */
 function arrayOnlyRead(b: { decl: ts.VariableDeclaration; scope: ts.Node }): boolean {
@@ -126,7 +142,7 @@ function arrayOnlyRead(b: { decl: ts.VariableDeclaration; scope: ts.Node }): boo
     if (!ok) return;
     if (ts.isIdentifier(n) && n.text === name && n !== b.decl.name) {
       const p = n.parent;
-      if (!(ts.isPropertyAccessExpression(p) && p.expression === n && ARRAY_READS.has(p.name.text))) ok = false;
+      if (!(ts.isPropertyAccessExpression(p) && p.expression === n && ARRAY_READS.has(p.name.text)) || isWriteTarget(p)) ok = false;
       else if (ELEMENT_CALLBACKS.has(p.name.text)) {
         // The callback receives the array itself as its third argument.
         const call = p.parent;
@@ -159,12 +175,19 @@ function resolveArray(node: ts.Expression, env: Env, depth: number): Resolution 
   return alts.length ? { alts, form: 'array-element' } : { reason: 'empty array' };
 }
 
+const constCache = new WeakMap<ts.VariableDeclaration, Resolution>();
+
 function resolveIdentifier(e: ts.Identifier, env: Env, depth: number): Resolution {
   const b = findBinding(e);
   if (!b || b.kind === 'other') return { reason: 'bare identifier' };
   if (b.kind === 'const') {
+    // A const initializer lies outside every key-builder body, so it never depends on env; limits are not cached.
+    const cached = constCache.get(b.decl);
+    if (cached) return cached;
     const v = resolveExpression(b.decl.initializer!, env, depth + 1);
-    return 'reason' in v ? failure(v, 'bare identifier') : { alts: v.alts, form: 'binding' };
+    const out: Resolution = 'reason' in v ? failure(v, 'bare identifier') : { alts: v.alts, form: 'binding' };
+    if (!isLimit(out)) constCache.set(b.decl, out);
+    return out;
   }
   const bound = env.get(b.param);
   if (bound) return bound;
@@ -200,6 +223,7 @@ function resolveCall(e: ts.CallExpression, env: Env, depth: number): Resolution 
 
 function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0): Resolution {
   if (depth > MAX_DEPTH) return { reason: TOO_DEEP };
+  if (++steps > MAX_STEPS) return { reason: TOO_LONG };
   const e = unwrap(node);
   if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return { alts: [[e.text]], form: 'literal' };
   if (ts.isConditionalExpression(e)) {
@@ -215,7 +239,7 @@ function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0)
     for (const prop of (unwrap(e.expression) as ts.ObjectLiteralExpression).properties) {
       if (!ts.isPropertyAssignment(prop)) return { reason: 'object map entry is not a plain property' };
       const v = resolveExpression(prop.initializer, env, depth + 1);
-      if ('reason' in v) return { reason: `object map value not statically resolvable: ${v.reason}` };
+      if ('reason' in v) return failure(v, `object map value not statically resolvable: ${v.reason}`);
       alts.push(...v.alts);
       if (alts.length > MAX_ALTS) return { reason: TOO_MANY };
     }
@@ -239,17 +263,21 @@ function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0)
 }
 
 /**
- * True when every use of the name `t` under the node is a direct call (scanned here) or an object property `t`
- * handed to another scanned module, which calls it as `x.t(...)`. Any other use could pass keys the scan never sees.
+ * True when every use of the name `t` under the node is a direct call (scanned here), `x.t(...)`, or an object property `t`
+ * handed to another module, which is safe only if that module is scanned too (all scanned files are checked).
+ * Any other use could pass keys the scan never sees.
  */
-function translatorOnlyCalled(root: ts.Node): boolean {
+function translatorOnlyCalled(root: ts.SourceFile, nonCallable: ReadonlySet<string>): boolean {
   let ok = true;
   const visit = (n: ts.Node): void => {
     if (!ok) return;
     if (ts.isIdentifier(n) && n.text === 't') {
       const p = n.parent;
       const declaration = (ts.isVariableDeclaration(p) || ts.isParameter(p) || ts.isBindingElement(p) || ts.isFunctionDeclaration(p)) && p.name === n;
-      const memberName = (ts.isPropertyAccessExpression(p) || ts.isPropertyAssignment(p) || ts.isPropertySignature(p) || ts.isPropertyDeclaration(p) || ts.isMethodDeclaration(p)) && p.name === n;
+      // `x.t` is fine only as a callee; read as a value it may be a handed-on wrapper escaping the scan.
+      const memberRead = ts.isPropertyAccessExpression(p) && p.name === n
+        && ((ts.isCallExpression(p.parent) && p.parent.expression === p) || nonCallable.has(`${root.fileName}:${n.getStart(root)}`));
+      const memberName = memberRead || ((ts.isPropertyAssignment(p) || ts.isPropertySignature(p) || ts.isPropertyDeclaration(p) || ts.isMethodDeclaration(p) || ts.isMethodSignature(p)) && p.name === n);
       const called = ts.isCallExpression(p) && p.expression === n;
       const handedOn = ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n && ts.isIdentifier(p.name) && p.name.text === 't');
       if (!(declaration || memberName || called || handedOn)) ok = false;
@@ -261,7 +289,7 @@ function translatorOnlyCalled(root: ts.Node): boolean {
 }
 
 /** A translator wrapper such as `const t = (k: MessageKey) => tr.t(k)`: its own call sites are the references. */
-function forwarding(arg: ts.Expression): 'forwarded' | 'escapes' | undefined {
+function forwarding(arg: ts.Expression, translatorContained: boolean): 'forwarded' | 'escapes' | undefined {
   const e = unwrap(arg);
   if (!ts.isIdentifier(e)) return undefined;
   const b = findBinding(e);
@@ -270,7 +298,9 @@ function forwarding(arg: ts.Expression): 'forwarded' | 'escapes' | undefined {
   const named = ts.isFunctionDeclaration(fn) ? fn.name?.text === 't'
     : (ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) && ts.isVariableDeclaration(fn.parent) && fn.parent.initializer === fn && ts.isIdentifier(fn.parent.name) && fn.parent.name.text === 't';
   if (!named) return undefined;
-  return translatorOnlyCalled(fn.getSourceFile()) ? 'forwarded' : 'escapes';
+  const holder = ts.isFunctionDeclaration(fn) ? fn : fn.parent.parent.parent; // declaration list -> variable statement
+  const exported = ts.canHaveModifiers(holder) && ts.getModifiers(holder)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+  return translatorContained && !exported ? 'forwarded' : 'escapes';
 }
 
 const patternOf = (alt: Alt): string => alt.map((p) => p ?? '*').join('');
@@ -289,14 +319,45 @@ function isVerifyViewDeclaration(node: ts.Node): boolean {
 }
 
 /** Find static catalog keys and dynamic translator calls. Results are stable regardless of input order. */
-export function extractReferences(files: Readonly<Record<string, string>>, catalog?: Readonly<Record<string, unknown>>): { static: MessageReference[]; dynamic: DynamicReference[]; resolved: ResolvedReference[]; forwarded: ForwardedReference[] } {
+export interface ExtractOptions {
+  /** `file:offset` of `x.t` names read as values that a type checker proved are not callable (see `nonCallableMemberReads`). */
+  nonCallableMemberReads?: ReadonlySet<string>;
+}
+
+/**
+ * Type-checked evidence for the forwarder check: every `x.t` read as a value whose type is neither callable nor any/unknown.
+ * `files` maps each scanned file key to its path in `program`; the program must have read the same text.
+ */
+export function nonCallableMemberReads(program: ts.Program, files: Readonly<Record<string, string>>): Set<string> {
+  const checker = program.getTypeChecker();
+  const out = new Set<string>();
+  for (const [key, path] of Object.entries(files)) {
+    const source = program.getSourceFile(path);
+    if (!source) throw new Error(`program does not contain ${path}`);
+    const visit = (n: ts.Node): void => {
+      if (ts.isIdentifier(n) && n.text === 't' && ts.isPropertyAccessExpression(n.parent) && n.parent.name === n) {
+        const type = checker.getTypeAtLocation(n.parent);
+        const mayCall = (type.isUnion() ? type.types : [type]).some((x) => x.getCallSignatures().length > 0 || (x.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) !== 0);
+        if (!mayCall) out.add(`${key}:${n.getStart(source)}`);
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(source);
+  }
+  return out;
+}
+
+export function extractReferences(files: Readonly<Record<string, string>>, catalog?: Readonly<Record<string, unknown>>, options: ExtractOptions = {}): { static: MessageReference[]; dynamic: DynamicReference[]; resolved: ResolvedReference[]; forwarded: ForwardedReference[] } {
   const catalogKeys = catalog ? Object.keys(catalog).sort() : [];
   const resolved: ResolvedReference[] = [];
   const statics: MessageReference[] = [];
   const dynamics: DynamicReference[] = [];
   const forwarded: ForwardedReference[] = [];
-  for (const file of Object.keys(files).sort()) {
-    const source = ts.createSourceFile(file, files[file]!, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const sources = Object.keys(files).sort().map((file) => ts.createSourceFile(file, files[file]!, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS));
+  const nonCallable = options.nonCallableMemberReads ?? new Set<string>();
+  const translatorContained = sources.every((source) => translatorOnlyCalled(source, nonCallable));
+  for (const source of sources) {
+    const file = source.fileName;
     const visit = (node: ts.Node): void => {
       if (isVerifyViewDeclaration(node)) return;
       if (ts.isCallExpression(node) && isTranslatorCall(node)) {
@@ -306,11 +367,12 @@ export function extractReferences(files: Readonly<Record<string, string>>, catal
           statics.push({ file, line, key: first.text });
         } else if (!first) {
           dynamics.push({ file, line, expression: '(missing argument)', reason: 'missing argument' });
-        } else if (forwarding(first) === 'forwarded') {
+        } else if (forwarding(first, translatorContained) === 'forwarded') {
           forwarded.push({ file, line, expression: first.getText(source) });
-        } else if (forwarding(first) === 'escapes') {
+        } else if (forwarding(first, translatorContained) === 'escapes') {
           dynamics.push({ file, line, expression: first.getText(source), reason: 'translator wrapper used as a value' });
         } else {
+          steps = 0;
           const r = resolveExpression(first);
           if ('reason' in r) dynamics.push({ file, line, expression: first.getText(source), reason: r.reason });
           else {

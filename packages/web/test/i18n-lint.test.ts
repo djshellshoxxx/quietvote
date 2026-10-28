@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { extractReferences, unknownReferences, unknownResolvedReferences } from '../src/i18n/extract.ts';
+import ts from 'typescript';
+import { extractReferences, nonCallableMemberReads, unknownReferences, unknownResolvedReferences } from '../src/i18n/extract.ts';
 import { lintCatalog, lintLiterals } from '../src/i18n/catalog-lint.ts';
 
 test('reference extraction is deterministic and separates dynamic keys', () => {
@@ -188,9 +189,10 @@ test('review regressions: hoisted var, reassigned parameters and array escapes s
     "const KF = ['qv.a.x']; KF.forEach(mutate); KF.map((k) => t(k));",
     "const KG = ['qv.a.x']; KG.map(function (k) { return t(k); });",
     "export const KE = ['qv.a.x']; KE.map((k) => t(k));",
+    "const KL = ['qv.a.x']; KL.length = 3; KL.find((k) => t(k));",
   ].join('\n') }, CAT);
   assert.deepEqual(refs.resolved, []);
-  assert.deepEqual(refs.dynamic.map((x) => x.line), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepEqual(refs.dynamic.map((x) => x.line), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
 });
 
 test('review regressions: alternatives are capped instead of exploding', () => {
@@ -222,4 +224,62 @@ test('review regressions: a forwarder must pass its first parameter and only be 
   const handedOn = extractReferences({ 'a.ts': "const t = (k: MessageKey) => tr.t(k); chart({ t }); other({ t: t }); t('qv.a.x');" }, CAT);
   assert.deepEqual(handedOn.forwarded.map((x) => x.expression), ['k']);
   assert.deepEqual(handedOn.dynamic, []);
+});
+
+test('second review: rest callbacks, writes through TS casts and object-map limits stay dynamic', () => {
+  const refs = extractReferences({ 'a.ts': [
+    "const KR = ['qv.a.x']; KR.forEach((...a) => { a[2][0] = 'qv.bad'; }); KR.map((k) => t(k));",
+    "const KT = ['qv.a.x']; KT.forEach((k, ...a) => {}); KT.map((k) => t(k));",
+    "const K1 = ['qv.a.x']; K1.forEach((k) => { k! = 'qv.bad'; t(k); });",
+    "const K2 = ['qv.a.x']; K2.forEach((k) => { (k as any) = 'qv.bad'; t(k); });",
+    "const K3 = ['qv.a.x']; K3.forEach((k) => { for ((k as any) of ['qv.bad']) {} t(k); });",
+    "const bb = (s: string) => (s! = 'qv.bad') ? s : s; t(bb('qv.a.x'));",
+    "const o0 = c ? 'a' : 'b'; const o1 = `${o0}${o0}`; const o2 = `${o1}${o1}`; const o3 = `${o2}${o2}${o2}`; t(`qv.${({ p: o3 })[q]}.x`);",
+  ].join('\n') }, CAT);
+  assert.deepEqual(refs.resolved, []);
+  assert.deepEqual(refs.dynamic.map((x) => x.line), [1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(refs.dynamic[6]!.reason, 'too many alternatives');
+});
+
+test('second review: an exported or escaping wrapper is not a forwarder', () => {
+  const member = extractReferences({ 'a.ts': "const t = (k: MessageKey) => tr.t(k); const ui = { t }; ['qv.bad'].map(ui.t);" }, CAT);
+  assert.deepEqual(member.forwarded, []);
+  const across = extractReferences({ 'a.ts': "const t = (k: MessageKey) => tr.t(k); chart({ t });", 'b.ts': "export function chart(env) { ['qv.bad'].map(env.t); env.t('qv.a.x'); }" }, CAT);
+  assert.deepEqual(across.forwarded, []);
+  assert.deepEqual(across.dynamic.map((x) => x.reason), ['translator wrapper used as a value']);
+  for (const src of ['export const t = (k: MessageKey) => tr.t(k);', 'export function t(k: MessageKey) { return tr.t(k); }']) {
+    const refs = extractReferences({ 'a.ts': src }, CAT);
+    assert.deepEqual(refs.forwarded, [], src);
+    assert.deepEqual(refs.dynamic.map((x) => x.reason), ['translator wrapper used as a value'], src);
+  }
+});
+
+test('second review: wide single-alternative chains resolve quickly', () => {
+  const lines = ["const w0 = 'x';"];
+  for (let i = 1; i <= 7; i++) lines.push(`const w${i} = \`${('${w' + (i - 1) + '}').repeat(6)}\`;`);
+  lines.push('t(`qv.${w7}`);');
+  const started = performance.now();
+  const refs = extractReferences({ 'a.ts': lines.join('\n') }, CAT);
+  assert.ok(performance.now() - started < 1000, 'resolution must be memoized or budgeted');
+  assert.equal(refs.resolved.length + refs.dynamic.length, 1);
+});
+
+test('type-checked evidence admits only non-callable `x.t` reads for the forwarder check', () => {
+  const files: Record<string, string> = {
+    'a.ts': "declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\ndeclare const m: { t: number } | undefined;\nexport const n = m?.t;\nconst ui = { t };\nexport const leak = ['qv.bad'].map(ui.t);",
+  };
+  const host = ts.createCompilerHost({});
+  const program = ts.createProgram(Object.keys(files), { noLib: true, types: [], strict: true }, {
+    ...host,
+    getSourceFile: (name, version) => (files[name] === undefined ? undefined : ts.createSourceFile(name, files[name]!, version)),
+    fileExists: (name) => files[name] !== undefined,
+    readFile: (name) => files[name],
+  });
+  const reads = nonCallableMemberReads(program, { 'a.ts': 'a.ts' });
+  assert.deepEqual([...reads], [`a.ts:${files['a.ts']!.indexOf('m?.t') + 3}`]);
+  // The numeric read is admitted; the callable ui.t read still makes the wrapper escape.
+  assert.deepEqual(extractReferences(files, CAT, { nonCallableMemberReads: reads }).dynamic.map((x) => x.reason), ['translator wrapper used as a value']);
+  const withoutLeak = { 'a.ts': files['a.ts']!.replace(/\nconst ui[\s\S]*$/, '') };
+  assert.deepEqual(extractReferences(withoutLeak, CAT).dynamic.map((x) => x.reason), ['translator wrapper used as a value'], 'untyped scans reject every x.t value read');
+  assert.deepEqual(extractReferences(withoutLeak, CAT, { nonCallableMemberReads: reads }).forwarded.map((x) => x.line), [2]);
 });
