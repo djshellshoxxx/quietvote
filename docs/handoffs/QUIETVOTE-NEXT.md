@@ -535,3 +535,82 @@ Blocked queue (unchanged; revisit only when the dependency changes):
 5. Whole-codebase code/bug audit: owned by PR #20; do not duplicate.
 6. Merge to `main`: not appropriate (checkpoint ancestry includes unreviewed web-triage/web-verifier
    lines); no merge, approval or PR operation under this handoff.
+
+## Restart snapshot and handoff verification — 2026-10-28
+
+This bounded pass made no implementation edits and ran no tests. At entry, local
+`feature/ordinary-ux-20261024` was clean at
+`c35ae44ec441fb9b7caa9506addced8f7ebca949`, with no untracked or unpushed work.
+The live owned work checkpoint had advanced by one Claude-authored commit to
+`ed505f522610311f9233060e0143c7f53d868dac`. Local was its ancestor, so it was
+fast-forwarded without discarding or rewriting anything; the local branch is now
+at that source-plus-handoff commit. `main` remains
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The existing publication branch is
+`checkpoint/quietvote-ordinary-ux-20261024`; no new backup branch is needed.
+
+Read-only `git ls-remote` confirmed these live refs:
+
+- `checkpoint/quietvote-ordinary-ux-20261024` —
+  `ed505f522610311f9233060e0143c7f53d868dac`.
+- `main` — `019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
+- `claude/quietvote-ui-locale-a11y-sltfb3` —
+  `424110d90e23dc443aa4498a4340973d3c8cb8b6`.
+- `claude/sharp-archimedes-tu76rh` —
+  `e2ee87460eefaf896ddef575b998c83dad84e8dc` (supplied as PR #20's active audit
+  branch; its code was not inspected).
+
+The remote source-and-handoff commit `ed505f5` records the dynamic-i18n extractor
+work and its tests. Its change summary names only `packages/web/src/i18n/extract.ts`,
+`packages/web/scripts/i18n-check.ts`, `packages/web/test/i18n-cli.test.ts`,
+`packages/web/test/i18n-lint.test.ts`, and this handoff. The recorded result is
+281 static references, 13 resolved dynamic references, zero unresolved, one
+forwarder, zero unknown keys, and the same explicit `verifyView` exclusion.
+Recorded commands/results at that source SHA are `npm ci --ignore-scripts
+--no-audit --no-fund` passed, `npm run typecheck` passed,
+`npm test -w @quietvote/web` 163/163 passed (including `i18n:check`), and
+`git diff --check` passed. Five focused tests failed before the fix and passed
+afterward; no assertions were removed except the CLI's obsolete expectation
+that dynamic references must remain nonempty, replaced by a forwarder assertion.
+No browser suite, other workspace suite, or separate production-size run was
+recorded for this tooling-only change. These are handoff-recorded results and
+were not rerun during this bounded pass.
+
+Integration/ownership: the Claude-authored change is already on the existing
+checkpoint branch and remains unmerged from `main`; this task only fast-forwarded
+the local branch. No Claude branch was edited. The upstream handoff says one
+independent read-only extractor reviewer completed but refers to a receipt that
+is not present in the checked handoff text; treat that review receipt as
+unverified. The prior GitHub PR metadata calls returned HTTP 403 Forbidden; this
+pass did not retry them and used only read-only Git refs. No new access denial
+occurred. No paid model call or additional worker was used here.
+
+Ready/blocked rule for continuation: finish and checkpoint independently
+executable accepted code and tests in the Ready queue before revisiting blocked
+items. Seek only safe, in-scope alternatives; do not bypass restrictions, reword
+denied work, invent approval, weaken tests, or waive real dependencies and
+essential pre-release safeguards. Recheck a blocked item only when relevant
+evidence, access, or explicit authorization changes. The last requirements
+inventory found no additional clearly safe, unowned ordinary implementation
+task; do not invent work to stay busy.
+
+Blocked queue remains: qualified translation and terminology review; RTL,
+assistive-technology, disabled-user and wider usability acceptance; registration
+error-copy/`commitRoll` owner decisions; guarantee/trust/ballot/receipt/verifier
+guidance and `/verify-client`/QR scope; claims-policy findings; PR #20's active
+whole-codebase audit; and any main merge. Preserve the existing exclusions on
+crypto/nonce, export-role, trust/authority, ballot/election verifier, and the
+stopped browser-verifier tranche. Do not claim election/security/WCAG acceptance.
+
+The Claude takeover prompt's budget rule remains in force: paid Claude use only
+through the existing shared broker, within its cumulative $200 cap and any
+stricter reserve; verify available budget before costly work. No budget was
+spent in this handoff-only pass. The delivered continuation instructions call
+for one integrator, bounded disjoint workers only where useful, strong suitable
+models for difficult allowed work and efficient models for routine tasks, and
+supported prompt caching only for stable non-sensitive context.
+
+At the end of this pass, the source branch is at `ed505f5`; the following
+documentation-only current-state receipt is intended to be committed and
+fast-forwarded to the same existing checkpoint branch. Resolve the exact final
+documentation HEAD and remote SHA at resume; `main` and all Claude branches must
+remain unchanged.
