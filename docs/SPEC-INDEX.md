@@ -36,6 +36,11 @@ This is the entry point for product and engineering specifications. Specs are in
 | QV-18 | [Federated governance](18-federated-governance.md) | Opt-in decisions and signed records across independent groups | QV-03, QV-06–QV-09, QV-16–QV-17 | Draft |
 | QV-19 | [Delegation, exit, and governance forks](19-delegation-exit-fork.md) | Bounded revocable delegation, portable export, rule forks | QV-03–QV-09, QV-16–QV-18 | Draft |
 
+## Notes
+
+- File names and IDs differ for the cryptography spec: QV-16 lives in `15-cryptography-and-technical-design.md`, and there is no `16-*` file. The decision log is listed as QV-15.
+- [HANDOFF](HANDOFF) is a review/implementation status note for prototype work tracked in separate draft PRs; it is not an approved spec and not an independent audit.
+
 ## Exploratory ideas
 
 [IDEAS.md](../IDEAS.md) holds non-binding concepts for future consideration. Ideas are not part of the MVP until selected, specified, threat-modeled, and recorded in the decision log.
