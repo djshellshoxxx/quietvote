@@ -522,11 +522,11 @@ test that failed on the previous commit before the fix):
 
 | Round | Findings | Fix commit |
 | --- | --- | --- |
-| 1 | `var` hoisting, parameter reassignment, callback third argument, exported arrays, exponential blowup (OOM crash), loose forwarder | `125ec1d` |
-| 2 | rest callbacks, writes through TS casts, wrapper escape via `ui.t`/export, object-map limit to wildcard, 5.9 s input | `3579580` |
-| 3 | generic/`object`/`{}` types accepted as non-callable; hand-off to unscanned module | `eee9c02` |
-| 4 | callee declaration ≠ implementation (param, interface, alias, `declare`); evidence despite type errors | `2cc8c26` |
-| 5 | `@ts-` suppressions; receiver passing the object on (replaced a documented assumption) | `c55e737` |
+| 1 | `var` hoisting, parameter reassignment, callback third argument, exported arrays, exponential blowup (OOM crash), loose forwarder | `ca5621b` |
+| 2 | rest callbacks, writes through TS casts, wrapper escape via `ui.t`/export, object-map limit to wildcard, 5.9 s input | `18d5753` |
+| 3 | generic/`object`/`{}` types accepted as non-callable; hand-off to unscanned module | `0e14fda` |
+| 4 | callee declaration ≠ implementation (param, interface, alias, `declare`); evidence despite type errors | `d6e6a44` |
+| 5 | `@ts-` suppressions; receiver passing the object on (replaced a documented assumption) | `b436012` |
 
 | Command (Node v22.22.0) | Result |
 | --- | --- |
