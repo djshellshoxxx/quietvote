@@ -267,7 +267,7 @@ function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0)
  * handed to another module, which is safe only if that module is scanned too (all scanned files are checked).
  * Any other use could pass keys the scan never sees.
  */
-function translatorOnlyCalled(root: ts.SourceFile, nonCallable: ReadonlySet<string>): boolean {
+function translatorOnlyCalled(root: ts.SourceFile, evidence: TranslatorEvidence): boolean {
   let ok = true;
   const visit = (n: ts.Node): void => {
     if (!ok) return;
@@ -276,10 +276,11 @@ function translatorOnlyCalled(root: ts.SourceFile, nonCallable: ReadonlySet<stri
       const declaration = (ts.isVariableDeclaration(p) || ts.isParameter(p) || ts.isBindingElement(p) || ts.isFunctionDeclaration(p)) && p.name === n;
       // `x.t` is fine only as a callee; read as a value it may be a handed-on wrapper escaping the scan.
       const memberRead = ts.isPropertyAccessExpression(p) && p.name === n
-        && ((ts.isCallExpression(p.parent) && p.parent.expression === p) || nonCallable.has(`${root.fileName}:${n.getStart(root)}`));
+        && ((ts.isCallExpression(p.parent) && p.parent.expression === p) || evidence.primitiveMemberReads.has(`${root.fileName}:${n.getStart(root)}`));
       const memberName = memberRead || ((ts.isPropertyAssignment(p) || ts.isPropertySignature(p) || ts.isPropertyDeclaration(p) || ts.isMethodDeclaration(p) || ts.isMethodSignature(p)) && p.name === n);
       const called = ts.isCallExpression(p) && p.expression === n;
-      const handedOn = ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n && ts.isIdentifier(p.name) && p.name.text === 't');
+      const handedOn = (ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n && ts.isIdentifier(p.name) && p.name.text === 't'))
+        && evidence.scannedHandOffs.has(`${root.fileName}:${n.getStart(root)}`);
       if (!(declaration || memberName || called || handedOn)) ok = false;
     }
     ts.forEachChild(n, visit);
@@ -319,32 +320,58 @@ function isVerifyViewDeclaration(node: ts.Node): boolean {
 }
 
 /** Find static catalog keys and dynamic translator calls. Results are stable regardless of input order. */
-export interface ExtractOptions {
-  /** `file:offset` of `x.t` names read as values that a type checker proved are not callable (see `nonCallableMemberReads`). */
-  nonCallableMemberReads?: ReadonlySet<string>;
+/**
+ * Type-checked evidence that the translator wrapper cannot escape the scan, keyed by `file:offset` of a `t` identifier.
+ * Without it every `x.t` value read and every `{ t }` hand-off counts as an escape.
+ */
+export interface TranslatorEvidence {
+  /** `x.t` read as a value whose type is primitive, so it cannot hold the wrapper. */
+  primitiveMemberReads: ReadonlySet<string>;
+  /** `{ t }` / `{ t: t }` in an object literal passed directly to a function declared in a scanned file. */
+  scannedHandOffs: ReadonlySet<string>;
 }
+export interface ExtractOptions { evidence?: TranslatorEvidence }
+
+const PRIMITIVE = ts.TypeFlags.StringLike | ts.TypeFlags.NumberLike | ts.TypeFlags.BigIntLike | ts.TypeFlags.BooleanLike | ts.TypeFlags.ESSymbolLike
+  | ts.TypeFlags.Undefined | ts.TypeFlags.Null | ts.TypeFlags.Void | ts.TypeFlags.Never;
 
 /**
- * Type-checked evidence for the forwarder check: every `x.t` read as a value whose type is neither callable nor any/unknown.
- * `files` maps each scanned file key to its path in `program`; the program must have read the same text.
+ * Build `TranslatorEvidence` with a type checker. `files` maps each scanned file key to its path in `program`, which must
+ * have read the same text. Residual assumption: a scanned function receiving `{ t }` does not pass that object on to
+ * unscanned code (its own `x.t` reads are checked like any other).
  */
-export function nonCallableMemberReads(program: ts.Program, files: Readonly<Record<string, string>>): Set<string> {
+export function translatorEvidence(program: ts.Program, files: Readonly<Record<string, string>>): TranslatorEvidence {
   const checker = program.getTypeChecker();
-  const out = new Set<string>();
+  const scannedPaths = new Set(Object.values(files).map((p) => program.getSourceFile(p)?.fileName));
+  const primitiveMemberReads = new Set<string>();
+  const scannedHandOffs = new Set<string>();
+  const declaredInScan = (callee: ts.Expression): boolean => {
+    const node = ts.isPropertyAccessExpression(callee) ? callee.name : callee;
+    let symbol = checker.getSymbolAtLocation(node);
+    if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+    const decls = symbol?.declarations ?? [];
+    return decls.length > 0 && decls.every((d) => scannedPaths.has(d.getSourceFile().fileName));
+  };
   for (const [key, path] of Object.entries(files)) {
     const source = program.getSourceFile(path);
     if (!source) throw new Error(`program does not contain ${path}`);
     const visit = (n: ts.Node): void => {
-      if (ts.isIdentifier(n) && n.text === 't' && ts.isPropertyAccessExpression(n.parent) && n.parent.name === n) {
-        const type = checker.getTypeAtLocation(n.parent);
-        const mayCall = (type.isUnion() ? type.types : [type]).some((x) => x.getCallSignatures().length > 0 || (x.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) !== 0);
-        if (!mayCall) out.add(`${key}:${n.getStart(source)}`);
+      if (ts.isIdentifier(n) && n.text === 't') {
+        const p = n.parent;
+        if (ts.isPropertyAccessExpression(p) && p.name === n) {
+          const type = checker.getTypeAtLocation(p);
+          if ((type.isUnion() ? type.types : [type]).every((x) => (x.flags & PRIMITIVE) !== 0)) primitiveMemberReads.add(`${key}:${n.getStart(source)}`);
+        } else if (ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n)) {
+          const literal = p.parent;
+          const call = literal.parent;
+          if (ts.isObjectLiteralExpression(literal) && ts.isCallExpression(call) && call.arguments.includes(literal) && declaredInScan(call.expression)) scannedHandOffs.add(`${key}:${n.getStart(source)}`);
+        }
       }
       ts.forEachChild(n, visit);
     };
     visit(source);
   }
-  return out;
+  return { primitiveMemberReads, scannedHandOffs };
 }
 
 export function extractReferences(files: Readonly<Record<string, string>>, catalog?: Readonly<Record<string, unknown>>, options: ExtractOptions = {}): { static: MessageReference[]; dynamic: DynamicReference[]; resolved: ResolvedReference[]; forwarded: ForwardedReference[] } {
@@ -354,8 +381,8 @@ export function extractReferences(files: Readonly<Record<string, string>>, catal
   const dynamics: DynamicReference[] = [];
   const forwarded: ForwardedReference[] = [];
   const sources = Object.keys(files).sort().map((file) => ts.createSourceFile(file, files[file]!, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS));
-  const nonCallable = options.nonCallableMemberReads ?? new Set<string>();
-  const translatorContained = sources.every((source) => translatorOnlyCalled(source, nonCallable));
+  const evidence = options.evidence ?? { primitiveMemberReads: new Set<string>(), scannedHandOffs: new Set<string>() };
+  const translatorContained = sources.every((source) => translatorOnlyCalled(source, evidence));
   for (const source of sources) {
     const file = source.fileName;
     const visit = (node: ts.Node): void => {

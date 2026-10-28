@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import ts from 'typescript';
-import { extractReferences, nonCallableMemberReads, unknownReferences, unknownResolvedReferences } from '../src/i18n/extract.ts';
+import { extractReferences, translatorEvidence, unknownReferences, unknownResolvedReferences } from '../src/i18n/extract.ts';
 import { lintCatalog, lintLiterals } from '../src/i18n/catalog-lint.ts';
 
 test('reference extraction is deterministic and separates dynamic keys', () => {
@@ -221,9 +221,10 @@ test('review regressions: a forwarder must pass its first parameter and only be 
   const asValue = extractReferences({ 'a.ts': "const t = (k: MessageKey) => tr.t(k); ['qv.bad'].map(t);" }, CAT);
   assert.deepEqual(asValue.forwarded, []);
   assert.deepEqual(asValue.dynamic.map((x) => [x.expression, x.reason]), [['k', 'translator wrapper used as a value']]);
-  const handedOn = extractReferences({ 'a.ts': "const t = (k: MessageKey) => tr.t(k); chart({ t }); other({ t: t }); t('qv.a.x');" }, CAT);
-  assert.deepEqual(handedOn.forwarded.map((x) => x.expression), ['k']);
-  assert.deepEqual(handedOn.dynamic, []);
+  // Without type-checked evidence a hand-off cannot be shown to stay inside the scan.
+  const handedOn = extractReferences({ 'a.ts': "const t = (k: MessageKey) => tr.t(k); chart({ t }); t('qv.a.x');" }, CAT);
+  assert.deepEqual(handedOn.forwarded, []);
+  assert.deepEqual(handedOn.dynamic.map((x) => x.reason), ['translator wrapper used as a value']);
 });
 
 test('second review: rest callbacks, writes through TS casts and object-map limits stay dynamic', () => {
@@ -264,22 +265,55 @@ test('second review: wide single-alternative chains resolve quickly', () => {
   assert.equal(refs.resolved.length + refs.dynamic.length, 1);
 });
 
-test('type-checked evidence admits only non-callable `x.t` reads for the forwarder check', () => {
+function inMemoryProgram(files: Record<string, string>): ts.Program {
+  const host = ts.createCompilerHost({});
+  return ts.createProgram(Object.keys(files), { noLib: true, types: [], strict: true, allowImportingTsExtensions: true, noEmit: true }, {
+    ...host,
+    getCurrentDirectory: () => '/',
+    getSourceFile: (name, version) => (files[bare(name)] === undefined ? undefined : ts.createSourceFile(name, files[bare(name)]!, version)),
+    fileExists: (name) => files[bare(name)] !== undefined,
+    readFile: (name) => files[bare(name)],
+  });
+}
+const bare = (name: string): string => name.replace(/^\//, '');
+const keysOf = (files: Record<string, string>): Record<string, string> => Object.fromEntries(Object.keys(files).map((k) => [k, k]));
+
+test('type-checked evidence admits only primitive `x.t` reads', () => {
   const files: Record<string, string> = {
     'a.ts': "declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\ndeclare const m: { t: number } | undefined;\nexport const n = m?.t;\nconst ui = { t };\nexport const leak = ['qv.bad'].map(ui.t);",
   };
-  const host = ts.createCompilerHost({});
-  const program = ts.createProgram(Object.keys(files), { noLib: true, types: [], strict: true }, {
-    ...host,
-    getSourceFile: (name, version) => (files[name] === undefined ? undefined : ts.createSourceFile(name, files[name]!, version)),
-    fileExists: (name) => files[name] !== undefined,
-    readFile: (name) => files[name],
-  });
-  const reads = nonCallableMemberReads(program, { 'a.ts': 'a.ts' });
-  assert.deepEqual([...reads], [`a.ts:${files['a.ts']!.indexOf('m?.t') + 3}`]);
+  const evidence = translatorEvidence(inMemoryProgram(files), keysOf(files));
+  assert.deepEqual([...evidence.primitiveMemberReads], [`a.ts:${files['a.ts']!.indexOf('m?.t') + 3}`]);
   // The numeric read is admitted; the callable ui.t read still makes the wrapper escape.
-  assert.deepEqual(extractReferences(files, CAT, { nonCallableMemberReads: reads }).dynamic.map((x) => x.reason), ['translator wrapper used as a value']);
+  assert.deepEqual(extractReferences(files, CAT, { evidence }).dynamic.map((x) => x.reason), ['translator wrapper used as a value']);
   const withoutLeak = { 'a.ts': files['a.ts']!.replace(/\nconst ui[\s\S]*$/, '') };
   assert.deepEqual(extractReferences(withoutLeak, CAT).dynamic.map((x) => x.reason), ['translator wrapper used as a value'], 'untyped scans reject every x.t value read');
-  assert.deepEqual(extractReferences(withoutLeak, CAT, { nonCallableMemberReads: reads }).forwarded.map((x) => x.line), [2]);
+  assert.deepEqual(extractReferences(withoutLeak, CAT, { evidence: translatorEvidence(inMemoryProgram(withoutLeak), keysOf(withoutLeak)) }).forwarded.map((x) => x.line), [2]);
+});
+
+test('third review: generic, object and {} member types are not proof the wrapper stays put', () => {
+  for (const read of ['const pick = <T,>(o: { t: T }): T => o.t;', 'const pick = (o: { t: object }) => o.t;', 'const pick = (o: { t: {} }) => o.t;']) {
+    const files = { 'a.ts': `declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\n${read}\nexport const v = pick({ t });` };
+    const refs = extractReferences(files, CAT, { evidence: translatorEvidence(inMemoryProgram(files), keysOf(files)) });
+    assert.deepEqual(refs.forwarded, [], read);
+    assert.deepEqual(refs.dynamic.map((x) => x.reason), ['translator wrapper used as a value'], read);
+  }
+});
+
+test('third review: a hand-off counts only when the callee is declared in a scanned file', () => {
+  const files: Record<string, string> = {
+    'a.ts': "import { draw } from './b.ts';\nimport { leak } from './c.ts';\ndeclare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\ndraw({ t });\nleak({ t });",
+    'b.ts': "export function draw(env: { t(k: string): string }): string { return env.t('qv.a.x'); }",
+    'c.ts': "export function leak(env: { t(k: string): string }): string[] { return ['qv.bad'].map(env.t); }",
+  };
+  const program = inMemoryProgram(files);
+  const scanned = { 'a.ts': files['a.ts']!, 'b.ts': files['b.ts']! };
+  const evidence = translatorEvidence(program, keysOf(scanned));
+  assert.deepEqual([...evidence.scannedHandOffs], [`a.ts:${files['a.ts']!.indexOf('draw({ t })') + 7}`]);
+  assert.deepEqual(extractReferences(scanned, CAT, { evidence }).dynamic.map((x) => x.reason), ['translator wrapper used as a value']);
+  const onlyScanned = { ...files, 'a.ts': files['a.ts']!.replace('\nleak({ t });', '') };
+  const ok = { 'a.ts': onlyScanned['a.ts']!, 'b.ts': files['b.ts']! };
+  const okRefs = extractReferences(ok, CAT, { evidence: translatorEvidence(inMemoryProgram(onlyScanned), keysOf(ok)) });
+  assert.deepEqual(okRefs.forwarded.map((x) => [x.file, x.line]), [['a.ts', 4]]);
+  assert.deepEqual(okRefs.static.map((x) => x.key), ['qv.a.x']);
 });
