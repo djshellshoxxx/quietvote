@@ -709,7 +709,7 @@ export function startApp(env: AppEnv): void {
 
   // ---------------------------------------------------------------- shell
   const skip = h('a', { href: '#main', class: 'skip', onclick: (e: Event) => { e.preventDefault(); main.focus(); } }, t('qv.shell.skip'));
-  const header = h('header', {}, h('p', { class: 'brand' }, t('qv.app.name')), nav, h('p', {}, link('/help', t('qv.shell.helpLink')), ' · ', link('/e', t('qv.shell.privacyLink'))));
+  const header = h('header', {}, h('p', { class: 'brand' }, t('qv.app.name')), nav, h('p', {}, link('/e', t('qv.shell.privacyLink'))));
   const footer = h('footer', {}, h('p', {}, t('qv.shell.footer.build', { version: env.build.version, build: env.build.id })), h('p', {}, h('a', { href: '/verify' }, t('qv.shell.footer.verifyPage')), ' · ', h('a', { href: 'https://github.com/djshellshoxxx/quietvote' }, t('qv.shell.footer.source'))));
   clear(env.root);
   add(env.root, [skip, h('p', { class: 'banner', role: 'note' }, t('qv.banner.experimental')), header, main, footer, polite, urgent,

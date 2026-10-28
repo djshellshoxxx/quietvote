@@ -38,6 +38,7 @@ try {
   const choose = (v) => { theme().value = v; theme().dispatchEvent(new Event('change', { bubbles: true })); };
   const nav = (path) => document.querySelector('nav a[href="' + path + '"]').click();
   check('Help controls start at device defaults', theme().value === 'auto' && !contrast().checked);
+  check('Help is linked once in the shared header', document.querySelectorAll('header a[href="/help"]').length === 1);
   check('Theme has a visible associated label', document.querySelector('label[for="' + theme().id + '"]').textContent === 'Colour theme');
   choose('dark');
   check('Explicit dark palette and native controls', bg() === 'rgb(16, 21, 31)' && scheme() === 'dark');
