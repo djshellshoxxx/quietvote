@@ -379,3 +379,22 @@ test('fifth review: suppressed diagnostics withdraw evidence; a receiver must no
     assert.equal(refs.forwarded.length, forwarded ? 1 : 0, name);
   }
 });
+
+test('sixth review: shorthand, parameter defaults and `this` in the carrier cannot take the object out', () => {
+  const head = "declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\n";
+  const u = "export const impl = (o: unknown): void => { ['qv.bad'].map((o as { t: (k: string) => string }).t); };";
+  const F = '((k: string) => string)';
+  const cases: [string, string, boolean][] = [
+    ['shorthand', `import { impl } from './u.ts';\nconst h = (env: { t: ${F} }): void => { const o = { env }; impl(o.env); };\nh({ t });`, false],
+    ['parameter default', `import { impl } from './u.ts';\nfunction h(env: { t: ${F} }, _x: void = impl(env)): void {}\nh({ t });`, false],
+    ['getter', `import { impl } from './u.ts';\nconst h = (env: { t: ${F}; self: unknown }): void => { impl(env.self); };\nh({ t, get self() { return this; } });`, false],
+    ['method', `import { impl } from './u.ts';\nconst h = (env: { t: ${F}; go(): void }): void => { env.go(); };\nh({ t, go() { impl(this); } });`, false],
+    ['primitive data', `const h = (env: { t: ${F}; rtl: boolean }): string => (env.rtl ? '' : env.t('qv.a.x'));\nh({ t, rtl: true });`, true],
+  ];
+  for (const [name, a, forwarded] of cases) {
+    const files = { 'a.ts': head + a, 'u.ts': u };
+    const scanned = { 'a.ts': files['a.ts'] };
+    const refs = extractReferences(scanned, CAT, { evidence: translatorEvidence(inMemoryProgram(files), keysOf(scanned)) });
+    assert.equal(refs.forwarded.length, forwarded ? 1 : 0, name);
+  }
+});

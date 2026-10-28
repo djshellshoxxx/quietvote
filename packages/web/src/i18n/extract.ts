@@ -378,11 +378,15 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
     const visit = (n: ts.Node): void => {
       if (!ok) return;
       if (ts.isIdentifier(n) && n !== param.name) {
+        // `{ env }` resolves to the property's symbol; its value symbol is the parameter.
+        const refers = checker.getSymbolAtLocation(n) === symbol || (ts.isShorthandPropertyAssignment(n.parent) && checker.getShorthandAssignmentValueSymbol(n.parent) === symbol);
         if (n.text === 'arguments' && !ts.isArrowFunction(fn)) ok = false;
-        else if (checker.getSymbolAtLocation(n) === symbol && !(ts.isPropertyAccessExpression(n.parent) && n.parent.expression === n && !isWriteTarget(n.parent))) ok = false;
+        else if (refers && !(ts.isPropertyAccessExpression(n.parent) && n.parent.expression === n && !isWriteTarget(n.parent))) ok = false;
       }
       ts.forEachChild(n, visit);
     };
+    // Parameter defaults run in the same scope as the body.
+    for (const p of fn.parameters) visit(p);
     if (fn.body) visit(fn.body);
     return ok;
   };
@@ -409,6 +413,15 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
     const file = module?.declarations?.[0];
     return file !== undefined && ts.isSourceFile(file) && inScan(file);
   };
+  // The handed-on literal holds only the wrapper and primitive data: no methods, accessors, spreads or other values
+  // that could carry the object out through `this`.
+  const plainCarrier = (literal: ts.ObjectLiteralExpression): boolean => literal.properties.every((p) => {
+    if (ts.isShorthandPropertyAssignment(p)) return p.name.text === 't' && !p.objectAssignmentInitializer;
+    if (!ts.isPropertyAssignment(p) || !(ts.isIdentifier(p.name) || ts.isStringLiteral(p.name))) return false;
+    if (p.name.text === 't') return ts.isIdentifier(p.initializer) && p.initializer.text === 't';
+    const type = checker.getTypeAtLocation(p.initializer);
+    return (type.isUnion() ? type.types : [type]).every((x) => (x.flags & PRIMITIVE) !== 0);
+  });
   const declaredInScan = (call: ts.CallExpression, literal: ts.Expression): boolean => {
     const index = call.arguments.indexOf(literal);
     if (index < 0 || call.arguments.slice(0, index).some(ts.isSpreadElement)) return false;
@@ -435,7 +448,7 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
         } else if (ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n)) {
           const literal = p.parent;
           const call = literal.parent;
-          if (ts.isObjectLiteralExpression(literal) && ts.isCallExpression(call) && declaredInScan(call, literal)) scannedHandOffs.add(`${key}:${n.getStart(source)}`);
+          if (ts.isObjectLiteralExpression(literal) && plainCarrier(literal) && ts.isCallExpression(call) && declaredInScan(call, literal)) scannedHandOffs.add(`${key}:${n.getStart(source)}`);
         }
       }
       ts.forEachChild(n, visit);
