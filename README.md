@@ -41,10 +41,14 @@ QuietVote is initially scoped for **internal decisions in voluntary organization
 
 Start with the [specification index](docs/SPEC-INDEX.md), which tracks each specification, dependencies, status, and open decisions. The [project charter](docs/00-project-charter.md) records the current product intent. The [capability map](docs/01-capability-map.md) proposes module boundaries and build order. Use the [spec template](docs/templates/SPEC-TEMPLATE.md) when expanding a module into an implementation-ready contract.
 
+## Screenshots
+
+None: this branch contains specifications only and has no runnable user interface. No mock-ups are shown because they would misrepresent the project's current state.
+
 ## Current status
 
 **Stage:** Framework / pre-implementation  
-**Implementation:** None  
+**Implementation:** None on the default branch. Prototype work (protocol records, board CLI, audit tooling) exists only in separate draft pull requests and is unaudited; see [docs/HANDOFF](docs/HANDOFF)  
 **Specification status:** Draft; decisions and acceptance criteria remain to be completed  
 **Release status:** No release
 
@@ -62,7 +66,7 @@ Do not treat placeholder requirements or proposed capability boundaries as appro
 
 ## Contributing
 
-The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md) when available.
+The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Repository description
 
