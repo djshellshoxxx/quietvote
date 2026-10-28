@@ -1,0 +1,48 @@
+// B3 audit PoC (calibration for B3-F2): with a working SSE stream the page's cached log is refreshed after the voter's own cast.
+// Run: node --test --test-reporter=spec packages/web/audit-b3/live-refresh.poc.test.ts
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { bytesToHex, hexToBytes, systemRng } from '@quietvote/crypto';
+import { NO_SUPERSEDES } from '@quietvote/protocol';
+import { ApiClient } from '../src/api/client.ts';
+import { BallotController } from '../src/flow/ballot-controller.ts';
+import { deriveElectionContext } from '../src/flow/election.ts';
+import { entryRecord } from '../src/flow/entries.ts';
+import { LiveElection, type LiveTarget } from '../src/flow/live.ts';
+import { inlineSealer } from '../src/flow/seal.ts';
+import { createSigner } from '../src/key/signer.ts';
+import { MemoryStorage } from '../src/key/storage.ts';
+import { World } from '../../server/test/helpers/world.ts';
+
+test('calibration: LiveElection refreshes the cached records after an own cast when SSE works (real server)', async () => {
+  const w = new World({ seed: 'b3-live', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection(); await w.registerVoters(); await w.publishManifest(); await w.ceremony(); await w.open();
+    const api = new ApiClient({ baseUrl: w.base });
+    const all = await api.allEntries(w.electionId);
+    const records = all.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) }));
+    const r = await deriveElectionContext(records);
+    assert.ok(r.ok);
+    const target: LiveTarget = { apiId: w.electionId, api, records, ctx: r.value };
+    const states: string[] = [];
+    const live = new LiveElection(target, { onStatus: (s) => states.push(s.state) });
+    live.start();
+    await new Promise((res) => setTimeout(res, 500));
+    console.log('SSE states so far:', states.join(' > '));
+    const signer = await createSigner(w.voters[0]!.secretKey.slice());
+    const c = new BallotController({ ctx: r.value, apiElectionId: w.electionId, origin: w.origin, signer, api, sealer: inlineSealer, storage: new MemoryStorage(), rng: systemRng, logPk: hexToBytes(w.logPkHex, 32), supersedes: NO_SUPERSEDES, clientBuild: 'poc', now: () => w.nowSec });
+    c.select({ budget: ['yes'], chair: ['ann'] }); c.review(); await c.seal(); c.codeRendered();
+    const n0 = target.records.length;
+    const t0 = Date.now();
+    await c.cast();
+    let dt = -1;
+    for (let i = 0; i < 60; i++) { if (target.records.length > n0) { dt = Date.now() - t0; break; } await new Promise((res) => setTimeout(res, 50)); }
+    console.log('records grew after own cast:', dt >= 0, dt >= 0 ? `${dt} ms after cast() returned/started` : '(not within 3 s)', '| SSE states:', states.join(' > '));
+    live.close();
+    assert.ok(dt >= 0);
+    void bytesToHex;
+  } finally {
+    await w.stop();
+  }
+});

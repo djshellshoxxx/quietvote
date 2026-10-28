@@ -1,0 +1,30 @@
+// B3 audit PoC: QV-19 s8.1 fallback ("modulepreload links with integrity for chunks") - does it protect statically imported chunks in Chromium?
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { exe, pw, startStack } from './harness.ts';
+
+const sim = await sharedSim();
+const stack = await startStack(new FakeBoard(sim), sim.voters[0]!.secretKey);
+const indexPath = join(stack.dist, 'index.html');
+const html = readFileSync(indexPath, 'utf8');
+const sri = (f: string): string => `sha384-${createHash('sha384').update(readFileSync(join(stack.dist, f))).digest('base64')}`;
+const chunks = ['assets/chunk-RFRBNNRD.js', 'assets/chunk-RWNAQACR.js'].filter((c) => { try { readFileSync(join(stack.dist, c)); return true; } catch { return false; } });
+const links = chunks.map((c) => `<link rel="modulepreload" href="/${c}" integrity="${sri(c)}" crossorigin="anonymous">`).join('\n');
+writeFileSync(indexPath, html.replace('</head>', `${links}\n</head>`));
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+for (const tamperIt of [false, true]) {
+  stack.tamper.fn = tamperIt ? (path, body) => (path.endsWith(chunks[0]!) ? Buffer.concat([body, Buffer.from(';globalThis.__B3_TAMPERED=1;')]) : body) : undefined;
+  const p = await (await browser.newContext()).newPage();
+  const errs: string[] = [];
+  p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text().slice(0, 140)); });
+  await p.goto(stack.origin + '/');
+  await p.waitForTimeout(2000);
+  const ran = await p.evaluate(() => (globalThis as { __B3_TAMPERED?: number }).__B3_TAMPERED === 1);
+  const app = (await p.locator('body').innerText()).replace(/\n+/g, ' ').slice(0, 50);
+  console.log(`modulepreload+integrity, chunk ${tamperIt ? 'TAMPERED' : 'intact'}: tampered code ran = ${ran}; page = "${app}"; console = ${errs.join(' | ') || 'none'}`);
+  await p.context().close();
+}
+await browser.close();
+stack.close();

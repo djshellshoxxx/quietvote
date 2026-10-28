@@ -1,0 +1,41 @@
+// B3 audit PoC (Playwright): Election-ID mismatch on the verifier pages (QV-10 s8.1 E-VER-ANCHOR, s11 "fake verifier"): what is the headline?
+// The standalone page is served with only its own <meta> CSP (how file:// behaves) because under the _headers/server CSP it does not run at all (see verifier-headers.poc.ts).
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { FakeBoard, TEST_CONTESTS } from '../test/helpers/fake-board.ts';
+import { bundleOf, castBallot, closeElection, publishTally, setup } from '../../protocol/test/helpers/sim.ts';
+import { exe, pw, startStack } from './harness.ts';
+
+const sim = await setup({ seed: 'b3-anchor', n: 3, t: 2, voters: 4, contests: TEST_CONTESTS()!, minCounted: 3 });
+for (let i = 0; i < 4; i++) castBallot(sim, i, { budget: ['yes'], board: ['p', 'q'] });
+closeElection(sim); publishTally(sim, [1, 2]);
+const stack = await startStack(new FakeBoard(sim), sim.voters[0]!.secretKey);
+const bundleFile = join(stack.dist, 'bundle.json');
+writeFileSync(bundleFile, JSON.stringify(bundleOf(sim)));
+const html = readFileSync(join(stack.dist, 'verifier.html'));
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const WRONG = 'AAAA-AAAA-AAAA-AAAA-AAAA';
+
+const spa = await (await browser.newContext()).newPage();
+await spa.goto(`${stack.origin}/verify`);
+await spa.getByLabel('Election bundle file (JSON)').setInputFiles(bundleFile);
+await spa.getByLabel(/Election ID you were told/).fill(WRONG);
+await spa.getByRole('button', { name: 'Run checks' }).click();
+await spa.locator('main h2').nth(1).waitFor({ timeout: 60000 });
+const out = (await spa.locator('main div[role=status]').innerText()).split('\n').filter(Boolean);
+console.log('SPA /verify with a WRONG Election ID, result region:');
+for (const l of out) console.log('   ', l);
+
+const ctx = await browser.newContext();
+const sp = await ctx.newPage();
+await sp.route('http://verifier.test/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: html }));
+await sp.goto('http://verifier.test/verifier.html');
+await sp.locator('#file').setInputFiles(bundleFile);
+await sp.locator('#anchor').fill(WRONG);
+await sp.locator('#run').click();
+await sp.locator('#out h2').waitFor({ timeout: 90000 });
+console.log('standalone verifier.html with a WRONG Election ID, #out:');
+for (const l of (await sp.locator('#out').innerText()).split('\n').filter(Boolean)) console.log('   ', l);
+console.log('#live (announced):', JSON.stringify(await sp.locator('#live').innerText()));
+await browser.close();
+stack.close();

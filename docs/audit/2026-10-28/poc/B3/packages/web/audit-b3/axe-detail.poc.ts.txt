@@ -1,0 +1,21 @@
+// B3 audit PoC: which nodes does axe-core 4.13 flag on the production build? (information only)
+import { readFileSync } from 'node:fs';
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { AXE, exe, pw, startStack } from './harness.ts';
+const sim = await sharedSim();
+const stack = await startStack(new FakeBoard(sim), sim.voters[0]!.secretKey);
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const ctx = await browser.newContext({ bypassCSP: true });
+const p = await ctx.newPage();
+for (const url of [stack.origin + '/', stack.origin + '/help']) {
+  await p.goto(url);
+  await p.getByRole('heading', { level: 1 }).first().waitFor({ timeout: 20000 });
+  await p.evaluate(readFileSync(AXE, 'utf8'));
+  const r = await p.evaluate(async () => {
+    const res = await (globalThis as any).axe.run();
+    return res.violations.map((v: any) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.map((n: any) => n.html.slice(0, 160)) }));
+  });
+  console.log(url, JSON.stringify(r, null, 1));
+}
+await browser.close();
+stack.close();

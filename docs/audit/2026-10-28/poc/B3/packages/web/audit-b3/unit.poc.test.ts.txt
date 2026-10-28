@@ -1,0 +1,149 @@
+// B3 audit PoC (throwaway evidence, not part of `npm test`). Node-only checks of web client logic.
+// Run: node --test --test-reporter=spec packages/web/audit-b3/unit.poc.test.ts
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { bytesToHex, ed25519Keypair, hexToBytes, streamRng, systemRng, argon2idKdfAsync, utf8 } from '@quietvote/crypto';
+import { NO_SUPERSEDES, signRecord, verifyElection, validateManifest } from '@quietvote/protocol';
+import { ApiClient } from '../src/api/client.ts';
+import { BallotController } from '../src/flow/ballot-controller.ts';
+import { deriveElectionContext } from '../src/flow/election.ts';
+import { entryRecord } from '../src/flow/entries.ts';
+import { inlineSealer } from '../src/flow/seal.ts';
+import { unlockKey } from '../src/flow/onboarding.ts';
+import { UX_CODES_FOR_TEST } from './ux-codes.ts';
+import { createTranslator, format } from '../src/i18n/index.ts';
+import { DEFAULT_PARAMS, FLOOR_PARAMS, defaultDeps, wrapSeed, type KeystoreDeps } from '../src/key/keystore.ts';
+import { createSigner } from '../src/key/signer.ts';
+import { MemoryStorage } from '../src/key/storage.ts';
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { bundleOf, castBallot, closeElection, publishTally, setup, clone } from '../../protocol/test/helpers/sim.ts';
+
+const t = createTranslator('en').t;
+
+test('B3-F5: unlockKey() never re-wraps a floor-parameter container on a fast device (predicate is inverted)', async () => {
+  const seed = streamRng('b3-seed').bytes(32);
+  const storage = new MemoryStorage();
+  const pass = 'correct horse battery staple';
+  const base: KeystoreDeps = { ...defaultDeps(), rng: streamRng('b3-rng') };
+  // a container written at the floor (e.g. imported from a phone that had to fall back, QV-19 REQ-004/005)
+  const w = await wrapSeed(seed.slice(), pass, base, FLOOR_PARAMS);
+  await storage.putKey('voter:x', w.container);
+  const clockFor = (elapsed: number): (() => number) => { let n = 0; return () => (n++ === 0 ? 0 : elapsed); };
+  const fast = await unlockKey({ storage, slot: 'voter:x', passphrase: pass, deps: base, now: clockFor(100) });
+  console.log('fast device (unlock took 100 ms): rewrapped =', fast.rewrapped, '| stored m =', (await storage.getKey('voter:x'))!.m);
+  assert.equal(fast.rewrapped, false, 'BUG: the device that can afford stronger parameters never gets them');
+  const mid = await unlockKey({ storage, slot: 'voter:x', passphrase: pass, deps: base, now: clockFor(1000) });
+  console.log('mid device (unlock took 1000 ms): rewrapped =', mid.rewrapped, '| stored m =', (await storage.getKey('voter:x'))!.m);
+  assert.equal(mid.rewrapped, true);
+});
+
+test('B3-F6: after lock() the open ballot controller keeps sealing with a zeroed nonce key and only fails at cast with a generic error', async () => {
+  const sim = await sharedSim();
+  const board = new FakeBoard(sim);
+  const api = new ApiClient({ fetch: board.fetch, sleep: async () => undefined });
+  const all = await api.allEntries(board.apiId);
+  const r = await deriveElectionContext(all.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) })));
+  assert.ok(r.ok);
+  const signer = await createSigner(sim.voters[0]!.secretKey.slice());
+  const c = new BallotController({ ctx: r.value, apiElectionId: board.apiId, origin: board.origin, signer, api, sealer: inlineSealer, storage: new MemoryStorage(), rng: systemRng, logPk: board.logKey.publicKey, supersedes: NO_SUPERSEDES, clientBuild: 'poc', now: () => 1_790_000_100 });
+  c.select({ budget: ['yes'], board: ['p', 'q'] });
+  c.review();
+  // auto-lock fires (ui/app.ts lockAll(): signer.lock(), then ctl.lockSession())
+  signer.lock();
+  c.lockSession();
+  console.log('after lock: nonceKey all zero =', signer.nonceKey.every((b) => b === 0), '| controller state =', c.state.kind);
+  assert.ok(signer.nonceKey.every((b) => b === 0));
+  assert.equal(c.state.kind, 'reviewing', 'the screen offers "Seal my ballot" again');
+  await c.seal();
+  c.codeRendered();
+  console.log('seal with the wiped signer ->', c.state.kind, '(the hedge key in QV-16 5.11 is now 32 zero bytes)');
+  assert.equal(c.state.kind, 'sealed');
+  const rep = await c.cast();
+  console.log('cast ->', rep?.outcome, rep?.error?.ux, '| state', c.state.kind, '| copy:', JSON.stringify(t('qv.err.E-GEN-UNKNOWN.body')));
+  assert.equal(c.state.kind, 'failed');
+  assert.equal(rep?.error?.ux, 'E-GEN-UNKNOWN');
+});
+
+test('B3-F7: SPA derives "Results" from a coordinator-signed tally without verifying it; the protocol verifier FAILs the same log', async () => {
+  const sim = await setup({ seed: 'b3-forged-tally', n: 3, t: 2, voters: 4, minCounted: 3 });
+  castBallot(sim, 0, { budget: ['yes'], chair: ['ann'] });
+  castBallot(sim, 1, { budget: ['yes'], chair: ['bob'] });
+  castBallot(sim, 2, { budget: ['no'], chair: ['ann'] });
+  castBallot(sim, 3, { budget: ['no'], chair: ['ann'] });
+  closeElection(sim);
+  publishTally(sim, [1, 2]);
+  const honest = bundleOf(sim);
+  assert.notEqual((await verifyElection(honest)).verdict, 'FAIL');
+  // forge: the coordinator key (a manifest coordinator, m=1 in the test setup) re-signs a tally whose numbers say "chair: cy won"
+  const idx = sim.log.findIndex((e) => (e.entry as { body?: { type?: string } }).body?.type === 'tally');
+  const tally = clone((sim.log[idx]!.entry as { body: any }).body);
+  const opt = tally.contests.find((x: any) => x.id === 'chair').options;
+  const cy = opt.find((o: any) => o.id === 'cy');
+  cy.T = 4; for (const o of opt) if (o.id !== 'cy') o.T = 0;
+  const res = tally.results.find((x: any) => x.contest === 'chair');
+  res.outcome = { kind: 'winners', winners: ['cy'] };
+  const c = sim.coord[0]!;
+  const forgedLog = sim.log.map((e, i) => (i === idx ? { ...e, entry: signRecord(c.secretKey, c.publicKey, sim.params!.ctx, tally) } : e));
+  const forged = { ...sim, log: forgedLog };
+  const board = new FakeBoard(forged as typeof sim);
+  const api = new ApiClient({ fetch: board.fetch, sleep: async () => undefined });
+  const entries = await api.allEntries(board.apiId);
+  const ctx = await deriveElectionContext(entries.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) })));
+  assert.ok(ctx.ok, ctx.ok ? '' : ctx.detail);
+  const shown = ctx.value.tally!.results.find((x) => x.contest === 'chair')!;
+  console.log('SPA context: phase =', ctx.value.phase, '| chair outcome shown =', JSON.stringify(shown.outcome), '| cy votes shown =', ctx.value.tally!.contests.find((x) => x.id === 'chair')!.options.find((o) => o.id === 'cy')!.T);
+  const v = await verifyElection(bundleOf(forged as typeof sim));
+  console.log('protocol verifyElection on the same log: verdict =', v.verdict, '| first failures =', v.findings.filter((f) => f.cls === 'F').slice(0, 3).map((f) => f.code).join(','));
+  assert.equal(ctx.value.phase, 'tallied');
+  assert.equal(shown.outcome.kind, 'winners');
+  assert.equal(v.verdict, 'FAIL');
+});
+
+test('B3-F8: ICU select / key lookups use plain objects: prototype names in data throw instead of falling back to "other"', () => {
+  for (const bad of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    assert.throws(() => format('Quorum: {met, select, true {met} other {not met}}.', { met: bad }, { locale: 'en' }), TypeError, bad);
+  }
+  // a coordinator-signed tally with quorum_met = "constructor" would therefore crash the results view (resultsView passes String(res.quorum_met))
+  assert.equal(format('Quorum: {met, select, true {met} other {not met}}.', { met: 'false' }, { locale: 'en' }), 'Quorum: not met.');
+  assert.throws(() => t('qv.results.outcome.__proto__' as never), TypeError);
+});
+
+test('B3-F9: error copy that needs arguments cannot be rendered with the {} that ui/app.ts passes (falls back to "Something went wrong")', () => {
+  const need: string[] = [];
+  for (const ux of UX_CODES_FOR_TEST) {
+    for (const part of ['title', 'body']) {
+      try { t(`qv.err.${ux}.${part}` as never, {}); } catch (e) { need.push(`${ux}.${part}: ${(e as Error).message}`); }
+    }
+  }
+  console.log(need.join('\n'));
+  // E-VOT-CLOSED / E-VOT-NOTOPEN / E-API-RATE are produced by uxCodeFor() and rendered by errorBox(ux, {}, ref)
+  for (const k of ['E-VOT-CLOSED.body', 'E-VOT-NOTOPEN.title', 'E-API-RATE.body']) assert.ok(need.some((x) => x.startsWith(k)), k);
+});
+
+test('B3-F10: manifest text with bidi controls is rejected by validateManifest (display-side isolation is therefore not needed for these)', async () => {
+  const sim = await sharedSim();
+  const m = clone(sim.manifest);
+  m.contests[0].options[0].label = 'Yes‮sey';
+  const v = validateManifest(m, sim.rollHex.length);
+  console.log('RLO in option label ->', v.ok ? 'accepted' : `${v.error} ${v.detail ?? ''}`);
+  const m2 = clone(sim.manifest);
+  m2.title = 'Budget⁦';
+  const v2 = validateManifest(m2, sim.rollHex.length);
+  console.log('LRI in title ->', v2.ok ? 'accepted' : `${v2.error} ${v2.detail ?? ''}`);
+  const m3 = clone(sim.manifest);
+  m3.contests[0].options[0].label = 'שלום yes'; // plain RTL letters are legitimate text and are NOT isolated on screen
+  const v3 = validateManifest(m3, sim.rollHex.length);
+  console.log('plain Hebrew label ->', v3.ok ? 'accepted' : `${v3.error}`);
+});
+
+test('B3-F11: Argon2id cost of the parameter ceiling accepted by parseContainer (hostile key file DoS, info)', async () => {
+  const time = async (m: number, tt: number, p: number): Promise<number> => {
+    const t0 = performance.now();
+    await argon2idKdfAsync(utf8('pw'), new Uint8Array(16), { m, t: tt, p, dkLen: 32 });
+    return Math.round(performance.now() - t0);
+  };
+  console.log('default 64 MiB t=3 p=1:', await time(DEFAULT_PARAMS.m, DEFAULT_PARAMS.t, 1), 'ms');
+  console.log('floor   19 MiB t=2 p=1:', await time(FLOOR_PARAMS.m, FLOOR_PARAMS.t, 1), 'ms');
+  console.log('256 MiB t=3 p=1 (a quarter of the accepted ceiling work):', await time(262144, 3, 1), 'ms');
+  void bytesToHex; void hexToBytes; void ed25519Keypair;
+});
