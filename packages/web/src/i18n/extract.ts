@@ -344,8 +344,7 @@ const PRIMITIVE = ts.TypeFlags.StringLike | ts.TypeFlags.NumberLike | ts.TypeFla
 
 /**
  * Build `TranslatorEvidence` with a type checker. `files` maps each scanned file key to its path in `program`, which must
- * have read the same text. Returns no evidence when a scanned file has type errors. Residual assumption: a scanned function receiving `{ t }` does not pass that object on to
- * unscanned code (its own `x.t` reads are checked like any other).
+ * have read the same text. Returns no evidence when a scanned file has type errors or suppresses diagnostics.
  */
 export function translatorEvidence(program: ts.Program, files: Readonly<Record<string, string>>): TranslatorEvidence {
   const checker = program.getTypeChecker();
@@ -359,12 +358,33 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
   };
   // The code that runs, not merely a type: a function with a body or a const function value, never a parameter,
   // interface/type member, ambient declaration, class method (overridable) or other variable.
-  const implementedInScan = (n: ts.Node): boolean => {
+  const implementedInScan = (n: ts.Node, argIndex: number): boolean => {
     const decls = symbolOf(n)?.declarations ?? [];
     const isFunction = (d: ts.Declaration): boolean => ts.isFunctionDeclaration(d) && !isAmbient(d);
     const constFunction = (d: ts.Declaration): boolean => ts.isVariableDeclaration(d) && (d.parent.flags & ts.NodeFlags.Const) !== 0 && d.initializer !== undefined
       && (ts.isArrowFunction(d.initializer) || ts.isFunctionExpression(d.initializer)) && !isAmbient(d);
-    return decls.length > 0 && decls.every((d) => inScan(d) && (isFunction(d) || constFunction(d))) && decls.some((d) => constFunction(d) || (ts.isFunctionDeclaration(d) && d.body !== undefined));
+    if (!(decls.length > 0 && decls.every((d) => inScan(d) && (isFunction(d) || constFunction(d))))) return false;
+    type Fn = ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression;
+    const bodies = decls.flatMap((d): Fn[] => (ts.isFunctionDeclaration(d) ? (d.body ? [d] : []) : [(d as ts.VariableDeclaration).initializer as ts.ArrowFunction | ts.FunctionExpression]));
+    return bodies.length > 0 && bodies.every((fn) => parameterStaysLocal(fn, argIndex));
+  };
+  // The receiving parameter is a plain name used only as `env.x`, so the object (and the wrapper in it) is not passed on;
+  // its `env.t` reads are then checked in the scanned file like any other.
+  const parameterStaysLocal = (fn: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression, index: number): boolean => {
+    const param = fn.parameters[index];
+    if (!param || !ts.isIdentifier(param.name) || param.dotDotDotToken || fn.parameters.slice(0, index).some((p) => p.dotDotDotToken)) return false;
+    const symbol = checker.getSymbolAtLocation(param.name);
+    let ok = symbol !== undefined;
+    const visit = (n: ts.Node): void => {
+      if (!ok) return;
+      if (ts.isIdentifier(n) && n !== param.name) {
+        if (n.text === 'arguments' && !ts.isArrowFunction(fn)) ok = false;
+        else if (checker.getSymbolAtLocation(n) === symbol && !(ts.isPropertyAccessExpression(n.parent) && n.parent.expression === n && !isWriteTarget(n.parent))) ok = false;
+      }
+      ts.forEachChild(n, visit);
+    };
+    if (fn.body) visit(fn.body);
+    return ok;
   };
   // `x` in `x.f(...)` must be the real namespace of a scanned module: `import * as x` or `const x = await import('…')`.
   const scannedNamespace = (receiver: ts.Expression): boolean => {
@@ -389,15 +409,19 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
     const file = module?.declarations?.[0];
     return file !== undefined && ts.isSourceFile(file) && inScan(file);
   };
-  const declaredInScan = (callee: ts.Expression): boolean => {
-    const c = unwrap(callee);
-    if (ts.isIdentifier(c)) return implementedInScan(c);
-    return ts.isPropertyAccessExpression(c) && scannedNamespace(unwrap(c.expression)) && implementedInScan(c.name);
+  const declaredInScan = (call: ts.CallExpression, literal: ts.Expression): boolean => {
+    const index = call.arguments.indexOf(literal);
+    if (index < 0 || call.arguments.slice(0, index).some(ts.isSpreadElement)) return false;
+    const c = unwrap(call.expression);
+    if (ts.isIdentifier(c)) return implementedInScan(c, index);
+    return ts.isPropertyAccessExpression(c) && scannedNamespace(unwrap(c.expression)) && implementedInScan(c.name, index);
   };
-  // Types are only evidence when the scanned files type-check.
+  // Types are only evidence when the scanned files type-check without suppressed diagnostics.
   for (const path of Object.values(files)) {
     const source = program.getSourceFile(path);
-    if (source && (program.getSyntacticDiagnostics(source).length || program.getSemanticDiagnostics(source).length)) return { primitiveMemberReads: new Set(), scannedHandOffs: new Set() };
+    if (source && (/@ts-(?:ignore|expect-error|nocheck)\b/.test(source.text) || program.getSyntacticDiagnostics(source).length || program.getSemanticDiagnostics(source).length)) {
+      return { primitiveMemberReads: new Set(), scannedHandOffs: new Set() };
+    }
   }
   for (const [key, path] of Object.entries(files)) {
     const source = program.getSourceFile(path);
@@ -411,7 +435,7 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
         } else if (ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n)) {
           const literal = p.parent;
           const call = literal.parent;
-          if (ts.isObjectLiteralExpression(literal) && ts.isCallExpression(call) && call.arguments.includes(literal) && declaredInScan(call.expression)) scannedHandOffs.add(`${key}:${n.getStart(source)}`);
+          if (ts.isObjectLiteralExpression(literal) && ts.isCallExpression(call) && declaredInScan(call, literal)) scannedHandOffs.add(`${key}:${n.getStart(source)}`);
         }
       }
       ts.forEachChild(n, visit);

@@ -266,6 +266,9 @@ test('second review: wide single-alternative chains resolve quickly', () => {
 });
 
 function inMemoryProgram(files: Record<string, string>): ts.Program {
+  return assertClean(inMemoryProgramUnchecked(files), files);
+}
+function inMemoryProgramUnchecked(files: Record<string, string>): ts.Program {
   const options: ts.CompilerOptions = { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, types: [], strict: true, allowImportingTsExtensions: true, noEmit: true };
   const host = ts.createCompilerHost(options);
   // Test files live at the virtual root; the standard library comes from disk.
@@ -276,6 +279,9 @@ function inMemoryProgram(files: Record<string, string>): ts.Program {
     fileExists: (name) => files[bare(name)] !== undefined || host.fileExists(name),
     readFile: (name) => files[bare(name)] ?? host.readFile(name),
   });
+  return program;
+}
+function assertClean(program: ts.Program, files: Record<string, string>): ts.Program {
   const errors = Object.keys(files).flatMap((f) => [...program.getSyntacticDiagnostics(program.getSourceFile(f)), ...program.getSemanticDiagnostics(program.getSourceFile(f))]);
   assert.deepEqual(errors.map((d) => ts.flattenDiagnosticMessageText(d.messageText, ' ')), [], 'test programs must type-check');
   return program;
@@ -353,4 +359,23 @@ test('fourth review: type errors in a scanned file withdraw all evidence', () =>
   const program = ts.createProgram(['a.ts'], options, { ...host, getCurrentDirectory: () => '/', getSourceFile: (n, v, ...r) => (bare(n) === 'a.ts' ? ts.createSourceFile(n, files['a.ts']!, v) : host.getSourceFile(n, v, ...r)), fileExists: (n) => bare(n) === 'a.ts' || host.fileExists(n) });
   const evidence = translatorEvidence(program, keysOf(files));
   assert.deepEqual([evidence.primitiveMemberReads.size, evidence.scannedHandOffs.size], [0, 0]);
+});
+
+test('fifth review: suppressed diagnostics withdraw evidence; a receiver must not pass the object on', () => {
+  const head = "declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\ntype Fn = (k: string) => string;\n";
+  const u = "export const impl = (o: { t: (k: string) => string }): void => { ['qv.bad'].map(o.t); };";
+  const cases: [string, string, string, boolean][] = [
+    ['suppressed error', "import { draw } from './b.ts';\ndraw({ t });", "// @ts-expect-error\nexport const bad: string = 1;\nexport function draw(env: { t: Fn }): string { return env.t('qv.a.x'); }", false],
+    ['passed on whole', "import { draw } from './b.ts';\ndraw({ t });", "import { impl } from './u.ts';\nexport function draw(env: { t: Fn }): void { impl(env); }", false],
+    ['passed on via arguments', "import { draw } from './b.ts';\ndraw({ t });", "import { impl } from './u.ts';\nexport function draw(env: { t: Fn }): void { env.t('qv.a.x'); impl(arguments[0]); }", false],
+    ['spread before the object', "import { draw } from './b.ts';\nconst xs: [] = [];\ndraw(...xs, { t });", "export function draw(env: { t: Fn }): string { return env.t('qv.a.x'); }", false],
+    ['member use only', "import { draw } from './b.ts';\ndraw({ t });", "export function draw(env: { t: Fn; rtl?: boolean }): string { return env.rtl ? '' : env.t('qv.a.x'); }", true],
+  ];
+  for (const [name, a, b, forwarded] of cases) {
+    const files = { 'a.ts': head + a, 'b.ts': b.replace(/Fn/g, '((k: string) => string)'), 'u.ts': u };
+    const scanned = { 'a.ts': files['a.ts'], 'b.ts': files['b.ts'] };
+    const program = inMemoryProgram(files);
+    const refs = extractReferences(scanned, CAT, { evidence: translatorEvidence(program, keysOf(scanned)) });
+    assert.equal(refs.forwarded.length, forwarded ? 1 : 0, name);
+  }
 });
