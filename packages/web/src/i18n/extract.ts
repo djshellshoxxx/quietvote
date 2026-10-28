@@ -20,6 +20,14 @@ function unwrap(node: ts.Node): ts.Expression {
 
 type Env = ReadonlyMap<ts.ParameterDeclaration, Resolution>; // parameter -> resolution of its call argument
 const MAX_DEPTH = 16;
+/** Bound on alternatives per expression; beyond it the expression and any expression built from it are unresolvable. */
+const MAX_ALTS = 1000;
+const TOO_MANY = 'too many alternatives';
+const TOO_DEEP = 'resolution depth exceeded';
+/** Analysis limits: the value is unbounded, not one unknown key segment, so these never become a template wildcard. */
+const isLimit = (v: Resolution): v is { reason: string } => 'reason' in v && (v.reason === TOO_MANY || v.reason === TOO_DEEP);
+/** Failure reason for a wrapping form: a limit propagates as is; other failures take the form's reason. */
+const failure = (v: { reason: string }, reason: string): { reason: string } => (isLimit(v) ? v : { reason });
 /** Array methods that read but never add elements; any other use of an array binding may mutate it. */
 const ARRAY_READS = new Set(['at', 'every', 'filter', 'find', 'flatMap', 'forEach', 'includes', 'indexOf', 'join', 'length', 'map', 'slice', 'some']);
 /** Callbacks whose first parameter is an element of the receiver array. */
@@ -46,8 +54,45 @@ function statementsBinding(stmts: readonly ts.Statement[], text: string, scope: 
   return undefined;
 }
 
-/** Nearest lexical binding of an identifier: a const with an initializer, a plain parameter, or something unresolvable. */
+/** True when the file declares the name with `var` anywhere; hoisting makes lexical lookup unsound, so give up on it. */
+function hasVarDeclaration(file: ts.SourceFile, text: string): boolean {
+  let found = false;
+  const visit = (n: ts.Node): void => {
+    if (found) return;
+    if (ts.isVariableDeclarationList(n) && (n.flags & ts.NodeFlags.BlockScoped) === 0 && n.declarations.some((d) => declaresName(d.name, text))) found = true;
+    else ts.forEachChild(n, visit);
+  };
+  visit(file);
+  return found;
+}
+
+/** True when the name is written anywhere under the node: assignment, compound assignment, ++/--, destructuring or for-in/of target. Shadowed names count too. */
+function isAssignedIn(root: ts.Node, text: string): boolean {
+  let found = false;
+  const isTarget = (n: ts.Node): boolean => {
+    let c = n;
+    for (let p = n.parent; p; c = p, p = p.parent) {
+      if (ts.isBinaryExpression(p)) return p.left === c && p.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && p.operatorToken.kind <= ts.SyntaxKind.LastAssignment;
+      if (ts.isPrefixUnaryExpression(p) || ts.isPostfixUnaryExpression(p)) return p.operator === ts.SyntaxKind.PlusPlusToken || p.operator === ts.SyntaxKind.MinusMinusToken;
+      if ((ts.isForOfStatement(p) || ts.isForInStatement(p)) && p.initializer === c) return true;
+      // Only climb through destructuring shapes; anything else means the name is read.
+      if (!(ts.isArrayLiteralExpression(p) || ts.isObjectLiteralExpression(p) || ts.isShorthandPropertyAssignment(p) || ts.isPropertyAssignment(p) || ts.isSpreadElement(p) || ts.isSpreadAssignment(p) || ts.isParenthesizedExpression(p))) return false;
+      if (ts.isPropertyAssignment(p) && p.name === c) return false;
+    }
+    return false;
+  };
+  const visit = (n: ts.Node): void => {
+    if (found) return;
+    if (ts.isIdentifier(n) && n.text === text && isTarget(n)) found = true;
+    else ts.forEachChild(n, visit);
+  };
+  visit(root);
+  return found;
+}
+
+/** Nearest lexical binding of an identifier: a const with an initializer, a never-reassigned parameter, or something unresolvable. */
 function findBinding(id: ts.Identifier): Binding | undefined {
+  if (hasVarDeclaration(id.getSourceFile(), id.text)) return { kind: 'other' };
   for (let a: ts.Node | undefined = id.parent; a; a = a.parent) {
     if (ts.isBlock(a) || ts.isSourceFile(a) || ts.isModuleBlock(a)) {
       const b = statementsBinding(a.statements, id.text, a);
@@ -58,7 +103,7 @@ function findBinding(id: ts.Identifier): Binding | undefined {
         if (b) return b;
       }
     } else if (ts.isFunctionLike(a)) {
-      for (const p of a.parameters) if (declaresName(p.name, id.text)) return ts.isIdentifier(p.name) && !p.dotDotDotToken ? { kind: 'param', param: p, fn: a } : { kind: 'other' };
+      for (const p of a.parameters) if (declaresName(p.name, id.text)) return ts.isIdentifier(p.name) && !p.dotDotDotToken && !isAssignedIn(a, id.text) ? { kind: 'param', param: p, fn: a } : { kind: 'other' };
       if (ts.isFunctionExpression(a) && a.name?.text === id.text) return { kind: 'other' };
     } else if ((ts.isForStatement(a) || ts.isForOfStatement(a) || ts.isForInStatement(a)) && a.initializer && ts.isVariableDeclarationList(a.initializer) && a.initializer.declarations.some((d) => declaresName(d.name, id.text))) {
       return { kind: 'other' };
@@ -67,8 +112,14 @@ function findBinding(id: ts.Identifier): Binding | undefined {
   return undefined;
 }
 
+/** An arrow callback that cannot reach the array: at most (element, index), so no third `array` parameter. */
+const isClosedElementCallback = (fn: ts.Node | undefined): boolean => fn !== undefined && ts.isArrowFunction(fn) && fn.parameters.length <= 2;
+
 /** True when every use of the name in the binding's scope only reads the array (conservative: shadowed names count too). */
 function arrayOnlyRead(b: { decl: ts.VariableDeclaration; scope: ts.Node }): boolean {
+  const statement = b.decl.parent.parent;
+  // Another module could mutate an exported array.
+  if (ts.isVariableStatement(statement) && statement.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) return false;
   const name = (b.decl.name as ts.Identifier).text;
   let ok = true;
   const visit = (n: ts.Node): void => {
@@ -76,6 +127,11 @@ function arrayOnlyRead(b: { decl: ts.VariableDeclaration; scope: ts.Node }): boo
     if (ts.isIdentifier(n) && n.text === name && n !== b.decl.name) {
       const p = n.parent;
       if (!(ts.isPropertyAccessExpression(p) && p.expression === n && ARRAY_READS.has(p.name.text))) ok = false;
+      else if (ELEMENT_CALLBACKS.has(p.name.text)) {
+        // The callback receives the array itself as its third argument.
+        const call = p.parent;
+        if (!(ts.isCallExpression(call) && call.expression === p && call.arguments.length === 1 && isClosedElementCallback(call.arguments[0]))) ok = false;
+      }
     }
     ts.forEachChild(n, visit);
   };
@@ -98,6 +154,7 @@ function resolveArray(node: ts.Expression, env: Env, depth: number): Resolution 
     const v = resolveExpression(el, env, depth + 1);
     if ('reason' in v) return v;
     alts.push(...v.alts);
+    if (alts.length > MAX_ALTS) return { reason: TOO_MANY };
   }
   return alts.length ? { alts, form: 'array-element' } : { reason: 'empty array' };
 }
@@ -107,18 +164,18 @@ function resolveIdentifier(e: ts.Identifier, env: Env, depth: number): Resolutio
   if (!b || b.kind === 'other') return { reason: 'bare identifier' };
   if (b.kind === 'const') {
     const v = resolveExpression(b.decl.initializer!, env, depth + 1);
-    return 'reason' in v ? { reason: 'bare identifier' } : { alts: v.alts, form: 'binding' };
+    return 'reason' in v ? failure(v, 'bare identifier') : { alts: v.alts, form: 'binding' };
   }
   const bound = env.get(b.param);
   if (bound) return bound;
   // First parameter of an element callback over a bounded, read-only array literal.
   const fn = b.fn;
   const call = fn.parent;
-  if (b.param === fn.parameters[0] && (ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) && ts.isCallExpression(call) && call.arguments[0] === fn) {
+  if (b.param === fn.parameters[0] && isClosedElementCallback(fn) && ts.isCallExpression(call) && call.arguments.length === 1 && call.arguments[0] === fn) {
     const callee = call.expression;
     if (ts.isPropertyAccessExpression(callee) && ELEMENT_CALLBACKS.has(callee.name.text)) {
       const v = resolveArray(callee.expression, env, depth);
-      return 'reason' in v ? { reason: 'bare identifier' } : v;
+      return 'reason' in v ? failure(v, 'bare identifier') : v;
     }
   }
   return { reason: 'bare identifier' };
@@ -138,11 +195,11 @@ function resolveCall(e: ts.CallExpression, env: Env, depth: number): Resolution 
     inner.set(p, resolveExpression(arg ?? p.initializer!, env, depth + 1));
   }
   const v = resolveExpression(fn.body, inner, depth + 1);
-  return 'reason' in v ? { reason: 'call expression' } : { alts: v.alts, form: 'call' };
+  return 'reason' in v ? failure(v, 'call expression') : { alts: v.alts, form: 'call' };
 }
 
 function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0): Resolution {
-  if (depth > MAX_DEPTH) return { reason: 'resolution depth exceeded' };
+  if (depth > MAX_DEPTH) return { reason: TOO_DEEP };
   const e = unwrap(node);
   if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return { alts: [[e.text]], form: 'literal' };
   if (ts.isConditionalExpression(e)) {
@@ -150,6 +207,7 @@ function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0)
     if ('reason' in a) return a;
     const b = resolveExpression(e.whenFalse, env, depth + 1);
     if ('reason' in b) return b;
+    if (a.alts.length + b.alts.length > MAX_ALTS) return { reason: TOO_MANY };
     return { alts: [...a.alts, ...b.alts], form: 'conditional' };
   }
   if (ts.isElementAccessExpression(e) && ts.isObjectLiteralExpression(unwrap(e.expression))) {
@@ -159,6 +217,7 @@ function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0)
       const v = resolveExpression(prop.initializer, env, depth + 1);
       if ('reason' in v) return { reason: `object map value not statically resolvable: ${v.reason}` };
       alts.push(...v.alts);
+      if (alts.length > MAX_ALTS) return { reason: TOO_MANY };
     }
     return alts.length ? { alts, form: 'object-map' } : { reason: 'empty object map' };
   }
@@ -166,7 +225,10 @@ function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0)
     let alts: Alt[] = [[e.head.text]];
     for (const span of e.templateSpans) {
       const inner = resolveExpression(span.expression, env, depth + 1);
+      if (isLimit(inner)) return inner;
       const options: Alt[] = 'reason' in inner || inner.alts.some((a) => a.includes(null)) ? [[null]] : inner.alts;
+      // Values may hold dots, so a truncated product cannot be stood in for by a one-segment wildcard.
+      if (alts.length * options.length > MAX_ALTS) return { reason: TOO_MANY };
       alts = alts.flatMap((prefix) => options.map((o) => [...prefix, ...o, span.literal.text]));
     }
     return { alts, form: 'template-pattern' };
@@ -176,15 +238,39 @@ function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0)
   return { reason: 'unsupported expression' };
 }
 
+/**
+ * True when every use of the name `t` under the node is a direct call (scanned here) or an object property `t`
+ * handed to another scanned module, which calls it as `x.t(...)`. Any other use could pass keys the scan never sees.
+ */
+function translatorOnlyCalled(root: ts.Node): boolean {
+  let ok = true;
+  const visit = (n: ts.Node): void => {
+    if (!ok) return;
+    if (ts.isIdentifier(n) && n.text === 't') {
+      const p = n.parent;
+      const declaration = (ts.isVariableDeclaration(p) || ts.isParameter(p) || ts.isBindingElement(p) || ts.isFunctionDeclaration(p)) && p.name === n;
+      const memberName = (ts.isPropertyAccessExpression(p) || ts.isPropertyAssignment(p) || ts.isPropertySignature(p) || ts.isPropertyDeclaration(p) || ts.isMethodDeclaration(p)) && p.name === n;
+      const called = ts.isCallExpression(p) && p.expression === n;
+      const handedOn = ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n && ts.isIdentifier(p.name) && p.name.text === 't');
+      if (!(declaration || memberName || called || handedOn)) ok = false;
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(root);
+  return ok;
+}
+
 /** A translator wrapper such as `const t = (k: MessageKey) => tr.t(k)`: its own call sites are the references. */
-function isForwardedParameter(arg: ts.Expression): boolean {
+function forwarding(arg: ts.Expression): 'forwarded' | 'escapes' | undefined {
   const e = unwrap(arg);
-  if (!ts.isIdentifier(e)) return false;
+  if (!ts.isIdentifier(e)) return undefined;
   const b = findBinding(e);
-  if (!b || b.kind !== 'param') return false;
+  if (!b || b.kind !== 'param' || b.param !== b.fn.parameters[0]) return undefined;
   const fn = b.fn;
-  if (ts.isFunctionDeclaration(fn)) return fn.name?.text === 't';
-  return (ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) && ts.isVariableDeclaration(fn.parent) && fn.parent.initializer === fn && ts.isIdentifier(fn.parent.name) && fn.parent.name.text === 't';
+  const named = ts.isFunctionDeclaration(fn) ? fn.name?.text === 't'
+    : (ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) && ts.isVariableDeclaration(fn.parent) && fn.parent.initializer === fn && ts.isIdentifier(fn.parent.name) && fn.parent.name.text === 't';
+  if (!named) return undefined;
+  return translatorOnlyCalled(fn.getSourceFile()) ? 'forwarded' : 'escapes';
 }
 
 const patternOf = (alt: Alt): string => alt.map((p) => p ?? '*').join('');
@@ -220,8 +306,10 @@ export function extractReferences(files: Readonly<Record<string, string>>, catal
           statics.push({ file, line, key: first.text });
         } else if (!first) {
           dynamics.push({ file, line, expression: '(missing argument)', reason: 'missing argument' });
-        } else if (isForwardedParameter(first)) {
+        } else if (forwarding(first) === 'forwarded') {
           forwarded.push({ file, line, expression: first.getText(source) });
+        } else if (forwarding(first) === 'escapes') {
+          dynamics.push({ file, line, expression: first.getText(source), reason: 'translator wrapper used as a value' });
         } else {
           const r = resolveExpression(first);
           if ('reason' in r) dynamics.push({ file, line, expression: first.getText(source), reason: r.reason });

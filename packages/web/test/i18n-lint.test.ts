@@ -133,7 +133,7 @@ test('const bindings resolve through their initializer; let, var and shadowed na
     "const a = b; const b = a; t(a);",
   ].join('\n') }, CAT);
   assert.deepEqual(refs.resolved.map((r) => [r.line, r.form, r.keys]), [[1, 'binding', ['qv.a.x', 'qv.a.y']]]);
-  assert.deepEqual(refs.dynamic.map((x) => [x.line, x.expression, x.reason]), [[2, 'm', 'bare identifier'], [3, 'key', 'bare identifier'], [4, 'a', 'bare identifier']]);
+  assert.deepEqual(refs.dynamic.map((x) => [x.line, x.expression, x.reason]), [[2, 'm', 'bare identifier'], [3, 'key', 'bare identifier'], [4, 'a', 'resolution depth exceeded']]);
 });
 
 test('element callbacks over a read-only const array resolve; mutated or escaping arrays stay dynamic', () => {
@@ -176,4 +176,50 @@ test('the translator wrapper parameter is a forwarder, not a dynamic reference',
   assert.deepEqual(refs.forwarded.map((x) => [x.line, x.expression]), [[1, 'k']]);
   assert.deepEqual(refs.dynamic.map((x) => [x.line, x.expression, x.reason]), [[2, 'k', 'bare identifier']]);
   assert.deepEqual(refs.static.map((x) => x.key), ['qv.a.x']);
+});
+
+test('review regressions: hoisted var, reassigned parameters and array escapes stay dynamic', () => {
+  const refs = extractReferences({ 'a.ts': [
+    "const key = 'qv.a.x'; function f() { if (c) { var key = 'qv.bad'; } t(key); }",
+    "const k2 = 'qv.a.x'; function g() { for (var k2 of xs) {} t(k2); }",
+    "const KS = ['qv.a.x']; KS.forEach((k) => { if (c) k = 'qv.bad'; t(k); });",
+    "const b = (s: string) => (s = 'qv.bad') ? s : s; t(b('qv.a.x'));",
+    "const KA = ['qv.a.x']; KA.forEach((k, i, a) => { a[0] = 'qv.bad'; }); KA.map((k) => t(k));",
+    "const KF = ['qv.a.x']; KF.forEach(mutate); KF.map((k) => t(k));",
+    "const KG = ['qv.a.x']; KG.map(function (k) { return t(k); });",
+    "export const KE = ['qv.a.x']; KE.map((k) => t(k));",
+  ].join('\n') }, CAT);
+  assert.deepEqual(refs.resolved, []);
+  assert.deepEqual(refs.dynamic.map((x) => x.line), [1, 2, 3, 4, 5, 6, 7, 8]);
+});
+
+test('review regressions: alternatives are capped instead of exploding', () => {
+  const lines = ["const a0 = c ? 'qv.a.x' : 'qv.a.y';"];
+  for (let i = 1; i <= 12; i++) lines.push(`const a${i} = \`\${a${i - 1}}\${a${i - 1}}\`;`);
+  lines.push('t(a12);', 't(`qv.t.${a12}`);');
+  const refs = extractReferences({ 'a.ts': lines.join('\n') }, CAT);
+  // Values hold dots, so a truncated product must not turn into one-segment wildcards further up.
+  assert.deepEqual(refs.dynamic.map((x) => [x.expression, x.reason]), [['a12', 'resolution depth exceeded'], ['`qv.t.${a12}`', 'resolution depth exceeded']]);
+  assert.deepEqual(refs.resolved, []);
+});
+
+test('review regressions: a shallow product over the alternatives cap stays dynamic', () => {
+  const lines = ["const b0 = c ? 'qv.a.x' : 'qv.a.y';"];
+  for (let i = 1; i <= 5; i++) lines.push(`const b${i} = \`\${b${i - 1}}\${b${i - 1}}\`;`);
+  lines.push('t(b3);', 't(b5);', 't(`qv.t.${b5}`);');
+  const refs = extractReferences({ 'a.ts': lines.join('\n') }, CAT);
+  assert.deepEqual(refs.resolved.map((r) => [r.line, r.keys.length]), [[7, 256]]);
+  assert.deepEqual(refs.dynamic.map((x) => [x.line, x.reason]), [[8, 'too many alternatives'], [9, 'too many alternatives']]);
+});
+
+test('review regressions: a forwarder must pass its first parameter and only be called or handed on as t', () => {
+  const second = extractReferences({ 'a.ts': "const t = (a: string, k: MessageKey) => tr.t(k); t('qv.a.x', 'qv.bad');" }, CAT);
+  assert.deepEqual(second.forwarded, []);
+  assert.deepEqual(second.dynamic.map((x) => x.expression), ['k']);
+  const asValue = extractReferences({ 'a.ts': "const t = (k: MessageKey) => tr.t(k); ['qv.bad'].map(t);" }, CAT);
+  assert.deepEqual(asValue.forwarded, []);
+  assert.deepEqual(asValue.dynamic.map((x) => [x.expression, x.reason]), [['k', 'translator wrapper used as a value']]);
+  const handedOn = extractReferences({ 'a.ts': "const t = (k: MessageKey) => tr.t(k); chart({ t }); other({ t: t }); t('qv.a.x');" }, CAT);
+  assert.deepEqual(handedOn.forwarded.map((x) => x.expression), ['k']);
+  assert.deepEqual(handedOn.dynamic, []);
 });
