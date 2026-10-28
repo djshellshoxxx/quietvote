@@ -483,45 +483,63 @@ Start: live `checkpoint/quietvote-ordinary-ux-20261024` at
 `claude/sharp-archimedes-tu76rh` `e2ee87460eefaf896ddef575b998c83dad84e8dc` (active audit,
 not inspected or touched); `claude/quietvote-ui-locale-a11y-sltfb3` still `424110d` (ancestor of the
 checkpoint). `claude/dazzling-cerf-n8ha3g` `d75d4a2` is a 2026-10-21 ancestor of the checkpoint,
-not new work. No PR metadata operation was attempted.
+not new work. No PR metadata operation was attempted. The session's designated branch
+`claude/quirky-ritchie-8qxfg0` sits at `main`; the checkpoint does not descend from `main`, so it was
+not pushed there (that would need a force-push) and no PR was opened.
 
 Ready queue (done): the six unresolved dynamic translator references reported by `i18n:check`.
-`packages/web/src/i18n/extract.ts` now resolves, conservatively and only lexically:
+`packages/web/src/i18n/extract.ts` (tooling only; no app runtime, catalog, copy or locale change)
+now resolves, conservatively and lexically:
 
-- identifiers bound to a `const` with a resolvable initializer (form `binding`; `let`/`var`,
-  destructured, imported, catch/loop and shadowing names stay dynamic);
-- the first parameter of an element callback (`map`, `forEach`, `filter`, …) over a const array
-  literal whose every other use only reads it (form `array-element`; `push`, escape into a call,
-  spreads stay dynamic);
-- calls to a local const single-expression arrow key builder, with arguments substituted
-  (form `call`; block bodies and unknown functions stay dynamic);
-- the translator wrapper `const t = (k) => tr.t(k)` is reported as `references.forwarded`, not as a
-  dynamic reference, because its call sites are the scanned references.
+- identifiers bound to a `const` with a resolvable initializer (form `binding`); any `var` of the
+  name in the file, `let`, destructured, imported, catch/loop names stay dynamic;
+- the first parameter of an arrow element callback (`map`, `forEach`, …; at most `(el, i)`, no rest)
+  over a const, non-exported array literal whose every other use only reads it (form `array-element`);
+  writes (`push`, `length =`, element assignment), escapes into calls, spreads stay dynamic;
+- calls to a local const single-expression arrow key builder with arguments substituted (form
+  `call`); parameters written anywhere in their function (incl. through `!`/`as`/`<T>`/`satisfies`)
+  are never bound;
+- limits: 1,000 alternatives, depth 16, 20,000 steps per call; a limit is a hard failure that
+  propagates and never becomes a template wildcard; const resolutions are memoized;
+- the translator wrapper `const t = (k) => tr.t(k)` is reported as `references.forwarded` only if it
+  forwards its first parameter, is not exported, and every `t` use in the scanned files is a direct
+  call, a declaration/member name, `x.t(...)`, or proven safe by type-checked evidence: an `x.t`
+  value read whose type is primitive, or `{ t }` passed directly to a function implemented (body or
+  const function) in a scanned file, reached directly or via `import * as ns`/`const ns = await
+  import(…)`, whose receiving parameter is used only as `env.x`. Evidence is withdrawn if a scanned
+  file has diagnostics or `@ts-ignore`/`@ts-expect-error`/`@ts-nocheck`. Otherwise the wrapper's
+  call is reported dynamic (`translator wrapper used as a value`).
+- `scripts/i18n-check.ts` builds that evidence with a TypeScript program from
+  `packages/web/tsconfig.json` (check time ~3 s, was <1 s) and verifies the program read the same text.
 
 App result: 281 static, 13 resolved (was 8), **0 unresolved** (was 6), 1 forwarder, 0 unknown keys,
-`verifyView` still excluded. The six now resolve to: stepper keys (4), error title/body patterns
+`verifyView` still excluded. The six resolve to: stepper keys (4), error title/body patterns
 `qv.err.*.title|body` (32 each), privacy not-claimed list (6; guarantee copy **unchanged**, only
-analysed), receipt titles (6). The theme-option template now resolves to its exact 3 keys instead of
-the `qv.help.theme.*` pattern. Tooling only: no app runtime, catalog, copy or locale change.
+analysed), receipt titles (6). The theme-option template resolves to its exact 3 keys.
 
-Regression evidence: the 4 new `i18n-lint` tests and the updated CLI test failed (5 failures)
-against the previous extractor and pass with the change. The CLI test's `dynamic.length > 0`
-snapshot assertion was replaced by an exact forwarder assertion; no assertion was removed otherwise.
+Review history (one independent read-only reviewer, five fix rounds, each finding reproduced by a
+test that failed on the previous commit before the fix):
+
+| Round | Findings | Fix commit |
+| --- | --- | --- |
+| 1 | `var` hoisting, parameter reassignment, callback third argument, exported arrays, exponential blowup (OOM crash), loose forwarder | `125ec1d` |
+| 2 | rest callbacks, writes through TS casts, wrapper escape via `ui.t`/export, object-map limit to wildcard, 5.9 s input | `3579580` |
+| 3 | generic/`object`/`{}` types accepted as non-callable; hand-off to unscanned module | `eee9c02` |
+| 4 | callee declaration ≠ implementation (param, interface, alias, `declare`); evidence despite type errors | `2cc8c26` |
+| 5 | `@ts-` suppressions; receiver passing the object on (replaced a documented assumption) | `c55e737` |
 
 | Command (Node v22.22.0) | Result |
 | --- | --- |
 | `npm ci --ignore-scripts --no-audit --no-fund` | passed |
-| `npm run typecheck` | passed |
-| `npm test -w @quietvote/web` (incl. `i18n:check`) | 163/163 passed, 0 failed/skipped |
+| `npm run typecheck` | passed (it caught two type errors the test runner does not; both fixed) |
+| `npm test -w @quietvote/web` (incl. `i18n:check`) | 176/176 passed, 0 failed/skipped |
 | `git diff --check` | passed |
 
 Not rerun (no runtime/UI file changed): Playwright `e2e/help.ts`, `e2e/a11y.ts`, `e2e/run.ts`,
-other workspaces' tests, production build size check outside the web test suite.
-
-Review: one independent read-only reviewer on the extractor diff (see receipt below). Excluded and
-not reviewed: crypto/nonce, export-role/trust anchors, authority, ballot verification, verifiers,
-the stopped browser-verifier tranche, `verifyView`. A wider web-client code/bug review was **not**
-started because PR #20 carries the active web-client audit (B3); doing it here would duplicate it.
+other workspaces' tests. Excluded and not reviewed: crypto/nonce, export-role/trust anchors,
+authority, ballot verification, verifiers, the stopped browser-verifier tranche, `verifyView`. A
+wider web-client code/bug review was **not** started: PR #20 carries the active web-client audit (B3).
+The extractor is a developer lint, not a security control; its review is AI-assisted, not independent.
 
 Blocked queue (unchanged; revisit only when the dependency changes):
 
@@ -535,6 +553,9 @@ Blocked queue (unchanged; revisit only when the dependency changes):
 5. Whole-codebase code/bug audit: owned by PR #20; do not duplicate.
 6. Merge to `main`: not appropriate (checkpoint ancestry includes unreviewed web-triage/web-verifier
    lines); no merge, approval or PR operation under this handoff.
+
+No other Ready ordinary work was found; do not invent features. On restart, `git ls-remote` the
+checkpoint and `main` first; the publication receipt below records the last pushed SHA.
 
 ## Restart snapshot and handoff verification — 2026-10-28
 
@@ -614,3 +635,15 @@ documentation-only current-state receipt is intended to be committed and
 fast-forwarded to the same existing checkpoint branch. Resolve the exact final
 documentation HEAD and remote SHA at resume; `main` and all Claude branches must
 remain unchanged.
+
+## Integration note — review rounds after the restart snapshot
+
+The restart snapshot above (commit `5fb97cb`, documentation-only, authored on the checkpoint
+after `ed505f5`) was preserved unchanged; the review-round commits were rebased onto it while
+still unpublished. Its "review receipt not present" note is resolved by the review-history
+table in the dynamic i18n section above: the first review found six defects, so `ed505f5`'s
+extractor was not final; the published source after this integration includes five fix rounds.
+That section's results (176/176 web tests, typecheck, `i18n:check`) supersede the snapshot's
+recorded 163/163 at `ed505f5`. Budget: no paid API request outside this Claude Code session was
+made; one in-session read-only review subagent was used (six passes). No shared-broker or ledger
+spend was made or recorded here, and no prompt-cache usage was measured or claimed.
