@@ -91,13 +91,28 @@ try {
     await page.getByRole('button', { name: 'Yes, it matches' }).click();
     await page.getByText('Election ID confirmed on this device.').waitFor();
   });
+  // The stub election is OPEN with its roll committed, so registration is closed (QV-09: 403 REGISTRATION_CLOSED). The
+  // imported key is already on the roll: the accepted journey is importing it without an invite (QV-04 §new device).
+  const importKey = async (p: typeof page, url: string): Promise<void> => {
+    await p.goto(url);
+    await p.getByLabel('Use a key file I saved before').check();
+    await p.getByLabel('Key file', { exact: true }).setInputFiles(keyFile);
+    await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+    await p.getByRole('button', { name: 'Create key' }).click();
+  };
+  await step('invite link after roll commit: registration refusal is shown, not hidden', async () => {
+    const p = await (await browser.newContext()).newPage();
+    try {
+      await importKey(p, `${base}/key#inv=AAAAAAAAAAAAAAAAAAAAAA`);
+      await p.getByRole('alert').waitFor({ timeout: 30000 });
+      if (await p.getByText('Your key is registered.').count()) throw new Error('refused registration reported as success');
+    } finally {
+      await p.context().close();
+    }
+  });
   await step('import key file and unlock', async () => {
-    await page.goto(`${base}/key#inv=AAAAAAAAAAAAAAAAAAAAAA`);
+    await importKey(page, `${base}/key`);
     await currentStep(2);
-    await page.getByLabel('Use a key file I saved before').check();
-    await page.getByLabel('Key file', { exact: true }).setInputFiles(keyFile);
-    await page.getByLabel('Passphrase', { exact: true }).fill(PASS);
-    await page.getByRole('button', { name: 'Create key' }).click();
     await page.getByText('Your key is registered.').waitFor({ timeout: 30000 });
   });
   await step('vote: choose, review, seal; buttons enabled only after the code shows', async () => {

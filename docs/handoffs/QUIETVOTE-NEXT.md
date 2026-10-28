@@ -350,3 +350,44 @@ export-role, browser-verifier, guarantee copy, trust/authority, registration).
 
 Automated checks are not WCAG conformance, screen-reader/AT qualification or native
 translation review; those remain human gates. All translations stay unreviewed/unoffered.
+
+## Registration-journey 404 — 2026-10-28
+
+Branch `claude/sharp-archimedes-tu76rh`, started from PR #18 head
+`3b738004061d6ced57b5a3650491fb894cf99e6d` (base checkpoint `884f59975bdfcad51d5dac7b77b8bd5ae0d6b067`;
+merge base with `main` `69c03fb6f50c3b6e865946820f878ea8b595e6ce`; main `019f4e789be2ff38a5fb2d348c3b225cc87cf296`).
+PR #18 hosted CI green on `3b73800` (6 typecheck+test jobs, claims lint). No merge into main or the checkpoint.
+
+- Reproduced against the real build (`node e2e/run.ts`, Playwright + preinstalled Chromium):
+  "import key file and unlock" timed out. Root cause: the e2e stub `FakeBoard` had no
+  `POST …/registrations` route, so the app got a 404 instead of a contract answer.
+- The real server (`packages/server/src/app.ts`) and QV-09 refuse registration once the roll is
+  committed (`403 REGISTRATION_CLOSED`, checked before invite/idempotency). The stub election is OPEN
+  with a committed roll, so the old step asserted a journey the real contract rejects.
+- Fix (test infrastructure only; no app, server, crypto or registration-policy change):
+  `test/helpers/fake-board.ts` answers registrations as the server does in this state (400 on a
+  malformed body, else 403 REGISTRATION_CLOSED); unit regression in `test/flow.test.ts`.
+  `e2e/run.ts` now checks (a) an invite link after roll commit shows an error alert and never
+  "Your key is registered." and (b) the accepted already-on-roll journey: import the key file
+  without an invite (QV-04 new-device import), then vote.
+- **Open decision (owner):** QV-10 §8.1 has no UX code for `REGISTRATION_CLOSED`,
+  `INVITE_EXPIRED` or `INVITE_USED`; the app shows `E-GEN-UNKNOWN`. A voter who reopens their
+  invite link after roll commit and imports their (already rolled) key sees a generic error even
+  though they can vote. Choosing copy or treating that 403 as benign is registration UX policy;
+  not decided here.
+
+| Command (Node v22.22.0) | Result |
+| --- | --- |
+| `npm ci --ignore-scripts --no-audit --no-fund` | passed |
+| `npm run typecheck` | passed |
+| `npm test -w @quietvote/<ws>` each | board 61, cli 29, crypto 49, protocol 172, server 121, trustee 65, verifier 23, web 159 (incl. `i18n:check`); 0 failed/skipped |
+| `node e2e/run.ts` (web) | 8/8 steps passed (was 6/7 with the registration step red) |
+| `node e2e/help.ts` | 12/12 light + 12/12 dark |
+| `node e2e/a11y.ts` | 45/45 automated checks (not WCAG conformance) |
+| `node scripts/lint-claims.mjs` | 11 findings in 5 files (non-blocking job; unchanged docs, not triaged here) |
+| `git diff --check` | passed |
+
+Not run: `verifier-py` tests (not in CI workflow), live server e2e, AT/screen-reader testing.
+Review status: self-review only; **no independent security or accessibility review performed**.
+Human translation review still pending; translations stay unoffered. DCO: commits on this branch
+carry no `Signed-off-by` (an author attestation the agent cannot make); DCO/authorship not established.

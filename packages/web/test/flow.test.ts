@@ -11,6 +11,7 @@ import { canAudit, canCast } from '../src/flow/ballot-machine.ts';
 import { BoardIntegrityError, checkInclusion } from '../src/flow/receipt.ts';
 import { checkAuditPackage, parseAuditPackage } from '../src/flow/audit.ts';
 import { inlineSealer } from '../src/flow/seal.ts';
+import { registrationBody } from '../src/flow/onboarding.ts';
 import { createSigner, type Signer } from '../src/key/signer.ts';
 import { MemoryStorage } from '../src/key/storage.ts';
 import { ApiError } from '../src/api/errors.ts';
@@ -360,4 +361,12 @@ test('api client: problem+json, Retry-After and timeout classification', async (
   const decoded = b64uDecode('AA');
   assert.ok(decoded);
   void systemRng;
+});
+
+test('registration after roll commit: fake board answers 403 REGISTRATION_CLOSED (QV-09), not 404', async () => {
+  const e = await env();
+  const body = await registrationBody({ apiElectionId: e.board.apiId, token: new Uint8Array(16), signer: await e.signer(0) });
+  await assert.rejects(e.api.register(e.board.apiId, body), (err: unknown) => err instanceof ApiError && err.status === 403 && err.code === 'REGISTRATION_CLOSED');
+  const bad = await e.board.fetch(`/api/v1/elections/${e.board.apiId}/registrations`, { method: 'POST', body: '{"pk":1}' });
+  assert.equal(bad.status, 400);
 });

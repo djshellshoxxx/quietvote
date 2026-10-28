@@ -156,7 +156,24 @@ export class FakeBoard {
     }
     if (p === `${base}/export.json`) return this.json(200, this.bundle());
     if (p === `${base}/log/entries` && method === 'POST') return this.append(init);
+    if (p === `${base}/registrations` && method === 'POST') return this.register(init);
     return this.problem(404, 'NOT_FOUND');
+  }
+
+  /**
+   * POST registrations (QV-09 table: `403 REGISTRATION_CLOSED`). This stand-in election is OPEN with its roll already
+   * committed, so — as the real server (packages/server/src/app.ts) does once roll_commit is set — every well-formed
+   * registration is refused. Body shape is checked first, as on the server.
+   */
+  private register(init?: RequestInit): Response {
+    let b: Record<string, unknown>;
+    try {
+      b = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    } catch {
+      return this.problem(400, 'BAD_REQUEST');
+    }
+    if (b === null || typeof b !== 'object' || !['invite_code', 'pk', 'alg', 'pop'].every((k) => typeof b[k] === 'string')) return this.problem(400, 'BAD_REQUEST');
+    return this.problem(403, 'REGISTRATION_CLOSED', { detail: 'registration closed at roll_commit' });
   }
 
   private view(e: StoredEntry): unknown {
