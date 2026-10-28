@@ -1,0 +1,17 @@
+# B1: summarise mutation logs (main sweep + re-run of replace-all mutants) into report-ready groups.
+import re, sys
+rows = {}
+for path in sys.argv[1:]:
+    for line in open(path):
+        m = re.match(r'^(M\d\d) (.*?)\s+crypto=(KILLED|survived).*?protocol-subset=(KILLED|survived)', line)
+        if m:
+            rows[m.group(1)] = (m.group(2).strip(), m.group(3), m.group(4))
+groups = {'crypto': [], 'protocol-only': [], 'none': []}
+for k in sorted(rows):
+    name, c, p = rows[k]
+    g = 'crypto' if c == 'KILLED' else ('protocol-only' if p == 'KILLED' else 'none')
+    groups[g].append(f'{k} {name}')
+for g, items in groups.items():
+    print(f'## {g} ({len(items)})')
+    for i in items: print('  ', i)
+print('total', len(rows))

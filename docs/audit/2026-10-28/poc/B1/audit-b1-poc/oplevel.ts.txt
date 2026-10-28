@@ -1,0 +1,186 @@
+// B1 audit PoC (2026-10-28): operation-level differential inputs for the TS reference vs the Python second verifier.
+//  (1) manifest validation variants  -> out/op-manifest.json   (TS validateManifest results recorded)
+//  (2) DKG adjudication variants     -> out/op-dkg.json        (TS adjudicateDkg results recorded)
+//  (3) Ed25519 mixed-order key/sigs  -> out/op-ed25519.json    (TS ed25519Verify results recorded)
+// op_py.py evaluates the same inputs with verifier-py and prints both. Synthetic data only. Run: node audit-b1-poc/oplevel.ts
+import { writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ed25519 } from '@noble/curves/ed25519.js';
+import { sha512 } from '@noble/hashes/sha2.js';
+import {
+  bytesToHex, concatBytes, ed25519Keypair, ed25519Verify, hexToBytes, leToBigint, sha256, streamRng, utf8,
+} from '../packages/crypto/src/index.ts';
+import { pointToBytes } from '../packages/crypto/src/index.ts';
+import {
+  PROTO_ID, adjudicateDkg, checkDealing, dkgCommitFor, dkgDeal, dkgMakeComplaint, dkgMakeShares,
+  rollRoot, validateManifest, type ManifestContest, type ParsedDealing,
+} from '../packages/protocol/src/index.ts';
+const pointToBytesHex = (p: Parameters<typeof pointToBytes>[0]): string => bytesToHex(pointToBytes(p));
+import { buildManifest, kp } from '../packages/protocol/test/helpers/sim.ts';
+
+const H = bytesToHex;
+const here = dirname(fileURLToPath(import.meta.url));
+const out = (n: string, v: unknown): void => writeFileSync(join(here, 'out', n), JSON.stringify(v, null, 2));
+const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+
+// ------------------------------------------------------------------ (1) manifests
+{
+  const seed = 'b1-op-manifest';
+  const voters = Array.from({ length: 4 }, (_, i) => kp(seed, `voter${i}`)).sort((a, b) => (H(a.publicKey) < H(b.publicKey) ? -1 : 1));
+  const rollHex = voters.map((v) => H(v.publicKey));
+  const rr = rollRoot(rollHex);
+  if (!rr.ok) throw new Error('roll');
+  const contests: ManifestContest[] = [
+    { id: 'budget', title: 'Budget?', method: 'yes-no', options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }], selection_limit: 1, min_selections: 0,
+      rule: { type: 'threshold', num: 1, den: 2, basis: 'yes+no', strict: true }, tie_break: { type: 'status-quo', option: 'no' } },
+    { id: 'chair', title: 'Chair', method: 'single-choice', options: ['ann', 'bob'].map((id) => ({ id, label: id })), selection_limit: 1, min_selections: 0, tie_break: { type: 'lexicographic' } },
+  ];
+  const M0 = buildManifest({ seed, n: 3, t: 2, voters: 4, contests }, [kp(seed, 'coord')], [1, 2, 3].map((i) => kp(seed, `trustee${i}`)), 4, H(rr.value));
+  const logPk = M0.bb.log_pk;
+  const w1 = H(kp(seed, 'w1').publicKey);
+  const smallOrder = '0100000000000000000000000000000000000000000000000000000000000000'; // Ed25519 identity encoding (small order)
+  const nonCanonicalY = 'edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f'; // y = p (non-canonical)
+  const cases: { id: string; m: any }[] = [];
+  const add = (id: string, f: (m: any) => void): void => { const m = clone(M0) as any; f(m); cases.push({ id, m }); };
+  add('M0-valid', () => {});
+  add('M1-created-after-open', (m) => { m.created = '2026-11-02T00:00:00Z'; });
+  add('M2-invalid-date-feb30', (m) => { m.voting_open = '2026-02-30T09:00:00Z'; m.created = '2026-01-01T00:00:00Z'; });
+  add('M3-hour-24', (m) => { m.voting_open = '2026-11-01T24:00:00Z'; });
+  add('M4-clock-skew-90000', (m) => { m.clock_skew_s = 90000; });
+  add('M5-trustee-name-bidi-U202E', (m) => { m.trustees[0].name = 'T\u202e1'; });
+  add('M6-title-U061C-arabic-letter-mark', (m) => { m.title = 'Vote\u061c'; });
+  add('M7-status-quo-on-single-choice', (m) => { m.contests[1].tie_break = { type: 'status-quo', option: 'ann' }; });
+  add('M8-witness-name-log-origin-prefix', (m) => { m.bb.witnesses = [{ name: 'quietvote/w1', pk: w1 }]; m.bb.witness_quorum = 1; });
+  add('M9-witness-pk-equals-log-pk', (m) => { m.bb.witnesses = [{ name: 'w1', pk: logPk }]; m.bb.witness_quorum = 1; });
+  add('M10-coordinator-key-small-order', (m) => { m.coordinator.keys = [smallOrder]; });
+  add('M11-trustee-key-non-canonical', (m) => { m.trustees[2].sign_pk = nonCanonicalY; });
+  add('M12-spoil-trustee-decrypt-true', (m) => { m.spoil_trustee_decrypt = true; });
+  add('M13-quorum-count-value', (m) => { m.quorum = { type: 'count', value: 2 }; });
+  add('M14-quorum-count-n', (m) => { m.quorum = { type: 'count', n: 2 }; });
+  add('M15-rule-basis-roll', (m) => { m.contests[0].rule.basis = 'roll'; });
+  add('M16-yes-no-with-winners', (m) => { m.contests[0].winners = 1; });
+  add('M17-rule-on-single-choice', (m) => { m.contests[1].rule = { type: 'threshold', num: 1, den: 2, basis: 'yes+no', strict: true }; });
+  add('M18-yes-no-without-rule', (m) => { delete m.contests[0].rule; });
+  add('M19-max-per-voter-1001', (m) => { m.ballots.max_per_voter = 1001; });
+  add('M20-title-300-chars', (m) => { m.title = 'x'.repeat(300); });
+  add('M21-nine-coordinator-keys', (m) => {
+    m.coordinator.keys = Array.from({ length: 9 }, (_, i) => H(kp(seed, `c${i}`).publicKey)).sort();
+  });
+  add('M22-witness-quorum-33', (m) => { m.bb.witness_quorum = 33; });
+  add('M23-log-pk-small-order', (m) => { m.bb.log_pk = smallOrder; });
+  add('M24-trustee-name-not-NFC-safe-ascii-control', (m) => { m.trustees[0].name = 'T\u00071'; });
+  const res = cases.map(({ id, m }) => {
+    const r = validateManifest(m, 4);
+    return { id, manifest: m, roll_size: 4, ts: r.ok ? 'OK' : `${r.error}: ${r.detail ?? ''}` };
+  });
+  out('op-manifest.json', res);
+  for (const r of res) console.log('manifest', r.id.padEnd(40), r.ts);
+}
+
+// ------------------------------------------------------------------ (2) DKG adjudication
+// Honest trustees run TS adjudication themselves (they only send shares to the R1 they compute).
+{
+  const mh = sha256(utf8('b1-op-dkg-manifest'));
+  type Rec = { seq: number; body: any };
+  interface Scenario { id: string; n: number; t: number; markers: Record<string, number>; records: { commits: Rec[]; dealings: Rec[]; shares: Rec[]; complaints: Rec[] } }
+  const upper = (b: any): any => JSON.parse(JSON.stringify(b), (k, v) => (typeof v === 'string' && /^[0-9a-f]{64}$/.test(v) && k !== 'proto' ? v.toUpperCase() : v));
+  async function build(id: string, n: number, t: number, hook: {
+    mutateDealing?: (i: number, body: any) => any; dupCommit?: number; earlyCommit?: number; badPackageFrom?: number;
+    complainAgainstBad?: [number, number]; honestR1?: number[];
+  }): Promise<Scenario> {
+    const rng = streamRng(`b1-dkg-${id}`);
+    let seq = hook.earlyCommit !== undefined ? 1 : 0; // seq 1 is taken by the early commit
+    const markers: Record<string, number> = {};
+    const records: Scenario['records'] = { commits: [], dealings: [], shares: [], complaints: [] };
+    markers['dkg-open'] = ++seq;
+    const deals = new Map<number, { secret: ReturnType<typeof dkgDeal>['secret']; orig: any; pub: any }>();
+    for (let i = 1; i <= n; i++) {
+      const d = dkgDeal(mh, i, t, rng);
+      const pub = hook.mutateDealing ? hook.mutateDealing(i, d.body) : d.body;
+      deals.set(i, { secret: d.secret, orig: d.body, pub });
+      const commit = dkgCommitFor(mh, i, pub);
+      records.commits.push({ seq: hook.earlyCommit === i ? 1 : ++seq, body: commit });
+      if (hook.dupCommit === i) records.commits.push({ seq: ++seq, body: { ...commit, h: H(sha256(utf8('a different dealing'))) } });
+    }
+    markers['dkg-r1-open'] = ++seq;
+    for (let i = 1; i <= n; i++) records.dealings.push({ seq: ++seq, body: deals.get(i)!.pub });
+    markers['dkg-r1-close'] = ++seq;
+    const parsed = new Map<number, ParsedDealing>();
+    for (let i = 1; i <= n; i++) {
+      const c = checkDealing(mh, t, deals.get(i)!.orig);
+      if (!c.ok) throw new Error('dealing');
+      parsed.set(i, c.value);
+    }
+    const honest = new Set(hook.honestR1 ?? [...parsed.keys()]);
+    for (let i = 1; i <= n; i++) {
+      // honest trustees send to the R1 they compute with the TS rules; a dealer outside that R1 sends to everyone else
+      const view = new Map([...parsed].filter(([j]) => (honest.has(i) ? honest.has(j) : true)));
+      const pkg = await dkgMakeShares(mh, deals.get(i)!.secret, view, rng);
+      if (hook.badPackageFrom === i) pkg.shares = pkg.shares.slice().reverse(); // descending j: R2-invalid under both readings
+      records.shares.push({ seq: ++seq, body: pkg });
+    }
+    markers['dkg-r2-close'] = ++seq;
+    if (hook.complainAgainstBad !== undefined) {
+      const [j, i] = hook.complainAgainstBad; // j complains about i's VALID share; i is already R2-disqualified
+      const pkg = records.shares.find((s) => s.body.i === i)!.body;
+      const ent = pkg.shares.find((s: any) => s.j === j);
+      records.complaints.push({ seq: ++seq, body: dkgMakeComplaint(mh, j, deals.get(j)!.secret.e, parsed.get(j)!.E, i, ent, rng) });
+    }
+    markers['dkg-r3-close'] = ++seq;
+    markers['dkg-final'] = ++seq;
+    return { id, n, t, markers, records };
+  }
+  const scen: Scenario[] = [
+    await build('D0-honest', 3, 2, {}),
+    await build('D1-duplicate-different-commit', 3, 2, { dupCommit: 3, honestR1: [1, 2] }),
+    await build('D2-uppercase-hex-dealing', 3, 2, { mutateDealing: (i, b) => (i === 3 ? upper(b) : b), honestR1: [1, 2] }),
+    await build('D3-complaint-vs-R2-disqualified', 4, 2, { badPackageFrom: 4, complainAgainstBad: [2, 4] }),
+    await build('D4-commit-before-dkg-open', 3, 2, { earlyCommit: 3 }),
+    // D5: trustee 3 writes its index as JSON `true` ... no: Python's True == 1, so trustee 1 is the one who can exploit it
+    await build('D5-boolean-index-trustee-1', 3, 2, { mutateDealing: (i, b) => (i === 1 ? { ...b, i: true } : b), honestR1: [2, 3] }),
+  ];
+  const res = [];
+  for (const s of scen) {
+    const a = await adjudicateDkg({ mh, n: s.n, t: s.t, markers: s.markers as any, ...s.records });
+    const ts = a.ok ? { Q: a.value.Q, K_hex: pointToBytesHex(a.value.K), ctx_hex: H(a.value.ctx) } : { error: `${a.error} ${a.detail ?? ''}` };
+    res.push({ ...s, manifest_hash_hex: H(mh), ts });
+    console.log('dkg', s.id.padEnd(36), JSON.stringify(a.ok ? { Q: a.value.Q, ctx: H(a.value.ctx).slice(0, 16) } : ts));
+  }
+  out('op-dkg.json', res);
+}
+
+// ------------------------------------------------------------------ (3) Ed25519 with a mixed-order public key (KNOWN CP-04)
+{
+  const P = ed25519.Point;
+  const L = P.Fn.ORDER;
+  // a torsion point of order 8: [L]X for a curve point X with a torsion component
+  // a known order-8 point of edwards25519 (small-order list, e.g. Chalkias et al. 'Taming the many EdDSAs')
+  const T8c = P.fromHex('c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a');
+  const T8: InstanceType<typeof P> | undefined =
+    !T8c.is0() && !T8c.double().is0() && !T8c.double().double().is0() && T8c.double().double().double().is0() ? T8c : undefined;
+  if (T8 === undefined) throw new Error('no order-8 point');
+  const a = leToBigint(sha256(utf8('b1-mixed-order-secret'))) % L;
+  const A = P.BASE.multiply(a).add(T8);
+  const Ab = A.toBytes();
+  const sign = (msg: Uint8Array, r: bigint): Uint8Array => {
+    const Rb = P.BASE.multiply(r).toBytes();
+    const k = leToBigint(sha512(concatBytes(Rb, Ab, msg))) % L;
+    const S = (r + k * a) % L;
+    const Sb = new Uint8Array(32);
+    let x = S;
+    for (let i = 0; i < 32; i++, x >>= 8n) Sb[i] = Number(x & 0xffn);
+    return concatBytes(Rb, Sb);
+  };
+  const cases = [];
+  for (let m = 0; m < 16; m++) {
+    const msg = utf8(`b1 message ${m}`);
+    const sig = sign(msg, 1000n + BigInt(m));
+    const k8 = Number((leToBigint(sha512(concatBytes(sig.subarray(0, 32), Ab, msg))) % L) % 8n);
+    cases.push({ id: `mixed-order-${m}`, public_hex: H(Ab), msg_hex: H(msg), sig_hex: H(sig), k_mod_8: k8, ts: ed25519Verify(Ab, sig, msg) });
+  }
+  const honest = ed25519Keypair(sha256(utf8('b1-honest')));
+  void hexToBytes; void PROTO_ID;
+  out('op-ed25519.json', { torsion_free_public_key: false, cases, control_honest_pk: H(honest.publicKey) });
+  console.log('ed25519 mixed-order: TS accepts', cases.filter((c) => c.ts).length, 'of', cases.length);
+}

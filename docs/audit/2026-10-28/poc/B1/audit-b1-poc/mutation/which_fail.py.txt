@@ -1,0 +1,20 @@
+# B1: apply one mutant (replace-all) in a scratch copy, run the protocol subset, print failing test names, restore.
+import subprocess, sys, pathlib, re
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+D = pathlib.Path(sys.argv[1]); want = sys.argv[2]
+src_txt = (pathlib.Path(__file__).parent / 'mutate.py').read_text()
+start = src_txt.index('M = ['); end = src_txt.index('\n]', start) + 2
+C = D / 'packages/crypto/src'; P = D / 'packages/protocol/src'
+M = eval(src_txt[start + 4:end], {'C': C, 'P': P})
+name, f, old, new = next(m for m in M if m[0].split()[0] == want)
+src = f.read_text()
+f.write_text(src.replace(old, new))
+try:
+    PRO = ['node', '--test', 'test/vectors.test.ts', 'test/attacks.test.ts', 'test/dkg.test.ts', 'test/ballot.test.ts', 'test/tally.test.ts', 'test/verify.test.ts', 'test/manifest-rules.test.ts']
+    r = subprocess.run(PRO, cwd=D / 'packages/protocol', capture_output=True, text=True, timeout=900)
+    out = r.stdout + r.stderr
+    for l in out.splitlines():
+        if re.match(r'^\s*not ok', l) or 'AssertionError' in l or re.match(r'^\s+(error|expected|actual):', l): print(l[:220])
+    print('rc', r.returncode, [l for l in out.splitlines() if l.startswith('# fail')])
+finally:
+    f.write_text(src)

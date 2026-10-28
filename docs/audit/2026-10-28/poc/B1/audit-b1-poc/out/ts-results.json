@@ -1,0 +1,470 @@
+{
+  "E0-baseline": {
+    "note": "honest election",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "passed"
+        }
+      }
+    ]
+  },
+  "E1-spoil-over-limit": {
+    "note": "spoil(publish) then cast of the same code; max_spoils_per_voter=0",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [
+      "E_REVOTE_LIMIT/L@21"
+    ],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "rejected",
+          "reason": "tie-break"
+        }
+      }
+    ]
+  },
+  "E1c-spoil-within-limit": {
+    "note": "spoil(publish) then cast of the same code; max_spoils_per_voter=16",
+    "verdict": "PASS",
+    "failed": [
+      "chk.benaloh.spoiled"
+    ],
+    "counted": 3,
+    "findings": [
+      "E_SPOILED_CODE_CAST/ALARM@22"
+    ],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 3,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "rejected"
+        }
+      }
+    ]
+  },
+  "E2-count-quorum": {
+    "note": "manifest quorum {type:count,value:2}",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "passed"
+        }
+      }
+    ]
+  },
+  "E3-tie-basis-counted": {
+    "note": "yes=2 no=1 blank=1, basis counted, strict 1/2, declare-tie",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "tie",
+          "tied": [
+            "no",
+            "yes"
+          ]
+        }
+      }
+    ]
+  },
+  "E3b-2of3-status-quo-yes": {
+    "note": "yes=2 no=2, rule 2/3 non-strict, status-quo yes",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "rejected"
+        }
+      }
+    ]
+  },
+  "E4-kofn-winner-order": {
+    "note": "counts zeta=2 alpha=2 mid=1 low=1, winners=3, lexicographic",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [],
+    "results": [
+      {
+        "contest": "board",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "winners",
+          "winners": [
+            "alpha",
+            "zeta",
+            "low"
+          ],
+          "reason": "tie-break"
+        }
+      }
+    ]
+  },
+  "E5-approval-no-winners": {
+    "note": "approval without winners field",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [],
+    "results": [
+      {
+        "contest": "topics",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "winners",
+          "winners": [
+            "a"
+          ]
+        }
+      }
+    ]
+  },
+  "E7-bad-close-then-good": {
+    "note": "unsigned (non-coordinator) election-close before the real one",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [
+      "E_SIG/L@25"
+    ],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "passed"
+        }
+      }
+    ]
+  },
+  "E8-P4-bad-reveal-then-cast": {
+    "note": "signed spoil with mismatching attached reveal, then cast of the same code",
+    "verdict": "PASS",
+    "failed": [
+      "chk.benaloh.spoiled"
+    ],
+    "counted": 4,
+    "findings": [
+      "E_SPOIL_MISMATCH/ALARM@21"
+    ],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "rejected",
+          "reason": "tie-break"
+        }
+      }
+    ]
+  },
+  "E10-CP03-constructor-field": {
+    "note": "cast envelope with extra member \"constructor\"",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "passed"
+        }
+      }
+    ]
+  },
+  "E11-control-entries": {
+    "note": "coordinator pause/resume control records (QV-ADR-022)",
+    "verdict": "PASS",
+    "failed": [
+      "chk.encoding.canonical"
+    ],
+    "counted": 4,
+    "findings": [
+      "E_VERSION/L@23",
+      "E_VERSION/L@24"
+    ],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "passed"
+        }
+      }
+    ]
+  },
+  "E12-dkg-final-no-qmask": {
+    "note": "dkg-final without qmask/K (re-signed)",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "passed"
+        }
+      }
+    ]
+  },
+  "E13-C3-close-with-binding": {
+    "note": "election-close carrying manifest_hash/joint_key_seq/roll_commit_seq, then a clean close",
+    "verdict": "PASS",
+    "failed": [
+      "chk.encoding.canonical"
+    ],
+    "counted": 4,
+    "findings": [
+      "E_SCHEMA/L@25"
+    ],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "passed"
+        }
+      }
+    ]
+  },
+  "E14-tally-share-uppercase-hex": {
+    "note": "tally share M in upper-case hex",
+    "verdict": "FAIL",
+    "failed": [
+      "chk.encoding.canonical"
+    ],
+    "counted": 4,
+    "findings": [
+      "E_SCHEMA/F@26"
+    ]
+  },
+  "E15-excluded-latest-cast": {
+    "note": "X1 cast; X2 spoiled then cast (excluded): does X1 count?",
+    "verdict": "PASS",
+    "failed": [
+      "chk.benaloh.spoiled"
+    ],
+    "counted": 4,
+    "findings": [
+      "E_SPOILED_CODE_CAST/ALARM@23"
+    ],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "rejected"
+        }
+      }
+    ]
+  },
+  "E17-tally-posted-twice": {
+    "note": "identical tally record appended twice",
+    "verdict": "PASS",
+    "failed": [],
+    "counted": 4,
+    "findings": [
+      "E_SCHEMA/L@27"
+    ],
+    "results": [
+      {
+        "contest": "budget",
+        "participation": 4,
+        "quorum_met": true,
+        "outcome": {
+          "kind": "passed"
+        }
+      }
+    ]
+  },
+  "K-CP01-rewrap-reveal": {
+    "note": "counted ballot re-wrapped as a published-reveal spoil",
+    "verdict": "PASS",
+    "failed": [],
+    "findings": [],
+    "checks": {
+      "chk.manifest.hash": "pass",
+      "chk.manifest.sig": "pass",
+      "chk.keys.trustees": "pass",
+      "chk.board.append_only": "not_run",
+      "chk.board.witness": "not_run",
+      "chk.ballots.valid": "pass",
+      "chk.ballots.latest": "pass",
+      "chk.tally.aggregate": "pass",
+      "chk.tally.decrypt": "pass",
+      "chk.result.rules": "pass",
+      "chk.benaloh.spoiled": "pass",
+      "chk.receipts.sample": "not_run",
+      "chk.encoding.canonical": "pass",
+      "chk.time.window": "pass"
+    }
+  },
+  "K-P3-second-tally-differs": {
+    "note": "second coordinator-signed tally with flipped outcome",
+    "verdict": "PASS",
+    "failed": [],
+    "findings": [
+      "E_SCHEMA/L@27"
+    ],
+    "checks": {
+      "chk.manifest.hash": "pass",
+      "chk.manifest.sig": "pass",
+      "chk.keys.trustees": "pass",
+      "chk.board.append_only": "not_run",
+      "chk.board.witness": "not_run",
+      "chk.ballots.valid": "pass",
+      "chk.ballots.latest": "pass",
+      "chk.tally.aggregate": "pass",
+      "chk.tally.decrypt": "pass",
+      "chk.result.rules": "pass",
+      "chk.benaloh.spoiled": "pass",
+      "chk.receipts.sample": "not_run",
+      "chk.encoding.canonical": "pass",
+      "chk.time.window": "pass"
+    }
+  },
+  "K-P11-decrypters-wrong": {
+    "note": "tally.decrypters = [3] although shares are from 1,2",
+    "verdict": "PASS",
+    "failed": [],
+    "findings": [],
+    "checks": {
+      "chk.manifest.hash": "pass",
+      "chk.manifest.sig": "pass",
+      "chk.keys.trustees": "pass",
+      "chk.board.append_only": "not_run",
+      "chk.board.witness": "not_run",
+      "chk.ballots.valid": "pass",
+      "chk.ballots.latest": "pass",
+      "chk.tally.aggregate": "pass",
+      "chk.tally.decrypt": "pass",
+      "chk.result.rules": "pass",
+      "chk.benaloh.spoiled": "pass",
+      "chk.receipts.sample": "not_run",
+      "chk.encoding.canonical": "pass",
+      "chk.time.window": "pass"
+    }
+  },
+  "K-P7-below-floor": {
+    "note": "V=4 < min_counted_ballots=5; tally without shares",
+    "verdict": "FAIL",
+    "failed": [],
+    "findings": [
+      "E_BELOW_FLOOR/F"
+    ],
+    "checks": {
+      "chk.manifest.hash": "pass",
+      "chk.manifest.sig": "pass",
+      "chk.keys.trustees": "pass",
+      "chk.board.append_only": "not_run",
+      "chk.board.witness": "not_run",
+      "chk.ballots.valid": "pass",
+      "chk.ballots.latest": "pass",
+      "chk.tally.aggregate": "pass",
+      "chk.tally.decrypt": "pass",
+      "chk.result.rules": "not_run",
+      "chk.benaloh.spoiled": "pass",
+      "chk.receipts.sample": "not_run",
+      "chk.encoding.canonical": "pass",
+      "chk.time.window": "pass"
+    }
+  },
+  "K-P9-keyconf-shadow": {
+    "note": "invalid keyconf from trustee 3 before its valid one; t = n = 3",
+    "verdict": "FAIL",
+    "failed": [
+      "chk.keys.trustees"
+    ],
+    "findings": [
+      "E_DKG_KEYCONF/L@17",
+      "E_DKG_KEYCONF/F"
+    ],
+    "checks": {
+      "chk.manifest.hash": "pass",
+      "chk.manifest.sig": "pass",
+      "chk.keys.trustees": "fail",
+      "chk.board.append_only": "not_run",
+      "chk.board.witness": "not_run",
+      "chk.ballots.valid": "not_run",
+      "chk.ballots.latest": "not_run",
+      "chk.tally.aggregate": "not_run",
+      "chk.tally.decrypt": "not_run",
+      "chk.result.rules": "not_run",
+      "chk.benaloh.spoiled": "not_run",
+      "chk.receipts.sample": "not_run",
+      "chk.encoding.canonical": "pass",
+      "chk.time.window": "not_run"
+    }
+  },
+  "E18-roll-uppercase-hex": {
+    "note": "E0 bundle with every roll entry upper-cased (made by hand, see report)",
+    "verdict": "FAIL",
+    "failed": [],
+    "findings": [
+      "E_ROLL/F"
+    ]
+  },
+  "E19-manifest-envelope-extra-members": {
+    "note": "E0 bundle with junk members in the manifest envelope and in its sig object (made by hand, see report)",
+    "verdict": "PASS",
+    "failed": [],
+    "findings": []
+  },
+  "E20-dkg-open-marker-dropped": {
+    "note": "E0 bundle with the first log entry (dkg-open marker) removed (made by hand; same as the verifier synthetic canary first-log-entry-dropped)",
+    "verdict": "FAIL",
+    "failed": [
+      "chk.keys.trustees"
+    ],
+    "findings": [
+      "E_DKG_MARKERS/F"
+    ]
+  }
+}

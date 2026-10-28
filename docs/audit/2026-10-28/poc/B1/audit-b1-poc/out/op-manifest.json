@@ -1,0 +1,2683 @@
+[
+  {
+    "id": "M0-valid",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "OK"
+  },
+  {
+    "id": "M1-created-after-open",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-11-02T00:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: time ordering"
+  },
+  {
+    "id": "M2-invalid-date-feb30",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-01-01T00:00:00Z",
+      "voting_open": "2026-02-30T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: timestamp"
+  },
+  {
+    "id": "M3-hour-24",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T24:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: timestamp"
+  },
+  {
+    "id": "M4-clock-skew-90000",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 90000,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_SCHEMA: $.clock_skew_s: integer out of range"
+  },
+  {
+    "id": "M5-trustee-name-bidi-U202E",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T‮1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "OK"
+  },
+  {
+    "id": "M6-title-U061C-arabic-letter-mark",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Vote؜",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "OK"
+  },
+  {
+    "id": "M7-status-quo-on-single-choice",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "status-quo",
+            "option": "ann"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: status-quo needs a yes-no option"
+  },
+  {
+    "id": "M8-witness-name-log-origin-prefix",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 1,
+        "witnesses": [
+          {
+            "name": "quietvote/w1",
+            "pk": "7165a87328a292f02b930d72f49bbb1f34090599bc66b0f9063999ae9d4169e0"
+          }
+        ]
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: witness entry invalid"
+  },
+  {
+    "id": "M9-witness-pk-equals-log-pk",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 1,
+        "witnesses": [
+          {
+            "name": "w1",
+            "pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87"
+          }
+        ]
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: witness entry invalid"
+  },
+  {
+    "id": "M10-coordinator-key-small-order",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "0100000000000000000000000000000000000000000000000000000000000000"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: coordinator key invalid"
+  },
+  {
+    "id": "M11-trustee-key-non-canonical",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: trustee key invalid/duplicate"
+  },
+  {
+    "id": "M12-spoil-trustee-decrypt-true",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true,
+      "spoil_trustee_decrypt": true
+    },
+    "roll_size": 4,
+    "ts": "OK"
+  },
+  {
+    "id": "M13-quorum-count-value",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true,
+      "quorum": {
+        "type": "count",
+        "value": 2
+      }
+    },
+    "roll_size": 4,
+    "ts": "OK"
+  },
+  {
+    "id": "M14-quorum-count-n",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true,
+      "quorum": {
+        "type": "count",
+        "n": 2
+      }
+    },
+    "roll_size": 4,
+    "ts": "E_SCHEMA: $.quorum.n: unknown field"
+  },
+  {
+    "id": "M15-rule-basis-roll",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "roll",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_SCHEMA: $.contests[0].rule.basis: not in enum"
+  },
+  {
+    "id": "M16-yes-no-with-winners",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          },
+          "winners": 1
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: yes-no: selection_limit must be 1, no winners"
+  },
+  {
+    "id": "M17-rule-on-single-choice",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          },
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: rule only for yes-no"
+  },
+  {
+    "id": "M18-yes-no-without-rule",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: yes-no requires rule"
+  },
+  {
+    "id": "M19-max-per-voter-1001",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 1001,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_SCHEMA: $.ballots.max_per_voter: integer out of range"
+  },
+  {
+    "id": "M20-title-300-chars",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_SCHEMA: $.title: bad string"
+  },
+  {
+    "id": "M21-nine-coordinator-keys",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "2218a7ad79032f16929773d761a347267638ad5e45b7d9c13f1231a382e3e26f",
+          "2d9e74edba78448dead67b37d2ac47afd68fbde1b5583485d5ed8fc730545c5c",
+          "30689f6a0c76de9c35e553a5e5e709d1ce839c3d980892527b88087e7a2f75ac",
+          "3cabfc7d0a0eceb719ffeb80176cda664daf9e1b102fc2f8faa91dee1de5c63f",
+          "510ee992e92cded28be807205d91cb4cfd4d25253b9d69612e07473c8375d2a9",
+          "6f9d188322b708e5ce61ee5d2bb0e5f47fadff27de50b89096496b396e1968bd",
+          "8968a778373dd573885f286d624419e6f58bb66fe9857cf0dbef7fe790b47f5e",
+          "9eab5c7ce9a0198f454372b9e6824d56f647b8ce480a016857a36eb475fe19ee",
+          "f7de141ed176b51a1b3a8eaefd426b15c1a3bcbb0c4bc9fd492c4254ed6f5ce3"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_SCHEMA: $.coordinator.keys: bad array"
+  },
+  {
+    "id": "M22-witness-quorum-33",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 33
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_SCHEMA: $.bb.witness_quorum: integer out of range"
+  },
+  {
+    "id": "M23-log-pk-small-order",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T1",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "0100000000000000000000000000000000000000000000000000000000000000",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "E_MANIFEST: log key invalid"
+  },
+  {
+    "id": "M24-trustee-name-not-NFC-safe-ascii-control",
+    "manifest": {
+      "proto": "qv1-r255-sha2",
+      "type": "manifest",
+      "election_id": "0b66d5b5ea01d3232b2ea6288094b5b2",
+      "title": "Test election b1-op-manifest",
+      "created": "2026-10-21T12:00:00Z",
+      "voting_open": "2026-11-01T09:00:00Z",
+      "voting_close": "2026-11-08T21:00:00Z",
+      "clock_skew_s": 300,
+      "contests": [
+        {
+          "id": "budget",
+          "title": "Budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "Yes"
+            },
+            {
+              "id": "no",
+              "label": "No"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        {
+          "id": "chair",
+          "title": "Chair",
+          "method": "single-choice",
+          "options": [
+            {
+              "id": "ann",
+              "label": "ann"
+            },
+            {
+              "id": "bob",
+              "label": "bob"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        }
+      ],
+      "roll": {
+        "scheme": "ed25519-roll-v1",
+        "weights": "uniform",
+        "root": "ec1a86fd635dc23360a219da1751cff76df23e2322d5874ee0adf5495927e78e",
+        "size": 4
+      },
+      "trustees": [
+        {
+          "index": 1,
+          "name": "T\u00071",
+          "sign_pk": "aea63231d1218f5a6c9bab3fc5db58618cfb515e76af06de7994fbc19688a69b"
+        },
+        {
+          "index": 2,
+          "name": "T2",
+          "sign_pk": "c1a44cef1d09d3734b8d741b2170d0b989d0873629cb7997671e534bc461824b"
+        },
+        {
+          "index": 3,
+          "name": "T3",
+          "sign_pk": "dbf7dc4c13c518095ded097ab466b4a44f142d39e8c3da80dd5d91320558e6e2"
+        }
+      ],
+      "n": 3,
+      "t": 2,
+      "coordinator": {
+        "keys": [
+          "4040ff2121cecbe76bb366c49121f1eafceb1ca670dc627ef4a78e50461d0980"
+        ],
+        "m": 1
+      },
+      "ballots": {
+        "max_per_voter": 8,
+        "max_spoils_per_voter": 16
+      },
+      "bb": {
+        "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+        "log_pk": "10bb79d25f8af30c9a0583006e7b288479bf91e0bd91bbb2a898c89f730bbb87",
+        "witness_quorum": 0
+      },
+      "privacy_ack": true
+    },
+    "roll_size": 4,
+    "ts": "OK"
+  }
+]

@@ -9,7 +9,7 @@ independent audit. QuietVote remains unaudited and is not for real elections.
 | Report | Scope | State |
 |---|---|---|
 | [B2](B2-quietvote-server-board.md) | Server, bulletin board, trustee tooling, CLI | Complete: 17 new findings (1 High, 8 Medium, 8 Low) and known items whose fixes are on unmerged PRs |
-| B1 | Cryptography, protocol, verifiers, test vectors | In progress |
+| [B1](B1-quietvote-crypto-protocol.md) | Cryptography, protocol, verifiers, test vectors | Complete: 14 new findings (5 Medium, 6 Low, 3 Info), all confirmed. The TS crypto core matched QV-16; findings concern TS/Python verifier divergence, spoil handling and verifier caveats |
 | B3 | Web client | In progress |
 
 None of these findings has been through the second pass yet. Still to come:
@@ -24,6 +24,11 @@ The PoC tests are under `poc/B2/<original path>.txt`. The `.txt` suffix keeps th
 globs and the TypeScript build from picking them up. To run one, copy it back to its original
 path without the suffix at the SHA above and run that package's tests.
 
-The B2 tests assert the current defect: they pass now and fail once it is fixed.
+Each PoC set asserts the current defect: it passes now and fails once the defect is fixed.
+
+| PoC | Location | How to run |
+|---|---|---|
+| B2 | `poc/B2/<original path>.txt` | Copy back without `.txt`, then run that package's tests |
+| B1 | `poc/B1/audit-b1-poc/` | Restore `.txt` code files to the same layout under the repository root, then run `node --test audit-b1-poc/b1-poc.test.ts` and `python3 audit-b1-poc/test_b1_py_poc.py`; `out/` holds the generated synthetic bundles, `mutation/` the mutation sweep |
 
 Paths in the report such as `/home/user/audit/quietvote-b2/...` refer to the repository root.
