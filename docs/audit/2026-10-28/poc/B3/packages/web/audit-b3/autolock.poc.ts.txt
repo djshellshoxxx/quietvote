@@ -1,0 +1,41 @@
+// B3 audit PoC (Playwright): what the voter sees when the 10-minute idle auto-lock fires in the middle of the ballot flow.
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { PASS, exe, pw, startStack } from './harness.ts';
+
+const sim = await sharedSim();
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const base = `${stack.origin}/e/${board.apiId}`;
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+await p.clock.install();
+await p.goto(`${base}/key`);
+await p.getByLabel('Use a key file I saved before').check();
+await p.getByLabel('Key file', { exact: true }).setInputFiles(stack.keyFile);
+await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+await p.getByRole('button', { name: 'Create key' }).click();
+await p.clock.runFor(100);
+await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+await p.getByRole('link', { name: 'Vote' }).first().click();
+await p.getByLabel('YES', { exact: true }).check();
+await p.getByRole('button', { name: 'Review my choices' }).click();
+console.log('before idle: review screen shown:', await p.getByRole('button', { name: 'Seal my ballot' }).isVisible());
+await p.clock.fastForward('11:00'); // > 10 min without input
+await p.clock.runFor(20_000);       // let the 15 s interval fire
+const polite = await p.locator('#live-polite').innerText();
+const urgent = await p.locator('#live-urgent').innerText();
+console.log('live regions after the lock: polite=', JSON.stringify(polite), 'urgent=', JSON.stringify(urgent));
+console.log('visible lock notice in the page body:', /Your key is locked|will lock/.test(await p.locator('main').innerText()));
+console.log('seal button still offered:', await p.getByRole('button', { name: 'Seal my ballot' }).isVisible());
+await p.getByRole('button', { name: 'Seal my ballot' }).click();
+await p.clock.runFor(100);
+const send = p.getByRole('button', { name: 'Send my vote' });
+await send.waitFor({ timeout: 30000 });
+console.log('sealed after the lock; code shown; send enabled:', await send.isEnabled());
+await send.click();
+await p.clock.runFor(100);
+await p.locator('main .error').first().waitFor({ timeout: 30000 });
+console.log('after Send:', (await p.locator('main .error').first().innerText()).replace(/\n+/g, ' | '));
+console.log('POST requests that reached the board:', board.requests.filter((r) => r.method === 'POST').length);
+await browser.close();
+stack.close();

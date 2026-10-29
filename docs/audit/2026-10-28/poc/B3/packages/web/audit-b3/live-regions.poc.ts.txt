@@ -1,0 +1,33 @@
+// B3 audit PoC: QV-13-REQ-021 "at most one polite region and one assertive region per page": count live-region elements per page.
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { PASS, exe, pw, startStack } from './harness.ts';
+const sim = await sharedSim();
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const base = `${stack.origin}/e/${board.apiId}`;
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+const count = async (name: string): Promise<void> => {
+  const r = await p.evaluate(() => {
+    const els = Array.from(document.querySelectorAll('[role="status"],[role="alert"],[role="log"],[aria-live]:not([aria-live="off"]),output'));
+    return els.map((e) => `${e.tagName.toLowerCase()}${e.id ? '#' + e.id : ''}[${e.getAttribute('role') ?? ''}/${e.getAttribute('aria-live') ?? ''}]`);
+  });
+  console.log(name.padEnd(26), r.length, 'live regions:', r.join(' '));
+};
+await p.goto(stack.origin + '/'); await p.getByRole('heading', { level: 1 }).waitFor(); await count('home');
+await p.goto(`${base}/key`); await p.getByLabel('Use a key file I saved before').check().catch(() => undefined);
+await p.getByLabel('Passphrase', { exact: true }).waitFor(); await count('key');
+await p.getByLabel('Use a key file I saved before').check();
+await p.getByLabel('Key file', { exact: true }).setInputFiles(stack.keyFile);
+await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+await p.getByRole('button', { name: 'Create key' }).click();
+await p.getByText('Your key is registered.').waitFor({ timeout: 30000 }); await count('key after unlock');
+await p.getByRole('link', { name: 'Vote' }).first().click();
+await p.getByLabel('YES', { exact: true }).check(); await count('vote (selecting)');
+await p.getByRole('button', { name: 'Review my choices' }).click();
+await p.getByRole('button', { name: 'Seal my ballot' }).click();
+await p.getByRole('button', { name: 'Send my vote' }).waitFor({ timeout: 30000 }); await count('vote (sealed)');
+await p.goto(`${base}/receipt`); await p.getByRole('heading', { name: 'Check a receipt' }).first().waitFor(); await count('receipt');
+await p.goto(`${stack.origin}/verify`); await p.getByRole('button', { name: 'Run checks' }).waitFor(); await count('verify');
+await browser.close();
+stack.close();

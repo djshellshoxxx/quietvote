@@ -1,0 +1,506 @@
+// B2 audit proof-of-concept tests (AI-assisted audit, 2026-10-28; report: /home/user/audit/reports/B2-quietvote-server-board.md).
+// NOT an independent audit. Each test ASSERTS THE CURRENT (defective or non-conformant) behaviour at SHA 424110d so that it passes
+// as evidence; a fix is expected to make the corresponding test fail (then invert or delete it). Synthetic data only.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { connect } from 'node:net';
+import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { b64u, checkFork, cosignLine, parseCheckpoint, witnessStatus } from '@quietvote/board';
+import { bytesToHex, ed25519Sign, utf8, type Ed25519Keypair } from '@quietvote/crypto';
+import { aggregate, analyzeBallotLog, witnessAnchors, type Manifest } from '@quietvote/protocol';
+import { buildServer, signRequest } from '../src/index.ts';
+import { BucketKeyer } from '../src/ratelimit.ts';
+import { World, kp } from './helpers/world.ts';
+import { exportQvb, fullElection, importAndWait } from './helpers/full.ts';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
+
+const H = bytesToHex;
+const pop = (k: Ed25519Keypair, electionId: string): string => b64u(ed25519Sign(k.secretKey, new Uint8Array([...utf8(`QV-REG-v1\0${electionId}\0`), ...k.publicKey])));
+const register = (w: World, code: string, k: Ed25519Keypair) =>
+  w.req('POST', `/api/v1/elections/${w.electionId}/registrations`, { invite_code: code, pk: b64u(k.publicKey), alg: 'ed25519', pop: pop(k, w.electionId) });
+
+// ------------------------------------------------------------------------------------------------------------------ B2-03
+test('B2-03 PoC: an instance_admin key removed from adminKeys keeps full admin power after restart and can take over any org', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'qv-b2-admin-'));
+  const admin = kp('b2', 'admin');
+  const owner = kp('b2', 'owner');
+  const attacker = kp('b2', 'attacker');
+  const clock = Date.UTC(2026, 9, 28, 12);
+  const boot = async (adminKeys: string[]) => {
+    const s = buildServer({ dataDir: dir, now: () => clock, logSink: () => {}, minFreeBytes: 0, adminKeys });
+    const a = await s.start();
+    const inst = (await (await fetch(`${a.url}/api/v1/instance`)).json()) as { instance_id: string };
+    const audience = `qv:${inst.instance_id}@http://localhost`;
+    let n = 0;
+    const call = async (method: string, path: string, body: unknown, key: Ed25519Keypair, idem = false) => {
+      const bytes = body === undefined ? new Uint8Array(0) : utf8(JSON.stringify(body));
+      const nonce = utf8(`nonce-${adminKeys.length}-${++n}-pad`);
+      const headers: Record<string, string> = { authorization: signRequest(key.secretKey, key.publicKey, method, path, audience, bytes, Math.floor(clock / 1000), nonce) };
+      if (bytes.length > 0) headers['content-type'] = 'application/json';
+      if (idem) headers['idempotency-key'] = `idem-${adminKeys.length}-${n}`;
+      const r = await fetch(a.url + path, { method, headers, ...(bytes.length > 0 ? { body: Buffer.from(bytes) } : {}) });
+      const text = await r.text();
+      return { status: r.status, text, json: text ? (JSON.parse(text) as any) : undefined };
+    };
+    return { s, call };
+  };
+  try {
+    // boot 1: `admin` is configured; an unrelated org is registered by its owner
+    const b1 = await boot([H(admin.publicKey)]);
+    assert.equal((await b1.call('GET', '/api/v1/admin/status', undefined, admin)).status, 200);
+    const org = await b1.call('POST', '/api/v1/orgs', { name: 'Synthetic Org', owner_key: { pk: b64u(owner.publicKey), alg: 'ed25519' } }, owner, true);
+    assert.equal(org.status, 201, org.text);
+    const orgId = org.json.org_id as string;
+    await b1.s.stop();
+
+    // boot 2: the operator REMOVED the key from the configuration (e.g. after a suspected compromise)
+    const b2 = await boot([]);
+    try {
+      const st = await b2.call('GET', '/api/v1/admin/status', undefined, admin);
+      assert.equal(st.status, 200, 'BUG: de-configured admin key is still an instance_admin');
+      // ... and it can mint an owner key for an org it does not belong to (cross-org takeover)
+      const p = b64u(ed25519Sign(attacker.secretKey, new Uint8Array([...utf8(`QV-KEY-v1\0${orgId}\0`), ...attacker.publicKey])));
+      const add = await b2.call('POST', `/api/v1/orgs/${orgId}/keys`, { pk: b64u(attacker.publicKey), alg: 'ed25519', role: 'org_owner', pop: p }, admin);
+      assert.equal(add.status, 201, add.text);
+      const keys = await b2.call('GET', `/api/v1/orgs/${orgId}/keys`, undefined, attacker);
+      assert.equal(keys.status, 200);
+      assert.equal((keys.json.items as { role: string }[]).filter((k) => k.role === 'org_owner').length, 2);
+      t.diagnostic(`after removal from adminKeys: GET /admin/status -> ${st.status}; POST /orgs/${orgId}/keys (org_owner) -> ${add.status}`);
+    } finally {
+      await b2.s.stop();
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-04
+const REAL_WITNESS = kp('b2', 'manifest-witness');
+class ManifestWitnessWorld extends World {
+  override buildManifest(): Manifest {
+    const m = super.buildManifest();
+    // The manifest names witness "w1" with the key of the group's chosen witness ...
+    m.bb.witnesses = [{ name: 'w1', pk: H(REAL_WITNESS.publicKey) }];
+    return m;
+  }
+}
+
+test('B2-04 PoC: the live server gates on its own configured witness keys, ignores manifest bb.witnesses, and drops the manifest witness cosignature', { timeout: 180_000 }, async (t) => {
+  // ... while the server is configured (World default) with a DIFFERENT key under the same name "w1" (operator-chosen).
+  const w = new ManifestWitnessWorld({ seed: 'b2-wit', n: 3, t: 2, voters: 3, witnessQuorum: 1 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    await w.registerVoters();
+    const pm = await w.publishManifest();
+    assert.equal(pm.status, 201, `manifest with bb.witnesses that differ from the server config is accepted: ${pm.text}`);
+    await w.ceremony();
+    assert.equal((await w.open()).status, 409, 'open waits for a witnessed checkpoint');
+    const cp = (await w.get(`/api/v1/elections/${w.electionId}/log/checkpoint`)).text;
+    const size = Number(cp.split('\n')[1]);
+    const text = cp.slice(0, cp.indexOf('\n\n') + 1);
+    // the MANIFEST's witness cosigns: silently dropped
+    const real = await w.req('POST', `/api/v1/elections/${w.electionId}/log/cosignatures`, { checkpoint_size: size, lines: [cosignLine('w1', REAL_WITNESS.secretKey, REAL_WITNESS.publicKey, text, w.nowSec)] });
+    assert.equal(real.status, 200);
+    assert.deepEqual(real.json.accepted, [], 'BUG: the cosignature of the manifest witness is not stored');
+    assert.equal((await w.open()).status, 409);
+    // the OPERATOR-configured key (not in the manifest) cosigns: accepted, gate passes, state says witnessed
+    const oper = w.witnesses[0]!;
+    const op = await w.req('POST', `/api/v1/elections/${w.electionId}/log/cosignatures`, { checkpoint_size: size, lines: [cosignLine('w1', oper.secretKey, oper.publicKey, text, w.nowSec)] });
+    assert.deepEqual(op.json.accepted, ['w1']);
+    const st = await w.get(`/api/v1/elections/${w.electionId}/state`);
+    assert.equal(st.json.witnessed, true, 'BUG: server reports witnessed by a key the manifest does not list');
+    assert.equal(st.json.integrity, 'ok');
+    const opened = await w.open();
+    assert.equal(opened.status, 201, 'BUG: election_open witness gate satisfied by a non-manifest key');
+    // under the manifest's own policy (what verifiers and trustees use) the stored checkpoint is NOT witnessed
+    const stored = (await w.get(`/api/v1/elections/${w.electionId}/log/checkpoints?after_size=${size - 1}&limit=1`)).json.items[0].note as string;
+    const parsed = parseCheckpoint(stored);
+    assert.ok(parsed.ok);
+    const { anchors } = witnessAnchors(w.manifest);
+    const ws = witnessStatus(parsed.value, { witnesses: anchors, quorum: 1, noneAcknowledged: false });
+    assert.equal(ws.witnessed, false, 'manifest policy: not witnessed');
+    t.diagnostic(`manifest witness cosig accepted=${JSON.stringify(real.json.accepted)}; operator key accepted=${JSON.stringify(op.json.accepted)}; open=${opened.status}; manifest-policy witnessed=${ws.witnessed}`);
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-09
+test('B2-09 PoC: the invite cap counts registered voters, not invites, so an organizer can create unbounded invite rows', async (t) => {
+  const w = new World({ seed: 'b2-inv', n: 3, t: 2, voters: 1, server: { maxVotersPerElection: 2 } });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    for (let i = 0; i < 6; i++) {
+      const r = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { count: 4 }, w.owner, w.idemKey());
+      assert.equal(r.status, 201, r.text);
+    }
+    const list = await w.signed('GET', `/api/v1/elections/${w.electionId}/invites?limit=500`);
+    assert.equal(list.json.items.length, 24, 'BUG: 24 live invites for an election capped at 2 voters (limit is voterCount + n > 2 x cap)');
+    t.diagnostic(`maxVotersPerElection=2, invites created=${list.json.items.length}`);
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-10
+test('B2-10 PoC: invites never expire by default; unknown and used codes are distinguishable; (used code, other registered pk) returns 201', async (t) => {
+  const w = new World({ seed: 'b2-ttl', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    const inv = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { count: 3 }, w.owner, w.idemKey());
+    const codes = (inv.json.invites as { code: string }[]).map((x) => x.code);
+    const [v0, v1, v2] = [w.voters[0]!, w.voters[1]!, w.voters[2]!];
+    assert.equal((await register(w, codes[0]!, v0)).status, 201);
+    // oracle: an unknown code and a used code answer differently (QV-04 §5.1/REQ-004 asks for uniform responses)
+    const unknown = await register(w, 'A'.repeat(22), v1);
+    const used = await register(w, codes[0]!, v1);
+    assert.equal(unknown.status, 422);
+    assert.equal(used.status, 409);
+    assert.notEqual(unknown.json.code, used.json.code, `unknown=${unknown.json.code} used=${used.json.code}`);
+    // no default lifetime: 400 days later the invite still registers (QV-04 default TTL 336 h; QV-29-REQ-008 <= 30 days)
+    w.clock += 400 * 86_400_000;
+    assert.equal((await register(w, codes[1]!, v1)).status, 201, 'BUG: invite without expires_at is valid forever');
+    // QV-09 §4.4: a used code with a DIFFERENT pk must be 409 INVITE_USED; here v0's key (registered with codes[0]) + codes[1] -> 201
+    const cross = await register(w, codes[1]!, v0);
+    assert.equal(cross.status, 201, `QV-09 §4.4 expects 409 INVITE_USED, got ${cross.status}`);
+    void v2;
+    t.diagnostic(`unknown -> ${unknown.status} ${unknown.json.code}; used -> ${used.status} ${used.json.code}; +400d -> 201; cross-invite replay -> ${cross.status}`);
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-11
+test('B2-11 PoC: P2 invite data (labels, contacts) is never purged except the contact of a registered invite (QV-28 §11)', async (t) => {
+  const w = new World({ seed: 'b2-p2', n: 3, t: 2, voters: 2 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    const inv = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, {
+      items: [{ label: 'Synthetic member A', contact: 'a@example.invalid' }, { label: 'Synthetic member B', contact: 'b@example.invalid' }],
+    }, w.owner, w.idemKey());
+    assert.equal(inv.status, 201, inv.text);
+    const [a, b] = inv.json.invites as { invite_id: string; code: string }[];
+    assert.equal((await register(w, a!.code, w.voters[0]!)).status, 201);
+    assert.equal((await w.signed('DELETE', `/api/v1/elections/${w.electionId}/invites/${b!.invite_id}`)).status, 204);
+    w.clock += 30 * 86_400_000; // well beyond "+7 d"
+    const db = new DatabaseSync(join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`), { readOnly: true });
+    try {
+      const rows = db.prepare('SELECT invite_id, state, label_enc IS NOT NULL AS has_label, contact_enc IS NOT NULL AS has_contact FROM voter_invite ORDER BY invite_id').all() as { invite_id: string; state: string; has_label: number; has_contact: number }[];
+      const ra = rows.find((r) => r.invite_id === a!.invite_id)!;
+      const rb = rows.find((r) => r.invite_id === b!.invite_id)!;
+      assert.equal(ra.state, 'registered');
+      assert.equal(ra.has_label, 1, 'BUG: label of a registered invite is kept (QV-28 §11: NULLed)');
+      assert.equal(ra.has_contact, 0);
+      assert.equal(rb.state, 'revoked');
+      assert.equal(rb.has_label, 1, 'BUG: label of a revoked invite is kept');
+      assert.equal(rb.has_contact, 1, 'BUG: contact of a revoked invite is kept');
+      t.diagnostic(`after 30 days: ${JSON.stringify(rows)}`);
+    } finally {
+      db.close();
+    }
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-14
+test('B2-14 PoC: a junk cosignature is answered 200 with rejected: [] and still invalidates the export cache (ETag changes)', async (t) => {
+  const w = new World({ seed: 'b2-cos', n: 3, t: 2, voters: 2 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    assert.equal((await w.publishManifest()).status, 201);
+    const e1 = (await w.get(`/api/v1/elections/${w.electionId}/export.qvb`)).headers.get('etag');
+    const junk = await w.req('POST', `/api/v1/elections/${w.electionId}/log/cosignatures`, { checkpoint_size: 1, lines: ['— nobody AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='] });
+    assert.equal(junk.status, 200);
+    assert.deepEqual(junk.json.accepted, []);
+    assert.deepEqual(junk.json.rejected, [], 'QV-09 §8 expects rejected lines / 403 / 422, the server always answers rejected: []');
+    const e2 = (await w.get(`/api/v1/elections/${w.electionId}/export.qvb`)).headers.get('etag');
+    assert.notEqual(e1, e2, 'BUG: an anonymous junk POST changes the export ETag (cache rebuilt on next download)');
+    t.diagnostic(`etag before=${e1} after=${e2}`);
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-01
+test('B2-01 PoC: anonymous GET /tally/draft recomputes the full homomorphic aggregate on every call (event-loop CPU per request)', { timeout: 240_000 }, async (t) => {
+  const w = new World({ seed: 'b2-tally', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    await w.registerVoters();
+    await w.publishManifest();
+    await w.ceremony();
+    assert.equal((await w.open()).status, 201);
+    for (let i = 0; i < 3; i++) assert.equal((await w.cast(i, { budget: ['yes'], chair: ['ann'] })).status, 201);
+    assert.equal((await w.close()).status, 201);
+    const tally = await w.get(`/api/v1/elections/${w.electionId}/tally`);
+    assert.equal(tally.json.phase, 'TALLYING');
+    // no trustee has posted shares yet: the endpoint still aggregates every counted ballot, then answers 409
+    const t0 = performance.now();
+    const d = await w.get(`/api/v1/elections/${w.electionId}/tally/draft`);
+    const ms = performance.now() - t0;
+    assert.equal(d.status, 409);
+    // cost model: aggregate() decodes 2 ristretto points per counted ballot and option; measure it on a replicated counted set
+    const log = await w.fetchLog();
+    const open = log.find((e) => e.rec?.body?.name === 'election-open')!.seq;
+    const close = log.find((e) => e.rec?.body?.name === 'election-close')!.seq;
+    const env = log.filter((e) => e.rec && 'intent' in e.rec).map((e) => ({ seq: e.seq, raw: e.rec }));
+    const z0 = performance.now();
+    const an = analyzeBallotLog(w.params, new Set(w.rollHex), env, open, close);
+    t.diagnostic(`analyzeBallotLog (run by the first /tally/draft after every restart or pool eviction, not cached on disk): ${((performance.now() - z0) / env.length).toFixed(1)} ms per ballot`);
+    const N = 2000;
+    const big = Array.from({ length: N }, () => an.counted[0]!);
+    const a0 = performance.now();
+    aggregate(w.params, big);
+    const perBallotMs = (performance.now() - a0) / N;
+    t.diagnostic(`GET /tally/draft (3 ballots) took ${ms.toFixed(1)} ms; aggregate() costs ${perBallotMs.toFixed(3)} ms per counted ballot (5 options) => ~${(perBallotMs * 10_000 / 1000).toFixed(1)} s of synchronous CPU per anonymous request at 10,000 counted ballots`);
+    assert.ok(perBallotMs > 0);
+    // end to end: give the runtime's cached analysis 2000 counted ballots (what a 2000-voter election holds after close) and time one
+    // anonymous GET /tally/draft while a concurrent GET /healthz waits for the blocked event loop
+    const rt = (await w.server.pool.get(w.electionId))!;
+    rt.st.analysis = { ...rt.st.analysis!, counted: big };
+    const h0 = performance.now();
+    const [draft, health] = await Promise.all([
+      w.get(`/api/v1/elections/${w.electionId}/tally/draft`).then((r) => ({ r, ms: performance.now() - h0 })),
+      // scheduled 50 ms after the draft request; client and server share this process, so its completion time shows the blocked loop
+      new Promise((res) => setTimeout(res, 50)).then(async () => {
+        const r = await w.get('/healthz');
+        return { r, ms: performance.now() - h0 };
+      }),
+    ]);
+    t.diagnostic(`2000 counted: anonymous GET /tally/draft -> ${draft.r.status} after ${draft.ms.toFixed(0)} ms; a GET /healthz scheduled at +50 ms completed at +${health.ms.toFixed(0)} ms`);
+    assert.ok(health.ms > 1000, 'the event loop is blocked for every election on the instance');
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-02
+test('B2-02 PoC: POST /imports verifies every proof synchronously on the event loop and re-verifies a duplicate bundle in full before refusing it', { timeout: 300_000 }, async (t) => {
+  const A = await fullElection('b2-imp-src');
+  try {
+    const bytes = await exportQvb(A);
+    const ballots = (await A.fetchLog()).filter((e) => e.type === 'ballot' || e.type === 'ballot_audit').length;
+    // any org key may import; with the default registrationMode 'open' anyone can create an org (World does that here)
+    const B = new World({ seed: 'b2-imp-dst', n: 3, t: 2, voters: 1 });
+    await B.start();
+    try {
+      await B.setupOrgAndElection();
+      const run = async (): Promise<{ job: any; stallMs: number; wallMs: number }> => {
+        const h = monitorEventLoopDelay({ resolution: 5 });
+        h.enable();
+        const t0 = performance.now();
+        const job = await importAndWait(B, bytes);
+        const wallMs = performance.now() - t0;
+        h.disable();
+        return { job, stallMs: h.max / 1e6, wallMs };
+      };
+      const first = await run();
+      assert.equal(first.job.state, 'done', JSON.stringify(first.job.error));
+      const again = await run();
+      assert.equal(again.job.state, 'failed');
+      assert.equal(again.job.error.rule, 'ELECTION_EXISTS', 'the cheap existence check runs only after the full verification');
+      t.diagnostic(`bundle with ${ballots} ballot entries: first import wall ${first.wallMs.toFixed(0)} ms, longest event-loop stall ${first.stallMs.toFixed(0)} ms; duplicate import (refused ELECTION_EXISTS) wall ${again.wallMs.toFixed(0)} ms, stall ${again.stallMs.toFixed(0)} ms`);
+      assert.ok(again.stallMs > 100, 'a duplicate import still blocks the event loop for the full proof verification');
+    } finally {
+      await B.stop();
+    }
+  } finally {
+    await A.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-05+B2-06
+test('B2-05+B2-06 PoC: ONE coordinator re-posts an old m-of-k "pause" record (no freshness binding) and halts voting; and a close long before voting_close is accepted', { timeout: 180_000 }, async (t) => {
+  const w = new World({ seed: 'b2-ctl', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    await w.registerVoters();
+    await w.publishManifest();
+    await w.ceremony();
+    assert.equal((await w.open()).status, 201);
+    const pause = w.control('pause', 'maintenance'); // signed by coordinators 0 and 1 (m = 2)
+    const resume = w.control('resume');
+    assert.equal((await w.post('notice', w.coord[0]!, pause)).status, 201);
+    w.tick();
+    assert.equal((await w.post('notice', w.coord[1]!, resume)).status, 201);
+    w.tick();
+    // coordinator 0 cannot pause on its own authority ...
+    const solo = w.multi(w.mh, { proto: 'qv1-r255-sha2', type: 'control', action: 'pause', reason: 'solo' } as { type: string }, [0]);
+    const r1 = await w.post('notice', w.coord[0]!, solo);
+    assert.equal(r1.status, 422, r1.text);
+    // ... but it can wrap the OLD 2-of-3 record in a new entry header and the election is paused again
+    const replay = await w.post('notice', w.coord[0]!, pause);
+    assert.equal(replay.status, 201, 'BUG: replayed m-of-k control record accepted from a single coordinator');
+    assert.equal((await w.get(`/api/v1/elections/${w.electionId}/state`)).json.phase, 'PAUSED');
+    w.tick();
+    const ballot = await w.cast(0, { budget: ['yes'], chair: ['ann'] });
+    assert.equal(ballot.status, 409, 'voting is blocked');
+    // resume by replay too (any single earlier signer can toggle the election)
+    assert.equal((await w.post('notice', w.coord[1]!, resume)).status, 201);
+    // QV-03 "no early close" / QV-16 §5.14.3: the server accepts election_close days before voting_close
+    const closeAt = Date.parse(w.manifest.voting_close);
+    const close = await w.close();
+    assert.equal(close.status, 201, close.text);
+    t.diagnostic(`solo pause -> ${r1.status} ${r1.json?.reason}; replayed 2-of-3 pause -> ${replay.status}; ballot while paused -> ${ballot.status}; election_close accepted ${((closeAt - w.clock) / 86_400_000).toFixed(1)} days before voting_close`);
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-12
+test('B2-12 PoC: a mirror (IMPORTED) answers a resubmitted entry with a receipt signed by the all-zero-seed key, not the log key', { timeout: 300_000 }, async (t) => {
+  const A = await fullElection('b2-rcpt-src');
+  try {
+    const bytes = await exportQvb(A);
+    const entries = await A.get(`/api/v1/elections/${A.electionId}/log/entries?from=1&limit=1`);
+    const e1 = entries.json.entries[0] as { header_b64u: string; body_b64u: string };
+    const logPk = Buffer.from(A.logPkHex, 'hex');
+    const B = new World({ seed: 'b2-rcpt-dst', n: 3, t: 2, voters: 1 });
+    await B.start();
+    try {
+      await B.setupOrgAndElection();
+      const job = await importAndWait(B, bytes);
+      assert.equal(job.state, 'done', JSON.stringify(job.error));
+      const id = job.result.election_id as string;
+      const r = await B.req('POST', `/api/v1/elections/${id}/log/entries`, { header: e1.header_b64u, body: e1.body_b64u });
+      assert.equal(r.status, 200, r.text);
+      const { receiptFromJson, verifyReceipt } = await import('@quietvote/board');
+      const j = r.json.receipt;
+      const rec = receiptFromJson({
+        origin: j.origin, seq: j.seq, leaf_hash: Buffer.from(j.leaf_hash, 'base64url').toString('base64'), sequenced_at: j.promise.sequenced_at,
+        checkpoint_deadline: j.promise.checkpoint_deadline, promise_sig: Buffer.from(j.promise_sig, 'base64url').toString('base64'),
+      });
+      assert.ok(rec.ok);
+      const v = verifyReceipt(rec.value, new Uint8Array(logPk));
+      const zero = (await import('@quietvote/crypto')).ed25519Keypair(new Uint8Array(32)).publicKey;
+      const vz = verifyReceipt(rec.value, zero);
+      t.diagnostic(`receipt from the mirror: verifies under the election log key: ${v.ok}; verifies under the zero-seed key: ${vz.ok}`);
+      assert.equal(v.ok, false, 'BUG: receipt does not verify under the log key');
+      assert.equal(vz.ok, true, 'it was signed with the all-zero seed placeholder key');
+    } finally {
+      await B.stop();
+    }
+  } finally {
+    await A.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-13
+test('B2-13 PoC: the public roll listing exposes enrolment order (ORDER BY rowid; the same query serves the roll after roll_commit)', { timeout: 120_000 }, async (t) => {
+  const w = new World({ seed: 'b2-roll', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    const inv = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { count: 3 }, w.owner, w.idemKey());
+    const codes = (inv.json.invites as { code: string }[]).map((x) => x.code);
+    // enrol in DESCENDING key order, so enrolment order and key order differ
+    const order = [...w.voters].sort((a, b) => Buffer.compare(Buffer.from(b.publicKey), Buffer.from(a.publicKey)));
+    for (let i = 0; i < 3; i++) assert.equal((await register(w, codes[i]!, order[i]!)).status, 201);
+    const listed = (await w.get(`/api/v1/elections/${w.electionId}/roll`)).json.items.map((v: { pk: string }) => v.pk);
+    assert.deepEqual(listed, order.map((k) => b64u(k.publicKey)), 'public listing = enrolment order');
+    assert.notDeepEqual(listed, [...listed].sort(), 'not key order');
+    t.diagnostic('GET /roll (anonymous) lists voters in enrolment order; anyone who knows when a person enrolled can map them to their key');
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ B2-07
+test('B2-07 PoC: restoring an older election DB (e.g. an /admin/backups copy) is not detected; the server then signs a second history (log-key fork)', { timeout: 120_000 }, async (t) => {
+  const w = new World({ seed: 'b2-restore', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    await w.registerVoters();
+    assert.equal((await w.publishManifest()).status, 201);
+    const db = join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`);
+    const backup = join(w.dir, 'b2-backup.sqlite');
+    await w.server.stop(); // closes the DBs (WAL checkpointed)
+    copyFileSync(db, backup); // the operator's backup at tree size 1
+    await w.start();
+    assert.equal((await w.post('ceremony_start', w.coord[0]!, w.marker('dkg-open', w.mh))).status, 201);
+    const n1 = (await w.get(`/api/v1/elections/${w.electionId}/log/checkpoint`)).text; // size 2, handed to clients/witnesses
+    await w.server.stop();
+    copyFileSync(backup, db); // "restore from backup"
+    rmSync(`${db}-wal`, { force: true });
+    rmSync(`${db}-shm`, { force: true });
+    await w.start();
+    const st = await w.get(`/api/v1/elections/${w.electionId}/state`);
+    assert.equal(st.json.integrity, 'ok', 'no quarantine, no alert after the restore');
+    const cancel = await w.post('election_cancel', w.coord[0]!, w.control('cancel'));
+    assert.equal(cancel.status, 201, cancel.text);
+    const n2 = (await w.get(`/api/v1/elections/${w.electionId}/log/checkpoint`)).text; // size 2 again, different root
+    const fork = checkFork(n1, n2, Buffer.from(w.logPkHex, 'hex'));
+    t.diagnostic(`restored DB accepted (integrity=${st.json.integrity}); second checkpoint for size 2 signed; checkFork ok=${fork.ok}`);
+    assert.equal(fork.ok, true, 'BUG: the log key signed two different roots for size 2');
+  } finally {
+    await w.stop();
+  }
+});
+
+// ------------------------------------------------------------------------------------------------------------------ KNOWN SRV-001/002/003
+test('KNOWN SRV-001 (PR #9 unmerged) still present: a refused request whose peer disconnects kills the whole server process', { timeout: 60_000 }, async (t) => {
+  const child = spawn(process.execPath, [join(import.meta.dirname, 'b2-fixtures', 'srv001-child.ts')], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stderr = '';
+  child.stderr.on('data', (d) => (stderr += d));
+  const exited = new Promise<number | null>((resolve) => child.on('exit', (code) => resolve(code)));
+  const port = await new Promise<number>((resolve, reject) => {
+    let out = '';
+    child.stdout.on('data', (d) => {
+      out += d;
+      const m = /PORT (\d+)/.exec(out);
+      if (m) resolve(Number(m[1]));
+    });
+    child.on('exit', () => reject(new Error(`child exited early: ${stderr}`)));
+  });
+  try {
+    await new Promise<void>((resolve) => {
+      const s = connect(port, '127.0.0.1', () => {
+        s.write('POST /api/v1/orgs HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n');
+        const chunk = 'x'.repeat(2000);
+        for (let i = 0; i < 20; i++) s.write(`${chunk.length.toString(16)}\r\n${chunk}\r\n`);
+      });
+      s.on('close', () => resolve());
+      s.on('error', () => resolve());
+      setTimeout(() => s.destroy(), 3000).unref();
+    });
+    const code = await Promise.race([exited, new Promise<'alive'>((r) => setTimeout(() => r('alive'), 5000))]);
+    t.diagnostic(`server process after one unauthenticated request: exit=${String(code)}; stderr: ${stderr.split('\n').find((l) => /TypeError/.test(l)) ?? '(none)'}`);
+    assert.notEqual(code, 'alive', 'expected the SRV-001 crash at this SHA');
+    assert.match(stderr, /Cannot read properties of null \(reading 'destroy'\)/);
+  } finally {
+    child.kill('SIGKILL');
+  }
+});
+
+test('KNOWN SRV-002 (PR #9 unmerged) still present: two hosts of one IPv6 /64 get different rate-limit buckets', () => {
+  const k = new BucketKeyer(() => 0);
+  assert.notEqual(k.bucket('2001:db8::1:2:3:4'), k.bucket('2001:db8::5:6:7:8'));
+});
+
+test('KNOWN SRV-003 (PR #9 unmerged) still present: read-key protected responses are public, immutable and CORS *', async () => {
+  const w = new World({ seed: 'b2-srv3', n: 3, t: 2, voters: 1 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    const r = await w.signed('POST', `/api/v1/orgs/${w.orgId}/elections`, { title: 'Link only', access: 'link' }, w.owner, w.idemKey());
+    const x = await w.get(`/api/v1/elections/${r.json.election_id}/log/proof/consistency?old=0&new=0`, { 'qv-read-key': r.json.read_key });
+    assert.equal(x.status, 200);
+    assert.match(x.headers.get('cache-control') ?? '', /public, max-age=31536000, immutable/);
+    assert.equal(x.headers.get('access-control-allow-origin'), '*');
+  } finally {
+    await w.stop();
+  }
+});

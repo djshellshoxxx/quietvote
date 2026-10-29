@@ -1,0 +1,19 @@
+// B3 audit PoC: QVKEY1 interoperability between the web key store and the CLI key file code (word-list passphrase canonicalisation).
+import { streamRng, ed25519Keypair } from '@quietvote/crypto';
+import { wrapSeed as webWrap, unwrapSeed as webUnwrap, defaultDeps, FLOOR_PARAMS } from '../src/key/keystore.ts';
+import { canonicalPassphrase, generatePassphrase } from '../src/key/passphrase.ts';
+import { wrapSeed as cliWrap, unwrapSeed as cliUnwrap, FLOOR_PARAMS as CLI_FLOOR } from '../../cli/src/keyfile.ts';
+
+const seed = streamRng('b3-kf').bytes(32);
+const words = generatePassphrase(streamRng('b3-words'));            // what "Generate 7 words" shows: lower-case, single spaces
+const typed = words.split(' ').map((w, i) => (i === 0 ? w.toUpperCase() : w)).join('-'); // what a voter may type back: FIRST-second-third...
+console.log('generated :', words);
+console.log('typed back:', typed, '| web canonical form equals generated:', canonicalPassphrase(typed) === words);
+const w = await webWrap(seed.slice(), typed, { ...defaultDeps(), rng: streamRng('r1') }, FLOOR_PARAMS);
+const tryCli = async (pw: string): Promise<string> => cliUnwrap(w.container as never, pw).then(() => 'unlocks', (e: Error) => `fails (${e.message})`);
+const tryWeb = async (pw: string): Promise<string> => webUnwrap(w.container, pw, { ...defaultDeps() }).then(() => 'unlocks', (e: Error) => `fails (${e.message})`);
+console.log('web-made key file, web with typed passphrase :', await tryWeb(typed));
+console.log('web-made key file, CLI with the same typed passphrase :', await tryCli(typed));
+console.log('web-made key file, CLI with the canonical passphrase  :', await tryCli(words));
+const c = await cliWrap(seed.slice(), 'a long enough pass phrase', streamRng('r2'), CLI_FLOOR);
+console.log('CLI-made key file, web unlock :', await webUnwrap(c as never, 'a long enough pass phrase', defaultDeps()).then((u) => (Buffer.from(u.publicKey).equals(Buffer.from(ed25519Keypair(seed).publicKey)) ? 'unlocks, same key' : 'different key'), (e: Error) => `fails ${e.message}`));
