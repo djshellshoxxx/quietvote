@@ -1,0 +1,97 @@
+
+**Status label for everything below: AI-assisted review and implementation. It is NOT an independent professional audit. QuietVote remains unaudited and not for real elections.**
+
+## 1. What exists now
+
+### 1.1 PR stack (all draft, repo djshellshoxxx/quietvote)
+
+| PR | Branch | Base | Content |
+|---|---|---|---|
+| #6 | claude/quietvote-audit-qa-1 | claude/quietvote-board-cli-1 | protocol `spoil-share` record + `collectSpoilShares`, `auditSpoil` + private-audit vectors (QV-10/34), TR-01 first cut, merge of `claude/quietvote-complete-1`, CI test fixes (keep-alive 30 s in the server test world, diagnostic message on the status secrecy check), `docs/audit/README.md`, this file |
+| #7 | claude/quietvote-audit-web-verifier-1 | audit-qa-1 | web/verifier audit WV-1..7 + Windows lint-test fix |
+| #8 | claude/quietvote-audit-trustee-1 | audit-qa-1 | trustee TR-01/02 (spoil relay refuses cast ciphertexts, tally release state) |
+| #9 | claude/quietvote-audit-server-1 | audit-qa-1 | server SRV-001..007 |
+| #10 | claude/quietvote-audit-crypto-protocol-1 | audit-qa-1 | CP-01/03/04 + second wave (P2,P3,P4,P6,P7,P9,P11,C1,C4-C8,C10) |
+| #11 | claude/quietvote-audit-board-cli-1 | audit-qa-1 | board/cli BC-01..10 (ported onto the other session's versions) |
+| #13 | claude/quietvote-web-triage-1 | audit-web-verifier-1 | web second wave W1-W14 |
+| #14 | claude/quietvote-spoil-wiring-1 | audit-server-1 | server endpoint/storage/tally inclusion for trustees-mode spoil shares |
+| #15 | claude/quietvote-ci-gates-1 | audit-qa-1 | CI `lockfile:lint` + `npm audit --audit-level=high`; cli declares `@quietvote/verifier` (**dependency declaration change**, one lockfile line) |
+| #16 | claude/quietvote-cli-spoil-collect-1 | audit-board-cli-1 | `qv election spoil-collect` |
+| #17 | claude/quietvote-trustee-hardening-1 | audit-trustee-1 | TR-03 lock + change detection, TR-04 fork refusal |
+
+Other sessions' PRs that interact: #12 (`claude/quietvote-complete-1`, base-green fixes, already merged INTO #6's branch), #4/#3/#1 (the older chain to `main`), #5 (docs).
+
+### 1.2 State of verification
+* Integration of #6-#14 on the merged base: typecheck clean; board 74, cli 38, crypto 57, protocol 187, server 136, trustee 69, verifier 23, web 128 = 712 tests, 0 failing (local, node 22). Base without these PRs: 622. #15-#17 were added afterwards and each ran in its own worktree (cli 46 on #16, trustee 71 on #17, lockfile lint and audit on #15); **the integration of #15-#17 with everything else was NOT re-run as a whole**.
+* GitHub CI (node 22/24 x ubuntu/windows/macos): finished with no failing suite on #6, #7, #8, #9, #10, #11 (late), #13, #14, #15, #16, #17 at the heads listed in the PR pages (macOS jobs queue slowly). Re-check the current heads before merging.
+* Not run anywhere: Playwright e2e (`packages/web/e2e`), any real-browser a11y check, mutation/performance measurement of tally BSGS (see 4.4), a second-implementation differential test.
+
+### 1.3 Findings (from the reports; info items approximate)
+Critical 0. High 4 fixed / 0 open. Medium 18 fixed / 4 open. Low 32 fixed / 7 open. Info about 30 noted. Full IDs, evidence and verification status are in the per-scope reports (they live on the PR branches, see `docs/audit/README.md`): `dependencies.md`, `dependencies-ci.md`, `crypto-protocol.md`, `server.md`, `trustee.md`, `board-cli.md`, `web-verifier.md`, `web-second-wave.md`.
+
+### 1.4 Behaviour changes a reviewer must know about
+1. `ed25519IsStrictPoint` now requires torsion-free points (CP-04). Measured cost: Ed25519 verify 2.76 ms -> 5.53 ms per verification (strict-point check 0.12 ms -> 1.5 ms). The server e2e was not measurably slower (32.4 s vs 33.6 s). If verification becomes a bottleneck, cache torsion-freeness per public key and replace the per-signature R check with a cofactorless comparison of the encoded R.
+2. `analyzeBallotLog` drops a spoil that shares ElGamal `a` values with an envelope-valid cast under a different code, with ALARM `E_SPOILED_CODE_CAST` ("re-wrapped") (CP-01/TR-01). Same-code behaviour unchanged.
+3. `verifyElection`: a second, different tally record is `E_RESULT` F (P3); a spoil with a bad attached reveal still spoils its code (P4); `chk.tally.decrypt` is `pass` only after decryption ran (P7); `tally.decrypters` must equal the recomputed set and `buildTally` emits it (P11). The canary vector `expected-report.json` therefore has `chk.tally.decrypt: not_run`; vectors were regenerated (`node packages/protocol/test/vecgen/write.ts`).
+4. Crypto: scrypt `logN` cap lowered 22 -> 20 on open (bundles sealed at 21/22 can no longer be opened; none exist in the repo) with optional `maxLogN`; `canonicalize` throws on non-plain objects, non-NFC strings, lone-surrogate keys.
+5. Server: `GET log/entries` pages may hold fewer than `limit` rows (`maxPageBytes`, default 4 MiB): clients must follow `next_from`; link-election responses are `private, no-store`; new non-log endpoints `POST|GET /api/v1/elections/:id/spoil-shares`; electiondb migration 4 `spoil_share`.
+6. Trustee: tally release now requires the trustee to have imported `election-open` (STANDBY) (the other session's gate); two processes on one bundle fail fast (`BUNDLE_LOCKED`/`BUNDLE_CHANGED`; a hard kill leaves `<bundle>.lock` which the operator deletes by hand); fork refusal `LOG_FORK` at release.
+7. CLI: `board verify` without `--log-key` on a standalone board bundle is PARTIAL (exit 3); new `--witness-policy`, `--manifest-hash` on `ballot encrypt|audit`; new `qv election spoil-collect`.
+8. Web: post-send failures are PENDING_UNCONFIRMED and retry the same sealed bytes; receipt heads are checked against the pinned head; a tally counts only if signed by a manifest coordinator key under ctx; auto-lock reaches an open ballot session.
+9. CI: new lockfile lint and high/critical audit gates (ubuntu node 22 only).
+
+## 2. How to land it
+
+1. Land the base chain you want first. #6 targets `claude/quietvote-board-cli-1`, but its branch already contains `claude/quietvote-complete-1` (PR #12). Either merge #12 into the base before #6, or retarget #6 to whatever #12 targets; do not merge #6 first without that.
+2. Merge #6, then the PRs that target `audit-qa-1` (#7, #8, #9, #10, #11, #15) in any order, then the second-level PRs: #13 (after #7), #14 (after #9), #16 (after #11), #17 (after #8). Siblings touch the same `NOTES.md` files; conflicts so far were append-only (keep both sides).
+3. Before each merge: merge the base branch into the PR branch, run `npm ci --ignore-scripts && npx tsc -p tsconfig.json --noEmit` and test each workspace **separately** (`for p in board cli crypto protocol server trustee verifier web; do (cd packages/$p && node --test "test/**/*.test.ts"); done`), because `npm test` at the root stops reporting after the first failing workspace. Expect about 8 minutes locally.
+4. After merging #10 or any change to verdict/check behaviour: run `node packages/protocol/test/vecgen/write.ts` and `node packages/verifier/scripts/build-corpus.ts`; `vectors.test.ts` and the verifier "corpus in sync" test enforce zero drift.
+5. After everything is merged, update the counts in `docs/audit/README.md` (they are from reports, not recomputed) and re-run the full suite once on the merged result.
+
+## 3. What still needs to be completed, and how
+
+Ordered by importance. "Decision" means a human/spec owner must choose before code is written.
+
+### 3.1 Decisions
+* **P1/TSV-05: PASS without board log evidence.** `verifyElection` returns PASS when called without `opts.log` (board append-only `not_run`), so an operator who silently removes a cast ballot is not detected by that call. Options: (a) cap the verdict at INCOMPLETE unless log evidence is supplied or the caller explicitly opts out; (b) keep PASS but always print a loud "NOT WITNESSED / NO LOG CHECK" caveat. Recommended: (a). Implementation: `packages/protocol/src/verify.ts` verdict computation (~lines 136, 208), update `docs/16` and QV-05 text, the `log-layer-4v` vector, `packages/verifier` report mapping (V4 `not_run`), web verifier page wording, `verifier-py` (has no INCOMPLETE; PY-02), regenerate vectors and corpus, add tests proving a removed cast ballot yields INCOMPLETE or FAIL.
+* **CP-02/C2: decryption nonce does not bind A/B.** `cp-dec-nonce` hashes `(s_j, ctx, cid, oid, rand32)`; with a repeating RNG, two decryptions of different aggregates for the same (ctx, cid, oid) leak `s_j`. Fix is a QV-16 registry change: add the A and B points to the hedge for both `decProve` and the spoil variant (`proofs.ts` ~219 and ~274), update `docs/16` registry, and regenerate vectors (prover-side only; verifiers unaffected). Add a test with a constant RNG showing different aggregates no longer share a nonce.
+* **BC-02: witness policy default.** `board verify` still uses the bundle's own witness policy when `--witness-policy` is absent. Decide whether to require it, or to downgrade to PARTIAL without it (as done for the log key). Update `packages/cli/test/audit.test.ts` accordingly.
+* **SRV-008..014** (open registration default, `bucketHeader` trusted from any peer, webhook DNS error oracle, KEK stored beside the data, stuck idempotency marker on crash, CORS preflight ACAO `*`, body read before auth): decide each (accept/document or harden). See `docs/audit/server.md`.
+
+### 3.2 Remaining implementation
+1. **Coordinator flow for trustees-mode spoils end to end in the web app.** Server endpoint, trustee CLI (`qv-trustee spoil-release`) and `qv election spoil-collect` exist. Missing: an organizer-side UI/flow in `packages/web` that posts verified records to `/spoil-shares` and shows the decoded selections, plus an `ApiClient` method; i18n strings (English source only; do not mark translations reviewed). Add a web test with the fake board/server helpers. Also confirm the POST body format with the server (the CLI assumes the signed record itself; `packages/server/src/election.ts` `addSpoilShare` is the authority).
+2. **V13 control entries** (`pause/resume/invalidate`, QV-ADR-022) are not interpreted anywhere (`packages/protocol` notes). Implement parsing + authorisation in `logcheck.ts`/`verify.ts` and the matching vectors, or document as out of scope for v1 in the spec.
+3. **CP-05**: base verifier does not order `roll-commit` against `election-open` and silently ignores a second conflicting `roll-commit` (`verify.ts` ~283-288, 341-354): make both F-class with tests.
+4. **TSV-04/06, PY-01/02** (verifier packages): a board-layer throw must not leave PASS reachable (should be FAIL); the canary `expect.verdict` is never compared; `verifier-py` must check `spoil_trustee_decrypt` for zero-digest spoils (PY-01) and model INCOMPLETE (PY-02).
+5. **TR-06..09** (info): cap on unauthenticated scrypt work factor is done at 20; remaining: passphrase kept on the Trustee object, public `debugPlaintext()`, `destroy` overwriting recorded backup paths without checking, replay guard confidentiality. Fix or document.
+6. **DEP**: add `npm audit signatures` (it failed to download in the agent environment; retry in CI), an allowlist/exact-pin check (docs/19 P1/P2), and SRI for lazy chunks/worker needs an import map that conflicts with the hash-pinned CSP (W15): design decision.
+7. **Server hygiene noted by agents**: the 22-voter HTTP e2e is slow (about 32 s) and sensitive to the 5 s keep-alive default; the test world now uses 30 s. If it flakes again, capture the response; do not skip it.
+
+### 3.3 QA that was NOT done (do these)
+* Playwright e2e and real-browser checks (focus order, screen reader, contrast, forced-colors) for the web app.
+* Mutation-style sweep as a permanent test: the CP-08 gaps (Fiat-Shamir field-omission mutants M3, M7, M8, M15 and the `zip215:true` switch M18 survive the crypto unit tests; only protocol frozen vectors catch some). Add crypto-level per-field omission tests and a test that a mixed-order signature is rejected (done for CP-04) plus a zip215 sensitivity test.
+* Property/fuzz: random byte mutations over verifier inputs (bundle JSON, checkpoint notes, receipts) asserting "never throws, never PASS"; a fuzz seed corpus is not in the repo.
+* Cross-package end-to-end with a full election in every spoil mode (reveal/private/trustees), revotes, close, tally, export, verify, and tamper cases (flip a byte, drop an entry, reorder, replay, wrong ctx). Server e2e covers much of this over HTTP; there is no single test spanning web + server + trustee + CLI.
+* Performance: tally BSGS and total suite time were never measured or optimised. Measure with a 10k-ballot synthetic tally (`packages/protocol` e2e is about 25 s for 50 voters) before optimising; Ed25519 verification cost increased with CP-04 (see 1.4).
+* Cross-platform: macOS jobs were slow to start; confirm the current heads are green on all six matrix cells, not only ubuntu/windows. POSIX-mode tests are guarded on win32; the trustee `.lock` behaviour on Windows is untested beyond CI passing.
+
+### 3.4 Research and claims
+No new standards/citation research was done in this wave (earlier commits by other sessions verified citations: `docs/research`, `docs/claims`). If a task still needs it: verify each normative citation (RFC 8032, RFC 9496, C2SP tlog, FIPS 180-4, noble versions) against primary sources, record in `docs/research`, and keep claims honest per `docs/claims`.
+
+## 4. Conventions that must be kept
+* Never lower thresholds (KDF floors, privacy floors, 200 kB bundle budget); never skip/disable/weaken tests; no dependency changes without a note in the PR and package NOTES (this wave: only the cli -> verifier declaration, #15).
+* Update the package `NOTES.md` for every behaviour change; do not mark any translation reviewed; keep "unaudited, not for real elections" in every report; an AI-assisted review is never presented as an independent audit.
+* No secrets in logs or commits; no invented APIs/versions/results.
+* Sub-agent work pattern used here: one agent per package or audit dimension, agents never run git, the coordinator commits per package branch and verifies in a separate git worktree with its own `npm ci` (symlinked `node_modules` contaminates workspace resolution).
+
+## 5. Known risks and honest caveats
+* Severities from haiku audits were re-verified by tests, but each report is one reviewer's reading; none replaces expert review.
+* The Windows server e2e `ECONNRESET` was fixed by raising the test keep-alive; the cause (idle keep-alive socket reuse during slow client-side proof work) is a hypothesis consistent with the evidence, not reproduced locally.
+* The `spoil-collect` per-trustee proof pre-check is a heuristic (the server re-verifies everything).
+* Some merges adapted tests to the other session's implementations (BC-07 expected count 2 -> 3 with extra assertions; TR-01 accepts `CIPHERTEXT_WAS_CAST` or `NOT_SPOILED`; TR-02 now asserts the stricter `WRONG_STATE` gate). They are noted in the commits; review them.
+* Local scratch worktrees under `/tmp/claude-0/wt*` are ephemeral; the branches are all pushed.
+EOF
+cd /tmp/claude-0/wt2 && git add docs/audit/HANDOFF.md && git commit -qm "docs(audit): extensive handoff (status, landing order, remaining work and how, caveats)
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_015hwJKB4anFYVueMneNRhN8" && git push -q origin HEAD:claude/quietvote-audit-qa-1 2>&1|tail -1; cp docs/audit/HANDOFF.md /tmp/claude-0/-home-user-quietvote/1beef061-d5dc-563f-9433-8e737ea98880/scratchpad/HANDOFF.md; ls -la /tmp/claude-0/-home-user-quietvote/1beef061-d5dc-563f-9433-8e737ea98880/scratchpad/HANDOFF.md
