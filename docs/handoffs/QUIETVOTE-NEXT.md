@@ -670,3 +670,38 @@ and the unpublished review commits were rebased onto it rather than overwriting 
 of the handoff, `extract.ts`, `i18n-check.ts`, `i18n-lint.test.ts`): zero findings; the `ed505f5`
 push was scanned the same way (5 versions, zero). No workflow file changed; this receipt is
 documentation-only.
+
+## Branch merge pass — 2026-10-29
+
+Owner instruction: "merge any unmerged branches where it makes sense to merge". Inventory from a
+fresh fetch of all 23 remote heads. Already contained in the checkpoint (no action):
+`dazzling-cerf-n8ha3g`, `quietvote-audit-web-verifier-1`, `quietvote-board-cli-1`,
+`quietvote-complete-1`, `quietvote-docs-1`, `quietvote-ui-locale-a11y-sltfb3`,
+`quietvote-web-triage-1`; `quirky-curie-n5pxf5` equals `main`.
+
+Merged into `checkpoint/quietvote-ordinary-ux-20261024` (merge commits, no rewriting; net tree
+change is two docs files):
+
+- `main` `019f4e7` (owner's `docs/HANDOFF`). The checkpoint now descends from `main`.
+- `claude/quietvote-audit-qa-1` `563eec8` (`docs/audit/HANDOFF.md`, the audit stack's landing guide;
+  the rest of that branch was already in the checkpoint).
+- `claude/quietvote-finish-1` `e56403b`: the keep-alive test change was already present; only its
+  comment wording conflicted, and the checkpoint's wording was kept (no code change).
+
+Checks: `npm run typecheck` passed; `git diff --check` passed; claims-lint unchanged (11 findings,
+non-blocking). No code changed, so suites were not rerun (177/177 web at the prior commit).
+
+Not merged, and why:
+
+| Branch(es) | Reason |
+| --- | --- |
+| `quietvote-audit-crypto-protocol-1`, `-audit-server-1`, `-audit-trustee-1`, `-audit-board-cli-1`, `-spoil-wiring-1`, `-trustee-hardening-1`, `-cli-spoil-collect-1` | crypto/protocol/trustee/server security fixes and regenerated vectors: need security review (excluded scope here) and would change code under PR #20's active audit. Land per `docs/audit/HANDOFF.md` §2 after that audit. |
+| `sharp-archimedes-tu76rh` (PR #20) | active audit ownership. |
+| `quietvote-ci-gates-1` | CI/dependency gate (`npm audit`, lockfile lint, cli→verifier declaration); part of the audit stack, whose handoff says its integration was never re-run as a whole. |
+| `docs/readme-and-wiki` (PR #2) | superseded by the checkpoint's `wiki/` and README link; would add a duplicate `docs/wiki/`. |
+| `docs-screenshots` | README/SPEC-INDEX notes that are true only of `main` ("no UI on the default branch"); wrong for the checkpoint. |
+
+`main` was **not** changed. Landing the checkpoint on `main` is now a fast-forward, but it would put
+the whole unaudited implementation on the default branch without a PR, owner review or the DCO
+sign-off that CONTRIBUTING requires (the checkpoint's Claude commits carry no `Signed-off-by`), while
+PR #20 is still auditing that code. That is an owner decision through a PR, not an agent merge.
