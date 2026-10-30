@@ -1075,3 +1075,15 @@ exclusion); `node --test --test-reporter=spec packages/web/test/i18n-catalogs.te
 in light and dark at 320px and 1280px. No server element, live election, or real user data was
 used. This is UI/notice evidence only, not demo deployment, WCAG, election readiness or security
 acceptance.
+
+### QuietVote demo-label checkpoint receipt
+
+Source, localized credit key, focused Help/Home regression, checklist and handoff were committed
+as `aaa0fe4ec6a8020bed11fdc4afa03fe97601ccf6` and fast-forwarded the owned checkpoint from
+`68f04aca239493fcfe9eb01bdfc454b4546760a4`. Fresh `git ls-remote` returned that exact checkpoint
+SHA; main remained `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. Eleven outgoing blob versions were
+scanned with detect-secrets 1.5.0 default plugins/filters and `--no-verify`; zero findings. No
+workflow changed, so this checkpoint push did not trigger CI. CDL source commit
+`c86648927af76517fef7927f4821edc690e30104` is on CDL `main`; Pages visibility remains unverified
+after the web-viewer stale response and direct HTTP 403. QuietVote's own Pages demo was not
+deployed.
