@@ -36,6 +36,7 @@ export const PT_BR = {
   'qv.org.invalidDate': 'data inválida',
   'qv.banner.experimental': 'Software experimental. Ele não passou por auditoria independente. Não o use para votações importantes.',
   'qv.banner.demo': 'DEMO — não é para votos reais',
+  'qv.shell.footer.cdlCredit': 'Um projeto da Circuit Drift Labs',
   'qv.status.draft': 'Rascunho',
   'qv.status.ceremony': 'Criando as chaves',
   'qv.status.ready': 'Pronta',

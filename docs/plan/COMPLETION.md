@@ -77,3 +77,28 @@ server/CLI integration, privacy/legal/operations, full traceability, independent
 and product release gates were not audited here. The repository's specs remain Draft. Do not infer
 that the architecture confirmation or this web slice makes QuietVote implementation-ready or fit
 for real elections.
+
+## GitHub Pages demo request — 2026-10-30
+
+The owner has approved Pages deployment, but no QuietVote demo has been deployed. The app now
+shows the existing “Experimental software” notice and the existing “DEMO — not for real votes”
+notice together; the app footer and README credit and link Circuit Drift Labs (CDL). The added
+credit text in translated catalog files remains draft/unreviewed; no locale offer gate changed.
+The Help/Home browser regression verifies the warnings and CDL link. CDL's main branch now
+features a Crypto Libertarian development-wing page and QuietVote source link at commit
+`c86648927af76517fef7927f4821edc690e30104`. That source push succeeded, but the public Pages
+update is not verified: the web viewer still returned the previous home page and could not open
+the new path, and a direct page request returned HTTP 403. No alternate route was tried.
+
+The QuietVote work branch may not publish around unresolved main merge gates: PR #20 audit
+ownership/status, independent owner review, and valid DCO attestation remain unresolved. The prior
+QuietVote Pages settings lookup returned HTTP 403, and no Pages workflow is tracked. The local
+built `index.html` references root-absolute `/assets/...` paths, which do not resolve under the
+repository project's usual `/quietvote/` Pages subpath; no verified base-path configuration or
+custom domain is recorded. Before a public client demo can be linked, an authorized repository
+admin must resolve Pages configuration, the subpath versus custom-domain hosting path, and the
+owner-reviewed main-branch process. Keep the demo visibly marked experimental and not for real
+votes. The banner/link change passed root typecheck, 9/9 catalog tests, `i18n:check` (283 static,
+13 resolved dynamic, 0 unresolved, 1 forwarder and 1 explicit restricted exclusion), and the
+Help/Home browser check (16/16 in light/dark at 320px and 1280px). No test server for the server
+component or real election was run.

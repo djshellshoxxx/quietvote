@@ -31,6 +31,15 @@ const check = (name, ok) => { if (!ok) throw new Error(name); checks.push(name);
 try {
   startApp({ root: document.getElementById('app'), storage: new MemoryStorage(), build: { version: 'test', id: 'help-only' } });
   const requestedDark = new URL(location.href).searchParams.get('dark') === 'true';
+  const notices = [...document.querySelectorAll('.banner')].map((node) => node.textContent?.trim() ?? '').join(' ');
+  check('experimental and demo warnings are visible', notices.includes('Experimental software') && notices.includes('DEMO — not for real votes'));
+  const noticeOverflow = [...document.querySelectorAll('.banner')].some((node) => {
+    const box = node.getBoundingClientRect();
+    return box.left < -1 || box.right > innerWidth + 1 || node.scrollWidth > node.clientWidth + 1;
+  });
+  check('warning banners fit the viewport', !noticeOverflow);
+  const cdlCredit = document.querySelector('footer a[href="https://djshellshoxxx.github.io/circuitdriftlabs/"]');
+  check('CDL credit links to the official studio page', cdlCredit?.textContent?.includes('Circuit Drift Labs') === true);
   const theme = () => document.querySelector('main select');
   const contrast = () => document.querySelector('main input[type=checkbox]');
   const bg = () => getComputedStyle(document.body).backgroundColor;
@@ -88,17 +97,19 @@ await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
 const address = server.address();
 assert.ok(address && typeof address !== 'string');
 try {
-  for (const dark of [false, true]) {
-    const context = await browser.newContext({ colorScheme: dark ? 'dark' : 'light' });
-    const page = await context.newPage();
-    const pageErrors: string[] = [];
-    page.on('pageerror', (e) => pageErrors.push(e.message));
-    await page.goto(`http://127.0.0.1:${address.port}/help?dark=${dark}`);
-    await page.waitForFunction(() => document.documentElement.dataset.helpCheck !== undefined, undefined, { timeout: 30_000 }).catch((e: unknown) => { throw new Error(`Help checks did not finish: ${pageErrors.join('; ') || String(e)}`); });
-    const state = await page.evaluate(() => ({ status: document.documentElement.dataset.helpCheck, results: document.getElementById('help-check-results')?.textContent ?? '' }));
-    assert.equal(state.status, 'pass', state.results);
-    console.log(`${dark ? 'Dark' : 'Light'} device: ${state.results.split('\n').length} Help/Home checks passed`);
-    await context.close();
+  for (const width of [320, 1280]) {
+    for (const dark of [false, true]) {
+      const context = await browser.newContext({ colorScheme: dark ? 'dark' : 'light', viewport: { width, height: 720 } });
+      const page = await context.newPage();
+      const pageErrors: string[] = [];
+      page.on('pageerror', (e) => pageErrors.push(e.message));
+      await page.goto(`http://127.0.0.1:${address.port}/help?dark=${dark}`);
+      await page.waitForFunction(() => document.documentElement.dataset.helpCheck !== undefined, undefined, { timeout: 30_000 }).catch((e: unknown) => { throw new Error(`Help checks did not finish: ${pageErrors.join('; ') || String(e)}`); });
+      const state = await page.evaluate(() => ({ status: document.documentElement.dataset.helpCheck, results: document.getElementById('help-check-results')?.textContent ?? '' }));
+      assert.equal(state.status, 'pass', state.results);
+      console.log(`${width}px ${dark ? 'dark' : 'light'}: ${state.results.split('\n').length} Help/Home checks passed`);
+      await context.close();
+    }
   }
   assert.deepEqual(unexpected, [], 'Only Help/Home test assets may be requested');
 } finally {

@@ -37,6 +37,7 @@ export const AR = {
   'qv.org.invalidDate': 'تاريخ غير صالح',
   'qv.banner.experimental': 'برنامج تجريبي. لم يخضع لتدقيق مستقل. لا تستخدمه في اقتراعات مهمة.',
   'qv.banner.demo': 'عرض توضيحي — ليس للاقتراعات الحقيقية',
+  'qv.shell.footer.cdlCredit': 'مشروع من Circuit Drift Labs',
   'qv.status.draft': 'مسودة',
   'qv.status.ceremony': 'إنشاء المفاتيح',
   'qv.status.ready': 'جاهز',

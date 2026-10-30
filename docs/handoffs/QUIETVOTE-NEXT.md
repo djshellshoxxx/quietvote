@@ -1024,3 +1024,54 @@ The completion-table and handoff updates were committed as
 scanned with detect-secrets 1.5.0 default plugins/filters and `--no-verify`; zero findings. No
 workflow files changed, so this checkpoint push did not trigger the existing main-only push CI.
 No code, merge, Pages deployment, release, or external branch changed.
+
+## GitHub Pages example-client request — 2026-10-30
+
+Current starting refs were local `feature/ordinary-ux-20261024` and remote
+`checkpoint/quietvote-ordinary-ux-20261024` at `68f04aca239493fcfe9eb01bdfc454b4546760a4`; main
+was `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The app now shows the existing experimental
+warning and the existing `DEMO — not for real votes` warning together. The app footer and README
+credit/link Circuit Drift Labs at the requester's supplied official Pages URL. The English catalog
+adds the visible credit string; five translated draft catalogs contain draft credit wording with
+no review records added, and the locales remain unoffered. `packages/web/e2e/help.ts` verifies the
+warnings, link target, and banner fit at 320px and 1280px. The actual demo remains unpublished.
+
+The existing local static build (`packages/web/dist/index.html`, build ID `cf734e4c27bf`) points
+styles, the app bundle, and the worker at root-absolute `/assets/...` paths. A normal GitHub
+project Pages URL is under `/quietvote/`, so this artifact is not path-compatible there unless a
+custom root domain or separately verified base-path deployment is used. This pass did not inspect
+or modify the shared builder because it also emits the standalone verifier page; base-path support
+would require changing a shared builder under the active stopped browser-verifier exclusion.
+`.github/workflows` contains only `ci.yml`; no
+Pages workflow is tracked. Its CI runs on pull requests, pushes to `main`, and merge groups. The
+previous Pages settings lookup returned HTTP 403; do not retry it or route around it. The attempted
+public URL could not be opened by the web viewer; that is not evidence that a site is or is not
+published.
+
+The requester identified CDL as Circuit Drift Labs and supplied
+`https://djshellshoxxx.github.io/circuitdriftlabs/`. The existing live CDL home had no crypto/
+libertarian development wing, so a new static page and main-page feature were prepared in
+`djshellshoxxx/circuitdriftlabs`: source commit
+`c86648927af76517fef7927f4821edc690e30104` was pushed fast-forward to its `main`. The page links
+QuietVote's source and accurately states that its hosted demo is not live, specs are drafts, and
+the project is not for real votes. Post-push web-viewer reads still showed the old home and could
+not open the new path; a direct HTTP GET of that exact new path returned 403. Treat Pages
+propagation/status as unverified and do not retry through another route. Do not link to a
+not-yet-live QuietVote Pages URL from CDL; the new page links to the source repository only.
+
+The QuietVote demo is still blocked by main-branch gates: PR #20 audit ownership/status is
+unverified, independent owner review remains outstanding, valid DCO sign-off is missing, Pages
+settings previously returned HTTP 403, and no Pages workflow exists. Do not publish from this
+checkpoint or merge to main to bypass those gates. The existing client build uses root-absolute
+`/assets/...` paths and is not compatible with the repository Pages `/quietvote/` subpath; safely
+supporting that path would require changing the shared builder, which also emits the standalone
+verifier page; do not cross the active exclusion to make that change. An authorized admin must
+resolve Pages configuration and the domain/path choice; the main-branch owner-review/DCO gates must
+also be met.
+Validation for the banner: `npm run typecheck` passed; `npm run i18n:check -w @quietvote/web`
+passed (283 static, 13 resolved dynamic, 0 unresolved, 1 forwarder, 1 explicit `verifyView`
+exclusion); `node --test --test-reporter=spec packages/web/test/i18n-catalogs.test.ts` passed 9/9;
+`QV_REQUIRE_BROWSER=1 QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/help.ts` passed 16/16
+in light and dark at 320px and 1280px. No server element, live election, or real user data was
+used. This is UI/notice evidence only, not demo deployment, WCAG, election readiness or security
+acceptance.
