@@ -878,3 +878,14 @@ merge to `main` or deploy Pages: active PR #20 audit ownership, missing owner re
 unresolved; no Pages workflow exists. Do not retry the prior PR metadata denial. Reconsider the
 requested main merge and Pages publication only when these gates are resolved through the reviewed
 process. All prior security/verifier exclusions and human acceptance gates remain active.
+
+### Publication receipt
+
+`git push origin HEAD:refs/heads/checkpoint/quietvote-ordinary-ux-20261024` fast-forwarded the
+owned branch from `46f77891b0b697264f7ee3e07b0830692a640544` to
+`157914473efa8aff2288686e12b0b94a69f8db8d`. A fresh `git ls-remote --heads origin` returned that
+exact checkpoint SHA and unchanged main `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The two
+outgoing blob versions (responsive e2e regression and handoff) were scanned with detect-secrets
+1.5.0, default plugins/filters and `--no-verify`; zero findings. No workflow file changed, so this
+checkpoint push did not trigger the existing main-only push CI workflow. No merge, Pages deployment,
+release, or external branch update occurred.
