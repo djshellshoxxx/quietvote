@@ -889,3 +889,17 @@ outgoing blob versions (responsive e2e regression and handoff) were scanned with
 1.5.0, default plugins/filters and `--no-verify`; zero findings. No workflow file changed, so this
 checkpoint push did not trigger the existing main-only push CI workflow. No merge, Pages deployment,
 release, or external branch update occurred.
+
+## Scoped requirements traceability — 2026-10-30
+
+The owner confirmed the high-level architecture (organization-operated server + browser client +
+CLI verifier; separately hosted client allowed; maintainer-hosted service later). This does not
+approve every ADR or change draft status. `docs/plan/COMPLETION.md` now has an additive, scoped
+implementation-to-requirements table for ordinary web localization and accessibility. It records
+the current `i18n:check` and typecheck results, cites the prior 177/177 web tests, 49/49 browser
+checks, and build evidence at source `54f90be81855e2c334705002d615e5d2ef98ff92`, and identifies
+two spec/implementation decisions for owner resolution: JSON catalog requirement vs TypeScript
+catalog modules, and specified formatter-library decision vs the custom precompiler. This is not
+the full C2 requirement audit. Security, trust, authority, ballot/election-verifier and stopped
+browser-verifier areas remain unreviewed and excluded. No product code changed in this traceability
+pass; rerun no implementation tests solely for the documentation update.
