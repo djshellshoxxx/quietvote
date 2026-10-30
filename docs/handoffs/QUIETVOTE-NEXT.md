@@ -894,15 +894,19 @@ release, or external branch update occurred.
 
 The owner confirmed the high-level architecture (organization-operated server + browser client +
 CLI verifier; separately hosted client allowed; maintainer-hosted service later). This does not
-approve every ADR or change draft status. `docs/plan/COMPLETION.md` now has an additive, scoped
-implementation-to-requirements table for ordinary web localization and accessibility. It records
-the current `i18n:check` and typecheck results, cites the prior 177/177 web tests, 49/49 browser
-checks, and build evidence at source `54f90be81855e2c334705002d615e5d2ef98ff92`, and identifies
-two spec/implementation decisions for owner resolution: JSON catalog requirement vs TypeScript
-catalog modules, and specified formatter-library decision vs the custom precompiler. This is not
-the full C2 requirement audit. Security, trust, authority, ballot/election-verifier and stopped
-browser-verifier areas remain unreviewed and excluded. No product code changed in this traceability
-pass; rerun no implementation tests solely for the documentation update.
+approve every ADR or change the status of all specifications. `docs/plan/COMPLETION.md` has an
+additive, scoped implementation-to-requirements table for ordinary web localization and
+accessibility. It records the current `i18n:check` and typecheck results, cites the prior 177/177
+web tests, 49/49 browser checks, and build evidence at source
+`54f90be81855e2c334705002d615e5d2ef98ff92`.
+
+The owner then approved keeping typed TypeScript catalog modules and the project-maintained ICU
+precompiler. QV-13 REQ-061/062 and the section 9.1 diagram now describe those choices; QV-ADR-025
+records the rationale, consequences and review triggers. This closes those two format/tool-choice
+mismatches only. It does not mark translations human-reviewed or approve QV-13 as a whole. This is
+not the full C2 requirement audit. Security, trust, authority, ballot/election-verifier and stopped
+browser-verifier areas remain unreviewed and excluded. No product code changed; no implementation
+tests were rerun solely for these documentation updates.
 
 The checklist and handoff update was committed as `3dafe28f37c6b7b0f3fe99676b27c2b2b0c4cfd3`
 and fast-forwarded the owned checkpoint from `b5d9f1ea396abdfa5dca72d39934e2bdcedb04a4`.
@@ -910,3 +914,40 @@ Fresh `git ls-remote` returned `3dafe28f37c6b7b0f3fe99676b27c2b2b0c4cfd3`; main 
 `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The two outgoing documentation blob versions were
 scanned with detect-secrets 1.5.0 default plugins/filters and `--no-verify`; zero findings. No
 workflow or application code changed.
+
+## Copy/paste continuation prompt — ordinary non-server work
+
+Continue only `djshellshoxxx/quietvote`. First read this handoff and
+`docs/plan/COMPLETION.md`, then inspect `git status`, local HEAD and live refs. Preserve all local
+and remote work; never reset, force-push, delete, or overwrite another owner's branch. The owner
+approved the high-level self-hosted-server + browser-client + CLI architecture and approved
+QV-ADR-025 (typed TypeScript catalogs plus the project-maintained build-time ICU compiler). The
+latest owner checkpoint and main refs may have advanced; verify them before acting.
+
+Work autonomously on accepted items that can be implemented and validated without creating,
+exposing, or depending on a test server. Prioritize the open, in-scope ordinary web presentation,
+Help/documentation, localization tooling, accessibility presentation, and local tests/builds listed
+in the completion checklist and backlog. Do not invent features: if no concrete independent item is
+ready, record that and stop implementation. Use existing local fixtures and browser tests only;
+do not run elections or use real user data. Do not claim a complete requirements audit from a
+scoped pass.
+
+Keep the exclusions intact: do not inspect, modify, review, delegate or route around crypto/nonce,
+export-role/authorization, trust/authority, ballot/election-verification, or stopped
+browser-verifier work. PR #20 audit ownership remains with its owner; its current status is
+unverified after prior GitHub PR-metadata access returned 403. Do not retry that metadata access or
+inspect that branch. Do not merge to main until independent audit/owner-review and valid DCO gates
+are evidenced. Never forge a sign-off. The owner approved GitHub Pages deployment, but Pages
+settings lookup previously returned 403 and no Pages workflow exists; do not publish from a work
+branch as a workaround for main gates. Continue only non-publishing prep that does not change
+security settings, and report the required admin/review steps.
+
+For code changes, reproduce a specific issue, add a focused regression without weakening existing
+assertions, then run relevant tests, typecheck and web build. For documentation/spec changes, run
+`git diff --check` and record the rationale. Update this handoff and the completion checklist at
+coherent milestones with exact refs, changed files, commands/results, failures, remaining ready and
+blocked work, and exclusions. Before an authorized checkpoint push, inspect the outgoing diff and
+workflow effects, secret-scan each outgoing blob version, push fast-forward only to the owned
+`checkpoint/quietvote-ordinary-ux-20261024` branch, and read back the remote SHA. Keep main and
+external branches unchanged. Continue until the independent ordinary work is complete or an actual
+approval/access/capacity blocker remains; then report exact evidence and limits.

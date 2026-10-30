@@ -208,9 +208,9 @@ QuietVote has no passwords-for-accounts; the sensitive step is unlocking/creatin
 
 ```mermaid
 flowchart LR
-  SRC["Source catalog en.json (ICU MessageFormat)"] --> LINT["i18n lint + extraction"]
+  SRC["Source catalog en.ts (typed entries, ICU MessageFormat)"] --> LINT["i18n lint + extraction"]
   LINT --> TMS["Translation workflow (public strings only)"]
-  TMS --> CAT["locale catalogs (xx.json)"]
+  TMS --> CAT["locale catalogs (xx.ts, stable keys)"]
   CAT --> COMP["Build: precompile to JS functions per locale/route"]
   COMP --> BUNDLE["Locale chunk (≤ 20 kB gz)"]
   MAN["Signed election manifest: text maps by BCP47 tag"] --> CLIENT
@@ -222,8 +222,8 @@ flowchart LR
 | ID | Requirement | Pri | Acceptance criteria | Verif. |
 |---|---|---|---|---|
 | QV-13-REQ-060 | All user-visible strings shall be message IDs in catalogs using **ICU MessageFormat** syntax (plural, select, selectordinal, number/date/time arguments); no string concatenation, no sentence fragments assembled in code. | M | i18n lint fails on literal text in templates; lint on concatenation patterns. | T |
-| QV-13-REQ-061 | Catalog format: JSON `{ "qv.privacy.headline": { "message": "…", "description": "…context for translators…", "maxLength": 120, "sensitivity": "guarantee|normal" } }` with namespaces by flow; IDs stable and never reused for different meaning. | M | Schema validation in CI. | T |
-| QV-13-REQ-062 | Messages shall be **precompiled at build time** to functions (no runtime ICU parser in the client) to minimize size and attack surface; plural rules via `Intl.PluralRules` (CLDR), list/relative-time via `Intl.ListFormat`/`RelativeTimeFormat`. Library choice: FormatJS (`@formatjs/cli compile`) or `messageformat` — decided by dependency audit (ADR-003: smallest vetted). | M | Build output has no parser; size budget met. | T |
+| QV-13-REQ-061 | Catalogs shall be typed TypeScript modules with namespaces by flow and stable IDs never reused for a different meaning. English entries contain `message`, translator `description`, `sensitivity` (`guarantee` or `normal`), and optional `maxLength`; locale modules map the same IDs to translated messages. | M | Typecheck and CI catalog validation enforce exact key parity, valid ICU messages and matching placeholders/plural/select structure. | T |
+| QV-13-REQ-062 | The web app shall use the project-maintained TypeScript ICU compiler at build time to emit registered formatter functions; the browser app shall not parse source ICU messages at runtime. Number, plural, list and relative-time formatting shall use the relevant `Intl` APIs. | M | Tests compare emitted formatters with source formatting across every catalog message, reject malformed ICU, and verify the built app contains no ICU parser; the existing compressed-size budget remains enforced. | T |
 | QV-13-REQ-063 | Locale negotiation: URL path/query `?lang=` > locally stored preference > `Accept-Language` (server-rendered pages) > default `en`; the server never records the language preference (QV-06); locales identified by **BCP 47** tags (e.g. `pt-BR`, `ar`, `zh-Hans`). | M | Unit tests of negotiation. | T |
 | QV-13-REQ-064 | Fallback chain: `xx-YY → xx → en` for **normal** strings; for strings with `sensitivity: guarantee` there is **no silent fallback**: if missing, the language is not offered for voter flows (build fails for that locale). | M | CI matrix. | T |
 | QV-13-REQ-065 | Pseudo-localization locales `en-XA` (accented/expanded +40%) and `ar-XB` (RTL pseudo) are built and used in CI visual tests to detect truncation/hard-coded strings/RTL bugs. | M | Visual regression run. | T |
