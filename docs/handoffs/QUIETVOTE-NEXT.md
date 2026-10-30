@@ -951,3 +951,13 @@ workflow effects, secret-scan each outgoing blob version, push fast-forward only
 `checkpoint/quietvote-ordinary-ux-20261024` branch, and read back the remote SHA. Keep main and
 external branches unchanged. Continue until the independent ordinary work is complete or an actual
 approval/access/capacity blocker remains; then report exact evidence and limits.
+
+### Owner-approved catalog/compiler decision receipt
+
+Commit `7e85d9fcc3772900059d392ad242f9286389d556` records the approved QV-13 REQ-061/062 wording,
+QV-ADR-025, completion statuses, and this continuation prompt. It fast-forwarded the owned
+checkpoint from `e33f094dbe98463f104e064f30072006f47181c4`; fresh `git ls-remote` returned
+`7e85d9fcc3772900059d392ad242f9286389d556`, with main unchanged at
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. Four outgoing documentation blob versions were scanned
+with detect-secrets 1.5.0 default plugins/filters and `--no-verify`; zero findings. No application
+code, tests, or workflows changed.
