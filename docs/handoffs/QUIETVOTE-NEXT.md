@@ -814,6 +814,42 @@ as machine-drafted, unreviewed and unoffered until qualified language reviewers 
 documented workflow. This pass makes no WCAG, disabled-user acceptance, translation approval, or
 election-readiness claim.
 
+### Responsive QA and ordinary-scope code review — 2026-10-30
+
+Starting from source checkpoint `46f77891b0b697264f7ee3e07b0830692a640544`, added a browser
+regression in `packages/web/e2e/a11y.ts` that checks Home, Help and not-found at 320, 768, 1024 and
+1440 CSS pixels for horizontal page, body and primary-navigation overflow. Source/test commit is
+`54f90be81855e2c334705002d615e5d2ef98ff92`. A scoped review of the changed test and shared primary
+navigation presentation found no further ordinary UI defect. This is not a full repository audit;
+the excluded security, trust, authority, ballot/election-verifier and stopped browser-verifier areas
+were not reviewed or changed.
+
+Validation at this source commit:
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | passed |
+| `QV_REQUIRE_BROWSER=1 QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/a11y.ts` | 49/49 automated checks passed; responsive matrix passed on all three pages; explicitly not WCAG/assistive-technology acceptance |
+| `npm test -w @quietvote/web` | 177/177 passed; `i18n:check` reported 281 static, 13 resolved dynamic, 0 unresolved, 1 explicit exclusion |
+| `npm run build -w @quietvote/web` | passed; build `cf734e4c27bf`, gzip JS 190.2 KiB total / 93.1 KiB entry |
+| `git diff --check` | passed |
+
+The build output is local at `packages/web/dist`; it has not been published. There is no GitHub Pages
+deployment workflow in `.github/workflows` (the existing CI workflow runs on pull requests, pushes
+to `main`, and merge groups). The generated `_headers` file does not by itself configure Pages
+response headers. Do not deploy a Pages preview as a workaround for the main merge gate: the
+handoff's existing PR #20 audit ownership is active, its current status remains unverified after
+the prior HTTP 403 on PR metadata, owner review is outstanding, and the checkpoint commits lack
+the required DCO sign-off. No merge or deployment was attempted. The user has requested a merge
+followed by GitHub Pages publication; reconsider only after those gates have proper evidence and
+the published app's hosting behavior is reviewed. Do not forge a DCO attestation. Main remains at
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
+
+Remaining work is gated human acceptance (language/terminology review, qualified RTL/assistive
+technology and disabled-user review, broader usability) and the owner-reviewed main merge/Pages
+publication path above. The ordinary UI work selected for this pass is complete; do not invent more
+features absent a concrete defect or newly accepted requirement.
+
 ### Documentation consistency follow-up — 2026-10-30
 
 `packages/web/NOTES.md` had a stale sentence saying app messages were still parsed at runtime, despite
@@ -821,3 +857,24 @@ the same file's completed build-time precompilation section and the REQ-062 impl
 Updated only that ordinary status sentence to reflect the tested app build. The adjacent chunk/SRI
 discussion was left unchanged. `git diff --check` and a local heading-reference check passed; no code
 or tests changed for this documentation-only correction.
+
+## Latest restart status — 2026-10-30
+
+Local branch `feature/ordinary-ux-20261024` is at `54f90be81855e2c334705002d615e5d2ef98ff92`
+before the handoff-only commit. It adds the responsive browser matrix described above. The owned
+remote checkpoint was last verified at parent `46f77891b0b697264f7ee3e07b0830692a640544`; main
+was `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. Re-read both remote refs before publication.
+The worktree should be clean after the handoff commit. No other worker owns this slice.
+
+The web typecheck, 49-check ordinary browser run, 177-test web suite, and production build all passed
+after the source/test change; the exact commands and limits are in “Responsive QA and ordinary-scope
+code review” above. The changed file is only `packages/web/e2e/a11y.ts`; the generated build output
+is local and ignored. No additional ordinary runtime fix was found in the scoped presentation review.
+
+Next: inspect outgoing test + handoff diffs, scan outgoing blob versions for secrets, confirm the
+checkpoint is still at `46f7789`, inspect workflow side effects, push fast-forward only to
+`checkpoint/quietvote-ordinary-ux-20261024`, verify the exact remote SHA, then add a receipt. Do not
+merge to `main` or deploy Pages: active PR #20 audit ownership, missing owner review and DCO remain
+unresolved; no Pages workflow exists. Do not retry the prior PR metadata denial. Reconsider the
+requested main merge and Pages publication only when these gates are resolved through the reviewed
+process. All prior security/verifier exclusions and human acceptance gates remain active.
