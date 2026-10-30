@@ -778,3 +778,38 @@ the reported low-credit threshold, record exact refs, completed work, remaining 
 tests, failures, constraints and restart steps. Paid Claude use remains through the existing shared
 broker and within its cap/reserve. The security, verifier, human-language and accessibility gates
 listed above remain unchanged.
+
+## Ordinary web UI QA and human-review prep — 2026-10-30
+
+Source change at `cb624cc8b250307bb1c811b694885e27f5aadd1e` is limited to Home/Help shell
+presentation: `app.ts` marks the shared navigation with `site-nav`; CSS gives its links 12px inline
+spacing, 8px row spacing, wrapping, and a 44px minimum target height. A real-browser regression in
+`e2e/a11y.ts` checks spacing, target height, and no overflow at 320px. Routes, copy, state, and election
+flows were not changed. The screenshots exposed the prior visible defect: adjacent primary-nav links
+ran together on desktop and mobile. The updated captures show clear spacing and wrap on mobile.
+
+Checks on the source change:
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | passed |
+| `npm test -w @quietvote/web` | 177 passed, 0 failed/skipped; scoped `i18n:check` reported 281 static, 13 resolved dynamic, 0 unresolved, 1 explicit `verifyView` exclusion |
+| `QV_REQUIRE_BROWSER=1 QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/help.ts` | 13/13 Help/Home checks in light and 13/13 in dark mode |
+| `QV_REQUIRE_BROWSER=1 QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/a11y.ts` | 46/46 automated checks on Home, Help and not-found pages; includes 320px reflow, 200% text scaling, forced-colors emulation, contrast sampling and the new nav regression |
+| `npm run build -w @quietvote/web` | passed; build `cf734e4c27bf`, JS 190.2 kB gzip total / 93.1 kB entry; verifier page 172.0 kB |
+| Visual Playwright capture | Home/Help at 1440x1000 light, 1440x1000 dark (Home), and 320x720 light: no uncaught page errors or horizontal page overflow |
+
+The first temporary screenshot server returned 404 for `/help` because it lacked the SPA fallback;
+the harness was corrected to match the existing e2e fallback and all five captures then succeeded.
+Captures live only in `/tmp` and are not durable review artifacts. The tests are automated heuristics,
+not WCAG conformance or assistive-technology evidence. No real election, live server, or restricted
+verifier path was exercised. The broader web unit suite is ordinary regression evidence only and is
+not independent security acceptance.
+
+Human reviewer brief (not completed by this pass): review Home (`/`), Help (`/help`) and not-found in
+light/dark themes at 320, 768, 1024 and 1440 CSS pixels; check keyboard-only navigation and focus
+order, touch usability of the 44px nav targets, 200% zoom, platform forced-colors, and screen-reader
+announcements with qualified testers. Review English help wording for clarity. Keep es/fr/de/pt-BR/ar
+as machine-drafted, unreviewed and unoffered until qualified language reviewers complete the
+documented workflow. This pass makes no WCAG, disabled-user acceptance, translation approval, or
+election-readiness claim.
