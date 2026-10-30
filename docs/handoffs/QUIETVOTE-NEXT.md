@@ -740,3 +740,13 @@ work remains excluded. No implementation or test ran during this reconciliation.
 177/177 web-suite result is recorded at the prior source SHA; the 2026-10-29 merge pass separately
 records a passing typecheck and `git diff --check`, with no code changes in those merges. This note
 does not elevate those results into security, election, WCAG, or human-language acceptance.
+
+### Publication receipt
+
+The continuation note above was published by commit `d967508416ab8eb5973d38c21218cfd8e150e576`.
+The push fast-forwarded the owned checkpoint from `3a7ecaa03bdc9cda251b72cbea1733de605d82f5`;
+fresh `git ls-remote` returned `d967508416ab8eb5973d38c21218cfd8e150e576`, while `main` remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The outgoing handoff-only blob was scanned with
+detect-secrets 1.5.0 default plugins/filters and `--no-verify`; zero findings. The workflow file
+was unchanged; its push trigger is restricted to `main`, so this checkpoint push did not trigger
+CI. No implementation changes or tests were part of this publication.
