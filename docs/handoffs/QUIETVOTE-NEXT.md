@@ -1013,3 +1013,14 @@ At documentation-only source HEAD `fe047fd0bc7a88225e366f0dbd1c0c8378f86f77`, ma
 diff and workflow changes; scan outgoing blob versions for secrets; then push fast-forward only to
 the owned checkpoint and read back its SHA. Do not merge to main or deploy Pages under the existing
 audit, owner-review, DCO, and Pages-access gates.
+
+### REQ-063 documentation checkpoint receipt
+
+The completion-table and handoff updates were committed as
+`2bb9890ea280739308f73ee32107433e03147bf5` and fast-forwarded the owned checkpoint from
+`fe047fd0bc7a88225e366f0dbd1c0c8378f86f77`. A fresh `git ls-remote` returned checkpoint
+`2bb9890ea280739308f73ee32107433e03147bf5`; main remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The two outgoing documentation blob versions were
+scanned with detect-secrets 1.5.0 default plugins/filters and `--no-verify`; zero findings. No
+workflow files changed, so this checkpoint push did not trigger the existing main-only push CI.
+No code, merge, Pages deployment, release, or external branch changed.
