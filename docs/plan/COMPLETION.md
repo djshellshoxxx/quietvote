@@ -42,8 +42,9 @@ items below are either done and verified or listed with an owner and a real bloc
 
 This addendum is newer than the branch snapshot above and covers only the ordinary web
 presentation, localization tooling, and accessibility evidence recorded at source commit
-`54f90be81855e2c334705002d615e5d2ef98ff92` (the current checkpoint is
-`b5d9f1ea396abdfa5dca72d39934e2bdcedb04a4`; later commits are handoff-only). It is not the C2
+`54f90be81855e2c334705002d615e5d2ef98ff92` (the checkpoint tip before this documentation-only
+traceability update was `b5d9f1ea396abdfa5dca72d39934e2bdcedb04a4`; no app code changed after the
+source commit). It is not the C2
 whole-repository traceability audit and does not review or accept excluded crypto/nonce,
 export-role/authorization, trust/authority, ballot/election-verification, or browser-verifier
 requirements.
