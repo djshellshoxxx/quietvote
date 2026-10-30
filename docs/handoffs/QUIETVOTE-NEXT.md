@@ -961,3 +961,55 @@ checkpoint from `e33f094dbe98463f104e064f30072006f47181c4`; fresh `git ls-remote
 `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. Four outgoing documentation blob versions were scanned
 with detect-secrets 1.5.0 default plugins/filters and `--no-verify`; zero findings. No application
 code, tests, or workflows changed.
+
+## REQ-063 locale integration status — 2026-10-30
+
+Starting checkpoint: local `feature/ordinary-ux-20261024` and the owned remote
+`checkpoint/quietvote-ordinary-ux-20261024` both resolved to
+`fe047fd0bc7a88225e366f0dbd1c0c8378f86f77`; `main` resolved to
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The worktree was clean before this documentation
+update. No child workers were started; this task had one integrator.
+
+The locale helper in `packages/web/src/i18n/locales-core.ts` implements the documented
+query > stored > browser > English ordering and matches only offered BCP 47 locales. The
+`packages/web/src/ui/app.ts` caller supplies `?lang` and `navigator.languages`, but not a stored
+preference. The exact locale implementation and its focused tests are unchanged from source
+`54f90be81855e2c334705002d615e5d2ef98ff92`. Currently only English is offered, so the missing
+stored-preference input does not change today's language choice. It remains a real partial
+requirement, not a claimed fix.
+
+Do not wire persistence until the owner/spec resolves a concrete mismatch: QV-13 REQ-063 and §10
+specify a locally stored language preference using `localStorage`, while the existing built-asset
+test rejects `localStorage`, `sessionStorage` and cookie APIs. The codebase has an IndexedDB-backed
+settings adapter, but substituting that would change the specified persistence contract. The
+requirement also describes server-rendered `Accept-Language`; this SPA caller uses browser
+`navigator.languages`, and this pass did not create or test a server/no-JS page. No storage adapter,
+locale-choice UI, translated locale offer gate, or server behavior was changed. Machine-translated
+catalogs remain drafts, unreviewed and unoffered. The corresponding row was added to
+`docs/plan/COMPLETION.md` as **Partial; helper tests pass, app integration and storage contract
+unresolved**.
+
+Validation on unchanged implementation:
+
+| Command | Result |
+|---|---|
+| `node --test --test-reporter=spec --test-name-pattern='locale|Locale|language' packages/web/test/ui-logic.test.ts packages/web/test/i18n-catalogs.test.ts` | 5/5 selected tests passed, 0 failed, 0 skipped |
+| `node --test --test-reporter=spec packages/web/test/ui-logic.test.ts packages/web/test/i18n-catalogs.test.ts` | 20/20 passed. Because the second command selected whole files, it also executed adjacent pre-existing pure ballot-state unit cases; no live election or server was run, and this is not election/security acceptance. |
+| `npm run i18n:check -w @quietvote/web` | exited successfully; no lint findings were printed |
+| `git diff --check` | passed for this documentation update |
+
+No runtime code fix is justified without a resolved persistence/spec contract; only English is
+offered and the query/browser path is present. The ordinary work queue has no other concrete,
+independent code item identified by this pass. Ready next step: obtain an owner/spec decision on
+the REQ-063 preference backend and whether the server-rendered `Accept-Language` clause applies to
+the approved client/server architecture, then implement and test only that resolved behavior.
+Still gated: qualified translation review, RTL/assistive-technology and disabled-user acceptance,
+broader usability, PR #20's audit ownership, valid DCO and owner-reviewed main merge, and the Pages
+admin/workflow path. No excluded security/verifier work was changed or reviewed. No server,
+release, deployment, election, credential or external branch action occurred.
+
+At documentation-only source HEAD `fe047fd0bc7a88225e366f0dbd1c0c8378f86f77`, main remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. For the next checkpoint, first inspect the two-file
+diff and workflow changes; scan outgoing blob versions for secrets; then push fast-forward only to
+the owned checkpoint and read back its SHA. Do not merge to main or deploy Pages under the existing
+audit, owner-review, DCO, and Pages-access gates.
