@@ -705,3 +705,38 @@ Not merged, and why:
 the whole unaudited implementation on the default branch without a PR, owner review or the DCO
 sign-off that CONTRIBUTING requires (the checkpoint's Claude commits carry no `Signed-off-by`), while
 PR #20 is still auditing that code. That is an owner decision through a PR, not an agent merge.
+
+## Continuation reconciliation — 2026-10-30
+
+At entry, local `feature/ordinary-ux-20261024` was clean at `5fb97cb94a2bb1244b406cac2de71a126df0e9ef`.
+The live checkpoint was `3a7ecaa03bdc9cda251b72cbea1733de605d82f5`, and `main` remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. The local commit was an ancestor of the checkpoint
+(17 commits behind, no divergence), so I fetched the named checkpoint and used `git merge --ff-only`
+to advance the local branch. No edits were discarded or rewritten. At the end of reconciliation,
+local HEAD matched checkpoint `3a7ecaa`; the worktree was clean. No `AGENTS.md` was found in this
+checkout.
+
+Read-only live-ref checks confirmed the ordinary branches recorded in the prior merge pass had not
+advanced: `claude/quietvote-ui-locale-a11y-sltfb3` `424110d`, `claude/dazzling-cerf-n8ha3g`
+`d75d4a2`, `claude/quietvote-docs-1` `5341f6f`, `claude/quietvote-web-triage-1` `e9d4cd3`,
+`claude/quietvote-finish-1` `e56403b`, and `claude/quietvote-audit-qa-1` `563eec8`. Their tips are
+ancestors of the checkpoint. `docs/readme-and-wiki` (`29313c3`) and
+`claude/docs-screenshots` (`e671fd1`) remain unmerged and unsuitable for the reasons in the
+2026-10-29 branch table; no code from them was reviewed in this pass.
+
+The PR #20-associated ref `claude/sharp-archimedes-tu76rh` now resolves to
+`2a02bd3249f3c988ef5afd8e9559fa13a959bdef`, rather than the previously recorded `e2ee874`. I read
+only the ref, not its code or PR metadata. The last handoff records active audit ownership; current
+PR status is unverified because prior metadata access returned HTTP 403. Preserve that ownership
+and do not duplicate or inspect the audit. `main` still resolves to `019f4e7`; no merge, PR action,
+or external branch change occurred.
+
+No new independently executable accepted ordinary feature was found. The Ready queue remains empty;
+do not invent work. The remaining items are the previously listed human translation/terminology and
+RTL/AT/usability gates; owner decisions for registration-error copy and `commitRoll`; claims-policy
+triage; PR #20's active audit; and the owner-reviewed merge process for `main`. All crypto/nonce,
+export-role/authorization, trust/authority, ballot/election verification, and stopped browser-verifier
+work remains excluded. No implementation or test ran during this reconciliation. The existing
+177/177 web-suite result is recorded at the prior source SHA; the 2026-10-29 merge pass separately
+records a passing typecheck and `git diff --check`, with no code changes in those merges. This note
+does not elevate those results into security, election, WCAG, or human-language acceptance.
