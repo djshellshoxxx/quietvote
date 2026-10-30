@@ -68,7 +68,7 @@ export function startApp(env: AppEnv): void {
   const urgent = h('div', { id: 'live-urgent', role: 'alert', class: 'sr-only' });
   const say = new Announcer(polite, urgent);
   const main = h('main', { id: 'main', tabindex: -1 });
-  const nav = h('nav', { 'aria-label': t('qv.shell.nav') });
+  const nav = h('nav', { 'aria-label': t('qv.shell.nav'), class: 'site-nav' });
   const sealer = env.sealer ?? inlineSealer;
   const signers = new Map<string, Signer>();
   const loaded = new Map<string, Loaded>();

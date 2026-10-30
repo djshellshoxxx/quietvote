@@ -210,6 +210,30 @@ try {
     need(n === 0, `${n} current links`);
   });
 
+  await step('main navigation separates links and wraps at mobile width', async () => {
+    await open(page, '/');
+    const nav = page.locator('nav[aria-label="Main"]');
+    const desktop = await nav.evaluate((el) => {
+      const style = getComputedStyle(el);
+      const links = [...el.querySelectorAll('a')];
+      return {
+        display: style.display,
+        columnGap: parseFloat(style.columnGap),
+        rowGap: parseFloat(style.rowGap),
+        links: links.length,
+        minLinkHeight: Math.min(...links.map((a) => a.getBoundingClientRect().height)),
+      };
+    });
+    need(desktop.display === 'flex', `navigation display ${desktop.display}`);
+    need(desktop.columnGap >= 8 && desktop.rowGap >= 8, `navigation gaps ${desktop.columnGap}px/${desktop.rowGap}px`);
+    need(desktop.links >= 4, `navigation links ${desktop.links}`);
+    need(desktop.minLinkHeight >= 44, `navigation target height ${desktop.minLinkHeight}px`);
+    await page.setViewportSize({ width: 320, height: 640 });
+    const mobile = await nav.evaluate((el) => ({ width: el.getBoundingClientRect().width, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
+    need(mobile.width > 0 && mobile.scrollWidth <= mobile.clientWidth, `mobile navigation overflow ${JSON.stringify(mobile)}`);
+    return `${desktop.links} links with ${desktop.columnGap}px spacing and ${desktop.minLinkHeight}px minimum height; mobile width ${mobile.clientWidth}px`;
+  });
+
   // keyboard order + focus indicator
   const FOCUS_FN = () => {
     const a = document.activeElement as HTMLElement;
