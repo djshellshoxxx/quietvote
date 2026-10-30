@@ -177,6 +177,26 @@ try {
 
   // skip link
   for (const p of PAGES) {
+    await step(`responsive reflow at 320/768/1024/1440 on ${p.label}`, async () => {
+      await open(page, p.path);
+      const widths = [320, 768, 1024, 1440];
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 800 });
+        const metrics = await page.evaluate(() => ({
+          viewport: innerWidth,
+          document: document.documentElement.scrollWidth,
+          body: document.body.scrollWidth,
+          nav: document.querySelector('nav')?.scrollWidth ?? 0,
+          navClient: document.querySelector('nav')?.clientWidth ?? 0,
+        }));
+        need(metrics.document <= width && metrics.body <= width, `${width}px page overflow ${JSON.stringify(metrics)}`);
+        need(metrics.nav <= metrics.navClient, `${width}px navigation overflow ${JSON.stringify(metrics)}`);
+      }
+      return `${widths.join('/')}px; no horizontal page or navigation overflow`;
+    });
+  }
+
+  for (const p of PAGES) {
     await step(`skip link ${p.label}: first Tab after load focuses it`, async () => {
       await open(page, p.path); // fresh load, no scripted focus changes: this is what a keyboard user gets
       const initial = await page.evaluate(() => document.activeElement?.tagName.toLowerCase());
