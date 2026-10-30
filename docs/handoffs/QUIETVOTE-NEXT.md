@@ -813,3 +813,11 @@ announcements with qualified testers. Review English help wording for clarity. K
 as machine-drafted, unreviewed and unoffered until qualified language reviewers complete the
 documented workflow. This pass makes no WCAG, disabled-user acceptance, translation approval, or
 election-readiness claim.
+
+### Documentation consistency follow-up — 2026-10-30
+
+`packages/web/NOTES.md` had a stale sentence saying app messages were still parsed at runtime, despite
+the same file's completed build-time precompilation section and the REQ-062 implementation above.
+Updated only that ordinary status sentence to reflect the tested app build. The adjacent chunk/SRI
+discussion was left unchanged. `git diff --check` and a local heading-reference check passed; no code
+or tests changed for this documentation-only correction.
