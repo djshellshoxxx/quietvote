@@ -42,7 +42,8 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 * **[X-10] Spoil that matches a cast ballot.** The flagged cast ballot is inadmissible and does *not* advance the voter's
   `supersedes` chain (the voter's next ballot must reference the previous admissible one). `E_SPOILED_CODE_CAST` and
   `E_SPOIL_MISMATCH` are class ALARM: they fail `chk.benaloh.spoiled` but do not flip the verdict (otherwise one voter could
-  force a FAIL). `max_spoils_per_voter` excess spoils are ignored.
+  force a FAIL). `max_spoils_per_voter` excess spoils are not admitted as audits, but every envelope-valid signed spoil
+  permanently excludes its code from counting, including spoils outside the voting window (B1-01).
 * **[X-11] Verdict.** PASS iff no F-class finding and a tally was verified; `INCOMPLETE` when everything verifiable passed but no
   tally record exists; otherwise FAIL. Named checks (QV-34 §9.1) can be `fail` while the verdict is PASS (ignored L-class
   ballots, alarms): QV-34's "no mutant passes all checks" holds, QV-16 App. C's "PASS only if no F-class error" also holds.
@@ -230,12 +231,13 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 
 ## Known gaps
 
-* Log layer (X-21..X-30) runs only when the caller passes `{log}`; `packages/verifier` still composes `board.verifyLog` itself and does
-  not pass log evidence to `verifyElection` yet (not changed here). Control/notice entries are authenticated and reported but never
+* Log layer (X-21..X-30) runs only when the caller passes `{log}`; `packages/verifier` passes the bundle's board export as log evidence
+  and also composes `board.verifyLog`. Control/notice entries are authenticated and reported but never
   applied (X-31..X-34); their governance effect (QV-05 V13: pause/resume windows, invalidate/cancel verdicts) is not implemented.
 * Secret types (`SecretScalar` etc., QV-30 S2), wiping, and lint rules (QV-30 §5.2) not done; scalars are plain `bigint`.
 * Constant-time claims are those of `@noble/*` only.
-* Test vectors: `status: candidate`; no independent second implementation; MANIFEST unsigned; external-standard sets contain only
+* Test vectors: `status: candidate`; an independent Python skeleton exists but report parity and capability gates remain open;
+  MANIFEST unsigned; external-standard sets contain only
   a handful of values re-derived by computation (not verbatim imports with source hashes); RNG is a SHA-512 stream, not `vecrng-v1`;
   mutants derive from `tiny-yesno-3v`, not the 20-voter election; no `scale/` set, no `edge-ties-quorum` election, no JSON Schema
   files for ops (only registries).
@@ -252,10 +254,25 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
   `reveal_digest` commits to the reveal (zero digest = trustee mode, commits to nothing). New vector set
   `protocol/benaloh/private-audit.json` (operation `benaloh.private_audit`, QV-10/QV-34), runners in `vectors.test.ts` and `qv vectors check`.
 * Unaudited; not for real elections.
-* **TR-01 (trustee audit)**: `analyzeBallotLog` now returns `castAlphas` (every `a` of every cast envelope in the log, valid or not;
-  `collectAlphas`). `verifyElection` fails `chk.benaloh.spoiled` with ALARM `E_SPOILED_CODE_CAST` when a trustees-mode spoil in the tally shares
+* **TR-01 (trustee audit)**: `analyzeBallotLog` returns `castAlphas` (every `a` of every envelope-valid cast within the voting window;
+  `collectAlphas`). Invalid casts cannot plant an alpha. `verifyElection` fails `chk.benaloh.spoiled` with ALARM `E_SPOILED_CODE_CAST` when a trustees-mode spoil in the tally shares
   any `a` with a cast envelope: spoils are not chain-checked and proofs bind only (ctx, voter), so a voter could re-wrap a cast ballot's
   ciphertexts under a new code (`supersedes`) and have trustees decrypt it. Test: `tally.test.ts` (fails without the check).
+
+## Consolidation regressions (2026-10-31)
+
+* **CP-01 + B1-01:** every envelope-valid signed spoil is checked against valid cast ciphertexts, even if outside the window or over
+  the audit limit. A rewrapped spoil is excluded from the admissible `spoiled` audit map and raises an ALARM. The independent
+  signed-code registry survives audit rejection, so the same spoiled code can never count. The counted-cast chain policy remains X-10;
+  no new tie, DKG-equivocation or latest-excluded-ballot semantics were chosen. Tests: `test/b1-regressions.test.ts` and imported
+  `test/audit.test.ts` / `second-wave.test.ts`.
+* **B1-13:** manifest envelope and signature objects have closed schemas. An empty signature list still yields `E_MANIFEST_SIG`;
+  unsigned extra members yield fatal `E_SCHEMA` and fail `chk.encoding.canonical`.
+* **B2-01 support:** `buildTallyFromAggregate` assembles a coordinator draft from an independently admitted aggregate and checks all
+  partial-decryption proofs. It does not establish counted-ballot binding. `buildTally` still recomputes the aggregate and root, and
+  `trusteeDecryptTally` still independently recomputes before releasing shares. Wire records and proof transcripts are unchanged.
+* **CP-02 remains open:** decryption nonce hedging does not bind a changed aggregate for the same option; the existing test was
+  renamed to state the narrower option-id separation it actually checks. Extending the registry requires a spec-owner decision.
 * **CP-01 (crypto-protocol audit)**: the TR-01 rule is enforced in `analyzeBallotLog` itself (any mode, either order), not only for tally-listed
   trustees-mode spoils. **CP-03**: closed schemas use `Object.hasOwn`. **CP-04**: `ed25519IsStrictPoint` (crypto) now also requires a
   torsion-free point (mixed-order roll/author keys and signature R values are rejected). See `docs/audit/crypto-protocol.md`.

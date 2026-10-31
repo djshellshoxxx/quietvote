@@ -224,11 +224,24 @@ export interface TallyInputs {
   spoiled: { rec: SpoilRecord; mode: 'reveal' | 'trustees'; selections: Record<string, string[]>; shares?: ReadonlyMap<number, ShareSet> }[];
 }
 
+export interface AggregateTallyInputs extends Omit<TallyInputs, 'analysis'> {
+  nCounted: number;
+  countedRoot: Uint8Array;
+  aggs: ReadonlyMap<string, ReadonlyMap<string, Aggregate>>;
+}
+
 /** Coordinator convenience: assemble the §5.19.1 record. It is verified, not trusted. */
 export function buildTally(p: ElectionParams, inp: TallyInputs): Result<{ body: TallyBody; counts: Map<string, Map<string, number>> }, ErrorCode> {
   const counted = inp.analysis.counted;
-  const V = counted.length;
-  const aggs = aggregate(p, counted);
+  return buildTallyFromAggregate(p, { ...inp, nCounted: counted.length, countedRoot: countedRoot(counted), aggs: aggregate(p, counted) });
+}
+
+/** Coordinator convenience over an independently admitted/recomputed aggregate. Still verifies all decryption proofs.
+ * Does not establish the aggregate's counted-ballot binding; verifiers/trustees independently recompute that binding.
+ */
+export function buildTallyFromAggregate(p: ElectionParams, inp: AggregateTallyInputs): Result<{ body: TallyBody; counts: Map<string, Map<string, number>> }, ErrorCode> {
+  const V = inp.nCounted;
+  const aggs = inp.aggs;
   const dec = decryptAggregates(p, inp.Y, inp.decrypters, aggs, V, inp.shares);
   if (!dec.ok) return dec;
   const contests: TallyBody['contests'] = [];
@@ -261,7 +274,7 @@ export function buildTally(p: ElectionParams, inp: TallyInputs): Result<{ body: 
     type: 'tally',
     ctx: H(p.ctx),
     n_counted: V,
-    counted_root: H(countedRoot(counted)),
+    counted_root: H(inp.countedRoot),
     decrypters: dec.value.validSet, // §5.19: T_valid (P11), not every trustee that sent something
     contests,
     spoiled,

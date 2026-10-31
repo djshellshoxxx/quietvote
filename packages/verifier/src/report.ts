@@ -77,6 +77,8 @@ export interface VerifierReport {
   caveats: string[];
   counts: { cast: number; spoiled: number; counted: number; ignored: Record<string, number> };
   ctxPrefix?: string;
+  manifestHash?: string;
+  manifestHashSource?: 'caller' | 'bundle';
   results?: unknown;
   board?: BoardSummary;
   log?: LogLayerSummary;

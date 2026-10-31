@@ -17,6 +17,7 @@ from .errors import QVError
 from .framed_hash import H256, u8, u32
 from .proofs import POK_ENC_KEY_INDEX, dh_check, pok_check
 from .ristretto import G, R_IDENTITY, RPoint, decode_hex, scalar_decode_hex
+from .recordfields import integer, valid_body
 
 SHARE_INFO_PREFIX = b"qv1-r255-sha2/dkg-share"
 
@@ -24,7 +25,7 @@ SHARE_INFO_PREFIX = b"qv1-r255-sha2/dkg-share"
 def _first_timely(records: list[dict], who_key: str, who: int, lo: int, hi: int) -> dict | None:
     """First record (by seq) from `who` with lo < seq < hi."""
     for r in sorted(records, key=lambda r: r["seq"]):
-        if r["body"].get(who_key) == who and lo < r["seq"] < hi:
+        if valid_body(r["body"]) and integer(r["seq"]) and r["body"].get(who_key) == who and lo < r["seq"] < hi:
             return r
     return None
 
@@ -58,11 +59,15 @@ def share_key(mh: bytes, i: int, j: int, R: RPoint, S: RPoint) -> bytes:
 
 
 def adjudicate(mh: bytes, n: int, t: int, markers: dict[str, int], records: dict[str, list]) -> dict:
+    required = ('dkg-open', 'dkg-r1-open', 'dkg-r1-close', 'dkg-r2-close', 'dkg-r3-close', 'dkg-final')
+    if (any(not integer(markers.get(k)) for k in required)
+            or any(markers[a] >= markers[b] for a, b in zip(required, required[1:]))):
+        raise QVError('E_DKG_MARKERS', 'all six coordinator phase markers must be strictly ordered')
     r1_open = markers["dkg-r1-open"]
     r1_close = markers["dkg-r1-close"]
     r2_close = markers["dkg-r2-close"]
     r3_close = markers["dkg-r3-close"]
-    dkg_open = markers.get("dkg-open", 0)
+    dkg_open = markers['dkg-open']
 
     commits = records.get("commits", [])
     dealings_recs = records.get("dealings", [])
@@ -123,6 +128,8 @@ def adjudicate(mh: bytes, n: int, t: int, markers: dict[str, int], records: dict
         if not (r2_close < rec["seq"] < r3_close):
             continue  # late (or premature): ignored
         b = rec["body"]
+        if not valid_body(b):
+            continue
         try:
             j, i = b["accuser"], b["accused"]
             if i not in pkg or j not in R1 or j == i or j not in pkg[i]:

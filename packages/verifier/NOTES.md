@@ -56,22 +56,33 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
 6. **Pinned manifest hash** (`--manifest-hash`) replaces the bundle's own `manifest_hash`, which is attacker-controlled.
 7. **Independence (QV-08 D5).** The package imports only `@quietvote/crypto`, `protocol` and `board`. D1 says L3 packages never import each
    other, yet the requested `qv verify` makes `cli` import `verifier`; flagged for the owner. `qv-verify` here is the D1-clean path.
-   The production-dependency closure is `@noble/*` via crypto. No second implementation exists (G4 still open).
+   The production-dependency closure is `@noble/*` via crypto. An independent Python skeleton exists, with incomplete capabilities
+   and unresolved exact report parity (G4 still open).
 8. `verifyElection` also returns `jointKey` and `ctx` (hex) now (two optional fields added to `VerificationReport`) so the CLI can build ballots.
 
 ## Audit changes (docs/audit/web-verifier.md)
 * `verifyWithSelfTest` recomputes `reportHash` after it changes the verdict/caveats (it used to leave the hash of the pre-self-test report). A corpus that cannot be loaded or run now yields self-test failed and verdict FAIL (it used to throw); `qv-verify --selftest` exits 1 in that case. New option `corpusText` (test hook).
+
+### Consolidation regressions (2026-10-31)
+
+* **B1-06:** reports carry the selected `manifestHash` and its source (`caller` or `bundle`), and text reports print it. Omitting
+  `pinnedManifestHash` / `--manifest-hash` adds an explicit caveat that the hash was not supplied out of band. This discloses the
+  weaker trust basis without changing PASS/INCOMPLETE semantics. Modified reports are sealed again so their hashes remain correct.
+* **TSV-06:** canary self-tests compare an explicitly supplied expected verdict as well as named checks and finding codes.
+* **TSV-04 remains a verdict-policy gate:** a board-layer exception produces a V4 `not_run` result and an explicit caveat; the text
+  report lists skipped checks. Whether this must force the overall verdict to FAIL needs the owner decision also tracked as P1/TSV-05.
+  No board or governance failure was reclassified during consolidation.
+* The protocol verifier now rejects unknown fields on the manifest envelope and its signatures (B1-13). No signed vector or corpus
+  expectation was weakened for these changes.
 
 ## Known gaps
 
 * No worker threads / resumable verification (QV-11 scale row); no HTML offline page (the offline `verifier.html` is built by
   `packages/web` from the protocol API, not from this package); no signed corpus; redaction handling is coarse; no board-level canary
   in the corpus (covered by tests only).
-* **Board grammar vs protocol log (open, owner: board).** `board` requires a `roll_commit` before `election_open` even when the
-  manifest carries `roll.root`, and a `tally_aggregate` before `tally_result`. The protocol log produces neither (a roll-commit is
-  required only when `roll.root` is absent, and the tally is a single `tally` record). Every tallied or roll-root log therefore fails
-  the board layer with `QV_BOARD_GRAMMAR` and V4 fails. `test/helpers/sim.ts` emits a roll-commit to satisfy the grammar; the
-  tally case is avoided in `test/logcheck.test.ts` (those elections verify as INCOMPLETE).
+* **Board grammar reconciliation (imported).** The board accepts a manifest-declared static roll in place of a separate `roll_commit`
+  and no longer requires a separate `tally_aggregate` before `tally_result`. The protocol's QV-ADR-015 election-open still requires
+  the signed roll-commit reference it binds. There is no new QV-16 aggregate record or silent translation between record schemas.
 * **Shipped test vectors do not bind their log (open, owner: test-vectors / protocol).** `test-vectors/v1` manifests carry a constant
   placeholder `bb.log_id` (836ff184...c213) that is not SHA-256 of `logOrigin(manifest)` (X-21), so `E_LOG_BINDING` on any board export
   built for them. Left unchanged (zero-diff). Tests build their own conformant elections instead; new vectors would be the fix.
@@ -80,7 +91,6 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
   manifest_hash, joint_key_seq, roll_commit_seq; sim order is dkg-final, roll-commit, election-open; `electionOpenBody` imported from the
   protocol package); the local roll-commit workaround is gone. Re-sync by hand; regenerate `canary/corpus.json` with
   `node packages/verifier/scripts/build-corpus.ts` whenever test-vectors change.
-  changed and two additions: a roll-commit before election-open, and a `witnessPolicy` option on `buildBoard`. Re-sync by hand.
 
 ## CLI (`packages/cli`, binary `qv`)
 

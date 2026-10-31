@@ -55,6 +55,8 @@ def _multi(contest: dict, counts: dict) -> dict:
         w = contest["winners"]
     elif contest["method"] == "k-of-n":
         w = contest["selection_limit"]
+    elif contest["method"] == "approval":
+        w = 1  # QV-20 §5.3: single winner unless the manifest specifies otherwise.
     else:
         raise QVError("E_RULES", "number of winners undefined")
     ranked = sorted(ids, key=lambda o: -counts.get(o, 0))

@@ -87,10 +87,11 @@ export async function runSelfTest(corpus: Corpus = loadCorpus()): Promise<SelfTe
     const got = failedChecks(r);
     const exact = want.length === 0 || (want.length === got.length && want.every((x, i) => x === got[i]));
     const codesOk = (k.expect.codes ?? []).every((c) => r.findings.some((f) => f.code === c));
-    const ok = rejectedOk && exact && codesOk;
+    const verdictOk = k.expect.verdict === undefined || r.verdict === k.expect.verdict;
+    const ok = rejectedOk && exact && codesOk && verdictOk;
     cases.push({
       id: k.id, kind: 'canary', ok, verdict: r.verdict,
-      detail: !rejectedOk ? 'ACCEPTED a known-bad bundle' : !exact ? `failed checks [${got.join(', ')}], expected [${want.join(', ')}]` : !codesOk ? `missing expected finding codes [${(k.expect.codes ?? []).join(', ')}]` : `rejected as expected (${got.join(', ') || r.verdict})`,
+      detail: !rejectedOk ? 'ACCEPTED a known-bad bundle' : !verdictOk ? `verdict ${r.verdict}, expected ${k.expect.verdict}` : !exact ? `failed checks [${got.join(', ')}], expected [${want.join(', ')}]` : !codesOk ? `missing expected finding codes [${(k.expect.codes ?? []).join(', ')}]` : `rejected as expected (${got.join(', ') || r.verdict})`,
     });
   }
   for (const s of syntheticCanaries(corpus.control.bundle)) {

@@ -12,9 +12,10 @@ Error classes, in the order they are checked:
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
 
-from . import qvjson
+from . import ed25519, qvjson
 from .errors import QVError
 from .framed_hash import H256
 
@@ -67,7 +68,18 @@ def _hex(v: Any, rx: re.Pattern, what: str) -> str:
 def _ts(v: Any, what: str) -> str:
     if not isinstance(v, str) or not TS_RE.match(v):
         raise QVError("E_SCHEMA", f"{what} is not YYYY-MM-DDTHH:MM:SSZ")
+    try:
+        datetime.strptime(v, '%Y-%m-%dT%H:%M:%SZ')
+    except ValueError:
+        raise QVError('E_MANIFEST', f'{what} is not a valid UTC calendar timestamp')
     return v
+
+
+def _signing_key(v: Any, what: str) -> str:
+    h = _hex(v, HEX32, what)
+    if not ed25519.valid_public_key(bytes.fromhex(h)):
+        _bad(f'{what}: invalid Ed25519 subgroup point')
+    return h
 
 
 def _text(v: Any, what: str) -> str:
@@ -127,6 +139,8 @@ def _contest(c: Any, idx: int) -> None:
         wn = _int(c["winners"], f"{w}.winners")
         if not 1 <= wn <= len(ids):
             _bad(f"{w}: winners out of range")
+    if method == "yes-no" and "rule" not in c:
+        _bad(f"{w}: yes-no requires a threshold rule")
     if "rule" in c:
         r = _obj(c["rule"], {"type", "num", "den", "basis", "strict"}, set(), f"{w}.rule")
         if _str(r["type"], "rule.type") != "threshold":
@@ -169,6 +183,8 @@ def validate(m: Any, roll_size: int | None = None) -> None:
     _text(m["title"], "title")
     _ts(m["created"], "created")
     vo, vc = _ts(m["voting_open"], "voting_open"), _ts(m["voting_close"], "voting_close")
+    if m['created'] > vo:
+        _bad('created must not be after voting_open')
     if _int(m["clock_skew_s"], "clock_skew_s") < 0:
         _bad("clock_skew_s negative")
     if not vc > vo:  # fixed-width UTC timestamps compare lexicographically
@@ -218,7 +234,7 @@ def validate(m: Any, roll_size: int | None = None) -> None:
         _obj(tr, {"index", "name", "sign_pk"}, set(), f"trustees[{k}]")
         _int(tr["index"], "trustee.index")
         _text(tr["name"], "trustee.name")
-        _hex(tr["sign_pk"], HEX32, "trustee.sign_pk")
+        _signing_key(tr["sign_pk"], "trustee.sign_pk")
     if not 1 <= t <= n <= 32:
         _bad("require 1 <= t <= n <= 32")
     if len(trustees) != n or [tr["index"] for tr in trustees] != list(range(1, n + 1)):
@@ -230,7 +246,7 @@ def validate(m: Any, roll_size: int | None = None) -> None:
     if not isinstance(co["keys"], list) or not co["keys"]:
         raise QVError("E_SCHEMA", "coordinator.keys is not a non-empty array")
     for k in co["keys"]:
-        _hex(k, HEX32, "coordinator.keys[]")
+        _signing_key(k, "coordinator.keys[]")
     if len(set(co["keys"])) != len(co["keys"]) or not 1 <= _int(co["m"], "coordinator.m") <= len(co["keys"]):
         _bad("coordinator m-of-k invalid")
 
@@ -242,7 +258,7 @@ def validate(m: Any, roll_size: int | None = None) -> None:
     # Accepted here as used by the log-layer vectors (QV-ERR-PY-014).
     bb = _obj(m["bb"], {"log_id", "log_pk", "witness_quorum"}, {"witnesses"}, "bb")
     _hex(bb["log_id"], HEX32, "bb.log_id")
-    _hex(bb["log_pk"], HEX32, "bb.log_pk")
+    _signing_key(bb["log_pk"], "bb.log_pk")
     wq = _int(bb["witness_quorum"], "bb.witness_quorum")
     wit = bb.get("witnesses", [])
     if not isinstance(wit, list):
@@ -250,7 +266,7 @@ def validate(m: Any, roll_size: int | None = None) -> None:
     for k, w in enumerate(wit):
         _obj(w, {"name", "pk"}, set(), f"bb.witnesses[{k}]")
         _text(w["name"], "witness.name")
-        _hex(w["pk"], HEX32, "witness.pk")
+        _signing_key(w["pk"], "witness.pk")
     if len({w["pk"] for w in wit}) != len(wit) or len({w["name"] for w in wit}) != len(wit):
         _bad("duplicate witness")
     if wq < 0 or ("witnesses" in bb and wq > len(wit)):

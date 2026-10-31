@@ -7,6 +7,7 @@ export function formatReport(r: VerifierReport): string {
   const L: string[] = [];
   L.push(`QuietVote verification report (${r.tool})`);
   L.push(`VERDICT: ${r.verdict}`);
+  if (r.manifestHash !== undefined) L.push(`manifest hash (${r.manifestHashSource ?? 'unknown'}): ${r.manifestHash}`);
   if (r.ctxPrefix !== undefined) L.push(`election ctx: ${r.ctxPrefix}...`);
   const flagged = V_IDS.filter((id) => r.checks[id].status === 'fail');
   if (r.verdict !== 'FAIL' && flagged.length > 0) L.push(`FLAGGED: ${flagged.join(', ')} failed without changing the verdict (ignored ballots or alarms, QV-16 App. C); read the notes below`);

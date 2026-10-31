@@ -51,6 +51,9 @@ export function analyzeBallotLog(
     findings.push({ code, cls, seq, detail });
   };
   const spoiled = new Map<string, SpoilRecord>();
+  // REQ-015 applies to every authenticated spoil, even one that is not admissible as an audit.
+  const spoiledCodes = new Set<string>();
+  const signedSpoils = new Map<string, SpoilRecord>();
   const casts: { seq: number; v: { voter: string; code: Uint8Array; env: CastEnvelope } }[] = [];
   const spoilsPerVoter = new Map<string, number>();
   let castSeen = 0;
@@ -82,12 +85,16 @@ export function analyzeBallotLog(
       add(r.error, seq, r.detail ?? 'envelope invalid', r.error === 'E_SPOIL_MISMATCH' ? 'ALARM' : 'L');
       continue;
     }
+    const code = H(r.value.code);
+    if (r.value.env.intent === 'spoil') {
+      spoiledCodes.add(code);
+      if (!signedSpoils.has(code)) signedSpoils.set(code, { seq, code, voter: r.value.voter, env: r.value.env });
+    }
     if (!(seq > open && seq < close)) {
       cf.window = false;
       add('E_TIME_WINDOW', seq, 'outside open/close markers');
       continue;
     }
-    const code = H(r.value.code);
     if (r.value.env.intent === 'spoil') {
       const env = r.value.env;
       const n = (spoilsPerVoter.get(r.value.voter) ?? 0) + 1;
@@ -113,7 +120,7 @@ export function analyzeBallotLog(
 
   // CP-01/TR-01: a spoil is only ever a test ballot. One that shares ciphertexts with a valid cast (re-wrapped under another
   // `supersedes`, so it has a different code) would let a published/decrypted spoil expose a cast ballot: reject it.
-  for (const [code, rec] of [...spoiled]) {
+  for (const [code, rec] of signedSpoils) {
     const mine = new Set<string>();
     collectAlphas(rec.env.body, mine);
     // Same code as a cast is the plain 'spoiled code cast' case handled below (the cast is excluded, the spoil stays).
@@ -146,7 +153,7 @@ export function analyzeBallotLog(
       add('E_DUP_CODE', seq, 'ballot code already used by another voter');
       continue;
     }
-    if (spoiled.has(code)) {
+    if (spoiledCodes.has(code)) {
       cf.benaloh = false;
       add('E_SPOILED_CODE_CAST', seq, 'ballot code was spoiled; excluded', 'ALARM');
       continue;

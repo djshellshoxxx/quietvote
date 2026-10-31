@@ -75,6 +75,10 @@ protocol, scale vectors, and anything from Phase 2 or 3.
 
 ## Results (only runs actually performed)
 
+The results below are historical (2026-10-21). See [NOTES.md](NOTES.md) for consolidation repairs and remaining parity gates;
+the integration validation report records current measurements. In particular, the imported protocol fix corrects the canary's
+expected decrypt status without weakening the mutation expectations.
+
 Run on 2026-10-21 at 11:33 UTC with Python 3.13.16 (the only interpreter available; 3.11/3.12 were
 not tested). Command: `python3 -I verifier-py/qv_verifier vectors test-vectors/v1`.
 Tree state: `test-vectors/MANIFEST.json` listing 73 files with root `924f376e…864e`. All 70 listed

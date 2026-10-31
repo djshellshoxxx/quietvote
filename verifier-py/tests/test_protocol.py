@@ -39,7 +39,7 @@ def make_manifest(**over):
         "n": 3, "t": 2,
         "coordinator": {"keys": [ed25519.public_key(b"\x09" * 32).hex()], "m": 1},
         "ballots": {"max_per_voter": 8, "max_spoils_per_voter": 16},
-        "bb": {"log_id": "11" * 32, "log_pk": "22" * 32, "witness_quorum": 0},
+        "bb": {"log_id": "11" * 32, "log_pk": ed25519.public_key(b"\x22" * 32).hex(), "witness_quorum": 0},
         "privacy_ack": True,
     }
     m.update(over)
@@ -53,7 +53,7 @@ class TestManifest(unittest.TestCase):
         j, h = manifest.manifest_hash(m)
         self.assertEqual(h, H256("manifest", qvjson.jcs(m)))
         w = make_manifest()
-        w["bb"] = dict(w["bb"], witness_quorum=1, witnesses=[{"name": "w1", "pk": "33" * 32}])
+        w["bb"] = dict(w["bb"], witness_quorum=1, witnesses=[{"name": "w1", "pk": ed25519.public_key(b"\x33" * 32).hex()}])
         manifest.validate(w, 3)
         w["bb"]["witness_quorum"] = 2
         with self.assertRaises(QVError):

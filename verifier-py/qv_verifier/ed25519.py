@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 
-from .edwards import BASE, L, ed_decode, ed_encode, is_small_order
+from .edwards import BASE, IDENTITY, L, ed_decode, ed_encode, is_small_order
 
 
 def _sha512(*parts: bytes) -> bytes:
@@ -50,11 +50,11 @@ def sign(secret: bytes, msg: bytes) -> bytes:
 
 
 def valid_public_key(pk: bytes) -> bool:
-    """Canonical, decodable and not small-order (QV-16 §5.14.4 check 3)."""
+    """Canonical, nonzero prime-order subgroup point (QV-ADR-018 / CP-04)."""
     if len(pk) != 32:
         return False
     A = ed_decode(pk)
-    return A is not None and not is_small_order(A)
+    return A is not None and not is_small_order(A) and A.mul(L).edwards_equal(IDENTITY)
 
 
 def verify(pk: bytes, msg: bytes, sig: bytes) -> bool:
@@ -62,11 +62,11 @@ def verify(pk: bytes, msg: bytes, sig: bytes) -> bool:
     if len(pk) != 32 or len(sig) != 64:
         return False
     A = ed_decode(pk)
-    if A is None or is_small_order(A):
+    if A is None or is_small_order(A) or not A.mul(L).edwards_equal(IDENTITY):
         return False
     Rb = sig[:32]
     R = ed_decode(Rb)
-    if R is None or is_small_order(R):
+    if R is None or is_small_order(R) or not R.mul(L).edwards_equal(IDENTITY):
         return False
     S = int.from_bytes(sig[32:], "little")
     if S >= L:

@@ -31,6 +31,7 @@ from .errors import QVError
 from .framed_hash import H256
 from .proofs import dec_check, pok_share_check
 from .ristretto import G, R_IDENTITY, RPoint, decode_hex, scalar_decode_hex
+from .recordfields import hex_field, integer, valid_body
 
 CHECKS = [
     "chk.manifest.hash", "chk.manifest.sig", "chk.keys.trustees", "chk.board.append_only",
@@ -87,10 +88,12 @@ def _record_schema_ok(entry: Any) -> bool:
     if not isinstance(entry, dict) or not ("body" in entry and len(entry) == 2 and ("sig" in entry or "sigs" in entry)):
         return False
     body = entry["body"]
-    if not isinstance(body, dict) or body.get("type") not in _RECORD_KEYS:
+    if not isinstance(body, dict) or not isinstance(body.get('type'), str) or body.get("type") not in _RECORD_KEYS:
         return False
     req, opt = _RECORD_KEYS[body["type"]]
     if not _keys_ok(body, req, opt):
+        return False
+    if not valid_body(body):
         return False
     if body["type"] == "marker":
         # QV-ADR-015 / X-40: binding fields required on election-open, forbidden on every other marker.
@@ -129,7 +132,7 @@ def _record_schema_ok(entry: Any) -> bool:
             if not _keys_ok(r, {"contest", "participation", "quorum_met", "outcome"}, set()):
                 return False
     sigs = entry["sigs"] if "sigs" in entry else [entry["sig"]]
-    return isinstance(sigs, list) and all(_keys_ok(s, {"key", "sig"}, set()) for s in sigs)
+    return isinstance(sigs, list) and all(_keys_ok(s, {"key", "sig"}, set()) and hex_field(s['key'], 32) and hex_field(s['sig'], 64) for s in sigs)
 
 
 def record_msg(scope: bytes, body: dict) -> bytes:
@@ -247,9 +250,11 @@ def _open_binding_error(
 def _verify(bundle: dict, st: State, out: dict) -> None:
     # ------------------------------------------------ C1 manifest and parameters
     env = bundle.get("manifest")
-    if not _keys_ok(env, {"body", "sigs"}, set()):
+    if (not _keys_ok(env, {"body", "sigs"}, set()) or not isinstance(env.get('sigs'), list)
+            or not all(_keys_ok(s, {'key', 'sig'}, set()) and hex_field(s['key'], 32) and hex_field(s['sig'], 64) for s in env['sigs'])):
         st.add("chk.manifest.hash", "E_SCHEMA", True, "manifest envelope")
-        _stop(st, *ALL_AFTER_MANIFEST)
+        st.add('chk.encoding.canonical', 'E_SCHEMA', True, 'manifest envelope')
+        _stop(st, *[c for c in ALL_AFTER_MANIFEST if c != 'chk.encoding.canonical'])
     body = env["body"]
     try:
         j, mh = manifest_mod.manifest_hash(body)
@@ -277,6 +282,8 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         st.add("chk.manifest.sig", "E_MANIFEST_SIG", True, "fewer than m valid coordinator signatures")
     roll_root_hex: str | None = None
     try:
+        if not all(hex_field(x, 32) for x in roll_hex):
+            raise QVError('E_ROLL', 'roll keys must be lower-case fixed-width hex')
         roll_pks = [bytes.fromhex(x) for x in roll_hex]
         root, _ = merkle.roll_root(roll_pks)
         roll_root_hex = root.hex()
@@ -295,7 +302,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         st.add("chk.encoding.canonical", "E_SCHEMA", True, "log missing")
         _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
     seqs = [e.get("seq") for e in log if isinstance(e, dict)]
-    if len(seqs) != len(log) or any(not isinstance(s, int) for s in seqs) or seqs != sorted(set(seqs)):
+    if len(seqs) != len(log) or any(not integer(s) for s in seqs) or seqs != sorted(set(seqs)):
         st.add("chk.board.append_only", "E_LOG_ORDER", True, "sequence numbers not strictly increasing")
     envelopes, records = [], []
     for e in log:
@@ -360,9 +367,9 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
             keyconfs.append((seq, en))
         elif ty == "tally":
             tally_recs.append((seq, en))
-    need = ["dkg-r1-open", "dkg-r1-close", "dkg-r2-close", "dkg-r3-close", "dkg-final"]
-    if any(x not in markers for x in need):
-        st.add("chk.keys.trustees", "E_DKG_FINAL", True, "DKG phase markers missing")
+    need = ["dkg-open", "dkg-r1-open", "dkg-r1-close", "dkg-r2-close", "dkg-r3-close", "dkg-final"]
+    if any(x not in markers for x in need) or any(markers[a][0] >= markers[b][0] for a, b in zip(need, need[1:]) if a in markers and b in markers):
+        st.add("chk.keys.trustees", "E_DKG_MARKERS", True, "DKG phase markers missing or misordered")
         _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
     mk = {k: v[0] for k, v in markers.items()}
     try:
@@ -435,6 +442,9 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
 
     # ------------------------------------------------ C4/C5 ballots and spoils
     casts, spoils = [], []
+    signed_spoils = []
+    spoiled_codes: set[bytes] = set()
+    spoils_per_voter: dict[str, int] = {}
     for seq, en in envelopes:
         intent = en.get("intent")
         if intent == "cast":
@@ -448,15 +458,31 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
             if e.code in ("E_PARSE", "E_SCHEMA"):
                 st.add("chk.encoding.canonical", e.code, False, f"seq {seq}")
             continue
+        if en["intent"] == "spoil":
+            spoiled_codes.add(code)
+            signed_spoils.append((seq, en, code))
         if not open_seq < seq < close_seq:
             st.add("chk.time.window", "E_TIME_WINDOW", False, f"seq {seq} outside window")
             continue
+        if en["intent"] == "spoil":
+            voter = en["body"]["voter"]
+            spoils_per_voter[voter] = spoils_per_voter.get(voter, 0) + 1
+            if spoils_per_voter[voter] > m["ballots"]["max_spoils_per_voter"]:
+                st.add("chk.ballots.latest", "E_REVOTE_LIMIT", False, f"seq {seq}: max_spoils_per_voter exceeded")
+                continue
         (casts if en["intent"] == "cast" else spoils).append((seq, en, code))
 
-    spoiled_codes: set[bytes] = set()
+    # Only envelope-valid casts can establish a ciphertext clash: junk signatures cannot plant an alpha.
+    cast_codes = {code for _, _, code in casts}
+    cast_alphas = {s["a"] for _, en, _ in casts for c in en["body"]["contests"] for s in c["sel"]}
+    audit_codes = {code for _, _, code in spoils}
     reproduced: dict[str, dict] = {}
-    for seq, en, code in spoils:
-        spoiled_codes.add(code)
+    for seq, en, code in signed_spoils:
+        if code not in cast_codes and any(s["a"] in cast_alphas for c in en["body"]["contests"] for s in c["sel"]):
+            st.add("chk.benaloh.spoiled", "E_SPOILED_CODE_CAST", False, f"seq {seq}: re-wrapped spoil shares ciphertexts with a cast")
+            continue
+        if code not in audit_codes:
+            continue
         if "reveal" in en:
             try:
                 rd = H256("reveal", ctx, qvjson.jcs(en["reveal"]))
@@ -621,9 +647,11 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         st.add("chk.benaloh.spoiled", "E_SPOIL_MISMATCH", False, "tally.spoiled differs from reproduced reveals")
 
     # ------------------------------------------------ C7 results
-    results = [
-        rules.evaluate(m.get("quorum"), mc, counts[mc["id"]], V, n_roll) for mc in m["contests"]
-    ]
+    try:
+        results = [rules.evaluate(m.get("quorum"), mc, counts[mc["id"]], V, n_roll) for mc in m["contests"]]
+    except (QVError, KeyError, TypeError, ValueError) as e:
+        st.add("chk.result.rules", "E_RESULT", True, f"rule evaluation failed: {e}")
+        return
     out["results"] = results
     if tb.get("results") != results:
         st.add("chk.result.rules", "E_RESULT", True, "published results differ from evaluation")

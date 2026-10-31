@@ -8,7 +8,7 @@ import {
 import { effectiveMinCounted, manifestHash, rollRoot, validateManifest } from './manifest.ts';
 import { verifyMultiSig, verifySig } from './records.ts';
 import { evaluateAll } from './rules.ts';
-import { S, check, tallySchema, type Schema } from './schema.ts';
+import { S, check, manifestSchema, tallySchema, type Schema } from './schema.ts';
 import { decryptAggregates, decryptSpoiled, shareFromHex, shareKey, type ShareSet } from './tally.ts';
 import type {
   CommitBody, ComplaintBody, DealingBody, ErrorCode, KeyconfBody, Manifest, MarkerBody, MultiSignedRecord, RollCommitBody,
@@ -159,6 +159,12 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   if (!mv.ok) {
     F(mv.error, `manifest: ${mv.detail ?? ''}`);
     if (mv.error === 'E_SCHEMA' || mv.error === 'E_PARSE') R.checks['chk.encoding.canonical'] = 'fail';
+    return done();
+  }
+  const manifestShape = check({ t: 'obj', req: { body: manifestSchema(), sigs: { t: 'arr', item: S.sig, min: 0, max: 8 } } }, mrec);
+  if (manifestShape !== null) {
+    F('E_SCHEMA', `manifest envelope: ${manifestShape}`);
+    R.checks['chk.encoding.canonical'] = 'fail';
     return done();
   }
   const m = mv.value.manifest;

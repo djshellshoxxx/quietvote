@@ -144,11 +144,16 @@ export async function verifyBundle(input: string | Uint8Array | object, o: Verif
       observed_heads: log.observed?.length ?? 0,
     };
     const r = compose(pr, br, boardSkipped, board !== undefined, logInfo);
+    r.manifestHash = election.manifest_hash;
+    r.manifestHashSource = o.pinnedManifestHash === undefined ? 'bundle' : 'caller';
+    if (o.pinnedManifestHash === undefined) {
+      r.caveats.push('manifest hash was not supplied out of band; this run checks consistency with the bundle-provided hash only');
+    }
     if (log === undefined && ((o.receipts?.length ?? 0) > 0 || (o.observedCheckpoints?.length ?? 0) > 0 || o.pinnedCheckpoint !== undefined)) {
       r.caveats.push('log evidence (receipts, observed tree heads, pinned checkpoint) not checked: the bundle carries no board log export');
       return seal(r);
     }
-    return r;
+    return seal(r);
   } catch (e) {
     return rejected([`verifier internal rejection: ${e instanceof Error ? e.message : 'unknown'}`]);
   }
