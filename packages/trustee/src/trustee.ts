@@ -12,7 +12,7 @@ import {
 } from '@quietvote/protocol';
 import { witnessStatus, type WitnessPolicy } from '@quietvote/board';
 import {
-  encodeBundle, readBundle, readBundleSealed, tombstonePath, writeBundle,
+  readBundleSealed, sealBundle, tombstonePath, writeBundle,
   type BundleData, type CompromiseBody, type KeyDestructionBody, type KeycheckBody, type SpoilShareBody, type TallyShareBody, type VaultDeps,
 } from './bundle.ts';
 import { computeR1, markerBody, markerSeq, mergeEntries, takeDkg, uniqueBy, type ImportReport } from './ceremonylog.ts';
@@ -20,7 +20,7 @@ import { TrusteeError } from './errors.ts';
 import { exists, atomicWrite, lockPath, readFile, shred, withLock } from './fsutil.ts';
 import { ledgerPath, readLedger, writeLedger } from './ledger.ts';
 import { realpath } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fingerprintOf } from './fingerprint.ts';
 import { assertTransition, PRE_STANDBY, type TrusteeState } from './machine.ts';
 import { assertPassphraseStrength } from './passphrase.ts';
@@ -132,6 +132,7 @@ export class Trustee {
   private readonly deps: Dep;
   /** SHA-256 of the sealed file as this object last read or wrote it; undefined = the file must not exist yet (audit TR-03). */
   private sealedHash: string | undefined;
+  private writeFailed = false;
 
   private constructor(path: string, pass: string, d: BundleData, deps: Dep, sealed?: Uint8Array) {
     this.path = path;
@@ -145,6 +146,7 @@ export class Trustee {
 
   /** Creates a fresh per-election Ed25519 identity (QV-17-REQ-031) in a sealed bundle (state KEYS_READY). */
   static async keygen(path: string, pass: string, deps: Dep): Promise<Trustee> {
+    path = await realTarget(path);
     assertPassphraseStrength(pass, deps.allowWeak === true);
     if ((await exists(path)) || (await exists(tombstonePath(path))) || (await exists(ledgerPath(path)))) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'refusing to overwrite an existing bundle, tombstone or release ledger');
     const kp = ed25519Keypair(deps.rng.bytes(32));
@@ -165,10 +167,21 @@ export class Trustee {
    * already released from this path (a backup copied over the live bundle), the earlier releases are carried forward.
    */
   static async open(path: string, pass: string, deps: Dep): Promise<Trustee> {
+    path = await realTarget(path);
     const { data: d, sealed } = await readBundleSealed(path, pass, deps);
+    // Only the inert destruction state may survive a crash after the tombstone was written but before the final wipe.
+    if (await exists(tombstonePath(path)) && d.state !== 'DESTROYING') throw new TrusteeError('STATE', 'DESTROYED', 'this share was destroyed');
     const t = new Trustee(path, pass, d, deps, sealed);
+    let changed = false;
+    if (d.home !== undefined && await realTarget(d.home) !== path) {
+      if (await exists(tombstonePath(d.home))) throw new TrusteeError('STATE', 'DESTROYED', 'a destruction tombstone exists for the original bundle');
+      const original = await readLedger(ledgerPath(d.home));
+      if (original !== undefined) changed = t.adoptReleases(original, 'original release ledger');
+      else if (d.derived !== undefined) throw new TrusteeError('REFUSED', 'NO_RELEASE_LEDGER', 'relocated key-holding bundle has no original release ledger; use restore with a ledger or the explicit no-ledger override');
+    }
     const led = await readLedger(ledgerPath(path));
-    if (led !== undefined && t.adoptReleases(led, 'release ledger')) await t.save();
+    if (led !== undefined) changed = t.adoptReleases(led, 'release ledger') || changed;
+    if (changed) await t.save();
     return t;
   }
 
@@ -180,10 +193,16 @@ export class Trustee {
    * delete the ledger and the live bundle and restore anything; this guards against mistakes and stale backups, not an operator.
    */
   static async restore(from: string, fromPass: string, to: string, toPass: string, deps: Dep, opts: { ledger?: string; override?: string } = {}): Promise<Trustee> {
+    to = await realTarget(to);
+    from = await realTarget(from);
     if (await exists(tombstonePath(to))) throw new TrusteeError('STATE', 'DESTROYED', 'a destruction tombstone exists for the target');
     if (await exists(to)) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'target exists');
     assertPassphraseStrength(toPass, deps.allowWeak === true);
-    const d = await readBundle(from, fromPass, deps);
+    const { data: d, sealed } = await readBundleSealed(from, fromPass, deps);
+    const sourceFingerprint = H(sha256(sealed));
+    const sourceBackup = d.backups.find((backup) => backup.path === from);
+    if (sourceBackup !== undefined) sourceBackup.sha256 = sourceFingerprint;
+    else d.backups.push({ path: from, at: deps.now().toISOString(), epoch: d.backup_epoch, sha256: sourceFingerprint });
     if (d.state === 'DESTROYED' || d.state === 'DESTROYING') throw new TrusteeError('STATE', 'DESTROYED', 'backup is of a destroyed share');
     if (d.home !== undefined && (await exists(tombstonePath(d.home)))) throw new TrusteeError('STATE', 'DESTROYED', 'a destruction tombstone exists for the original bundle');
     const t = new Trustee(to, toPass, d, deps);
@@ -194,6 +213,8 @@ export class Trustee {
       if (opts.override !== OVERRIDE_NO_LEDGER) throw new TrusteeError('REFUSED', 'NO_RELEASE_LEDGER', 'no release ledger found for the original bundle; earlier releases cannot be ruled out. Pass the ledger, or confirm with the typed override');
       d.overrides.push({ what: 'restored without release ledger', at: deps.now().toISOString() });
     }
+    const targetLedger = await readLedger(ledgerPath(to));
+    if (targetLedger !== undefined) t.adoptReleases(targetLedger, 'target release ledger');
     d.home = resolve(to);
     d.events.push({ t: deps.now().toISOString(), note: `restored from backup epoch ${d.backup_epoch}` });
     await t.save({ ledger: true });
@@ -210,7 +231,12 @@ export class Trustee {
     for (const raw of records) {
       if (check(tallyShareRecordSchema, raw) === null) {
         const r = raw as SignedRecord<TallyShareBody>;
-        if (r.body.ctx !== dv.ctx || r.body.j !== j || !verifySig(ctx, 'tally-share', r.body, r.sig, this.d.sign_pk) || this.d.out.release !== undefined) continue;
+        if (r.body.ctx !== dv.ctx || r.body.j !== j || !verifySig(ctx, 'tally-share', r.body, r.sig, this.d.sign_pk)) continue;
+        const prior = this.d.out.release;
+        if (prior !== undefined) {
+          if (prior.body.counted_root !== r.body.counted_root || prior.body.n_counted !== r.body.n_counted) throw new TrusteeError('REFUSED', 'RELEASE_CONFLICT', 'authenticated release ledgers contain different counted sets for this share');
+          continue;
+        }
         this.d.out.release = r;
         changed = true;
       } else if (check(spoilShareRecordSchema, raw) === null) {
@@ -253,12 +279,22 @@ export class Trustee {
    * persist (and so never both emit) a one-shot output. `ledger`: also sync the public release ledger, inside the same lock, first.
    */
   private async save(opts: { ledger?: boolean } = {}): Promise<void> {
-    await withLock(this.path, async () => {
-      const cur = (await exists(this.path)) ? H(sha256(new Uint8Array(await readFile(this.path)))) : undefined;
-      if (cur !== this.sealedHash) throw new TrusteeError('STATE', 'BUNDLE_CHANGED', 'the bundle file changed on disk since it was opened (another qv-trustee process?); nothing was written. Re-run the command');
-      if (opts.ledger === true) await this.syncLedger();
-      this.sealedHash = H(sha256(await writeBundle(this.path, this.d, this.pass, this.deps)));
-    });
+    this.assertUsable();
+    try {
+      await withLock(this.path, async () => {
+        const cur = (await exists(this.path)) ? H(sha256(new Uint8Array(await readFile(this.path)))) : undefined;
+        if (cur !== this.sealedHash) throw new TrusteeError('STATE', 'BUNDLE_CHANGED', 'the bundle file changed on disk since it was opened (another qv-trustee process?); nothing was written. Re-run the command');
+        if (opts.ledger === true) await this.syncLedger();
+        this.sealedHash = H(sha256(await writeBundle(this.path, this.d, this.pass, this.deps)));
+      });
+    } catch (e) {
+      // In-memory state may already contain an output that was never persisted. Never re-serve it after a failed save.
+      this.writeFailed = true;
+      throw e;
+    }
+  }
+  private assertUsable(): void {
+    if (this.writeFailed) throw new TrusteeError('STATE', 'BUNDLE_REOPEN_REQUIRED', 'a previous save failed; reopen the bundle before continuing');
   }
   private note(s: string): void {
     this.d.events.push({ t: this.deps.now().toISOString(), note: s });
@@ -268,9 +304,11 @@ export class Trustee {
     this.d.state = to;
   }
   private need(...states: TrusteeState[]): void {
+    this.assertUsable();
     if (!states.includes(this.d.state)) throw new TrusteeError('STATE', 'WRONG_STATE', `state ${this.d.state}; this step needs ${states.join('|')}`);
   }
   private mf(): { m: Manifest; mh: Uint8Array; i: number } {
+    this.assertUsable();
     const { manifest, trustee_id } = this.d;
     if (manifest === undefined || trustee_id === undefined) throw new TrusteeError('STATE', 'NOT_JOINED', 'run join first');
     return { m: manifest.body, mh: manifestHash(manifest.body), i: trustee_id };
@@ -303,6 +341,7 @@ export class Trustee {
    * verify and this identity's key must be the one the manifest lists (QV-17 §7).
    */
   async join(manifest: MultiSignedRecord<Manifest>, manifestHashHex: string, ceremonyId: string): Promise<void> {
+    this.assertUsable();
     if (this.d.state !== 'KEYS_READY') throw new TrusteeError('STATE', 'WRONG_STATE', `state ${this.d.state}`);
     const body = (manifest as { body?: { roll?: { size?: unknown } } } | null)?.body;
     if (typeof body !== 'object' || body === null || typeof body.roll !== 'object' || body.roll === null) throw new TrusteeError('VERIFY', 'MANIFEST_INVALID', 'not a signed manifest record (body.roll missing)');
@@ -810,19 +849,25 @@ export class Trustee {
     const target = await realTarget(dest);
     for (const o of own) if ((await realTarget(o)) === target) throw new TrusteeError('USAGE', 'BACKUP_SAME_FILE', 'the backup would overwrite one of this share\'s own files');
     if (await exists(dest)) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'backup destination already exists; refusing to overwrite');
+    dest = target;
     const prev = { epoch: this.d.backup_epoch, backups: this.d.backups.length, events: this.d.events.length };
     this.d.backup_epoch += 1;
-    this.d.backups.push({ path: dest, at: this.deps.now().toISOString(), epoch: this.d.backup_epoch });
+    const backup = { path: dest, at: this.deps.now().toISOString(), epoch: this.d.backup_epoch, sha256: '' };
+    this.d.backups.push(backup);
     this.note(`backup made (epoch ${this.d.backup_epoch})`);
-    await writeBundle(dest, this.d, backupPass, this.deps);
     try {
+      const sealed = await sealBundle(this.d, backupPass, this.deps);
+      backup.sha256 = H(sha256(sealed));
+      await atomicWrite(dest, sealed, 0o600, { exclusive: true });
       await this.save();
     } catch (e) {
       // T9: the live bundle does not know about this backup, so destroy could never erase it: do not leave it behind.
       this.d.backup_epoch = prev.epoch;
       this.d.backups.length = prev.backups;
       this.d.events.length = prev.events;
-      await shred(dest, (n) => this.deps.rng.bytes(n)).catch(() => false);
+      const collision = (e as { code?: string }).code === 'EEXIST';
+      if (!collision && backup.sha256) await shred(dest, (n) => this.deps.rng.bytes(n), backup.sha256).catch(() => false);
+      if (collision) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'backup destination already exists; refusing to overwrite');
       throw e;
     }
     return { epoch: this.d.backup_epoch };
@@ -834,6 +879,7 @@ export class Trustee {
    * (public data only) keeps the command idempotent. Physical erasure of flash media is NOT guaranteed.
    */
   async destroy(auditClose: unknown, typedTitle: string): Promise<{ attestation: SignedRecord<KeyDestructionBody>; attestationPath: string; backupsRemoved: string[]; backupsMissing: string[]; reminders: string[] }> {
+    this.assertUsable();
     const mfm = this.d.manifest;
     if (this.d.state === 'DESTROYED') throw new TrusteeError('STATE', 'DESTROYED');
     if (mfm !== undefined && typedTitle !== mfm.body.title) throw new TrusteeError('DECLINED', 'CONFIRMATION_MISMATCH', 'type the exact election title to confirm');
@@ -877,14 +923,18 @@ export class Trustee {
     const removed: string[] = [];
     const missing: string[] = [];
     const rnd = (n: number): Uint8Array => this.deps.rng.bytes(n);
-    for (const b of this.d.backups) (await shred(b.path, rnd)) ? removed.push(b.path) : missing.push(b.path);
+    for (const b of this.d.backups) {
+      // A legacy relative path has no original cwd; a changed file at a known path is not ours to erase.
+      const erased = isAbsolute(b.path) && !!b.sha256 && await shred(b.path, rnd, b.sha256);
+      (erased ? removed : missing).push(b.path);
+    }
     const tomb = { format: 'qv-share-destroyed/v1', election_id: this.d.election_id ?? '', trustee_id: this.d.trustee_id ?? 0, destroyed_at: att.body.destroyed_at, attestation_sha256: H(sha256(jcs(att))) };
     await atomicWrite(tombstonePath(this.path), jcs(tomb), 0o644);
-    await shred(this.path, rnd);
+    if (!(await shred(this.path, rnd, this.sealedHash))) throw new TrusteeError('REFUSED', 'BUNDLE_NOT_REMOVED', 'the live bundle could not be safely removed; check the path and destroy it manually');
     const reminders = [
       'Shred the passphrase card and delete any password-manager entry for this bundle.',
       'File deletion does not guarantee erasure of flash/SSD blocks; destroying the passphrase makes residual blocks useless.',
-      ...(missing.length > 0 ? [`Backups not found at recorded paths (check manually): ${missing.join(', ')}`] : []),
+      ...(missing.length > 0 ? [`Backups not safely removed (missing, replaced or legacy path; check manually): ${missing.join(', ')}`] : []),
       'Copies you did not register with this tool (USB sticks, mnemonic shares) must be destroyed by hand.',
     ];
     this.d = { ...this.d, state: 'DESTROYED' };
@@ -903,6 +953,7 @@ export class Trustee {
 
   /** Abort a ceremony in progress: all round secrets are wiped from the bundle. */
   async abort(reason: string): Promise<void> {
+    this.assertUsable();
     if (!PRE_STANDBY.includes(this.d.state)) throw new TrusteeError('STATE', 'WRONG_STATE', `cannot abort from ${this.d.state}`);
     this.wipeCeremony();
     // the ceremony's own outputs and derived key material belong to the aborted run; nothing may be re-served from them
@@ -990,10 +1041,6 @@ export class Trustee {
     };
   }
 
-  /** Test/diagnostic helper: serialized plaintext (never written by the tool except inside the sealed bundle). */
-  debugPlaintext(): Uint8Array {
-    return encodeBundle(this.d);
-  }
 }
 
 // ---------------------------------------------------------------------------------------------- coordinator-side helpers

@@ -1,34 +1,47 @@
-import { chmod, open, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
-import { dirname, join, basename } from 'node:path';
+import { chmod, link, lstat, open, readFile, realpath, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { dirname, join, basename, resolve } from 'node:path';
 import { TrusteeError } from './errors.ts';
 
 /** Write temp (0600, exclusive) + fsync + rename + fsync(dir): a crash leaves the old or the new file, never a torn one. */
-export async function atomicWrite(path: string, data: Uint8Array, mode = 0o600): Promise<void> {
+export async function atomicWrite(path: string, data: Uint8Array, mode = 0o600, opts: { exclusive?: boolean } = {}): Promise<void> {
   const tmp = join(dirname(path), `.${basename(path)}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`);
-  const fh = await open(tmp, 'wx', mode);
+  let created = false;
   try {
-    await fh.writeFile(data);
-    await fh.sync();
-  } finally {
-    await fh.close();
-  }
-  await rename(tmp, path);
-  await chmod(path, mode);
-  try {
-    const d = await open(dirname(path), 'r');
+    const fh = await open(tmp, 'wx', mode);
+    created = true;
     try {
-      await d.sync();
+      await fh.writeFile(data);
+      await fh.sync();
     } finally {
-      await d.close();
+      await fh.close();
     }
-  } catch {
-    /* directory fsync is best-effort (not supported everywhere) */
+    if (opts.exclusive === true) {
+      await link(tmp, path);
+      await unlink(tmp);
+      created = false;
+    } else await rename(tmp, path);
+    await chmod(path, mode);
+    try {
+      const d = await open(dirname(path), 'r');
+      try {
+        await d.sync();
+      } finally {
+        await d.close();
+      }
+    } catch {
+      /* directory fsync is best-effort (not supported everywhere) */
+    }
+  } finally {
+    // A write, fsync or rename failure must not strand an unregistered sealed copy.
+    if (created) await unlink(tmp).catch(() => {});
   }
 }
 
 export async function exists(path: string): Promise<boolean> {
   try {
-    await stat(path);
+    await lstat(path);
     return true;
   } catch {
     return false;
@@ -47,23 +60,63 @@ export async function readSecretFile(path: string): Promise<Uint8Array> {
   return new Uint8Array(await readFile(path));
 }
 
-/** Best-effort overwrite then unlink. On SSD/flash this is NOT erasure (QV-17 §11.2): the key must be destroyed too. */
-export async function shred(path: string, randomBytes: (n: number) => Uint8Array): Promise<boolean> {
-  let st;
+/**
+ * Best-effort overwrite then unlink. Refuse aliases and nonregular/multiply-linked files. When an expected sealed-file
+ * fingerprint is supplied, compare it on the same open descriptor before overwriting. False means absent or unsafe to remove.
+ * On SSD/flash this is NOT erasure (QV-17 §11.2): the key must be destroyed too.
+ */
+export async function shred(path: string, randomBytes: (n: number) => Uint8Array, expectedSha256?: string): Promise<boolean> {
+  let before;
   try {
-    st = await stat(path);
-  } catch {
-    return false;
+    before = await lstat(path);
+    if (!before.isFile() || before.nlink !== 1 || await realpath(path) !== resolve(path)) return false;
+  } catch (e) {
+    if (['ENOENT', 'ENOTDIR'].includes((e as { code?: string }).code ?? '')) return false;
+    throw e;
   }
-  const fh = await open(path, 'r+');
+  let fh;
   try {
-    await fh.write(randomBytes(st.size), 0, st.size, 0);
+    fh = await open(path, constants.O_RDWR | (constants.O_NOFOLLOW ?? 0));
+  } catch (e) {
+    if (['ENOENT', 'ENOTDIR', 'ELOOP'].includes((e as { code?: string }).code ?? '')) return false;
+    throw e;
+  }
+  const same = (st: { dev: number; ino: number }): boolean => st.dev === before.dev && st.ino === before.ino;
+  try {
+    const st = await fh.stat();
+    if (!st.isFile() || st.nlink !== 1 || !same(st)) return false;
+    const chunkSize = 64 * 1024;
+    if (expectedSha256 !== undefined) {
+      const hash = createHash('sha256');
+      const chunk = new Uint8Array(chunkSize);
+      for (let pos = 0; pos < st.size;) {
+        const { bytesRead } = await fh.read(chunk, 0, Math.min(chunkSize, st.size - pos), pos);
+        if (bytesRead === 0) return false;
+        hash.update(chunk.subarray(0, bytesRead));
+        pos += bytesRead;
+      }
+      if (hash.digest('hex') !== expectedSha256) return false;
+    }
+    const current = await lstat(path);
+    const held = await fh.stat();
+    if (!same(current) || !current.isFile() || held.nlink !== 1 || held.size !== st.size || held.mtimeMs !== st.mtimeMs) return false;
+    for (let pos = 0; pos < st.size;) {
+      const chunk = randomBytes(Math.min(chunkSize, st.size - pos));
+      let written = 0;
+      while (written < chunk.length) {
+        const { bytesWritten } = await fh.write(chunk, written, chunk.length - written, pos + written);
+        if (bytesWritten === 0) throw new Error('backup overwrite made no progress');
+        written += bytesWritten;
+      }
+      pos += chunk.length;
+    }
     await fh.sync();
+    if (!same(await lstat(path))) return false;
+    await unlink(path);
+    return true;
   } finally {
     await fh.close();
   }
-  await unlink(path);
-  return true;
 }
 
 /** Lock file guarding a bundle's read-check-write section (audit TR-03). */

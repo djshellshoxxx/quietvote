@@ -140,3 +140,37 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
 
 ## Dependency note
 `@quietvote/board` added to package.json dependencies (workspace-internal; used by the log-evidence gate). package-lock.json gains the one workspace line; no external dependency added.
+
+## B2 custody follow-up (integration review, 2026-10-31)
+
+* **B2-08 / TR-08:** new backups record their canonical absolute destination and SHA-256 of the exact sealed bytes in the live
+  bundle. Changing cwd or retargeting the original parent symlink does not change that destination. `destroy` checks the fingerprint
+  on the same open descriptor it overwrites. Symlinks, paths with redirected parents, nonregular files, hardlinks and replaced files
+  are preserved. Unsafe, missing or legacy backups without a fingerprint are returned in `backups_missing` with a manual-removal
+  reminder; they are never reported removed. Legacy relative paths have no recoverable original cwd and are never resolved for
+  deletion. A restored backup receives its own sealed fingerprint from the authenticated source bytes. An unremovable live bundle
+  returns `BUNDLE_NOT_REMOVED` instead of claiming success. Flash/SSD erasure and arbitrary concurrent filesystem tampering remain
+  outside the guarantee; the passphrase and any manually retained copies still need destruction.
+* **TR-03 follow-up:** imported exclusive-lock/compare-before-write hardening now uses the canonical bundle path, including its
+  ledger and lock sidecars. A failed save invalidates that `Trustee` object (`BUNDLE_REOPEN_REQUIRED`); reopen to continue. Before
+  this fix, retrying a stale object three times could return an unpersisted second tally share for a different counted set after
+  two `BUNDLE_CHANGED` failures. The release ledger still guards accidental rollback, subject to its documented filesystem limit.
+* **TR-07:** removed the unused public `debugPlaintext()` diagnostic. JS string lifetime and the trusted embedding API's access to
+  bundle data remain documented limitations; no memory-erasure guarantee is claimed.
+* Regressions: `test/custody.test.ts` (cwd/symlink retargeting, replaced/legacy backups, unsafe shred, canonical locks) and
+  `test/audit.test.ts` (`TR-03: a failed persistence invalidates cached outputs on the same Trustee object`). The focused five tests
+  failed before these fixes and pass afterwards. Existing TR-01/03/04 adversarial tests remain in the imported audit suite.
+* Unresolved choices are unchanged: TR-09 lost spoil-packet replay/idempotence, missing manifest audit-window fields, witness
+  checkpoint size wording and base32-vs-hex log origin. This follow-up adds no protocol or authority-policy semantics.
+* Relocated key-holding bundles opened directly also consult the recorded original home's ledger and tombstone. Missing original
+  ledger returns `NO_RELEASE_LEDGER` and directs operators to the existing restore flow (explicit ledger or typed no-ledger override).
+  This prevents opening a pre-release backup under a new name from silently bypassing its original release history. The invariant
+  still assumes the operator does not deliberately delete/roll back every copy of the public ledger.
+* Backup publication is exclusive even when separate share bundles race to the same destination; only one succeeds and the other
+  returns `BUNDLE_EXISTS`. Sealing/fingerprinting precedes filesystem writes so late write failures can be cleaned up by exact hash;
+  failed atomic writes remove their own temporary file. Restore registers the actual source path when a backup was moved/copied.
+  Added regressions cover direct backup open, original tombstone, failed atomic-write cleanup, moved restore source and destination races.
+* Restore adopts valid own records from an existing target-path release ledger before persisting or returning the restored object.
+  Conflicting authenticated tally records (different counted roots/counts) from any recovery source fail closed with
+  `RELEASE_CONFLICT`. The regression covers a deleted target bundle with its ledger retained, plus inconsistent signed source/target
+  ledgers; forged/foreign records still do not count. The original source-ledger/typed-override requirements remain unchanged.

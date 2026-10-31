@@ -93,7 +93,8 @@ export interface BundleData {
     compromise: SignedRecord<CompromiseBody>[];
   };
   sas: { compared_with: number[]; at: string }[];
-  backups: { path: string; at: string; epoch: number }[];
+  /** Canonical absolute path and fingerprint of the sealed backup bytes. Older bundles may lack the fingerprint. */
+  backups: { path: string; at: string; epoch: number; sha256?: string }[];
   /** Typed safety overrides used (kept local; also surfaced in the exported transcript summary events). */
   overrides: { what: string; at: string }[];
   events: { t: string; note: string }[];
@@ -115,15 +116,20 @@ export function encodeBundle(d: BundleData): Uint8Array {
 }
 
 /** Seals and atomically writes the bundle; returns the sealed bytes written. */
-export async function writeBundle(path: string, d: BundleData, pass: string, deps: VaultDeps): Promise<Uint8Array> {
+export async function sealBundle(d: BundleData, pass: string, deps: VaultDeps): Promise<Uint8Array> {
   const plain = encodeBundle(d);
   try {
     const sealed = await sealWithPassphrase(plain, pass, deps.rng, { aad: AAD, ...(deps.logN !== undefined ? { logN: deps.logN } : {}), ...(deps.allowWeak === true ? { allowWeak: true } : {}) });
-    await atomicWrite(path, sealed, 0o600);
     return sealed;
   } finally {
     wipe(plain);
   }
+}
+
+export async function writeBundle(path: string, d: BundleData, pass: string, deps: VaultDeps): Promise<Uint8Array> {
+  const sealed = await sealBundle(d, pass, deps);
+  await atomicWrite(path, sealed, 0o600);
+  return sealed;
 }
 
 export function decodeBundle(plain: Uint8Array): BundleData {

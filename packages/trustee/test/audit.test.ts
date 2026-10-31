@@ -1,7 +1,7 @@
 // Adversarial regression tests from the trustee audit (docs/audit/trustee.md, IDs TR-xx).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { bytesToHex } from '@quietvote/crypto';
 import { ballotCode, makeSpoil, type BallotBody } from '@quietvote/protocol';
 import { Trustee, TrusteeError } from '../src/index.ts';
@@ -172,4 +172,60 @@ test('TR-04: an election bundle whose log differs from the trustee\'s imported l
   } finally {
     c.cleanup();
   }
+});
+
+test('TR-03: a failed persistence invalidates cached outputs on the same Trustee object', async () => {
+  const { c, a, b } = await forkedElection('audit-tr03-retry');
+  try {
+    const winner = await c.act(1, async (t) => t);
+    const stale = await c.act(1, async (t) => t);
+    await winner.releaseTally(a);
+    await rejects(stale.releaseTally(b), 'BUNDLE_CHANGED');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await rejects(stale.releaseTally(b), 'BUNDLE_REOPEN_REQUIRED');
+    }
+    const current = await c.act(1, async (t) => t);
+    await rejects(current.releaseTally(b), 'RELEASE_CONFLICT');
+  } finally {
+    c.cleanup();
+  }
+});
+
+test('TR-03: opening a relocated pre-release backup carries forward the original release ledger', async () => {
+  const { c, a, b } = await forkedElection('audit-tr03-backup-open');
+  try {
+    const backupPath = `${c.path(1)}.backup`;
+    const live = await c.act(1, async (t) => t);
+    await live.backup(backupPath, PASS);
+    await rejects(Trustee.open(backupPath, PASS, c.deps.get(1)!), 'NO_RELEASE_LEDGER');
+    await live.releaseTally(a);
+    const backup = await Trustee.open(backupPath, PASS, c.deps.get(1)!);
+    assert.equal(backup.state, 'RELEASED');
+    await rejects(backup.releaseTally(b), 'RELEASE_CONFLICT');
+    writeFileSync(`${c.path(1)}.destroyed`, 'original share destroyed');
+    await rejects(Trustee.open(backupPath, PASS, c.deps.get(1)!), 'DESTROYED');
+  } finally { c.cleanup(); }
+});
+
+test('TR-03: restore adopts a reused target ledger and refuses conflicting authenticated releases', async () => {
+  const { c, a, b } = await forkedElection('audit-tr03-restore-target');
+  try {
+    const backupPath = `${c.path(1)}.backup`, target = `${c.path(1)}.restored`;
+    const empty = `${c.path(1)}.empty-ledger`;
+    writeFileSync(empty, JSON.stringify({ format: 'qv-release-ledger/v1', records: [] }));
+    const live = await c.act(1, async (t) => t);
+    await live.backup(backupPath, PASS);
+    await live.releaseTally(a);
+    // A previous target bundle was deleted; its public release ledger remains.
+    writeFileSync(`${target}.releases`, readFileSync(`${c.path(1)}.releases`));
+    const restored = await Trustee.restore(backupPath, PASS, target, PASS, c.deps.get(1)!, { ledger: empty });
+    assert.equal(restored.state, 'RELEASED');
+    await rejects(restored.releaseTally(b), 'RELEASE_CONFLICT');
+    // Build a genuinely signed conflicting release to model inconsistent source and target recovery media.
+    const forkPath = `${c.path(1)}.fork`;
+    const fork = await Trustee.restore(backupPath, PASS, forkPath, PASS, c.deps.get(1)!, { ledger: empty });
+    await fork.releaseTally(b);
+    unlinkSync(target);
+    await rejects(Trustee.restore(backupPath, PASS, target, PASS, c.deps.get(1)!, { ledger: `${forkPath}.releases` }), 'RELEASE_CONFLICT');
+  } finally { c.cleanup(); }
 });
