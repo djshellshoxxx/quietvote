@@ -259,7 +259,7 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
   any `a` with a cast envelope: spoils are not chain-checked and proofs bind only (ctx, voter), so a voter could re-wrap a cast ballot's
   ciphertexts under a new code (`supersedes`) and have trustees decrypt it. Test: `tally.test.ts` (fails without the check).
 
-## Consolidation regressions (2026-10-31)
+## Consolidation regressions (2026-10-30)
 
 * **CP-01 + B1-01:** every envelope-valid signed spoil is checked against valid cast ciphertexts, even if outside the window or over
   the audit limit. A rewrapped spoil is excluded from the admissible `spoiled` audit map and raises an ALARM. The independent

@@ -3,7 +3,7 @@
 Unaudited reference skeleton; not for real elections. This implementation remains independent of the TypeScript arithmetic and
 does not import or call it. Audit regression tests also consume the synthetic public bundles preserved with the 2026-10-28 report.
 
-## Definite repairs, 2026-10-31
+## Definite repairs, 2026-10-30
 
 * **CP-04:** canonical A and R must be nonzero prime-subgroup points (`[L]P = O`), matching the imported TS strict policy. Tests
   independently construct mixed-order points from a base-point multiple plus two-torsion and retain honest-key/signature controls.

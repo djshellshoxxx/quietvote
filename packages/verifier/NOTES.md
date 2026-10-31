@@ -63,7 +63,7 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
 ## Audit changes (docs/audit/web-verifier.md)
 * `verifyWithSelfTest` recomputes `reportHash` after it changes the verdict/caveats (it used to leave the hash of the pre-self-test report). A corpus that cannot be loaded or run now yields self-test failed and verdict FAIL (it used to throw); `qv-verify --selftest` exits 1 in that case. New option `corpusText` (test hook).
 
-### Consolidation regressions (2026-10-31)
+### Consolidation regressions (2026-10-30)
 
 * **B1-06:** reports carry the selected `manifestHash` and its source (`caller` or `bundle`), and text reports print it. Omitting
   `pinnedManifestHash` / `--manifest-hash` adds an explicit caveat that the hash was not supplied out of band. This discloses the

@@ -8,7 +8,7 @@
 
 QuietVote is a proposed platform for organizations that want members to make collective decisions without publishing each person's ballot. It is intended for groups such as cooperatives, member associations, unions, collectives, and online communities. The project explores how a group can verify that eligible members participated, prevent duplicate voting, and audit the result while keeping individual choices private.
 
-QuietVote is at the **specification and early implementation stage**. This repository defines the questions, capabilities, and assurance work that must be settled before implementation, and it contains initial code for the cryptographic, protocol, and bulletin-board layers. It does not yet claim to provide anonymous voting, cryptographic verifiability, or production-ready election software.
+This branch contains a **consolidated experimental prototype** across eight TypeScript packages and a separate Python verifier. The specifications remain drafts. Security, protocol and authority-policy review are still required; this is **unaudited software, not for real elections**.
 
 ## What is QuietVote?
 
@@ -35,7 +35,7 @@ The design should favor user-controlled disclosure, minimal data collection, tra
 
 QuietVote uses **cryptography as a trust-reduction tool**, not necessarily cryptocurrency. Candidate design elements include encrypted ballots, zero-knowledge eligibility and ballot-validity proofs, decision-scoped nullifiers to prevent duplicate voting, threshold tally keys, digital signatures, and tamper-evident audit records. The byte-level draft is [Cryptographic protocol (QV-16)](docs/16-crypto-protocol.md). The older [Cryptography and Technical Design](docs/15-cryptography-and-technical-design.md) is a retained, non-authoritative draft.
 
-A token or public blockchain is not a core requirement. Existing voting protocols and standards are research starting points; the project has not selected or implemented a protocol. See the [Future Ideas backlog](IDEAS.md) for optional extensions such as portable credentials, federated group decisions, and forkable governance rules.
+A token or public blockchain is not a core requirement. The prototype implements the draft QV-16 protocol; implementation does not establish approval or security. See the [Future Ideas backlog](IDEAS.md) for optional extensions such as portable credentials, federated group decisions, and forkable governance rules.
 
 ## Intended users
 
@@ -56,17 +56,21 @@ Start with the [specification index](docs/SPEC-INDEX.md), which tracks each spec
 
 Web translation contributors can use the [translation workflow and review checklist](docs/TRANSLATING.md).
 
-For the latest ordinary catalog/app-build checkpoint, commands, ownership and remaining gates, use the [restart handoff](docs/handoffs/QUIETVOTE-NEXT.md).
+For exact source refs, branch/PR accounting, validation and remaining gates, use the [consolidation handoff](docs/handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md) and [integration ledger](docs/plan/CONSOLIDATION.md). The [restart entry](docs/handoffs/QUIETVOTE-NEXT.md) preserves earlier checkpoint receipts. These status documents are not approved specifications or an independent audit.
+
+The [wiki](wiki/) provides voter, organizer, trustee, auditor and developer guides. Screenshots are not included here; the production web build and reproducible browser checks are described in the handoff.
 
 ## Current status
 
-**Stage:** Specification drafted; early implementation  
-**Implementation:** Initial code exists in all eight packages (`crypto`, `protocol`, `board`, `server`, `trustee`, `verifier`, `cli`, `web`), plus a second-verifier skeleton in `verifier-py/`. All of it is **unaudited** and incomplete; the known gaps are listed in each `packages/*/NOTES.md`. Fresh local ordinary UI check results and their limits are recorded in the [2026-10-24 requirement inventory](docs/handoffs/2026-10-24-ordinary-inventory.md).<br>
+**Stage:** Consolidated prototype; review milestone remains blocked<br>
+**Implementation:** Code exists in all eight packages (`crypto`, `protocol`, `board`, `server`, `trustee`, `verifier`, `cli`, `web`) and in `verifier-py/`. The integration and audit ledgers record tested repairs and remaining gaps. The web/server registration wire contract is blocked pending protocol review, as explicitly retained by the owner; the working server registration path must not be mistaken for a successful real-client registration journey.<br>
 **Specification status:** Drafted; decisions and acceptance criteria remain to be completed  
 **Use:** **Not for real elections.** Do not rely on this software for any real decision.  
 **Release status:** No release
 
 Do not treat placeholder requirements or proposed capability boundaries as approved product decisions.
+
+Independent security/protocol review, unresolved owner decisions, native translation review and assistive-technology qualification remain external gates. All five translated catalogs remain unreviewed and unoffered. Automated browser checks are not WCAG or screen-reader acceptance. Main has not been merged, and nothing has been released or deployed.
 
 For the consolidated list of open work, see [docs/plan/TODO.md](docs/plan/TODO.md). The roadmap, backlog and decisions are in [docs/plan/](docs/plan/), and simple summaries are in [wiki/](wiki/).
 

@@ -1,5 +1,24 @@
 # QuietVote consolidated TODO
 
+## Current integration delta — 2026-10-30
+
+This older backlog remains a requirement inventory, not proof of current source
+status. [CONSOLIDATION](CONSOLIDATION.md) accounts for every source branch/PR;
+[the audit ledger](../audit/consolidation-2026-10-30.md) accounts for all 72 extracted
+audit findings and older duplicates; [the handoff](../handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md)
+records exact fresh validation and open failures. Those receipts supersede old
+test totals and stale missing-implementation notes below.
+
+- B3-01 registration: owner explicitly retained protocol-review block, no contract
+  or authority-rule relaxation. See OPEN-DECISIONS consolidation holds.
+- Shared CP-01/04/05, SRV-001..007, BC/TR, spoil collection and dependency/CI fixes
+  are now integrated, with surviving regressions and limits in the audit ledger.
+- Python remains capability-limited (log, private/trustee spoil modes and some
+  verdict/errata semantics); unsupported cases are reported, not counted as passes.
+- Native translation review, assistive-technology qualification and independent
+  security/protocol review remain external work. Main merge/release/deploy is not
+  authorized by this milestone.
+
 **Date:** 2026-10-21 · **Owner of this list:** Docs (PO for decisions) · **Status key:** Done · Partial · Open · Decision needed · Conflict · Stale · Errata open · TBD
 
 This list consolidates three sources into one table per section: (1) every task in [BACKLOG](BACKLOG.md) (QV-23) with its status refreshed against `packages/*/NOTES.md` and the repository tree; (2) gaps, conflicts and errata found in those NOTES files, in the decision log, in the errata log and in the specs; (3) cross-references the specs themselves mark TBD. Nothing here is a verified test result. Where a status depends on a run, the run and its date are named. The second verifier is in [QV-35](../35-second-verifier.md).
@@ -121,7 +140,7 @@ Checkboxes in BACKLOG are updated to match. Priority and owner role are as in BA
 | T-025 ristretto255 group wrapper (encode/decode strict, identity rejection, scalar canonical checks) | crypto | P0 | Done | ADR-004, QV-16 (owner role: T-008). Evidence (2026-10-21): protocol NOTES "What exists": ristretto255 strict decoding and identity checks. |
 | T-026 Domain-separated, length-prefixed transcript hashing (Fiat–Shamir) + label registry | crypto | P0 | Done | QV-16, QV-11 §6.1 (owner role: T-008). Evidence (2026-10-21): crypto framed hashing with closed label registry (protocol NOTES). |
 | T-027 Hash-to-scalar / hash-to-group (RFC 9380 or spec'd), second generator H derivation (nothing-up-my-sleeve) | crypto | P0 | Open | QV-16 (owner role: T-025). |
-| T-028 Exponential ElGamal encrypt/decrypt-to-point, rerandomize | crypto | P0 | Done | ADR-004 (owner role: T-025). Evidence (2026-10-21): exponential ElGamal in crypto (protocol NOTES). |
+| T-028 Exponential ElGamal encrypt/decrypt-to-point, rerandomize | crypto | P0 | Partial | Encrypt/decrypt-to-point exists; no rerandomize function (B1-10). Original 2026-10-21 Done status overstated the implementation. ADR-004 (owner role: T-025). |
 | T-029 Schnorr proof of knowledge / possession | crypto | P0 | Done | QV-16 (owner role: T-026). Evidence (2026-10-21): Schnorr PoK (protocol NOTES). |
 | T-030 Chaum–Pedersen (equality of DL) proof + verify | crypto | P0 | Done | ADR-004 (owner role: T-026). Evidence (2026-10-21): DLEQ / Chaum-Pedersen (protocol NOTES). |
 | T-031 CDS disjunctive 0/1 proof + verify | crypto | P0 | Done | ADR-004, QV-16 (owner role: T-030). Evidence (2026-10-21): CDS 0/1 proofs (protocol NOTES). |

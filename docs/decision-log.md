@@ -320,3 +320,13 @@ The ADRs below resolve cross-spec conflicts found during the 2026-10-21 consiste
 - **Consequences:** Typecheck and catalog tests remain responsible for key parity, schema, ICU validity and placeholder/plural/select compatibility. The project owns the custom compiler's maintenance and compatibility burden; its supported grammar must remain tested against every catalog message and malformed input. This decision does not mark translations human-reviewed or approve QV-13 as a whole.
 - **Requirements affected:** QV-13 REQ-061/062; ADR-003's minimal-dependency direction.
 - **Review trigger:** Reopen if translator tooling requires JSON source interchange, the compiler cannot support a required ICU feature, conformance tests fail, or a concrete maintenance or compatibility need justifies a formatter dependency.
+
+### QV-ADR-026 — Pinned browser test tooling for consolidation
+
+- **Status:** Implemented on the consolidation branch; tooling/security review required before main merge. This records an implementation choice within the owner's requested CI work, not approval of a protocol or product-policy change.
+- **Context:** Browser checks depended on an environment-specific global Playwright path and could report success after skipping unavailable tools. Unit tests did not load the standalone verifier under production headers.
+- **Decision:** Pin `playwright` 1.57.0 as a root development dependency with its exact lockfile entries. CI installs its Chromium revision and sets `QV_REQUIRE_BROWSER=1`; unavailable tooling fails. Local checks prefer the pinned installation, with the supported managed/legacy tool paths as fallbacks and `QV_CHROMIUM` as an explicit executable selector.
+- **Alternatives:** Keeping only global tools would leave CI unreproducible; adding a runtime browser automation dependency would not serve the application. The pinned tool is used only for tests and is not included in the browser product bundle.
+- **Consequences:** Preserve strict app/offline CSP and negative checks. The browser suite covers production app/help/a11y/verifier paths, and the source lockfile/licence checks include the test tooling. Browser checks remain automated evidence, not WCAG, assistive-technology qualification or independent security review. No new action is added; existing actions retain full SHA pins.
+- **Requirements affected:** QV-11 browser/integration coverage, QV-19 build/CSP checks, QV-30 CI and dependency review.
+- **Review trigger:** Browser/Playwright update, licence/advisory change, a missing-browser skip in required CI, or evidence that a different supported browser route is needed.

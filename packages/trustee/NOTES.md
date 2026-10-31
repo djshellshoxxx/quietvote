@@ -141,7 +141,7 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
 ## Dependency note
 `@quietvote/board` added to package.json dependencies (workspace-internal; used by the log-evidence gate). package-lock.json gains the one workspace line; no external dependency added.
 
-## B2 custody follow-up (integration review, 2026-10-31)
+## B2 custody follow-up (integration review, 2026-10-30)
 
 * **B2-08 / TR-08:** new backups record their canonical absolute destination and SHA-256 of the exact sealed bytes in the live
   bundle. Changing cwd or retargeting the original parent symlink does not change that destination. `destroy` checks the fingerprint
@@ -174,3 +174,7 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
   Conflicting authenticated tally records (different counted roots/counts) from any recovery source fail closed with
   `RELEASE_CONFLICT`. The regression covers a deleted target bundle with its ledger retained, plus inconsistent signed source/target
   ledgers; forged/foreign records still do not count. The original source-ledger/typed-override requirements remain unchanged.
+* A tombstone at the live bundle's own canonical path also blocks an older sealed copy written back there. Only an authenticated
+  bundle already in `DESTROYING` may reopen beside that tombstone, solely to resume cleanup after a crash between tombstone write
+  and final overwrite; release-state gates exclude it. Regressions cover both stale-copy refusal and an induced final-wipe crash
+  followed by successful destruction resume. Final custody test run: 9/9 pass.

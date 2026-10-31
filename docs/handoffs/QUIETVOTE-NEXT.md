@@ -1,4 +1,17 @@
-# QuietVote restart handoff — ordinary catalog and app build
+# QuietVote restart entry point
+
+**Current continuation:** read [QUIETVOTE-CONSOLIDATED-NEXT.md](QUIETVOTE-CONSOLIDATED-NEXT.md)
+for the consolidated integration branch, exact validation, audit dispositions,
+publication receipt and ordered next work. The review milestone remains blocked.
+
+Everything below is a historical ordinary-UI checkpoint record. Its receipts are
+preserved; its task-specific scope and publication restrictions are superseded
+for this consolidation by the owner's 2026-10-30 request. Required owner decisions,
+protocol/security review, native translation review and assistive-technology
+qualification remain gates. Do not read an old "current" heading below as the
+status of the consolidated branch.
+
+## Historical ordinary catalog and app-build handoff
 
 This is the restart entry point for Claude or another agent. Repository ownership
 is **only `djshellshoxxx/quietvote`**. Preserve all local changes before doing work;

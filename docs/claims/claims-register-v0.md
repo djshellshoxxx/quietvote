@@ -6,6 +6,19 @@
 
 > **Status of this register.** Not approved. Every row is provisional. Under `docs/07` section 12.1 rule 3, a claim may be made only once a security lead and the project owner approve its wording. Nothing here is a security guarantee. QuietVote is **unaudited software, not for real elections**. Do not use the rows below as marketing copy.
 
+**Current integration note (2026-10-30):** the rows and test totals below are the
+dated v0 snapshot. Current source/test status is recorded in
+[the consolidation handoff](../handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md) and
+[audit ledger](../audit/consolidation-2026-10-30.md). Eight implemented packages
+and a limited separate Python verifier exist. S-03/S-04 old failing totals and
+"no second verifier" notes are historical, not current claims. C-03 still needs
+independent protocol/security review and capability qualification; C-12's
+production CSP and static-import SRI behavior is checked by the new browser
+regression suite. Dynamic chunks and workers do not gain full SRI from that test;
+the remaining scope is recorded under B3-04.
+Translations are draft catalogs, unreviewed and unoffered. No claim is promoted
+to approved or independently reviewed by this update.
+
 ## How to read this register
 
 - **Type:** `make` = a claim the project makes or may make. `must-not` = wording the project must not use.

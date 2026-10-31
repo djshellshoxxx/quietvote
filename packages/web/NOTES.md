@@ -1,8 +1,65 @@
 # @quietvote/web notes
 
 Framework-free TypeScript SPA (QV-19). `npm run build -w @quietvote/web` -> `dist/` (hashed assets, SRI, CSP meta + `_headers`,
-`asset-manifest.json`, offline `verifier.html`). `npm run e2e -w @quietvote/web` runs Playwright (global install at
-/opt/node22, Chromium at /opt/pw-browsers) against `test/helpers/fake-board.ts`; it skips if those are missing. Not part of `npm test`.
+`asset-manifest.json`, offline `verifier.html`). `npm run e2e -w @quietvote/web` uses the pinned Playwright development dependency and supported shared loader against `test/helpers/fake-board.ts`. Set `QV_REQUIRE_BROWSER=1` to fail on unavailable tooling, as CI does; only optional local runs may skip. Browser checks are separate from `npm test`.
+
+## Current audit consolidation (2026-10-30)
+
+This section supersedes older gap/status statements in the implementation history below. The original B1/B2/B3 reports
+remain evidence of the audited revision, not claims that the current tree has passed an independent audit.
+
+* Results now run the shared protocol verifier on the exact loaded record snapshot, the derived manifest hash and the full
+  paginated voter list. Counts/charts are drawn only after aggregate, decryption and result-rule checks pass. Signed but false
+  coordinator counts are hidden. The itemized report and caveats are visible: board/witness/receipt evidence is not supplied
+  by this in-page path, so those checks remain not run. An independent verifier/client and an outside Election ID still matter.
+* Both verifier UIs make an outside Election-ID mismatch a visible failure. The English PASS headline is “Supplied checks
+  passed”; not-run checks and caveats remain explicit. Protocol report verdict rules are unchanged. Both file inputs reject
+  more than 64 MiB before reading. The offline verifier remains on the main thread without a worker pool/progress/resume.
+* The build pins transitive **static** app imports with integrity modulepreloads. Lazy catalog/chart chunks and the module
+  worker still lack SRI. Unreviewed/unoffered catalogs are not preloaded. The common generated CSP permits only the exact
+  offline inline script/style hashes, and the verifier route adds its closed offline policy; simultaneous matching policies
+  work. The app's strict meta policy continues to reject inline script/style. The server independently recomputes the
+  offline file's hashes and recognizes only this closed policy before serving its route exception.
+* Vote entry rereads the signed record before deriving the next supersedes link. Concurrent cast calls share one submission.
+  Signed promise-only receipts remain downloadable and optionally stored for inclusion checks; unknown delivery retries the
+  same signed bytes with pending copy. A local save failure preserves the verified recorded receipt. “Logged” uses the signed
+  promise timestamp. Rejected links no longer claim a newer ballot was recorded; refused ballots do not show receipt proof.
+* No-invite key completion checks the committed voter list rather than claiming registration. A 409 is not registration
+  success. **Registration remains blocked pending protocol-owner review:** QV-19/QV-04 and QV-09 disagree on invitation/PoP
+  bytes; this change does not reconcile them. The existing server-contract negative evidence remains relevant.
+* Backup/recovery actions are available after later unlock and before registration, so a failed registration does not hide
+  the backup. Recovery-code restore is wired. Mandatory backup restore-check/enrolment gating is still absent; the new
+  backup/recovery UI needs its own full browser journey. Clear actions require native-dialog confirmation. Idle lock warns,
+  visibly removes active seal/send controls, clears displayed key secrets and prevents sealing with a locked signer. Hidden
+  duration is checked before reset on resume. Actual suspended-tab behavior across browsers/devices remains unverified.
+* Read-only rules and proof-gated results work when IndexedDB opening fails. This does not introduce memory-only voting or
+  claim WebCrypto-free key wrapping. Confirmation is bound to the manifest hash. Route epochs discard stale asynchronous
+  views/redraws. Unlock autocomplete, malformed-key copy, fast-device rewrap, prototype-named selectors and the duplicate
+  shared Help link have focused fixes. Send/Test share their primary style and equal width/minimum height; an exact browser
+  dimension assertion remains to be added.
+* Final review adds unconditional wiping of the unwrapped seed when an upgrade KDF or storage write fails, and rechecks
+  the result snapshot after lazy chart import. The production regression delivers a real SSE reread while holding the chart
+  HTTP response; a newly appended conflicting signed tally must fail before any table is drawn. Both regressions failed
+  before these fixes and pass afterward.
+* Paused-state machine reasons/copy, normative one-ballot guarantee wording and web/CLI passphrase normalization remain owner
+  review gates. Existing normal English error/verifier wording was corrected; no guarantee string/review hash was changed,
+  no translation was endorsed, and every draft locale remains unoffered. Draft normal-string wording needs review against
+  the changed English source before release.
+
+Browser tooling is a pinned root dev dependency in CI, with supported managed/legacy installation fallbacks in
+`e2e/browser.ts`; `QV_CHROMIUM` selects a binary and `QV_REQUIRE_BROWSER=1` fails when tools cannot run. Production browser
+checks use actual served pages/CSP, not request-routing interception. Current successful receipts: app 12/12, production Help 64/64,
+ordinary accessibility heuristics 49/49, and verifier 16/16 (generated policies, actual reference-server static serving, honest/forged
+results, anchor mismatch, skipped evidence, static-chunk tamper, stale navigation, blocked IndexedDB and file bounds).
+The final package unit suite passed 186/186, including local-save-failure and final-review seed cleanup regressions.
+The final consolidated validation record at its recorded commit supersedes these package receipts.
+
+These automated checks are **not WCAG conformance**, security certification, manual assistive-technology testing, Tor/mobile
+acceptance or a release/reproducibility/signing claim. Announcement truncation/extra live regions, organizer invite-link UX,
+remaining unwired flows, KDF ceiling costs and chart/banner semantics still need work. See the consolidated B3 ledger for
+per-finding evidence and review gates.
+
+## Historical implementation record
 
 ## Layout
 `src/flow` (state machines, controllers, election derivation, receipts, receipt standing, live refresh, chart model, organizer logic), `src/net` (SSE client), `src/key` (QVKEY1, passphrase, signer,

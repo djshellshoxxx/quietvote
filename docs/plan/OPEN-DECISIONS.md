@@ -5,6 +5,21 @@
 
 ## A. Gate decisions (do first)
 
+### Consolidation holds — 2026-10-30
+
+- **Registration (B3-01): blocked pending protocol review, explicitly retained by
+  the owner on 2026-10-30.** QV-09 §3.3 / schema sends raw `invite_code` and signs
+  `(election_id, pk)`; QV-19 §6.1 hashes the token before sending and signs
+  `(ID, SHA-256(TOKEN), pubkey)`, while QV-04-REQ-005 also mentions a label. No
+  acceptance-set or authority-rule change is approved. Specify the exact wire
+  bytes, storage hash, signature framing and label treatment before unblocking.
+- **Passphrase portability (B3-25):** web generated-word normalization and CLI
+  raw-NFKC behavior differ. No canonicalization change is adopted in this
+  consolidation. The CLI documents exact-spelling requirements; review and
+  version any eventual shared normalization policy with legacy key fixtures.
+- Existing cryptographic/verifier errata, D-84/D-87 and review gates remain open;
+  a passing subset of tests does not resolve them.
+
 | ID | Decision | Source | Recommended default | Deadline |
 |---|---|---|---|---|
 | D-01 | Accept/modify baseline ADR-001…013 (stance, self-host, stack, ristretto255+ElGamal+CDS, phased identity, methods, board, non-claims, transport, client trust, AGPL, no token, PQ stance) | decision-log | Accept all as written; revisit ADR-004 after R1 | M0 |

@@ -12,7 +12,12 @@ independent audit. QuietVote remains unaudited and is not for real elections.
 | [B1](B1-quietvote-crypto-protocol.md) | Cryptography, protocol, verifiers, test vectors | Complete: 14 new findings (5 Medium, 6 Low, 3 Info), all confirmed. The TS crypto core matched QV-16; findings concern TS/Python verifier divergence, spoil handling and verifier caveats |
 | [B3](B3-quietvote-web.md) | Web client | Complete: 33 findings (2 High, 12 Medium, 13 Low, 6 Info). No XSS, eval/Function, storage or request-privacy finding |
 
-None of these findings has been through the second pass yet. Still to come:
+This was the original snapshot. A later [interim verification](interim-verification-quietvote.md)
+extracted 72 findings, batch-verified 52 and recorded zero extra-lens results.
+It remains incomplete. Current integration dispositions are in
+[the consolidation ledger](../consolidation-2026-10-30.md); the source reports
+and PoCs below remain unchanged historical evidence. At the initial snapshot,
+the following work remained:
 - independent verification of every finding (own reproduction plus a refutation attempt; a
   three-way vote for Medium and above);
 - coverage-gap rounds;

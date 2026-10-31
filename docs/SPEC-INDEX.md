@@ -2,6 +2,12 @@
 
 This is the entry point for product and engineering specifications. Specs are intentionally incomplete until decisions are reviewed and acceptance criteria are testable.
 
+Current implementation evidence is in the [consolidation ledger](plan/CONSOLIDATION.md)
+and [restart handoff](handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md). These and
+[HANDOFF](HANDOFF) are status records, not approved specifications or an independent
+audit. In this integrated tree QV-16 is `16-crypto-protocol.md`; the retained
+`15-cryptography-and-technical-design.md` is non-authoritative source material.
+
 ## Status key
 
 - **Framework** — document structure and questions exist; requirements are not complete.

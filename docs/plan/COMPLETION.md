@@ -1,5 +1,31 @@
 # Completion status (v1 scope)
 
+## Current consolidation — 2026-10-30
+
+**The consolidated review milestone remains blocked.** The integration branch
+reconciles the useful unmerged implementation histories, but the owner explicitly
+retained B3-01's conflicting registration contracts pending protocol review.
+Other open verifier/protocol/authority issues and external gates are enumerated
+in [the audit ledger](../audit/consolidation-2026-10-30.md).
+
+Use [CONSOLIDATION](CONSOLIDATION.md) for all branch/PR dispositions and
+[QUIETVOTE-CONSOLIDATED-NEXT](../handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md) for exact
+current commands/results, SHAs and publication receipt. All translations remain
+unreviewed and unoffered. Automated accessibility evidence is not assistive-
+technology qualification or WCAG acceptance. No main merge, release or deployment.
+
+Corrections to historical items below: C3's assertion was wrong (B1-09): Python
+already rejected binding fields on non-open markers; the unresolved issue is
+finding classification. Python now has `NOTES.md`; Python/vectors/production build
+and required-browser CI coverage are added by this consolidation. T-028's missing
+rerandomization function is only partial, not complete. The audit ledger records
+the remaining capabilities instead of inferring completeness from old test totals.
+
+## Historical completion branch record
+
+The following statements and test counts are dated historical receipts. They
+are superseded for current status by the consolidation evidence linked above.
+
 Status as of the completion branch `claude/quietvote-complete-1` (PR against `claude/quietvote-board-cli-1`).
 Scope is the v1 specs in `docs/` as indexed by `docs/SPEC-INDEX.md`. Specs remain Draft; "complete" here means the
 items below are either done and verified or listed with an owner and a real blocker.

@@ -1,4 +1,26 @@
-# QuietVote audit and QA index (2026-10-21)
+# QuietVote audit and QA index
+
+## Current consolidation — 2026-10-30
+
+The current source accounting is [CONSOLIDATION](../plan/CONSOLIDATION.md),
+with per-finding dispositions in [the consolidation audit ledger](consolidation-2026-10-30.md)
+and exact commands/refs in [the restart handoff](../handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md).
+The milestone remains blocked; B3-01 registration is explicitly held pending
+protocol review by the owner. A successful server registration test does not
+establish a successful real web/server registration journey.
+
+The [2026-10-28 original reports](2026-10-28/README.md), PoCs, interim JSON and
+full descriptions are preserved. The interim pass extracted 72 findings,
+batch-verified 52 and had zero extra-lens results. It was incomplete and is not
+an independent professional audit. Original and revised severities are kept in
+the new ledger; imported fixes are checked against the integrated source.
+
+## Historical audit wave — 2026-10-21
+
+The following totals and test receipts describe that earlier audit wave, not
+the current integrated branch. They are retained as provenance. Current repair
+and validation status is linked above; old claims that fixes exist elsewhere or
+that no second implementation exists must not be used as current source status.
 
 **These are AI-assisted reviews. They are NOT an independent professional audit and give no assurance of security. QuietVote is unaudited and not for real elections.**
 

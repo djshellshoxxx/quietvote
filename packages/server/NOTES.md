@@ -225,7 +225,7 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
 * Tests: `test/spoil-shares.test.ts`; `World` gained `spoilTrustees`, `analysis()`, `spoilShareRecord()`, `postSpoilShare()`.
 - Backup directory/file mode assertions (0700/0600) run on POSIX only; Windows ACLs are not asserted (no ACL check implemented).
 
-## Consolidation regressions and remaining gates (2026-10-31)
+## Consolidation regressions and remaining gates (2026-10-30)
 * B2-01: native tally drafts reject fewer than `t` selected received shares before ballot work, then use the stored admitted aggregate
   (`n_counted`, `counted_root`, points) and admitted spoil projection. They never reaggregate or replay ballot proofs after eviction.
   Up to 16 trustee-subset drafts are cached, invalidated by accepted aggregate/spoil decryption shares. Read-only imported mirrors return

@@ -5,6 +5,12 @@ implementation disagree or leave behaviour open. Each entry gives an id, the loc
 Entries are reported, not resolved: the spec owner decides the fix (QV-34 §8.2 step 4: "Any discrepancy is first treated as
 a specification ambiguity; QV-16 is amended, then vectors regenerated").
 
+Current consolidation dispositions are in [CONSOLIDATION](../plan/CONSOLIDATION.md)
+and its linked audit ledger. B3-01's QV-09/QV-19 registration conflict is explicitly
+blocked pending protocol review by the owner's 2026-10-30 decision; no wire
+contract was silently chosen. Historical observations below retain their original
+SHA context even when an imported repair or new regression now supersedes them.
+
 ## Second-verifier (Python) findings, 2026-10-21
 
 Source: the independent Python verifier skeleton in `verifier-py/` (`py-qv-verify 0.1.0`), written from QV-16, QV-34 and the
