@@ -1,5 +1,5 @@
 {
-  "scope": "Frozen implementation and inherited outgoing versions before handoff-only publication checkpoints",
+  "scope": "Frozen source and first published documentation checkpoint; final receipt-only successor is separately scanned before push",
   "source_sha": "247df393ea1ace300fe5ed1f569a12090e1364dc",
   "base_main_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
   "scanner": "detect-secrets 1.5.0",
@@ -98,5 +98,40 @@
     "Extract each distinct git blob in origin/main..HEAD under <blob>/<originalpath>; retain all historical versions.",
     "Later documentation-only checkpoints require an additional scan/triage; the final publication receipt is in the consolidated handoff."
   ],
-  "limitations": "Publication hygiene only; synthetic/private key fixtures are intentionally public test data. This does not establish absence of all secrets or independent security approval."
+  "limitations": "Publication hygiene only; synthetic/private key fixtures are intentionally public test data. This does not establish absence of all secrets or independent security approval.",
+  "first_publication": {
+    "branch": "integration/quietvote-consolidated-20261030",
+    "local_remote_readback_sha": "1a751ab58aef41a1ae1a7beb433d853938549b3a",
+    "main_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+    "draft_pr": "https://github.com/djshellshoxxx/quietvote/pull/22",
+    "outgoing_versions": {
+      "commits": 201,
+      "blob_versions": 1401,
+      "bytes": 27367160
+    },
+    "delta_review": {
+      "delta_findings": 24,
+      "unique_delta_fingerprints": 21,
+      "flagged_blob_versions": 4,
+      "exact_detector_fingerprint_line_rematches": 24,
+      "git_blob_hashes_verified": 4,
+      "by_disposition": {
+        "public_metadata": 24
+      },
+      "by_metadata_kind": {
+        "git_commit_object_id": 19,
+        "evidence_file_sha256": 5
+      },
+      "independent_audit_doc_second_review_findings": 17,
+      "unresolved_credentials": 0,
+      "previous_scan_findings_preserved": 18465,
+      "final_scan_findings": 18489
+    },
+    "full_scan_candidate_findings": 18489,
+    "unresolved_credentials": 0,
+    "evidence_sha256": {
+      "source-secrets-final.json": "3ba6acc21e6e0beb3e1abdb831848ff02f836e6281289a7e3068f13c69e48074",
+      "secret-final-doc-triage.json": "d829c95745be7c2f47895dca33fa534b4da8d1024a4f1f528b62e075b13fea5b"
+    }
+  }
 }

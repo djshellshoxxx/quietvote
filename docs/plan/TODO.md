@@ -23,7 +23,7 @@ test totals and stale missing-implementation notes below.
 
 This list consolidates three sources into one table per section: (1) every task in [BACKLOG](BACKLOG.md) (QV-23) with its status refreshed against `packages/*/NOTES.md` and the repository tree; (2) gaps, conflicts and errata found in those NOTES files, in the decision log, in the errata log and in the specs; (3) cross-references the specs themselves mark TBD. Nothing here is a verified test result. Where a status depends on a run, the run and its date are named. The second verifier is in [QV-35](../35-second-verifier.md).
 
-Counts: BACKLOG tasks 293 (Done 52, Partial 79, Open 162); new items 52 (N-01 to N-52); owner decisions: D-84 (existing) and D-85 to D-91 (new, in [OPEN-DECISIONS](OPEN-DECISIONS.md) section H).
+Historical inventory counts (not recomputed current completion totals): BACKLOG tasks 293 (Done 52, Partial 79, Open 162); new items 52 (N-01 to N-52); owner decisions: D-84 (existing) and D-85 to D-91 (new, in [OPEN-DECISIONS](OPEN-DECISIONS.md) section H).
 
 Priority: P0 blocks the critical path or a gate; P1 needed for the named phase exit; P2 should; P3 could. Decision deadlines are in OPEN-DECISIONS.
 

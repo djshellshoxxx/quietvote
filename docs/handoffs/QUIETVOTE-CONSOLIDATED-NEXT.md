@@ -9,7 +9,9 @@
 - Final implementation follow-up: `f58533b13c87f06af50f8d104c5a28b77bb8c270`.
 - Starting source: `2a02bd3249f3c988ef5afd8e9559fa13a959bdef`.
 - Main, freshly read before publication: `019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
-- No integration remote existed at this capture. The publication section below will record the actual pushed SHA and draft PR; never infer publication from a local commit.
+- Captured local/remote publication checkpoint: `1a751ab58aef41a1ae1a7beb433d853938549b3a`, independently read back from GitHub.
+- Draft consolidation PR: [#22](https://github.com/djshellshoxxx/quietvote/pull/22), open/draft against main.
+- This publication-receipt update is a documentation-only successor of that checkpoint. Its own hash cannot be embedded in itself; obtain the exact receipt tip with `git rev-parse HEAD` and `git ls-remote --heads origin integration/quietvote-consolidated-20261030` before resuming. The downloadable final receipt also records that tip.
 
 The validation checkpoint includes all source/CI repairs and status corrections. The final audit/validation/handoff documents are added as subsequent documentation-only commits. The final publication receipt distinguishes those SHAs; check `git rev-parse HEAD` and the live remote before resuming.
 
@@ -112,11 +114,15 @@ Do not change vector expectations, ignore negative inputs, suppress a required b
 
 ## Publication hygiene and receipt
 
-Publication is not yet claimed in this pre-push handoff snapshot. This section must be replaced with the actual branch readback and draft PR before the task finishes.
+`git push -u origin HEAD:refs/heads/integration/quietvote-consolidated-20261030` created only the new integration branch. A fresh `git ls-remote --heads origin` returned **`1a751ab58aef41a1ae1a7beb433d853938549b3a`** for that branch and unchanged main **`019f4e789be2ff38a5fb2d348c3b225cc87cf296`**. The working tree was clean. GitHub readback confirmed [PR #22](https://github.com/djshellshoxxx/quietvote/pull/22) is **open, draft, unmerged**, based on main, at that exact head. No existing PR was closed or auto-merge enabled.
+
+Pre-push hygiene at this published documentation checkpoint covered **201 outgoing commits, 1,401 distinct blob versions, 27,367,160 bytes**. The full correct scan produced **18,489 candidates**: the previously reviewed 18,465 plus **24 documentation metadata flags** (19 Git commit identifiers and 5 evidence SHA-256 digests). Every new tuple and all 4 affected blobs were verified; every identifier/digest resolved to the referenced object/file. **0 unresolved credentials.** Reports contain no flagged plaintext values. Publication uses inherited supported Git authentication; no credential was printed or reconfigured.
+
+This receipt-only successor updates the handoff, scan/status evidence and plan, without source/CI changes. It is separately scanned before the final fast-forward push; the final remote tip is read back and supplied in the final downloadable receipt. The core validation remains at `247df39`; `git diff 247df39..HEAD -- packages package.json package-lock.json scripts .github verifier-py ':!**/NOTES.md'` is empty. Hosted CI is a separate run, not a claim that all OS/Node matrix combinations have been qualified locally. Its conformance job intentionally remains blocked on the strict report discrepancy.
 
 Core outgoing source hygiene at `247df39` covered **200 commits, 1,392 distinct blob versions, 26,206,253 bytes**. Correct scanner invocation ran from the snapshot directory with `--all-files --no-verify .`, default plugins/filters. A separate synthetic positive control produced one finding. All **18,465** candidates were exhaustively matched by blob/path/line/detector/fingerprint and reviewed: 17,885 public/synthetic vector values plus 580 nonvector candidates (24 false positives, 537 public metadata, 19 synthetic key/password fixtures), **0 unresolved operational credentials**. Provenance included deterministic regeneration and historical signature/Merkle checks. This is publication hygiene, not security acceptance.
 
-[The core scan receipt](../reports/consolidation-publication-scan-2026-10-30.json) records exact counts and evidence digests. Additional handoff/documentation versions must be scanned before pushing. Do not rely on an absolute-path scan invoked outside the extracted snapshot directory; an early zero-result invocation was invalidated by the positive control and is not a receipt.
+[The core scan receipt](../reports/consolidation-publication-scan-2026-10-30.json) records exact counts and evidence digests. The additional published documentation versions were scanned and reviewed as recorded above; any further versions must also be scanned before pushing. Do not rely on an absolute-path scan invoked outside the extracted snapshot directory; an early zero-result invocation was invalidated by the positive control and is not a receipt.
 
 To reproduce the outgoing-version extraction after creating a temporary scanner venv with `detect-secrets==1.5.0`, use `git rev-list --objects origin/main..HEAD`, select blobs with `git cat-file --batch-check`, materialize each under `<blob-sha>/<original-path>` using `git cat-file blob`, then run the scanner from that extraction root. Preserve all versions and review every candidate with its exact line and generator/RFC/public-metadata provenance. Keep control fixtures and scanner environments outside the repository. Do not upload credential-looking values to third-party validation services.
 

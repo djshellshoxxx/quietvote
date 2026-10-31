@@ -19,9 +19,9 @@ Main and all existing source branches remain unchanged.
   repair semantics that are clear. Preserve owner decisions as explicit blockers.
 - [x] Exercise real server/client contracts, supported cross-verifier cases and
   production browser/CSP journeys; add missing CI coverage.
-- [ ] Reconcile documentation/status last, record all validation and remaining
+- [x] Reconcile documentation/status last, record all validation and remaining
   gates, scan outgoing source versions, publish only this branch and a draft PR.
-- [ ] Create `docs/handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md`, link the restart entry,
+- [x] Create `docs/handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md`, link the restart entry,
   and explicitly assess milestone completion.
 
 ## Constraints and review focus
@@ -379,3 +379,15 @@ The [consolidated restart handoff](../handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md)
 contains environment/bootstrap, all validation commands, remaining reproductions,
 publication receipt and ordered next actions. A fresh remote-head read before
 publication found all 23 source branch refs unchanged from the inventory.
+
+
+## Publication receipt
+
+Only `integration/quietvote-consolidated-20261030` was created/pushed. Remote
+readback returned `1a751ab58aef41a1ae1a7beb433d853938549b3a`; main stayed at
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. [Draft PR #22](https://github.com/djshellshoxxx/quietvote/pull/22)
+is open, draft and unmerged against main. The preceding code validation snapshot
+is unchanged by these documentation-only receipts. This receipt update is
+separately secret-scanned and fast-forwarded only on the integration branch;
+resolve its final tip from the remote before resuming. All 23 existing source
+branches were unchanged at the pre-publication readback.
