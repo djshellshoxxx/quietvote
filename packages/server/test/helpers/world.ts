@@ -323,7 +323,7 @@ export class World {
     return this.marker('election-open', this.params.ctx, Object.fromEntries(Object.entries(binding ?? {}).filter(([, v]) => v !== undefined)));
   }
   async close(): Promise<Resp> {
-    this.tick();
+    this.clock = Math.max(this.clock + 1000, Date.parse(this.manifest.voting_close));
     return this.post('election_close', this.coord[0]!, this.marker('election-close', this.params.ctx));
   }
 

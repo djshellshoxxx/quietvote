@@ -22,6 +22,8 @@ export interface Reply {
   contentType?: string;
   etag?: string;
   cache?: string;
+  /** A statically validated page-specific policy supplied by StaticAssets. */
+  csp?: string;
   /**
    * Long-lived streaming reply (SSE). Called once, after the handler returned, with the response and the merged response
    * headers (security headers, CORS, request id). The callback owns the response from then on and must write the head.
@@ -276,7 +278,7 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
             routeTpl = '(static)';
             const rl = env.limiter.take(`R:${bucket}`, cfg.rate.read);
             if (!rl.ok) throw new ApiError(429, 'RATE_LIMITED', 'too many requests', { retryAfter: rl.retryAfterSec });
-            const h: Record<string, string> = { ...headers, 'Content-Type': r.contentType ?? 'application/octet-stream', 'Cache-Control': r.cache ?? 'no-cache', 'Content-Security-Policy': STATIC_CSP };
+            const h: Record<string, string> = { ...headers, 'Content-Type': r.contentType ?? 'application/octet-stream', 'Cache-Control': r.cache ?? 'no-cache', 'Content-Security-Policy': r.csp ?? STATIC_CSP };
             if (r.etag) h['ETag'] = r.etag;
             if (r.etag && req.headers['if-none-match'] === r.etag) {
               status = 304;

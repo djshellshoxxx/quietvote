@@ -1,8 +1,6 @@
 # @quietvote/server: implementation notes, errata, gaps
 
-Zero third-party dependencies (node:http, node:sqlite, node:crypto) plus workspace packages crypto/board/protocol.
-`package.json` does not list the workspace deps (adding them needs a lockfile refresh; same as protocol NOTES). Board and
-protocol packages were NOT modified.
+Runtime uses node:http, node:sqlite and node:crypto plus the declared workspace crypto/board/protocol packages.
 
 ## Design summary
 * `http.ts` routing, limits (Content-Length + streamed counter, 413/414/415, header/headers/request timeouts, keep-alive,
@@ -38,18 +36,20 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
 * **Server key**: each election has a second Ed25519 key (`srv_pk`, in `GET /elections/{id}`) authorised only for
   `tally_aggregate`; the server posts it automatically after `election_close` (and after a witness quorum if required).
   If counted ballots < floor, no aggregate is posted (`tally.blocked`). The tally record is built by `GET /tally/draft`,
-  signed by a coordinator and posted; the server re-derives it and rejects any difference.
+  signed by a coordinator and posted; the server derives it from the admitted aggregate and received shares and rejects any difference.
 * **Time**: ballots need `voting_open - clock_skew <= now < voting_close` (server clock, QV-18 §5.3 step 8) in addition to
-  OPEN; `election_open` needs `now >= voting_open - skew`. Advisory scheduler (auto open/close) NOT implemented (no closer key in manifest).
+  OPEN; `election_open` needs `now >= voting_open - skew`; `election_close` needs `now >= voting_close` (no early close).
+  Advisory scheduler (auto open/close) NOT implemented (no closer key in manifest).
 * **TALLIED** is folded into AUDIT immediately (checkpoint exists at once). STALLED is derived (TALLYING > `stalledMaxSec`).
   CHALLENGED exists in the enum but no entry produces it. `max_total_hours` pause cap and RESUME-with-new-close-time not implemented; `maxHalts` is.
 * **Roll**: voters auto-approved on registration (no approval policy in the manifest); roll_commit must equal the server's
   approved set and its size must be >= the effective `min_counted_ballots`. Invite->voter link is not stored; replay of
   `(code, same pk)` returns the voter id. Idempotent replay of `POST invites` returns invite ids with `code_withheld:true`
   (codes are never stored). Registration PoP message: `"QV-REG-v1\0" election_id "\0" pk`.
-* Spoil `trustees` mode (QV-ADR-020) is accepted only if the manifest enables it, but the trustee spoil-decryption relay is not built.
+* Spoil `trustees` mode (QV-ADR-020) is accepted only if the manifest enables it; its share relay, storage and tally inclusion are implemented below.
 * `reveal` verification (`verifySpoilReveal`) is done at admission (costly); rejected with E_SPOIL_MISMATCH.
-* Bucket for IPv6 is /64 (spec says /56; the address is fully expanded first, so `::`-compressed text cannot leak host bits into the bucket); archive deletes erase the DEK and files but do not require an acknowledged export.
+* Bucket for IPv6 is /64 (finer than the spec's /56; address expansion prevents compressed text leaking host bits into the bucket);
+  archive deletes erase the DEK and files but do not require an acknowledged export.
 * `max_per_voter`/`max_spoils` overruns answer 429 `REVOTE_LIMIT` with `retryable:false` (QV-09 table).
 
 ## Event stream and webhooks (QV-09 §9, §6.3; QV-09-REQ-010/014)
@@ -71,13 +71,13 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
   DNS failure = retry with exponential backoff (`webhookBackoffBaseMs` x2^n, cap `webhookMaxBackoffMs`, `webhookMaxAttempts` incl. first); other 4xx and
   3xx are permanent (redirects are NEVER followed). `webhookDisableAfter` consecutive failed deliveries disable the hook. Bounds: per-attempt deadline
   (`webhookTimeoutMs`, hard max 30 s), response read up to `webhookMaxResponseBytes` then dropped, body <= `webhookMaxBodyBytes`, queue+retry-wait
-  <= `webhookMaxQueue` (oldest dropped), `webhookMaxInflight` concurrent sends. The queue is in memory: a restart drops pending retries.
+  <= `webhookMaxQueue` (oldest dropped), `webhookMaxInflight` concurrent sends. Pending retries and failure counts persist across restart (details below).
 * **SSRF policy**: https only; no credentials; ports 443/8443 only; no `localhost`, single-label, `.local/.internal/.lan/...` names; IP literals in any
   spelling are canonicalised by the URL parser then range-checked (v4: 0/8, 10/8, 100.64/10, 127/8, 169.254/16, 172.16/12, 192.0.0/24, 192.0.2/24,
   192.168/16, 198.18/15, test nets, multicast, 240/4; v6: only 2000::/3 minus Teredo/ORCHID/documentation, IPv4-mapped/NAT64/6to4 judged by the embedded
   v4). Names are resolved and EVERY address must be public. The check runs at registration and again before every attempt; the socket then connects
   to the validated address (lookup is overridden: no second resolution, TLS still verifies the certificate and SNI against the URL host).
-* Not covered / limits: no per-election event size cap; webhook delivery state is not persisted; `webhookResolver`/`webhookTransport` options exist
+* Not covered / limits: no per-election event size cap; webhook statistics counters reset on restart; `webhookResolver`/`webhookTransport` options exist
   only as test seams. Real-TLS transport tests need `openssl` (skipped without it). The 30-day post-ARCHIVED pruning (`pruneEventsIfExpired`) is not covered by a test (only the resulting 410 on a pruned window is).
 
 ## Audit hardening (docs/audit/server.md, 2026-10-21; behaviour changes)
@@ -96,9 +96,9 @@ OpenAPI/JSON-Schema generation (imports, jobs, `/admin/*`, gossip and single-ran
 proof-of-work challenges and L0-L3 load levels (queue shedding via `maxVerifyQueue` -> 503 BUSY exists), worker-thread proof
 verification (verification runs on the event loop under a per-election mutex), `merkle_node` table and `rebuild-projections`
 command (tree is rebuilt from leaf hashes at open), encrypted backups, scheduled integrity checks, TLS termination, per-org quotas
-beyond election/voter counts, `witness` / `event` tables (cosignature lines live in the stored checkpoint note).
+beyond election/voter/invitation counts, separate `witness` table (cosignature lines live in the stored checkpoint note; the event table exists).
 
-## Webhook retry state persistence (QV-09 §6.3; supersedes the "in memory / not persisted" statements above)
+## Webhook retry state persistence (QV-09 §6.3)
 * **Outbox**: control.sqlite migration 3 adds `webhook_outbox` (one row per pending delivery: `delivery_id`, `webhook_id`, `event_type`,
   `body` = the public P0 payload the receiver gets, `attempt`, `next_at` in ms). The row is written before the delivery is queued and is removed
   on success, on a terminal failure, when the hook is disabled or deleted, or when pruned. The control DB still holds no URL or secret in
@@ -152,7 +152,8 @@ BEFORE the body is read; `Content-Length` mandatory (chunked -> 411) and <= `max
 `/instance`); at most `maxImportUploads` (2) bodies held in memory (503 BUSY); `Idempotency-Key` required; query `org_id` (default: caller's org; admins must
 name one; other orgs' keys get 404), `access=public|link` (link: fresh read key returned ONCE in the 202 body, only its hash stored), `manifest_hash`
 (out-of-band H_m); unknown params 400. Org election quota applies (429). Result: `202` + `Location: /api/v1/jobs/{id}` + Job. At most `importQueueMax` (2) jobs
-queued/running, further 503 BUSY. Verification (job; yields to the event loop): strict tar (regular files only, checksummed headers, safe names, no prefix/links/
+queued/running, further 503 BUSY. Verification yields between stages and entry batches, but `verifyElection` and its proof work still run synchronously
+on the main event loop (B2-02 remains open): strict tar (regular files only, checksummed headers, safe names, no prefix/links/
 dup/trailing data, `maxImportEntries` files) -> every file in `SHA256SUMS` and vice versa -> `bundle.json` -> `entries.jsonl` (exact 3-key lines, gapless seq,
 bodies required, <= `maxImportEntries`) -> checkpoint files (name = size) -> `verifyElection(election.json)` (all protocol records, proofs, tally) -> manifest
 binds origin (`originOf(election_id)`), `bb.log_pk` = bundle log key, entry 0 = canonical manifest record -> `verifyLog` with a resolver derived from the
@@ -164,7 +165,7 @@ store read-only, voters/ballot index rebuilt, `TERMINAL`); `verdict` PASS or INC
 `server_pk_b64u` and `organizer_pk_b64u` (entry authors that the header only names by id; self-attested but id-bound and signature-checked; the manifest hash /
 `log_pk` remain the trust anchors); bundles from other producers without them are refused. (b) Bundles with redactions are refused (replay needs bodies).
 (c) Receipts, anchors and `bundle.json.sig` in a bundle are checksummed but ignored. (d) `.qvx` operator restore and `?at_size=` are not implemented.
-(e) Witness status of an imported log is shown against the instance's configured witnesses, not the manifest's. (f) The 15 s default `requestTimeoutMs` bounds
+(e) Witness status uses manifest `bb.witnesses` when present, with instance-configured witnesses as the legacy fallback. (f) The 15 s default `requestTimeoutMs` bounds
 an upload; raise it (hard max 120 s) for large bundles. (g) Unlike QV-28 §11.4, org owners may delete an IMPORTED mirror without a prior export.
 
 **Jobs.** `GET /jobs/{id}` (signed): creator key or instance admin, else 404. In-process FIFO runner (`jobs.ts`), one job at a time, state in `job`
@@ -175,7 +176,7 @@ an upload; raise it (hard max 120 s) for large bundles. (g) Unlike QV-28 §11.4,
 `GET /admin/elections` (registry columns only, `state`/`cursor`/`limit`), `POST /admin/backups` (SQLite online `backup` into `<data>/backups/<job>/`, 0700/0600,
 `PRAGMA quick_check` of each copy, `manifest.json` with SHA-256, never the KEK; NOT encrypted at rest beyond the already-sealed fields; no retention/pruning yet),
 `POST /admin/elections/{id}/self-audit` (leaf hashes, body digests, root, every checkpoint signature/root; mismatch quarantines a live log; no scheduler, REQ-054's
-6 h cycle is not implemented), `POST .../quarantine/clear` (needs `ack` = incident id, `verified_against` = `witness:<configured name>` entries, a fresh replay + full
+6 h cycle is not implemented), `POST .../quarantine/clear` (needs `ack` = incident id, `verified_against` = `witness:<election-policy name>` entries, a fresh replay + full
 audit, log size >= the largest size our key signed for, a stored checkpoint of at least that size cosigned by each named witness; `fork`/`inconsistent`
 evidence is permanent -> 409 `COMPROMISED`; this uses stored cosignatures, it does not query witnesses live), `DELETE /admin/elections/{id}` (`confirm` = title; same state
 preconditions as the org delete: DRAFT, ARCHIVED, CANCELLED, ABORTED, IMPORTED; the export-acknowledged / 30-day-grace rule of QV-28 §11.2 is still not enforced).
@@ -183,8 +184,9 @@ Idempotency lookup precedes precondition checks on the admin POST/DELETE routes,
 
 **Range.** `export.qvb` / `export.json` set `Accept-Ranges: bytes`; exactly one range -> 206 + `Content-Range`; multi-range, malformed, `a>b`, `-0`, start >= length,
 >128-char header, empty body -> 416 `Content-Range: bytes */len` (RFC 9110 allows rejecting; nothing is ever expanded); unknown unit ignored; `If-Range` only with the
-current strong ETag; `If-None-Match` -> 304 first. ETag is now `"<size>:<root16>:<gen>"` (gen bumps on cosignature intake). Built `.qvb` bytes are cached per election
-(10 min, 128 MiB total LRU) so ranged/resumed downloads are cheap; the class-X rate limit still counts every request, including range requests.
+current strong ETag; `If-None-Match` -> 304 first. ETag is `"<size>:<root16>:<gen>"` (gen bumps only when new valid cosignatures are attached).
+Built `.qvb` and JSON bytes share a bounded cache (10 min, 128 MiB total LRU); exact current-ETag 304 responses avoid serialization even on a cold cache.
+The class-X rate limit still counts every request, including range requests; responses larger than the cache budget are served without retaining their bytes.
 
 **Other changes.** `election.ts` (minimal edits): `forcedQuarantine`, `imported`, `markQuarantine`/`clearForcedQuarantine`/`raiseAlert`, `syncQuarantineFlags`, IMPORTED
 state mapping, `quarantineReason` used by the admission phase gate. `problem.ts`: `extra.headers`/`extra.body`. `http.ts`: `body: 'tar'` routes, `Reply.ranges`.
@@ -222,3 +224,29 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   A trustees-mode spoil with < t shares is silently omitted from the tally (verifier then sees fewer `spoiled` entries; decide operationally whether to wait).
 * Tests: `test/spoil-shares.test.ts`; `World` gained `spoilTrustees`, `analysis()`, `spoilShareRecord()`, `postSpoilShare()`.
 - Backup directory/file mode assertions (0700/0600) run on POSIX only; Windows ACLs are not asserted (no ACL check implemented).
+
+## Consolidation regressions and remaining gates (2026-10-31)
+* B2-01: native tally drafts reject fewer than `t` selected received shares before ballot work, then use the stored admitted aggregate
+  (`n_counted`, `counted_root`, points) and admitted spoil projection. They never reaggregate or replay ballot proofs after eviction.
+  Up to 16 trustee-subset drafts are cached, invalidated by accepted aggregate/spoil decryption shares. Read-only imported mirrors return
+  `409 STATE_CONFLICT` for this convenience endpoint; their published tally and exports remain available. Import logs can contain ignored ballot
+  records, so a raw import projection is not substituted for the protocol's admission analysis. The first native draft still checks decryption proofs
+  and decodes counts; overall proof admission/import processing still needs bounded worker isolation and load measurements.
+* B2-03: startup revokes previously active `instance_admin` keys absent from `adminKeys`, recording `admin.revoke` in the operator audit.
+  Rotate by adding a new distinct key to configuration, restarting, then removing the old key and restarting. Revoked key ids are not silently reactivated.
+* B2-04: the manifest's witness keys govern quorum, cosignatures, state, exports and quarantine-clear evidence when provided; instance keys are the fallback.
+* CP-01/TR-01 server admission now rejects a spoil sharing ciphertext alphas with any admitted cast, even if `supersedes` gives it another code.
+  Stored drafts also apply the protocol's existing exclusion to aliases in older native databases, preserving the earlier analysis result.
+* B2-09/B2-13: the `2 * maxVotersPerElection` invitation cap counts all invitation rows, including consumed/revoked rows; public roll pages use ascending
+  public-key order with key-based continuation, never enrollment row order. Idempotent invite replays do not consume quota again.
+* B2-14: malformed/bad cosignatures are refused (422), unknown policy keys are refused (403), mixed valid/rejected batches report `rejected`, and
+  duplicate valid lines do not change export generation. Valid newly attached names are reported for the requested checkpoint, including older checkpoints.
+* B3-03: `/verifier.html` uses its closed offline hash CSP only after the server recomputes the sole inline script/style hashes and matches the exact meta policy.
+  It retains `frame-ancestors 'none'` and the normal response security headers. Other static assets keep the app policy.
+* **Still open:** B2-02 synchronous import verification and late duplicate detection; B2-05 signed control freshness/replay; B2-07 restore rollback detection
+  without external gossip; B2-10 invite expiry/oracle/idempotency contract; B2-11 invite-label/contact retention; B2-12 keyless duplicate receipts;
+  B2-16 request-log precision/fields and public free-text control reasons. These are not closed by historical branch integration.
+* **B3-01 remains blocked for owner protocol review:** server registration expects raw issued `invite_code` and PoP over `(election_id, pk)` (QV-09),
+  while the web helper sends a token hash and invite-bound PoP (QV-19/QV-04). Neither acceptance set is broadened here.
+  `test/consolidation.test.ts` drives actual `registrationBody` into the real HTTP server and retains the observed `401 BAD_SIGNATURE` as explicit
+  unresolved evidence; permitted raw-token registration, roll freeze, vote/revote/refusal, spoil, close/tally/export and mirror behavior are exercised separately.

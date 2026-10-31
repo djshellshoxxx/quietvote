@@ -533,7 +533,7 @@ test('witness quorum: cosignatures produce witness + checkpoint events; real app
     const wk = w3.witnesses[0]!;
     const evil = (await import('./helpers/world.ts')).kp('evil', 'w');
     const bad = await w3.req('POST', `/api/v1/elections/${w3.electionId}/log/cosignatures`, { checkpoint_size: size, lines: [cosignLine('w1', evil.secretKey, evil.publicKey, text, w3.nowSec)] });
-    assert.deepEqual(bad.json.accepted, []);
+    assert.equal(bad.status, 422);
     await sleep(100);
     assert.equal(s.events.length, 0, 'an invalid cosignature emits nothing');
     const good = await w3.req('POST', `/api/v1/elections/${w3.electionId}/log/cosignatures`, { checkpoint_size: size, lines: [cosignLine('w1', wk.secretKey, wk.publicKey, text, w3.nowSec)] });

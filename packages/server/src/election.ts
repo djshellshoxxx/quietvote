@@ -12,12 +12,12 @@ import {
   type Ed25519Keypair,
 } from '@quietvote/crypto';
 import {
-  NO_SUPERSEDES, S, adjudicateDkg, aggregate, analyzeBallotLog, ballotCode, buildTally, castEnvelopeSchema, check, checkDealing,
+  NO_SUPERSEDES, S, adjudicateDkg, aggregate, analyzeBallotLog, ballotCode, buildTallyFromAggregate, castEnvelopeSchema, check, checkDealing,
   countedRoot, dealingCommitHash, effectiveMinCounted, manifestHash, manifestSchema, rollRoot, shareFromHex, shareKey,
-  collectSpoilShares, decryptSpoiled, signRecord, spoilEnvelopeSchema, spoilShareRecordSchema, tallySchema, validateManifest, verifyEnvelope, verifyKeyconf, verifyMultiSig, verifySig, verifySpoilReveal, PROTO_ID,
+  collectAlphas, collectSpoilShares, decryptSpoiled, signRecord, spoilEnvelopeSchema, spoilShareRecordSchema, tallySchema, validateManifest, verifyEnvelope, verifyKeyconf, verifyMultiSig, verifySig, verifySpoilReveal, PROTO_ID,
   type Aggregate, type BallotAnalysis, type CastEnvelope, type CommitBody, type ComplaintBody, type DealingBody, type DkgOutcome,
   type ElectionParams, type KeyconfBody, type Manifest, type MarkerBody, type MultiSignedRecord, type RollCommitBody,
-  type ShareSet, type SharesBody, type SignedRecord, type SpoilEnvelope, type SpoilShareBody, type TallyBody,
+  type ShareSet, type SharesBody, type SignedRecord, type SpoilEnvelope, type SpoilRecord, type SpoilShareBody, type TallyBody,
 } from '@quietvote/protocol';
 import type { RegistryRow, ElectionStateName } from './controldb.ts';
 import { ElectionDb, type EventRow } from './electiondb.ts';
@@ -76,6 +76,7 @@ export class ElectionState {
   casts = new Map<string, number>();
   spoils = new Map<string, number>();
   codeOwner = new Map<string, string>();
+  castAlphas = new Set<string>();
   spoiledCodes = new Set<string>();
   openSeq: number | undefined;
   closeSeq: number | undefined;
@@ -83,6 +84,8 @@ export class ElectionState {
   analysis: BallotAnalysis | undefined;
   aggs: Map<string, Map<string, Aggregate>> | undefined;
   aggregateSeq: number | undefined;
+  aggregateBody: AggregateBody | undefined;
+  admittedSpoils = new Map<string, SpoilRecord>();
   tallyBlocked: string | undefined;
   decShares = new Map<number, { seq: number; set: ShareSet }>();
   tallySeq: number | undefined;
@@ -124,6 +127,7 @@ export class ElectionRuntime {
   private readonly coordByKid = new Map<string, Uint8Array>();
   private readonly trusteeByKid = new Map<string, { pk: Uint8Array; index: number }>();
   private readonly reg: RegistryRow;
+  private readonly tallyDrafts = new Map<string, TallyBody>();
 
   private constructor(env: Env, reg: RegistryRow, edb: ElectionDb, logSk: Uint8Array | undefined, srvSk: Uint8Array | undefined) {
     const row = edb.row();
@@ -252,7 +256,12 @@ export class ElectionRuntime {
   }
 
   witnessPolicy() {
-    return this.env.witnessPolicy(this.st.manifest?.bb.witness_quorum ?? 0);
+    const bb = this.st.manifest?.bb;
+    if (bb?.witnesses !== undefined) return {
+      witnesses: bb.witnesses.map((w) => ({ name: w.name, alg: 'ed25519' as const, publicKey: hexToBytes(w.pk, 32) })),
+      quorum: bb.witness_quorum, noneAcknowledged: bb.witness_quorum === 0,
+    };
+    return this.env.witnessPolicy(bb?.witness_quorum ?? 0);
   }
 
   /** Latest checkpoint, with cosignature status against the manifest's witness quorum. */
@@ -470,12 +479,14 @@ export class ElectionRuntime {
         const voter = env.body.voter;
         const code = bytesToHex(ballotCode(st.params!.ctx, env.body));
         if (env.intent === 'cast') {
+          collectAlphas(env.body, st.castAlphas);
           st.last.set(voter, code);
           st.casts.set(voter, (st.casts.get(voter) ?? 0) + 1);
           if (!st.codeOwner.has(code)) st.codeOwner.set(code, voter);
         } else {
           st.spoils.set(voter, (st.spoils.get(voter) ?? 0) + 1);
           st.spoiledCodes.add(code);
+          if (!st.admittedSpoils.has(code)) st.admittedSpoils.set(code, { seq, code, voter, env });
         }
         break;
       }
@@ -483,11 +494,20 @@ export class ElectionRuntime {
         st.closeSeq = seq;
         this.fire('election_close', seq, at);
         break;
-      case 'tally_aggregate':
+      case 'tally_aggregate': {
+        const b = (rec as SignedRecord<AggregateBody>).body;
+        st.aggregateBody = b;
+        st.aggs = new Map();
+        for (const a of b.aggregates) {
+          let contest = st.aggs.get(a.contest);
+          if (!contest) st.aggs.set(a.contest, contest = new Map());
+          contest.set(a.option, { A: pointFromBytes(hexToBytes(a.A, 32)), B: pointFromBytes(hexToBytes(a.B, 32)) });
+        }
         st.aggregateSeq = seq;
         st.tallyingSince = at;
         this.fire('tally_aggregate', seq, at);
         break;
+      }
       case 'decryption_share': {
         const b = (rec as SignedRecord<DecSharesBody>).body;
         const set: ShareSet = new Map();
@@ -496,6 +516,7 @@ export class ElectionRuntime {
           if (p.ok) set.set(shareKey(s.contest, s.opt), p.value);
         }
         st.decShares.set(b.j, { seq, set });
+        this.tallyDrafts.clear();
         break;
       }
       case 'tally_result':
@@ -835,11 +856,12 @@ export class ElectionRuntime {
         return { rec };
       }
       case 'election_close': {
-        this.needManifest();
+        const { m } = this.needManifest();
         this.schema(S.multiSigned(S.marker), rec);
         const r = rec as MultiSignedRecord<MarkerBody>;
         if (r.body.name !== 'election-close') throw invalid('E_MARKERS', 'election_close must carry the election-close marker');
         this.multi(r, st.params!.ctx, h);
+        if (this.env.nowSec() < sec(m.voting_close)) throw wrongPhase('voting_close has not been reached');
         return { rec };
       }
       case 'ballot': case 'ballot_audit': return this.vBallot(h, rec);
@@ -887,7 +909,7 @@ export class ElectionRuntime {
     if (m.election_id !== this.id) throw invalid('E_MANIFEST', 'manifest election_id differs from this election');
     if (m.bb.log_pk !== bytesToHex(this.logPk)) throw invalid('E_MANIFEST', 'manifest bb.log_pk is not this election\'s log key');
     if (m.ballots.max_per_voter > 20) throw invalid('E_MANIFEST', 'ballots.max_per_voter exceeds the hard bound 20');
-    if (m.bb.witness_quorum > this.env.cfg.witnesses.length) throw invalid('E_MANIFEST', 'witness_quorum exceeds the number of configured witnesses');
+    if (m.bb.witness_quorum > (m.bb.witnesses?.length ?? this.env.cfg.witnesses.length)) throw invalid('E_MANIFEST', 'witness_quorum exceeds the number of election witnesses');
     const mhb = manifestHash(m);
     if (!verifyMultiSig(mhb, r, m.coordinator.keys, m.coordinator.m)) throw invalid('E_MANIFEST_SIG', 'fewer than m valid coordinator signatures');
     void h;
@@ -1022,6 +1044,9 @@ export class ElectionRuntime {
     } else {
       if ((st.spoils.get(voter) ?? 0) + 1 > m.ballots.max_spoils_per_voter) throw new ApiError(429, 'REVOTE_LIMIT', 'max_spoils_per_voter reached', { reason: 'E_REVOTE_LIMIT', retryable: false });
       if (st.codeOwner.has(code)) throw invalid('E_SPOILED_CODE_CAST', 'this ballot code was already cast');
+      const alphas = new Set<string>();
+      collectAlphas(env.body, alphas);
+      if ([...alphas].some((a) => st.castAlphas.has(a))) throw invalid('E_SPOILED_CODE_CAST', 'spoil shares ciphertexts with a cast ballot (CP-01/TR-01)');
       if (env.reveal === undefined && env.reveal_digest === ZERO32 && m.spoil_trustee_decrypt !== true) throw invalid('E_SPOIL_MISMATCH', 'trustee-mode spoils are disabled by the manifest');
     }
     // ---- expensive part: voter signature then zero-knowledge proofs (QV-29-REQ-001)
@@ -1092,12 +1117,35 @@ export class ElectionRuntime {
     await this.processLocked(e.headerBytes, bytes);
   }
 
-  async attachCosignatures(size: number, lines: string[]): Promise<{ accepted: number; witnessed: boolean }> {
+  async attachCosignatures(size: number, lines: string[]): Promise<{ accepted: string[]; rejected: string[]; witnessed: boolean }> {
     return this.queued(async () => {
+      const stored = this.edb.store.getCheckpoint(size);
+      if (!stored) throw new ApiError(404, 'NOT_FOUND', 'no checkpoint of that size');
+      const cp = parseCheckpoint(stored.note);
+      if (!cp.ok) throw invalid('E_SCHEMA', 'stored checkpoint does not parse');
+      const policy = this.witnessPolicy();
+      const known = new Set(policy.witnesses.map((w) => w.name));
+      const valid: string[] = [];
+      const rejected: string[] = [];
+      let unknown = false;
+      for (const [i, line] of lines.entries()) {
+        const p = parseCheckpoint(cp.value.text + '\n' + line.replace(/\n$/, '') + '\n');
+        const name = p.ok && p.value.lines.length === 1 ? p.value.lines[0]!.name : undefined;
+        if (name === undefined || !known.has(name) || !p.ok || !witnessStatus(p.value, policy, this.env.nowSec() + 300).valid.has(name)) {
+          rejected.push(name ?? `line:${i + 1}`);
+          if (name !== undefined && !known.has(name)) unknown = true;
+        } else valid.push(line);
+      }
+      if (valid.length === 0) {
+        if (unknown) throw forbidden('cosignature key is not in the election witness policy', 'AUTHOR_NOT_AUTHORIZED');
+        throw invalid('E_SIG', 'no valid cosignature lines');
+      }
+      const beforeNames = witnessStatus(cp.value, policy).valid;
       const had = new Set(this.witnessInfo().cosigners);
-      const r = this.log.attachCosignatures(size, lines, this.witnessPolicy());
+      const r = this.log.attachCosignatures(size, valid, policy);
       if (!r.ok) throw this.mapBoardErr(r.error.code, r.error.message);
-      const before = lines.length;
+      const after = parseCheckpoint(r.value.note);
+      const accepted = after.ok ? [...witnessStatus(after.value, policy).valid.keys()].filter((n) => !beforeNames.has(n)) : [];
       try {
         const info = this.witnessInfo();
         const fresh = info.cosigners.filter((x) => !had.has(x));
@@ -1113,7 +1161,7 @@ export class ElectionRuntime {
         /* events are best effort relative to the cosignature itself */
       }
       await this.maybeAggregateLocked();
-      return { accepted: before, witnessed: r.value.witnessed };
+      return { accepted, rejected, witnessed: r.value.witnessed };
     });
   }
 
@@ -1211,6 +1259,7 @@ export class ElectionRuntime {
       this.env.stats.proofVerifications++;
       if (!this.spoilSetValid(st.params, st.dkgPre.Y, sp, j, set)) throw invalid('E_DEC_PROOF', 'spoil share proof invalid');
       this.edb.insertSpoilShare(rec.body.code, j, sp.seq, text, this.env.nowSec());
+      this.tallyDrafts.clear();
       return { j, code: rec.body.code, duplicate: false };
     });
   }
@@ -1220,12 +1269,22 @@ export class ElectionRuntime {
     const st = this.st;
     if (st.params === undefined || st.dkgPre === undefined || st.manifest === undefined) throw conflict('election has no key');
     if (st.aggregateSeq === undefined) throw wrongPhase('no tally aggregate has been posted');
-    const an = this.ensureAnalysis();
+    // Imported logs can contain rejected ballot records. Their raw replay projection is not an admission result.
+    // A read-only mirror exposes the published tally/export, not a new coordinator draft.
+    if (this.imported) throw conflict('read-only mirrors do not issue tally drafts; use the published tally or export');
     const shares = new Map<number, ShareSet>();
     for (const [j, v] of [...st.decShares].sort((a, b) => a[0] - b[0])) if (use === undefined || use.includes(j)) shares.set(j, v.set);
-    const spoiled: Parameters<typeof buildTally>[1]['spoiled'] = [];
+    if (shares.size < st.manifest.t) throw conflict('tally cannot be built yet: E_TALLY_INSUFFICIENT', 'STATE_CONFLICT');
+    const cacheKey = [...shares.keys()].join(',');
+    const cached = this.tallyDrafts.get(cacheKey);
+    if (cached) return cached;
+    const spoiled: Parameters<typeof buildTallyFromAggregate>[1]['spoiled'] = [];
     const { params, dkgPre, manifest } = st;
-    for (const rec of an.spoiled.values()) {
+    for (const rec of st.admittedSpoils.values()) {
+      // Old native databases may predate the admission fix; preserve the protocol's ciphertext-level CP-01 exclusion.
+      const alphas = new Set<string>();
+      collectAlphas(rec.env.body, alphas);
+      if (!st.codeOwner.has(rec.code) && [...alphas].some((a) => st.castAlphas.has(a))) continue;
       if (rec.env.reveal !== undefined) {
         spoiled.push({ rec, mode: 'reveal', selections: rec.env.reveal.selections });
         continue;
@@ -1239,8 +1298,11 @@ export class ElectionRuntime {
       const valid = [...sets.keys()].filter((j) => this.spoilSetValid(params, dkgPre.Y, rec, j, sets.get(j)!)).sort((a, b) => a - b).slice(0, manifest.t);
       spoiled.push({ rec, mode: 'trustees', selections: dr.value.selections, shares: new Map(valid.map((j) => [j, sets.get(j)!])) });
     }
-    const t = buildTally(st.params, { analysis: an, shares, Y: st.dkgPre.Y, decrypters: st.decrypters, rollSize: st.rollSet!.size, spoiled });
+    const b = st.aggregateBody!;
+    const t = buildTallyFromAggregate(st.params, { nCounted: b.n_counted, countedRoot: hexToBytes(b.counted_root, 32), aggs: st.aggs!, shares, Y: st.dkgPre.Y, decrypters: st.decrypters, rollSize: st.rollSet!.size, spoiled });
     if (!t.ok) throw conflict(`tally cannot be built yet: ${t.error}`, 'STATE_CONFLICT');
+    if (this.tallyDrafts.size >= 16) this.tallyDrafts.delete(this.tallyDrafts.keys().next().value!);
+    this.tallyDrafts.set(cacheKey, t.value.body);
     return t.value.body;
   }
 

@@ -236,6 +236,16 @@ export class ControlDb {
   seedAdmin(keyId: string, pk: Uint8Array): void {
     if (!this.keyAnyById(keyId)) this.addKey(null, keyId, pk, 'instance_admin', null);
   }
+  /** Configuration is the revocation authority for instance admins; normal org-key routes cannot revoke them. */
+  revokeRemovedAdmins(configured: ReadonlySet<string>): void {
+    this.tx(() => {
+      for (const k of all<{ key_id: string }>(this.db, "SELECT key_id FROM account_key WHERE role='instance_admin' AND revoked_at IS NULL")) {
+        if (configured.has(k.key_id)) continue;
+        this.revokeKey(k.key_id);
+        this.audit('system', 'admin.revoke', k.key_id, { reason: 'removed_from_config' });
+      }
+    });
+  }
 
   // ---- registry
   insertElection(r: { election_id: string; org_id: string; db_path: string; access: 'public' | 'link'; title: string; dek_wrapped: Uint8Array }): void {

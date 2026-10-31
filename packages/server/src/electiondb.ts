@@ -394,6 +394,9 @@ export class ElectionDb {
   inviteByHash(h: Uint8Array): InviteRow | undefined {
     return get<InviteRow>(this.db, 'SELECT * FROM voter_invite WHERE code_hash=?', h);
   }
+  inviteCount(): number {
+    return get<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM voter_invite')!.n;
+  }
   inviteById(id: string): InviteRow | undefined {
     return get<InviteRow>(this.db, 'SELECT * FROM voter_invite WHERE invite_id=?', id);
   }
@@ -423,11 +426,8 @@ export class ElectionDb {
   voterCount(): number {
     return get<{ n: number }>(this.db, "SELECT COUNT(*) AS n FROM voter WHERE status IN ('approved','committed')")!.n;
   }
-  voters(after: number, limit: number): VoterRow[] {
-    return all<VoterRow>(this.db, "SELECT * FROM voter WHERE rowid>? AND status IN ('approved','committed') ORDER BY rowid LIMIT ?", after, limit);
-  }
-  voterRowid(kid: string): number {
-    return get<{ rowid: number }>(this.db, 'SELECT rowid FROM voter WHERE voter_kid=?', kid)?.rowid ?? 0;
+  voters(after: Uint8Array | undefined, limit: number): VoterRow[] {
+    return all<VoterRow>(this.db, "SELECT * FROM voter WHERE (? IS NULL OR pk>?) AND status IN ('approved','committed') ORDER BY pk LIMIT ?", after ?? null, after ?? null, limit);
   }
   /** Approved keys, hex, strictly ascending (the order rollRoot requires). */
   approvedKeysHex(): string[] {

@@ -232,7 +232,7 @@ export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, 
   if (rt0.edb.hasPermanentEvidence()) throw new ApiError(409, 'COMPROMISED', 'the log key signed contradictory histories (fork evidence); this quarantine cannot be cleared, retire the election instead');
   const incident = forced?.incident ?? `inc_${createHash('sha256').update(boardReason).digest('base64url').slice(0, 12)}`;
   if (!ctEq(utf8(ack), utf8(incident))) throw new ApiError(409, 'STATE_CONFLICT', 'ack does not match the current incident id');
-  const known = new Set(env.cfg.witnesses.map((w) => w.name));
+  const known = new Set(rt0.witnessPolicy().witnesses.map((w) => w.name));
   const names = new Set<string>();
   for (const v of verifiedAgainst) {
     const m = /^witness:([^\s+]{1,64})$/.exec(v);

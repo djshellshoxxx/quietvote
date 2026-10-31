@@ -304,7 +304,7 @@ test('SRV-007: quotes and SQL metacharacters in idempotency keys and query filte
   assert.equal(l2.json.items.length, 0);
   assert.equal((await w.get(`/api/v1/elections/${w.electionId}/log/entries?author=${evil}`)).status, 400);
   assert.equal((await w.get(`/api/v1/elections/${w.electionId}/log/entries?type=${evil}`)).status, 400);
-  assert.equal((await w.get(`/api/v1/elections/${w.electionId}/roll?cursor=${evil}`)).status, 200);
+  assert.equal((await w.get(`/api/v1/elections/${w.electionId}/roll?cursor=${evil}`)).status, 400);
   assert.equal((await w.get(`/api/v1/elections/${w.electionId}/voters/${evil}`)).status, 404);
 });
 

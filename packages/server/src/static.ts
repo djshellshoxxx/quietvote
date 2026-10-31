@@ -14,6 +14,7 @@ export interface Asset { path: string; bytes: Uint8Array; type: string; sha256: 
 
 export class StaticAssets implements StaticHandler {
   readonly files = new Map<string, Asset>();
+  private verifierCsp: string | undefined;
   constructor(dir: string) {
     const walk = (rel: string, depth: number): void => {
       if (depth > 8 || this.files.size > 5000) throw new Error('static dir too large');
@@ -28,6 +29,20 @@ export class StaticAssets implements StaticHandler {
       }
     };
     walk('', 0);
+    const verifier = this.files.get('/verifier.html');
+    if (verifier) {
+      const html = new TextDecoder().decode(verifier.bytes);
+      const hash = (s: string): string => `sha256-${Buffer.from(sha256(new TextEncoder().encode(s))).toString('base64')}`;
+      const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+      const styles = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)];
+      // Accept only the build's closed offline policy, with hashes recomputed from the actual inline bytes.
+      // Unrecognized documents keep the default policy; an asset cannot supply arbitrary header directives.
+      if (scripts.length === 1 && styles.length === 1) {
+        const policy = `default-src 'none'; script-src '${hash(scripts[0]![1]!)}'; style-src '${hash(styles[0]![1]!)}'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'`;
+        const tag = `<meta http-equiv="Content-Security-Policy" content="${policy}">`;
+        if (html.includes(tag)) this.verifierCsp = `${policy}; frame-ancestors 'none'`;
+      }
+    }
   }
   serve(path: string, _m: string): Reply | undefined {
     // the API namespace is never answered with the SPA shell: a mistyped endpoint must be a 404 problem, not a 200 HTML page
@@ -36,7 +51,7 @@ export class StaticAssets implements StaticHandler {
     let a = this.files.get(key);
     if (!a && !/\.[a-z0-9]+$/i.test(key)) a = this.files.get('/index.html'); // SPA fallback
     if (!a) return undefined;
-    return { status: 200, bytes: a.bytes, contentType: a.type, etag: `"${a.sha256.slice(0, 32)}"`, cache: 'no-cache' };
+    return { status: 200, bytes: a.bytes, contentType: a.type, etag: `"${a.sha256.slice(0, 32)}"`, cache: 'no-cache', ...(key === '/verifier.html' && this.verifierCsp ? { csp: this.verifierCsp } : {}) };
   }
   manifest(): { path: string; sha256: string }[] {
     return [...this.files.values()].map((a) => ({ path: a.path, sha256: a.sha256 })).sort((x, y) => (x.path < y.path ? -1 : 1));

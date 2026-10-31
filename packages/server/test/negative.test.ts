@@ -257,8 +257,7 @@ test('witness gating: election_open waits for a quorum-cosigned checkpoint', { t
     const text = cp.slice(0, cp.indexOf('\n\n') + 1);
     const evil = kp('evil', 'w');
     const bad = await w3.req('POST', `/api/v1/elections/${w3.electionId}/log/cosignatures`, { checkpoint_size: size, lines: [cosignLine('w1', evil.secretKey, evil.publicKey, text, w3.nowSec)] });
-    assert.equal(bad.status, 200);
-    assert.deepEqual(bad.json.accepted, []);
+    assert.equal(bad.status, 422);
     assert.equal((await w3.open()).status, 409);
     const good = await w3.req('POST', `/api/v1/elections/${w3.electionId}/log/cosignatures`, { checkpoint_size: size, lines: [cosignLine('w1', wk.secretKey, wk.publicKey, text, w3.nowSec)] });
     assert.deepEqual(good.json.accepted, ['w1']);

@@ -67,6 +67,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     witnessPolicy: (quorum): WitnessPolicy => ({ witnesses, quorum, noneAcknowledged: quorum === 0 }),
   };
   for (const k of cfg.adminKeys) control.seedAdmin(keyIdOf(hexToBytes(k, 32)), hexToBytes(k, 32));
+  control.revokeRemovedAdmins(new Set(cfg.adminKeys.map((k) => keyIdOf(hexToBytes(k, 32)))));
   const pool = new ElectionPool(env);
   const sse = new SseHub(env);
   const webhooks = new WebhookService(env);
@@ -486,8 +487,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       }
       const dek = unlockDek(rt);
       const n = b.count ?? b.items!.length;
-      if (rt.edb.voterCount() + n > cfg.maxVotersPerElection * 2) throw new ApiError(429, 'RATE_LIMITED', 'too many invites', { retryable: false });
       return idem(c, c.auth!.keyId, async () => {
+        if (rt.edb.inviteCount() + n > cfg.maxVotersPerElection * 2) throw new ApiError(429, 'RATE_LIMITED', 'too many invites', { retryable: false });
         const out: { invite_id: string; code: string; label?: string }[] = [];
         const rows = [];
         for (let i = 0; i < n; i++) {
@@ -571,7 +572,9 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     handler: async (c) => {
       const rt = await readable(c);
       const limit = Math.max(1, intQ(c, 'limit', 100, 500));
-      const after = c.query.get('cursor') ? rt.edb.voterRowid(c.query.get('cursor')!) : 0;
+      const cursor = c.query.get('cursor');
+      const after = cursor ? rt.edb.voter(cursor)?.pk : undefined;
+      if (cursor && after === undefined) throw new ApiError(400, 'BAD_REQUEST', 'unknown roll cursor');
       const rows = rt.edb.voters(after, limit + 1);
       const more = rows.length > limit;
       const items = rows.slice(0, limit).map((v) => ({ voter_kid: v.voter_kid, pk: b64u(v.pk), alg: v.alg, status: v.status, roll_index: v.roll_index, weight: v.weight }));
@@ -757,7 +760,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     handler: async (c) => {
       const rt = await readable(c);
       const w = rt.witnessInfo();
-      return { status: 200, json: { policy: { quorum: w.required, witnesses: cfg.witnesses.map((x) => x.name) }, latest_size: w.size, cosigners: w.cosigners, quorum_met: w.required === 0 || w.witnessed } };
+      return { status: 200, json: { policy: { quorum: w.required, witnesses: rt.witnessPolicy().witnesses.map((x) => x.name) }, latest_size: w.size, cosigners: w.cosigners, quorum_met: w.required === 0 || w.witnessed } };
     },
   });
   add({
@@ -767,12 +770,13 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       if (rt.imported) throw conflict('imported elections are read-only mirrors; they take no cosignatures');
       const b = c.parse(fObj({ checkpoint_size: req(fInt(1, 2 ** 40)), lines: req(fArr(fStr({ min: 10, max: 400 }), 16)) }));
       if (!rt.edb.store.getCheckpoint(b.checkpoint_size)) throw notFound('checkpoint');
-      const before = rt.witnessInfo();
       const r = await rt.attachCosignatures(b.checkpoint_size, b.lines);
-      exportGen.set(rt.id, (exportGen.get(rt.id) ?? 0) + 1);
-      exportCache.delete(rt.id);
-      const after = rt.witnessInfo();
-      return { status: 200, json: { accepted: after.cosigners.filter((x) => !before.cosigners.includes(x)), rejected: [], witnessed: r.witnessed } };
+      if (r.accepted.length > 0) {
+        exportGen.set(rt.id, (exportGen.get(rt.id) ?? 0) + 1);
+        exportCache.delete(`${rt.id}:qvb`);
+        exportCache.delete(`${rt.id}:json`);
+      }
+      return { status: 200, json: r };
     },
   });
 
@@ -847,18 +851,19 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const exportCache = new Map<string, { etag: string; bytes: Uint8Array; at: number }>();
   const EXPORT_CACHE_MAX = 128 * 1024 * 1024;
   const exportEtag = (rt: ElectionRuntime): string => `"${rt.log.size}:${toHex(rt.log.root()).slice(0, 16)}:${exportGen.get(rt.id) ?? 0}"`;
-  const cachedQvb = (rt: ElectionRuntime): { bytes: Uint8Array; etag: string } => {
+  const cachedExport = (rt: ElectionRuntime, format: 'qvb' | 'json'): { bytes: Uint8Array; etag: string } => {
     const etag = exportEtag(rt);
-    const hit = exportCache.get(rt.id);
+    const key = `${rt.id}:${format}`;
+    const hit = exportCache.get(key);
     if (hit && hit.etag === etag && nowMs() - hit.at < 600_000) {
-      exportCache.delete(rt.id);
-      exportCache.set(rt.id, hit); // LRU order
+      exportCache.delete(key);
+      exportCache.set(key, hit); // LRU order
       return { bytes: hit.bytes, etag };
     }
-    exportCache.delete(rt.id);
-    const bytes = qvb(rt);
+    exportCache.delete(key);
+    const bytes = format === 'qvb' ? qvb(rt) : Buffer.from(JSON.stringify(electionBundle(rt)));
     if (bytes.length <= EXPORT_CACHE_MAX) {
-      exportCache.set(rt.id, { etag, bytes, at: nowMs() });
+      exportCache.set(key, { etag, bytes, at: nowMs() });
       let total = 0;
       for (const v of exportCache.values()) total += v.bytes.length;
       for (const [k, v] of exportCache) {
@@ -874,7 +879,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     handler: async (c) => {
       const rt = await readable(c);
       if (!rt.st.manifest) throw new ApiError(409, 'WRONG_PHASE', 'nothing to export before the manifest');
-      const b = cachedQvb(rt);
+      if (c.header('if-none-match') === exportEtag(rt)) return { status: 304, etag: exportEtag(rt), cache: 'public, max-age=600' };
+      const b = cachedExport(rt, 'qvb');
       return { status: 200, bytes: b.bytes, ranges: true, contentType: 'application/x-tar', cache: 'public, max-age=600', etag: b.etag };
     },
   });
@@ -883,7 +889,9 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     handler: async (c) => {
       const rt = await readable(c);
       if (!rt.st.manifest) throw new ApiError(409, 'WRONG_PHASE', 'nothing to export before the manifest');
-      return { status: 200, bytes: Buffer.from(JSON.stringify(electionBundle(rt))), ranges: true, contentType: 'application/json; charset=utf-8', cache: 'public, max-age=600', etag: exportEtag(rt) };
+      if (c.header('if-none-match') === exportEtag(rt)) return { status: 304, etag: exportEtag(rt), cache: 'public, max-age=600' };
+      const b = cachedExport(rt, 'json');
+      return { status: 200, bytes: b.bytes, ranges: true, contentType: 'application/json; charset=utf-8', cache: 'public, max-age=600', etag: b.etag };
     },
   });
   void audienceOf;
