@@ -44,6 +44,63 @@ jobs:
         run: npm audit --audit-level=high
       - run: npm run check
 
+  conformance:
+    name: vectors, Python verifier and production build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Python verifier unit and regression tests
+        working-directory: verifier-py
+        run: python3 -I -m unittest
+      - name: Manifest hashes, honest, negative and mutation vectors
+        run: npm run vectors:check
+      - name: Python vector sweep (unsupported capabilities are reported)
+        run: python3 -I verifier-py/qv_verifier vectors test-vectors/v1
+      - name: Production web build
+        run: npm run build -w @quietvote/web
+      - name: Scoped i18n checks
+        run: npm run i18n:check -w @quietvote/web
+      - name: Dependency licence snapshot
+        run: node scripts/licence-snapshot.mjs --stdout
+      # Intentionally last: unresolved errata can fail this strict report check
+      # without suppressing the independent build/i18n/licence evidence above.
+      - name: Compare verifiers within shared capabilities
+        run: npm run verifiers:compare
+
+  browser:
+    name: production browser journeys, CSP and automated a11y
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      QV_REQUIRE_BROWSER: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Install the pinned Playwright Chromium revision
+        run: npx playwright install --with-deps chromium
+      - run: node packages/web/e2e/run.ts
+      - run: node packages/web/e2e/help.ts
+      - run: node packages/web/e2e/a11y.ts
+      - run: node packages/web/e2e/verifier.ts
+
   # Non-blocking: reports banned or overstated public claims (docs/claims/banned-phrases.txt).
   # Findings do not fail the workflow; see docs/claims/claims-register-v0.md.
   claims-lint:
