@@ -23,6 +23,7 @@
   "dependencies": {
     "@quietvote/board": "*",
     "@quietvote/crypto": "*",
-    "@quietvote/protocol": "*"
+    "@quietvote/protocol": "*",
+    "@quietvote/verifier": "*"
   }
 }

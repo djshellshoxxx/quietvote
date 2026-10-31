@@ -94,3 +94,10 @@ gate the trustees apply. Packets must be `qv-ceremony-packet/v1` (else exit 4); 
 t=1 (anything other than `E_DEC_PROOF` means every proof verified); this is a heuristic on the error code, not separate crypto. The
 POST body is the signed record as JSON; the server endpoint is not in this tree, so that body shape is an assumption. Files are created
 with `wx` (never overwritten). Tests: `test/spoil-collect.test.ts` (8; uses `packages/protocol/test/helpers/sim.ts`).
+## Dependency declaration (DEP-01, 2026-10-21)
+
+`packages/cli/src` imports `@quietvote/verifier` (`cmd-board.ts`, `cmd-vectors.ts`, `cmd-verify.ts`, `common.ts`), but the
+package did not declare it. `packages/cli/package.json` now lists `"@quietvote/verifier": "*"` in `dependencies`, the same form as
+the other workspace dependencies. `package-lock.json` changed by one line only (the `packages/cli` entry), from
+`npm install --package-lock-only --ignore-scripts`. This is a declaration fix; it does not change the D1 layering question above.
+Tests after the change: `npm test -w @quietvote/cli` 29/29 pass.
