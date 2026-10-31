@@ -18,6 +18,7 @@ main{scroll-margin-block-start:4rem;padding-block:1rem}
 .steps{display:flex;flex-wrap:wrap;gap:.5rem 2rem;padding-inline-start:1.5rem}.steps [aria-current="step"]{font-weight:700;text-decoration:underline;text-underline-offset:.2em}
 .error{border-inline-start:6px solid var(--err);padding-inline-start:1rem}.banner{border:2px solid var(--border);padding:.5rem}
 .row{display:flex;flex-wrap:wrap;gap:.5rem}.row.equal>*{flex:1 1 14rem}
+.row.equal>div>.btn{inline-size:100%;min-block-size:4.5em;margin-inline-end:0}
 .code{font-family:ui-monospace,monospace;overflow-wrap:anywhere;font-weight:700}
 .choice{display:block;min-block-size:48px;padding-block:.5rem}
 fieldset{border:2px solid var(--border);margin-block:1rem}

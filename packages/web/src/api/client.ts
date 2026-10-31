@@ -231,7 +231,7 @@ async function problem(res: Response): Promise<ApiError> {
   return new ApiError({
     status: res.status,
     code: typeof p.code === 'string' ? p.code : res.status === 404 ? 'NOT_FOUND' : res.status >= 500 ? 'INTERNAL' : 'BAD_REQUEST',
-    retryable: p.retryable === true || res.status === 429 || res.status === 503,
+    retryable: typeof p.retryable === 'boolean' ? p.retryable : res.status === 429 || res.status === 503,
     requestId: typeof p.request_id === 'string' ? p.request_id : res.headers.get('X-Request-Id') ?? undefined,
     reason: typeof p.reason === 'string' ? p.reason : undefined,
     retryAfter,

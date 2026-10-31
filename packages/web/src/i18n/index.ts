@@ -30,6 +30,7 @@ export function createTranslator(locale: string, o: TranslatorOptions = {}): Tra
   const cache = new Map<string, Node[]>();
   const fo = { locale, ...(o.timeZone === undefined ? {} : { timeZone: o.timeZone }) };
   const lookup = (key: MessageKey): string => {
+    if (!Object.hasOwn(EN, key)) throw new Error(`unknown message ${key}`);
     const entry = EN[key];
     const own = def?.messages[key] ?? (entry.sensitivity === 'guarantee' ? undefined : base?.messages[key]);
     if (own !== undefined) return own;

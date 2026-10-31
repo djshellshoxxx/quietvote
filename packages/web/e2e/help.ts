@@ -1,35 +1,18 @@
-// Ordinary Help/Home presentation smoke test. No election, verifier, API or persistent storage flows.
-// Uses Playwright + Chromium, which are NOT repo dependencies (global install). Skips (exit 0) when either is missing; QV_REQUIRE_BROWSER=1 makes a skip fail. QV_CHROMIUM overrides the browser binary.
+// Help/Home checks against the production app bundle, stylesheet and CSP.
+// QV_REQUIRE_BROWSER=1 fails if tooling is unavailable; QV_CHROMIUM overrides the binary.
 // Run from the repository root: node packages/web/e2e/help.ts
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
+import { tmpdir } from 'node:os';
+import { extname, join } from 'node:path';
+import { buildSite, csp } from '../src/build/site.ts';
+import { launchBrowser } from './browser.ts';
 
-const req = createRequire('/opt/node22/lib/node_modules/');
-let pw: typeof import('playwright');
-try {
-  pw = req('playwright');
-} catch {
-  console.log('help e2e skipped: playwright is not installed');
-  process.exit(process.env.QV_REQUIRE_BROWSER ? 1 : 0);
-}
-let browser: import('playwright').Browser;
-try {
-  browser = await pw.chromium.launch(process.env.QV_CHROMIUM ? { executablePath: process.env.QV_CHROMIUM } : {});
-} catch (e) {
-  console.log('help e2e skipped: chromium cannot be launched:', e instanceof Error ? e.message.split('\n')[0] : e);
-  process.exit(process.env.QV_REQUIRE_BROWSER ? 1 : 0);
-}
 const browserTest = String.raw`
-import { startApp } from './src/ui/app.ts';
-import { MemoryStorage } from './src/key/storage.ts';
 const checks = [];
 const check = (name, ok) => { if (!ok) throw new Error(name); checks.push(name); };
 try {
-  startApp({ root: document.getElementById('app'), storage: new MemoryStorage(), build: { version: 'test', id: 'help-only' } });
   const requestedDark = new URL(location.href).searchParams.get('dark') === 'true';
   const notices = [...document.querySelectorAll('.banner')].map((node) => node.textContent?.trim() ?? '').join(' ');
   check('experimental and demo warnings are visible', notices.includes('Experimental software') && notices.includes('DEMO — not for real votes'));
@@ -83,36 +66,53 @@ result.textContent = checks.join('\n');
 document.body.append(result);
 `;
 
-const output = await build({ stdin: { contents: browserTest, resolveDir: fileURLToPath(new URL('..', import.meta.url)), loader: 'js' }, bundle: true, format: 'esm', write: false, logLevel: 'silent' });
-const css = await readFile(new URL('../static/styles.css', import.meta.url));
+const dist = mkdtempSync(join(tmpdir(), 'qv-help-'));
+await buildSite(dist);
+const browser = await launchBrowser();
+const policy = csp().header;
+const mime: Record<string, string> = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json' };
 const unexpected: string[] = [];
+const errors: string[] = [];
 const server = createServer((req, res) => {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname;
-  if (path === '/help.js') { res.setHeader('Content-Type', 'text/javascript'); res.end(output.outputFiles[0]!.contents); }
-  else if (path === '/styles.css') { res.setHeader('Content-Type', 'text/css'); res.end(css); }
-  else if (path === '/help' || path === '/') { res.setHeader('Content-Type', 'text/html'); res.end('<!doctype html><link rel="stylesheet" href="/styles.css"><div id="app"></div><script type="module" src="/help.js"></script>'); }
-  else { if (path !== '/favicon.ico') unexpected.push(path); res.writeHead(404).end(); }
+  if (path === '/favicon.ico') return void res.writeHead(404).end();
+  const asset = path.startsWith('/assets/') && existsSync(join(dist, path));
+  if (!asset && path !== '/help' && path !== '/') {
+    unexpected.push(path);
+    return void res.writeHead(404).end();
+  }
+  const file = asset ? path : '/index.html';
+  res.writeHead(200, { 'Content-Type': mime[extname(file)] ?? 'application/octet-stream', 'Content-Security-Policy': policy, 'X-Content-Type-Options': 'nosniff' });
+  res.end(readFileSync(join(dist, file)));
 });
 await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
 const address = server.address();
 assert.ok(address && typeof address !== 'string');
+const origin = `http://127.0.0.1:${address.port}`;
 try {
   for (const width of [320, 1280]) {
     for (const dark of [false, true]) {
       const context = await browser.newContext({ colorScheme: dark ? 'dark' : 'light', viewport: { width, height: 720 } });
-      const page = await context.newPage();
-      const pageErrors: string[] = [];
-      page.on('pageerror', (e) => pageErrors.push(e.message));
-      await page.goto(`http://127.0.0.1:${address.port}/help?dark=${dark}`);
-      await page.waitForFunction(() => document.documentElement.dataset.helpCheck !== undefined, undefined, { timeout: 30_000 }).catch((e: unknown) => { throw new Error(`Help checks did not finish: ${pageErrors.join('; ') || String(e)}`); });
-      const state = await page.evaluate(() => ({ status: document.documentElement.dataset.helpCheck, results: document.getElementById('help-check-results')?.textContent ?? '' }));
-      assert.equal(state.status, 'pass', state.results);
-      console.log(`${width}px ${dark ? 'dark' : 'light'}: ${state.results.split('\n').length} Help/Home checks passed`);
-      await context.close();
+      try {
+        const page = await context.newPage();
+        page.on('pageerror', (error) => errors.push(error.message));
+        page.on('console', (message) => { if (/Content Security|Trusted Type/i.test(message.text())) errors.push(message.text()); });
+        page.on('request', (request) => { if (!request.url().startsWith(origin + '/') && !/^(?:data|blob):/.test(request.url())) unexpected.push(request.url()); });
+        await page.goto(`${origin}/help?dark=${dark}`);
+        await page.getByRole('combobox', { name: 'Colour theme' }).waitFor({ timeout: 30_000 });
+        await page.evaluate(browserTest);
+        const state = await page.evaluate(() => ({ status: document.documentElement.dataset.helpCheck, results: document.getElementById('help-check-results')?.textContent ?? '' }));
+        assert.equal(state.status, 'pass', state.results);
+        console.log(`${width}px ${dark ? 'dark' : 'light'}: ${state.results.split('\n').length} production Help/Home checks passed`);
+      } finally {
+        await context.close();
+      }
     }
   }
-  assert.deepEqual(unexpected, [], 'Only Help/Home test assets may be requested');
+  assert.deepEqual(errors, [], 'Production Help/Home must have no page errors or CSP/Trusted Types violations');
+  assert.deepEqual(unexpected, [], 'Only production Help/Home assets may be requested');
 } finally {
   await browser.close();
   await new Promise<void>((done, reject) => server.close((error) => error ? reject(error) : done()));
+  rmSync(dist, { recursive: true, force: true });
 }

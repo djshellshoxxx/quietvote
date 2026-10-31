@@ -1,33 +1,19 @@
 // Automated ordinary-UI accessibility browser checks (Home, Help, not-found) with Playwright + Chromium.
 // NOT a WCAG conformance claim: these are automated heuristics. They do not replace manual keyboard testing or testing with real
 // assistive technology (screen readers, voice control, switch devices), or review by people with disabilities.
-// No election, vote, key, verifier, receipt or API flows are exercised. Playwright is not a repo dependency; it is loaded from the
-// global install and the script skips (exit 0) when Playwright or Chromium is missing (QV_REQUIRE_BROWSER=1 makes a skip fail; QV_CHROMIUM overrides the binary).
+// No election, vote, key, verifier, receipt or API flows are exercised. Uses pinned repository Playwright, with supported global
+// fallbacks. QV_REQUIRE_BROWSER=1 fails if tooling is missing; QV_CHROMIUM overrides the binary.
 // Run from the repository root: node packages/web/e2e/a11y.ts
 import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { buildSite, csp } from '../src/build/site.ts';
+import { launchBrowser } from './browser.ts';
 
-const req = createRequire('/opt/node22/lib/node_modules/');
-let pw: typeof import('playwright');
-try {
-  pw = req('playwright');
-} catch {
-  console.log('a11y skipped: playwright is not installed');
-  process.exit(process.env.QV_REQUIRE_BROWSER ? 1 : 0);
-}
-let browser: import('playwright').Browser;
-try {
-  browser = await pw.chromium.launch(process.env.QV_CHROMIUM ? { executablePath: process.env.QV_CHROMIUM } : {});
-} catch (e) {
-  console.log('a11y skipped: chromium cannot be launched:', e instanceof Error ? e.message.split('\n')[0] : e);
-  process.exit(process.env.QV_REQUIRE_BROWSER ? 1 : 0);
-}
+const browser = await launchBrowser();
 
 type Page = import('playwright').Page;
 

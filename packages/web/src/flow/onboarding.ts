@@ -104,10 +104,11 @@ export async function unlockKey(a: { storage: DeviceStorage; slot: string; passp
   let atFloor = container.m <= deps.floor.m;
   const adapt = adaptParams({ m: container.m, t: container.t, p: container.p }, u.elapsedMs, deps.floor);
   atFloor = adapt.atFloor;
-  if (needsRewrap(container) && adapt.changed === false && u.elapsedMs < 3000) {
+  if (needsRewrap(container) && u.elapsedMs < 3000) {
     // Stronger parameters are affordable on this device: transparent re-wrap at unlock.
     const w = await wrapSeed(u.seed, a.passphrase, deps, { m: Math.max(container.m, Math.min(DEFAULT_PARAMS.m, container.m * 2)), t: Math.max(container.t, DEFAULT_PARAMS.t), p: container.p }, a.onProgress);
     await a.storage.putKey(a.slot, w.container);
+    atFloor = w.atFloor;
     rewrapped = true;
   }
   const signer = await createSigner(u.seed);

@@ -40,6 +40,8 @@ export interface CastReport {
   codeHex: string;
   codeDisplay: string;
   receipt?: ReceiptFile;
+  sequencedAt?: number;
+  storageFailed?: boolean;
   error?: { ux: UxCode | 'E-BOARD-INCL-FAIL' | 'E-BOARD-FORK' | 'E-BOARD-ROLLBACK'; requestId?: string | undefined };
 }
 
@@ -50,6 +52,7 @@ export class BallotController {
   private sealed: SealedBallot | undefined;
   private xi: Uint8Array | undefined;
   private pending: PreparedEntry | undefined;
+  private castInFlight: Promise<CastReport | undefined> | undefined;
   lastCast: CastReport | undefined;
   lastAudit: { result: AuditResult; text: string; link: string; posted: boolean } | undefined;
 
@@ -83,6 +86,7 @@ export class BallotController {
 
   /** Seal: encrypt and prove. Resolves when the state is `sealed` (code not yet rendered) or `failed`. */
   async seal(): Promise<void> {
+    if (this.d.signer.locked) return;
     if (this.state.kind !== 'reviewing') return;
     const { selections, attempt } = this.state;
     this.dispatch({ type: 'SEAL' });
@@ -121,7 +125,16 @@ export class BallotController {
   }
 
   /** CAST. Idempotent retry after an unknown delivery resends the SAME entry bytes. */
-  async cast(): Promise<CastReport | undefined> {
+  cast(): Promise<CastReport | undefined> {
+    if (this.castInFlight) return this.castInFlight;
+    if (this.d.signer.locked && !this.pending) return Promise.resolve(undefined);
+    const p = this.castOnce();
+    this.castInFlight = p;
+    void p.finally(() => { if (this.castInFlight === p) this.castInFlight = undefined; });
+    return p;
+  }
+
+  private async castOnce(): Promise<CastReport | undefined> {
     if (this.state.kind === 'failed') this.dispatch({ type: 'RETRY_CAST' });
     else this.dispatch({ type: 'CAST' });
     if (this.state.kind !== 'casting' || !this.sealed) return undefined;
@@ -140,16 +153,21 @@ export class BallotController {
       const info = verifyAppendResult(res, { origin, leafHash: this.pending.leafHash, logPk });
       // W2: the head in the receipt must extend the pinned one (rollback / fork alarms) before it replaces the pin.
       if (info.checkpointNote !== undefined && info.treeSize !== undefined) await this.checkAgainstPin(info.checkpointNote);
-      const report: CastReport = { outcome: info.outcome, seq: info.seq, codeHex, codeDisplay };
-      if (info.outcome === 'ACCEPTED_RECORDED') {
+      const report: CastReport = { outcome: info.outcome, seq: info.seq, codeHex, codeDisplay, sequencedAt: res.receipt.promise.sequenced_at };
+      {
         const file: ReceiptFile = {
           format: 'qv-receipt/1', election: this.d.apiElectionId, manifest_hash: ctx.manifestHashHex, ballot_code: codeHex, seq: info.seq,
           leaf_hash: res.receipt.leaf_hash, receipt: res.receipt, client_build: this.d.clientBuild,
         };
         report.receipt = file;
-        const settings = await this.d.storage.getSettings();
-        if (settings.rememberReceipts) await this.d.storage.putReceipt({ electionId: this.d.apiElectionId, code: codeHex, seq: info.seq, json: receiptFileText(file) });
-        if (info.checkpointNote !== undefined && info.treeSize !== undefined) await this.d.storage.putHead({ electionId: this.d.apiElectionId, size: info.treeSize, note: info.checkpointNote });
+        try {
+          const settings = await this.d.storage.getSettings();
+          if (settings.rememberReceipts) await this.d.storage.putReceipt({ electionId: this.d.apiElectionId, code: codeHex, seq: info.seq, json: receiptFileText(file) });
+          if (info.checkpointNote !== undefined && info.treeSize !== undefined) await this.d.storage.putHead({ electionId: this.d.apiElectionId, size: info.treeSize, note: info.checkpointNote });
+        } catch {
+          // The log's signed receipt remains valid even when this device cannot retain it.
+          report.storageFailed = true;
+        }
       }
       this.lastCast = report;
       this.discardSecrets(); // REQ-014: randomness zeroed once the submit succeeded
@@ -157,11 +175,11 @@ export class BallotController {
       return report;
     } catch (e) {
       // W1: anything that is not a definite refusal (4xx with a problem body) may have been recorded: retry the SAME bytes.
-      const unknown = e instanceof ApiError && (e.code === 'NETWORK' || e.code === 'TIMEOUT' || e.code === BAD_RESPONSE || e.status >= 500 || e.status === 429);
-      const ux = e instanceof BoardIntegrityError ? e.code : uxCodeFor(e, true);
+      const unknown = e instanceof ApiError && (e.code === 'NETWORK' || e.code === 'TIMEOUT' || e.code === BAD_RESPONSE || e.status >= 500 || (e.status === 429 && e.code !== 'REVOTE_LIMIT'));
+      const ux = e instanceof BoardIntegrityError ? e.code : unknown ? 'E-NET-TIMEOUT' : uxCodeFor(e, true);
       const rejected = e instanceof ApiError && !unknown;
       const outcome: SubmissionOutcome | undefined = rejected
-        ? e.code === 'WRONG_PHASE' ? 'AFTER_CLOSE' : ux === 'E-VOT-DUP' ? 'DUPLICATE_IGNORED' : ux === 'E-VOT-SUPERSEDED-LOST' ? 'SUPERSEDED' : 'REJECTED'
+        ? e.code === 'WRONG_PHASE' && ux === 'E-VOT-CLOSED' ? 'AFTER_CLOSE' : ux === 'E-VOT-DUP' ? 'DUPLICATE_IGNORED' : 'REJECTED'
         : undefined;
       const report: CastReport = {
         outcome: outcome ?? 'PENDING_UNCONFIRMED', codeHex, codeDisplay,

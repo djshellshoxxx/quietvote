@@ -227,7 +227,7 @@ export function evaluate(nodes: readonly Node[], args: Args, o: FormatOptions, h
       }
       case 'select': {
         const key = String(need(n.name));
-        out += evaluate(n.cases[key] ?? n.cases.other!, args, o, hashValue);
+        out += evaluate(Object.hasOwn(n.cases, key) ? n.cases[key]! : n.cases.other!, args, o, hashValue);
         break;
       }
       case 'plural': {

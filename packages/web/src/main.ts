@@ -6,7 +6,7 @@ import { createTranslator } from './i18n/index.ts';
 
 const meta = (n: string): string => document.querySelector(`meta[name="${n}"]`)?.getAttribute('content') ?? '';
 const root = document.getElementById('app');
-if (root === null || typeof crypto === 'undefined' || crypto.subtle === undefined || typeof indexedDB === 'undefined') {
+if (root === null) {
   const p = document.createElement('p');
   p.textContent = createTranslator('en').t('qv.shell.unsupportedBrowser');
   (root ?? document.body).append(p);

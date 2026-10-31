@@ -37,7 +37,7 @@ export function uxCodeFor(e: unknown, submitting = false): UxCode {
     case NETWORK: return submitting ? 'E-NET-TIMEOUT' : 'E-NET-OFFLINE';
     case TIMEOUT: return 'E-NET-TIMEOUT';
     case 'AUTHOR_NOT_AUTHORIZED': return 'E-VOT-NOTONROLL';
-    case 'WRONG_PHASE': return /clos/i.test(e.detail ?? '') ? 'E-VOT-CLOSED' : /not.*open|before/i.test(e.detail ?? '') ? 'E-VOT-NOTOPEN' : 'E-VOT-CLOSED';
+    case 'WRONG_PHASE': return /clos/i.test(e.detail ?? '') ? 'E-VOT-CLOSED' : /not.*open|before/i.test(e.detail ?? '') ? 'E-VOT-NOTOPEN' : 'E-API-UNAVAILABLE';
     case 'REVOTE_LIMIT': return 'E-VOT-ONEBALLOT';
     case 'ENTRY_INVALID': return e.reason === 'E_SUPERSEDES' || e.reason === 'SUPERSEDED' ? 'E-VOT-SUPERSEDED-LOST' : 'E-VOT-REJECTED-PROOF';
     case 'MALFORMED_ENTRY':
@@ -53,5 +53,6 @@ export function uxCodeFor(e: unknown, submitting = false): UxCode {
 
 /** True when repeating the *same bytes* is safe and likely to help (QV-09 §4.4). */
 export function isRetryable(e: unknown): boolean {
+  if (e instanceof ApiError && e.code === 'REVOTE_LIMIT') return false;
   return e instanceof ApiError && (e.retryable || e.code === NETWORK || e.code === TIMEOUT || e.status === 429 || e.status === 503);
 }

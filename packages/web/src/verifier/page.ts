@@ -3,6 +3,7 @@
 import { hexToBytes } from '@quietvote/crypto';
 import { verifyElectionText } from '@quietvote/protocol';
 import { createTranslator, type MessageKey } from '../i18n/index.ts';
+import { verificationSummary } from '../flow/verification.ts';
 import { electionIdOf, sameElectionId } from '../util/crockford.ts';
 
 const t = createTranslator('en').t;
@@ -63,15 +64,17 @@ async function runChecked(out: HTMLElement, text: string): Promise<void> {
     }
   }
   const rows = Object.entries(rep.checks);
-  kids.push(el('h2', t(`qv.verify.verdict.${rep.verdict}` as MessageKey)));
+  const summary = verificationSummary(rep, anchorBad);
+  kids.push(el('h2', t(`qv.verify.verdict.${summary.verdict}` as MessageKey)));
   kids.push(el('p', t('qv.verify.itemized', { passed: rows.filter(([, v]) => v === 'pass').length, total: rows.length })));
   const ul = document.createElement('ul');
   for (const [k, v] of rows) ul.append(el('li', `${label('qv.verify.chk.', k)}: ${label('qv.verify.status.', v)}`));
+  kids.push(...rep.caveats.map((c) => el('p', c)));
   kids.push(ul, el('p', t('qv.verify.counts', { cast: rep.counts.cast, counted: rep.counts.counted, spoiled: rep.counts.spoiled })), el('p', t('qv.verify.scope')));
   for (const fi of rep.findings.slice(0, 50)) kids.push(el('p', `${fi.code}${fi.seq !== undefined ? ` #${fi.seq}` : ''}: ${fi.detail}`));
   out.replaceChildren(...kids);
   // The anchor mismatch is part of what a screen-reader user must hear with the verdict.
-  $('live').textContent = anchorBad ? `${t('qv.err.E-VER-ANCHOR.title')}. ${t(`qv.verify.verdict.${rep.verdict}` as MessageKey)}` : t(`qv.verify.verdict.${rep.verdict}` as MessageKey);
+  $('live').textContent = anchorBad ? `${t('qv.err.E-VER-ANCHOR.title')}. ${t(`qv.verify.verdict.${summary.verdict}` as MessageKey)}` : t(`qv.verify.verdict.${summary.verdict}` as MessageKey);
 }
 
 $('run').addEventListener('click', () => void run());

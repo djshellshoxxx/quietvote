@@ -32,13 +32,17 @@ export function csp(boardOrigins: readonly string[] = []): { header: string; met
   return { header: [...common, "frame-ancestors 'none'", 'report-uri /csp-report'].join('; '), meta: common.join('; ') };
 }
 
-export function headersFile(boardOrigins: readonly string[] = []): string {
-  const { header } = csp(boardOrigins);
+export function headersFile(boardOrigins: readonly string[] = [], verifier?: { scriptHash: string; styleHash: string; policy: string }): string {
+  let { header } = csp(boardOrigins);
+  // Hosts can enforce every matching rule. Permit only these exact offline bytes in the common header; the app's
+  // own meta CSP still permits no inline code. The offline meta policy independently forbids network and workers.
+  if (verifier) header = header.replace("script-src 'self'", `script-src 'self' '${verifier.scriptHash}'`).replace("style-src 'self'", `style-src 'self' '${verifier.styleHash}'`);
   return [
     '/*', `  Content-Security-Policy: ${header}`, '  Cross-Origin-Opener-Policy: same-origin', '  Cross-Origin-Embedder-Policy: require-corp',
     '  Cross-Origin-Resource-Policy: same-origin', '  Referrer-Policy: no-referrer',
     '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), clipboard-read=(), interest-cohort=()',
     '  X-Content-Type-Options: nosniff', '  Strict-Transport-Security: max-age=63072000; includeSubDomains', '  Cache-Control: no-cache',
+    ...(verifier ? ['/verifier.html', `  Content-Security-Policy: ${verifier.policy}; frame-ancestors 'none'`] : []),
     '/assets/*', '  Cache-Control: public, max-age=31536000, immutable', '',
   ].join('\n');
 }
@@ -56,7 +60,7 @@ const common: BuildOptions = {
   define: { 'process.env.NODE_ENV': '"production"' }, absWorkingDir: PKG,
 };
 
-export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; version: string; buildId: string; connectOrigins: string[] }): string {
+export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: Asset[]; version: string; buildId: string; connectOrigins: string[] }): string {
   const { meta } = csp(a.connectOrigins);
   return `<!doctype html>
 <html lang="en" dir="ltr">
@@ -72,6 +76,7 @@ export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; version: str
 <title>${esc(EN['qv.app.name'].message)}</title>
 <link rel="stylesheet" href="/${a.css.path}" integrity="${a.css.integrity}" crossorigin="anonymous">
 <link rel="modulepreload" href="/${a.js.path}" integrity="${a.js.integrity}" crossorigin="anonymous">
+${(a.modules ?? []).map((m) => `<link rel="modulepreload" href="/${m.path}" integrity="${m.integrity}" crossorigin="anonymous">`).join('\n')}
 </head>
 <body>
 <div id="app"><p>${esc(EN['qv.shell.loading'].message)}</p><noscript><p>${esc(EN['qv.shell.noscript'].message)}</p></noscript></div>
@@ -81,7 +86,7 @@ export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; version: str
 `;
 }
 
-export async function verifierHtml(): Promise<{ html: string; scriptHash: string; styleHash: string }> {
+export async function verifierHtml(): Promise<{ html: string; scriptHash: string; styleHash: string; policy: string }> {
   const stubCatalogs = {
     name: 'stub-catalogs',
     setup(b: { onResolve(o: { filter: RegExp }, cb: () => { path: string }): void }) {
@@ -103,7 +108,7 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
 <p><button id="run" type="button">Run checks</button></p><div id="out"></div><div id="live" class="sr" role="status" aria-live="polite"></div></main>
 <script>${js}</script></body></html>
 `;
-  return { html, scriptHash: sh, styleHash: st };
+  return { html, scriptHash: sh, styleHash: st, policy };
 }
 
 export async function buildSite(outDir: string, opts: { version?: string; connectOrigins?: string[] } = {}): Promise<{ assets: Asset[]; buildId: string; verifierBytes: number }> {
@@ -128,7 +133,7 @@ export async function buildSite(outDir: string, opts: { version?: string; connec
   // Code splitting: dynamic import() boundaries (translated catalogs, results chart) become chunks next to the entry. esbuild names
   // chunks by content hash, so imports between files stay valid; the entry is renamed by its own hash below and imports its chunks
   // by relative path (all live in assets/; esbuild names shared chunks `chunk-<hash>.js`). Chunks are listed in asset-manifest.json like every other asset.
-  const app = await esbuild({ ...common, splitting: true, chunkNames: '[name]-[hash]', entryPoints: { app: 'src/main.ts' }, outdir: 'out', plugins: [precompileI18nPlugin()] });
+  const app = await esbuild({ ...common, metafile: true, splitting: true, chunkNames: '[name]-[hash]', entryPoints: { app: 'src/main.ts' }, outdir: 'out', plugins: [precompileI18nPlugin()] });
   const worker = await esbuild({ ...common, entryPoints: { 'seal-worker': 'src/worker/seal-worker.ts' }, outdir: 'out' });
   const css = readFileSync(join(PKG, 'static', 'styles.css'));
   const entry = app.outputFiles!.find((f) => /[\\/]app\.js$/.test(f.path));
@@ -141,11 +146,20 @@ export async function buildSite(outDir: string, opts: { version?: string; connec
   const buildId = hashOf('sha256', assets.map((a) => a.sha256).sort().join('\n'), 'hex').slice(0, 12);
   const version = opts.version ?? (JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8')) as { version: string }).version;
   const connectOrigins = opts.connectOrigins ?? [];
-  writeFileSync(join(outDir, 'index.html'), htmlPage({ js, css: cs, worker: wk, version, buildId, connectOrigins }));
+  const staticModules = new Set<string>();
+  const visit = (path: string): void => {
+    for (const imp of app.metafile!.outputs[path]?.imports ?? []) {
+      if (imp.kind !== 'import-statement' || imp.external || staticModules.has(imp.path)) continue;
+      staticModules.add(imp.path); visit(imp.path);
+    }
+  };
+  visit(Object.keys(app.metafile!.outputs).find((p) => p.endsWith('/app.js'))!);
+  const staticNames = new Set([...staticModules].map((p) => `assets/${p.split('/').pop()!}`));
+  writeFileSync(join(outDir, 'index.html'), htmlPage({ js, css: cs, worker: wk, modules: assets.filter((a) => staticNames.has(a.path)), version, buildId, connectOrigins }));
   const v = await verifierHtml();
   writeFileSync(join(outDir, 'verifier.html'), v.html);
   if (Buffer.byteLength(v.html) >= 400 * 1024) throw new Error('verifier.html exceeds 400 KB (QV-19-REQ-016)');
-  writeFileSync(join(outDir, '_headers'), headersFile(connectOrigins));
+  writeFileSync(join(outDir, '_headers'), headersFile(connectOrigins, v));
   const manifest = {
     schema: 'qv-client-assets/1', version, build_id: buildId,
     client_assets: assets.map((a) => ({ path: a.path, sha384: a.sha384, sha256: a.sha256, size: a.size })).sort((x, y) => (x.path < y.path ? -1 : 1)),

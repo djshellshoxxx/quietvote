@@ -27,9 +27,12 @@ test('build: hashed assets, SRI matches content, strict CSP, no inline scripts, 
   for (const m of html.matchAll(/(?:src|href)="\/(assets\/[^"]+)"[^>]*integrity="(sha384-[^"]+)"/g)) {
     const want = `sha384-${createHash('sha384').update(readFileSync(join(a, m[1]!))).digest('base64')}`;
     assert.equal(m[2], want, m[1]);
-    assert.match(m[1]!, /\.[0-9a-f]{12}\.(js|css)$/);
+    assert.match(m[1]!, /(?:\.[0-9a-f]{12}|-[A-Z0-9]{8})\.(js|css)$/);
   }
   assert.ok((html.match(/integrity=/g) ?? []).length >= 3);
+  const entryPath = /<script type="module" src="\/(assets\/[^"]+)"/.exec(html)![1]!;
+  for (const imp of read(a, entryPath).matchAll(/(?:import[^;]*?from|import)["']\.\/([^"']+)["']/g)) assert.ok(html.includes(`href="/assets/${imp[1]}" integrity="`), 'static module has a pinned preload');
+  assert.ok(!/modulepreload[^>]*catalog/.test(html), 'unoffered translations are not preloaded');
   const mani = JSON.parse(read(a, 'asset-manifest.json')) as { client_assets: { path: string; sha384: string }[] };
   for (const x of mani.client_assets) assert.equal(createHash('sha384').update(readFileSync(join(a, x.path))).digest('hex'), x.sha384);
   const headers = read(a, '_headers');

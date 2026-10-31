@@ -226,7 +226,7 @@ test('W6/W9/W12/W13/W14 (DOM, not unit-tested): source wiring checks', async () 
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../src/ui/app.ts', import.meta.url), 'utf8');
   assert.ok(!/catch \{ \/\* shown below as not on roll/.test(src), 'W6: registration failure is shown');
-  assert.ok(src.includes('e.status === 409'));
+  assert.ok(!src.includes('e.status === 409'), 'B3-10: conflicts must not silently claim registration success');
   assert.ok(!/storage\.clearAll\(\)\.then/.test(src), 'W9: clearAll goes through clearDevice (caught)');
   assert.ok(!src.includes('see Election ID after signing'), 'W12');
   assert.ok(!/h\('span', \{ 'aria-label'/.test(src), 'W13');

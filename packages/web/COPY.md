@@ -32,6 +32,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.shell.electionTitle`: Election
 - `qv.shell.adminTitle`: Admin
 - `qv.shell.unsupportedBrowser`: This browser can’t vote here. Use a newer browser or the command-line voter.
+- `qv.shell.footer.cdlCredit`: A Circuit Drift Labs project
 
 ## Banners and status
 
@@ -309,8 +310,8 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.err.E-VOT-REJECTED-PROOF.body`: Your device produced a ballot that failed the checks. Nothing was recorded. Reload this page and try again; if it happens again, report it with the reference.
 - `qv.err.E-VOT-DUP.title`: This exact ballot is already recorded
 - `qv.err.E-VOT-DUP.body`: It was already counted. Show your receipt to check it.
-- `qv.err.E-VOT-SUPERSEDED-LOST.title`: A newer ballot from you is already recorded
-- `qv.err.E-VOT-SUPERSEDED-LOST.body`: The older ballot was not counted.
+- `qv.err.E-VOT-SUPERSEDED-LOST.title`: This ballot could not replace your earlier ballot
+- `qv.err.E-VOT-SUPERSEDED-LOST.body`: Reload the election and check your latest receipt before voting again. Your earlier ballot may still be current.
 - `qv.err.E-KEY-LOCKED.title`: That passphrase didn't unlock the key
 - `qv.err.E-KEY-LOCKED.body`: Check the passphrase and try again, or restore from your backup.
 - `qv.err.E-KEY-LOST.title`: We can't recover your key
@@ -410,7 +411,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.verify.anchorHint`: Optional but strongly recommended. Without it, a copy of a different election would also pass.
 - `qv.verify.run`: Run checks
 - `qv.verify.running`: Running checks…
-- `qv.verify.verdict.PASS`: All checks passed
+- `qv.verify.verdict.PASS`: Supplied checks passed
 - `qv.verify.verdict.FAIL`: A check failed
 - `qv.verify.verdict.INCOMPLETE`: Incomplete: no result has been published yet
 - `qv.verify.status.pass`: passed
