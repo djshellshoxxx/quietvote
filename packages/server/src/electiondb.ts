@@ -100,6 +100,22 @@ CREATE TRIGGER equivocation_evidence_noupdate BEFORE UPDATE ON equivocation_evid
 CREATE TRIGGER equivocation_evidence_nodelete BEFORE DELETE ON equivocation_evidence BEGIN SELECT RAISE(ABORT,'evidence is append-only'); END;
 `,
   },
+  {
+    version: 4,
+    name: 'spoil_share',
+    // QV-ADR-020: trustee-signed spoil-share records are NOT board log records (QV-16 closed list); they live here and are
+    // published through tally.spoiled[].shares. One row per (ballot code, trustee); `record` is the signed record as JSON.
+    sql: `
+CREATE TABLE spoil_share (
+  code        TEXT NOT NULL CHECK (length(code)=64 AND code NOT GLOB '*[^0-9a-f]*'),
+  j           INTEGER NOT NULL CHECK (j BETWEEN 1 AND 32),
+  spoil_seq   INTEGER NOT NULL,
+  record      TEXT NOT NULL CHECK (length(record) <= 2097152),
+  received_at INTEGER NOT NULL,
+  PRIMARY KEY (code, j)
+) STRICT;
+`,
+  },
 ];
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
@@ -427,6 +443,20 @@ export class ElectionDb {
   }
   committedVoterByKid(kid: string): VoterRow | undefined {
     return get<VoterRow>(this.db, "SELECT * FROM voter WHERE voter_kid=? AND status='committed'", kid);
+  }
+
+  // ---- spoil shares (QV-ADR-020)
+  insertSpoilShare(code: string, j: number, spoilSeq: number, record: string, at: number): void {
+    run(this.db, 'INSERT INTO spoil_share(code,j,spoil_seq,record,received_at) VALUES (?,?,?,?,?)', code, j, spoilSeq, record, at);
+  }
+  spoilShare(code: string, j: number): { spoil_seq: number; record: string } | undefined {
+    return get(this.db, 'SELECT spoil_seq,record FROM spoil_share WHERE code=? AND j=?', code, j);
+  }
+  spoilSharesOf(code: string): { j: number; spoil_seq: number; record: string }[] {
+    return all(this.db, 'SELECT j,spoil_seq,record FROM spoil_share WHERE code=? ORDER BY j', code) as never;
+  }
+  spoilShareIndex(): { code: string; j: number }[] {
+    return all(this.db, 'SELECT code,j FROM spoil_share ORDER BY code,j') as never;
   }
 
   // ---- ballots

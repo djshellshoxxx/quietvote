@@ -89,6 +89,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       const k = c.header('qv-read-key');
       const ok = k !== undefined && row.read_key_hash !== null && ctEq(sha256(utf8(`QV-READKEY-v1\0${k}`)), new Uint8Array(row.read_key_hash));
       if (!ok) throw forbidden('this election requires a read key', 'READ_KEY_REQUIRED');
+      c.restricted = true; // a shared cache must not replay this response to a client that lacks the key
     }
     return rt;
   };
@@ -121,7 +122,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       control.storeIdem(principal, key, c.method, c.path, h, r.status, stored.json === undefined ? null : Buffer.from(JSON.stringify(stored.json)));
       return r;
     } catch (e) {
-      control.db.exec(`DELETE FROM idempotency WHERE idem_key = '${key.replace(/'/g, "''")}' AND principal = '${principal.replace(/'/g, "''")}' AND status = 0`);
+      control.dropIdemInProgress(principal, key);
       throw e;
     }
   };
@@ -407,6 +408,35 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       };
     },
   });
+  // QV-ADR-020: trustee-signed spoil shares are not log records; they have their own endpoints.
+  add({
+    method: 'POST', path: '/api/v1/elections/:id/spoil-shares', cls: 'W', auth: 'none', body: 'json', maxBody: 1_048_576,
+    handler: async (c) => {
+      const rt = await rtOf(c); // the record authenticates itself (trustee signature under the election ctx)
+      rt.inUse++;
+      try {
+        const o = await rt.addSpoilShare(c.rawJson());
+        return { status: o.duplicate ? 200 : 201, json: { status: o.duplicate ? 'duplicate' : 'accepted', j: o.j, code: o.code } };
+      } finally {
+        rt.inUse--;
+      }
+    },
+  });
+  add({
+    method: 'GET', path: '/api/v1/elections/:id/spoil-shares', cls: 'R', auth: 'none',
+    handler: async (c) => {
+      const rt = await readable(c);
+      for (const k of c.query.keys()) if (k !== 'code') throw new ApiError(400, 'BAD_REQUEST', `unknown query parameter ${k.slice(0, 40)}`);
+      const code = c.query.get('code');
+      if (code === null) {
+        const by = new Map<string, number[]>();
+        for (const r of rt.edb.spoilShareIndex()) by.set(r.code, [...(by.get(r.code) ?? []), r.j]);
+        return { status: 200, json: { items: [...by].map(([k, trustees]) => ({ code: k, trustees })) } };
+      }
+      if (!/^[0-9a-f]{64}$/.test(code)) throw new ApiError(400, 'BAD_REQUEST', 'bad code');
+      return { status: 200, json: { code, items: rt.edb.spoilSharesOf(code).map((r) => ({ j: r.j, spoil_seq: r.spoil_seq, record: JSON.parse(r.record) as unknown })) } };
+    },
+  });
   add({
     method: 'GET', path: '/api/v1/elections/:id/tally/draft', cls: 'R', auth: 'none',
     handler: async (c) => {
@@ -609,10 +639,30 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       if (type !== undefined && !(ENTRY_TYPES as readonly string[]).includes(type)) throw new ApiError(400, 'BAD_REQUEST', 'unknown type');
       const author = c.query.get('author') ?? undefined;
       if (author !== undefined && !/^[A-Za-z0-9_-]{16,64}$/.test(author)) throw new ApiError(400, 'BAD_REQUEST', 'bad author');
-      const page = rt.edb.entries(from, limit, type, author);
+      // Pages are bounded in bytes as well as in count: 1000 ballots of 128 KiB would otherwise be built in memory per request.
+      const rows: ReturnType<typeof rt.edb.entries>['rows'] = [];
+      let more = false;
+      let bytes = 0;
+      for (let cur = from; rows.length < limit && !more;) {
+        const part = rt.edb.entries(cur, Math.min(25, limit - rows.length), type, author);
+        for (const r of part.rows) {
+          bytes += r.headerBytes.length + (r.body?.length ?? 0);
+          if (rows.length > 0 && bytes > cfg.maxPageBytes) {
+            more = true;
+            break;
+          }
+          rows.push(r);
+        }
+        if (more) break;
+        if (!part.more) break;
+        cur = (part.rows.at(-1)?.seq ?? cur) + 1;
+        if (rows.length >= limit) more = true;
+      }
+      const page = { rows, more };
+      const truncated = more && rows.length < limit;
       const tree = rt.log.size;
       const last = page.rows.at(-1);
-      const complete = from + limit <= tree && type === undefined && author === undefined;
+      const complete = !truncated && from + limit <= tree && type === undefined && author === undefined;
       return {
         status: 200, cache: complete && from + limit <= tree ? 'public, max-age=3600' : 'no-cache',
         json: {

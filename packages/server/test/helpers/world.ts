@@ -9,7 +9,7 @@ import {
 } from '@quietvote/crypto';
 import {
   PROTO_ID, NO_SUPERSEDES, adjudicateDkg, analyzeBallotLog, buildBallot, checkDealing, dkgDeal, dkgFinalShare, dkgKeyconf, dkgMakeShares,
-  dkgReceiveShare, makeCast, makeSpoil, manifestHash, rollRoot, shareToHex, signRecord, signRecordRaw, trusteeDecryptTally,
+  dkgReceiveShare, makeCast, makeSpoil, manifestHash, rollRoot, shareToHex, signRecord, signRecordRaw, trusteeDecryptTally, trusteeDecryptSpoiled,
   type DealerSecret, type ElectionParams, type Manifest, type ManifestContest, type ParsedDealing, type Selections, type SpoilMode,
 } from '@quietvote/protocol';
 import { buildServer, signRequest, type QuietVoteServer } from '../../src/index.ts';
@@ -44,6 +44,7 @@ export interface WorldOpts {
   t: number;
   voters: number;
   witnessQuorum?: number;
+  spoilTrustees?: boolean;
   server?: Partial<ServerOptions>;
 }
 
@@ -219,6 +220,7 @@ export class World {
       n: this.o.n, t: this.o.t, coordinator: { keys: this.coord.map((k) => H(k.publicKey)), m: 2 },
       ballots: { max_per_voter: 4, max_spoils_per_voter: 4 }, bb: { log_id: H(sha256(utf8('log')).slice(0, 32)), log_pk: this.logPkHex, witness_quorum: this.o.witnessQuorum ?? 0 },
       privacy_ack: true,
+      ...(this.o.spoilTrustees ? { spoil_trustee_decrypt: true } : {}),
     };
     return m;
   }
@@ -352,6 +354,32 @@ export class World {
   }
 
   // ---- tally
+  async analysis() {
+    const log = await this.fetchLog();
+    const open = log.find((e) => e.rec?.body?.name === 'election-open')!.seq;
+    const close = log.find((e) => e.rec?.body?.name === 'election-close')?.seq ?? (1 << 30);
+    const env = log.filter((e) => e.rec && 'intent' in e.rec).map((e) => ({ seq: e.seq, raw: e.rec }));
+    return analyzeBallotLog(this.params, new Set(this.rollHex), env, open, close);
+  }
+  /** A trustee-signed spoil-share record for `code` (QV-ADR-020); `tweak` mutates the body before signing. */
+  async spoilShareRecord(j: number, code: string, tweak?: (b: any) => void, signer = j, ctx = this.params.ctx) {
+    const an = await this.analysis();
+    const rec = an.spoiled.get(code)!;
+    const k = this.tkeys.get(j)!;
+    const r = trusteeDecryptSpoiled(this.params, { j, sj: k.s, Yj: k.Y }, rec, this.rng);
+    if (!r.ok) throw new Error(`trustee ${j}: ${r.error}`);
+    const shares = [...r.value].map(([key, sp]) => {
+      const [contest, opt] = key.split('/') as [string, string];
+      return { contest, opt, ...(({ M, c, s }) => ({ M, c, s }))(shareToHex(j, sp)) };
+    });
+    const body: any = { proto: PROTO_ID, type: 'spoil-share', ctx: H(this.params.ctx), j, code, spoil_seq: rec.seq, shares };
+    tweak?.(body);
+    const tk = this.trustees[signer - 1]!;
+    return signRecord(tk.secretKey, tk.publicKey, ctx, body);
+  }
+  postSpoilShare(rec: unknown): Promise<Resp> {
+    return this.req('POST', `/api/v1/elections/${this.electionId}/spoil-shares`, rec);
+  }
   async trusteeShares(j: number): Promise<Resp> {
     const log = await this.fetchLog();
     const open = log.find((e) => e.rec?.body?.name === 'election-open')!.seq;

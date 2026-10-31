@@ -49,7 +49,7 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
   (codes are never stored). Registration PoP message: `"QV-REG-v1\0" election_id "\0" pk`.
 * Spoil `trustees` mode (QV-ADR-020) is accepted only if the manifest enables it, but the trustee spoil-decryption relay is not built.
 * `reveal` verification (`verifySpoilReveal`) is done at admission (costly); rejected with E_SPOIL_MISMATCH.
-* Bucket for IPv6 is /64 (spec says /56); archive deletes erase the DEK and files but do not require an acknowledged export.
+* Bucket for IPv6 is /64 (spec says /56; the address is fully expanded first, so `::`-compressed text cannot leak host bits into the bucket); archive deletes erase the DEK and files but do not require an acknowledged export.
 * `max_per_voter`/`max_spoils` overruns answer 429 `REVOTE_LIMIT` with `retryable:false` (QV-09 table).
 
 ## Event stream and webhooks (QV-09 §9, §6.3; QV-09-REQ-010/014)
@@ -79,6 +79,17 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
   to the validated address (lookup is overridden: no second resolution, TLS still verifies the certificate and SNI against the URL host).
 * Not covered / limits: no per-election event size cap; webhook delivery state is not persisted; `webhookResolver`/`webhookTransport` options exist
   only as test seams. Real-TLS transport tests need `openssl` (skipped without it). The 30-day post-ARCHIVED pruning (`pruneEventsIfExpired`) is not covered by a test (only the resulting 410 on a pruned window is).
+
+## Audit hardening (docs/audit/server.md, 2026-10-21; behaviour changes)
+* A refused request that asks for `Connection: close` no longer throws when the peer already disconnected (`req.socket` is null): this was an
+  unauthenticated remote crash (SRV-001).
+* Responses to read-key (`access: link`) elections are `Cache-Control: private, no-store` on every route (`Ctx.restricted`), including the otherwise
+  immutable/public proofs, entries and manifest (SRV-003).
+* `GET .../log/entries` pages stop at `maxPageBytes` (default 4 MiB, hard max 16 MiB; a page always holds >= 1 entry) as well as at `limit`; a cut page
+  is `no-cache` and `next_from` continues it (SRV-004). Clients must follow `next_from` rather than assume `limit` rows.
+* `readTar` rejects non-octal/negative/oversize size fields, truncated members, duplicate names and `.`/`..`/empty/backslash path segments (SRV-005).
+* The static handler never answers `/api` or `/api/...` (unknown API paths are 404 problem+json, not the SPA shell) (SRV-006).
+* The failed-idempotency cleanup uses a bound statement instead of a string-built one (SRV-007).
 
 ## Not implemented (known gaps)
 OpenAPI/JSON-Schema generation (imports, jobs, `/admin/*`, gossip and single-range `Range` are implemented, see the last section),
@@ -198,4 +209,16 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
 * **Webhook receivers** should reject deliveries whose `QV-Webhook-Timestamp` is outside their own window (e.g. +-5 min), compare the `v1=` signature in
   constant time, dedupe on `QV-Webhook-Id`, and take the event type from the signed body (the `QV-Webhook-Event` header is not signed).
 
+## Trustees-mode spoil shares (QV-ADR-020)
+* **Endpoints** (not board log records; QV-16 closed list): `POST /api/v1/elections/{id}/spoil-shares` (class W, `auth: none`, the record authenticates itself, max 1 MiB) takes a
+  `spoil-share` record signed by manifest trustee `j` under scope = ctx (`201 accepted`, `200 duplicate` for a byte-identical replay, `409` for a different record from the same
+  trustee for the same code). `GET .../spoil-shares` lists `{code, trustees[]}`; `?code=<hex32>` returns the stored signed records.
+* **Admission** (`ElectionRuntime.addSpoilShare`, under the append mutex): manifest `spoil_trustee_decrypt` true; election closed (409 `WRONG_PHASE` before close and after `tally_result`);
+  schema; body ctx; trustee signature; trustee completed key confirmation; code is an analysed spoil (`an.spoiled`, so re-wrapped/cast codes are 404); not reveal-mode (zero `reveal_digest`);
+  `spoil_seq` equals the spoil's log seq; exactly one share per option; every share DLEQ-verified with `spoilDecVerify`. Per-trustee `writeKey` rate limit, taken only after the signature verifies (an anonymous caller cannot exhaust a trustee's bucket).
+* **Storage**: election DB migration 4 `spoil_share(code, j, spoil_seq, record, received_at)`, PK `(code, j)`. Old DBs migrate forward; nothing else changed.
+* **Tally**: `buildTallyDraft` includes a trustees-mode spoil only when `decryptSpoiled` finds >= t valid distinct-trustee sets, publishing exactly the t lowest-index valid sets
+  as `spoiled[].shares`. Consequence: a draft fetched before the t-th share of some spoil arrives will be refused by `vTally` (byte-exact recomputation); re-fetch the draft.
+  A trustees-mode spoil with < t shares is silently omitted from the tally (verifier then sees fewer `spoiled` entries; decide operationally whether to wait).
+* Tests: `test/spoil-shares.test.ts`; `World` gained `spoilTrustees`, `analysis()`, `spoilShareRecord()`, `postSpoilShare()`.
 - Backup directory/file mode assertions (0700/0600) run on POSIX only; Windows ACLs are not asserted (no ACL check implemented).

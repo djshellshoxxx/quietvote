@@ -30,6 +30,8 @@ export class StaticAssets implements StaticHandler {
     walk('', 0);
   }
   serve(path: string, _m: string): Reply | undefined {
+    // the API namespace is never answered with the SPA shell: a mistyped endpoint must be a 404 problem, not a 200 HTML page
+    if (path === '/api' || path.startsWith('/api/')) return undefined;
     const key = path === '/' ? '/index.html' : path;
     let a = this.files.get(key);
     if (!a && !/\.[a-z0-9]+$/i.test(key)) a = this.files.get('/index.html'); // SPA fallback
