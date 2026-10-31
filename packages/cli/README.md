@@ -6,6 +6,12 @@ Exit codes: 0 ok, 1 failure, 2 usage, 3 incomplete/partial, 4 bad input, 70 inte
 
 See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
 
+Keep the exact passphrase used to create a CLI key, including capitalization, spaces and hyphens. For a word passphrase generated
+by the web client, enter the displayed lower-case words with one space between words in the CLI. The web client accepts case and
+separator variants that the CLI does not; those variants are not portable between clients (B3-25 remains unresolved).
+
+`board verify --witness-policy` applies to standalone board bundles; election bundles use their manifest policy and refuse that option.
+
 ## `qv election spoil-collect` (coordinator, offline)
 
 ```

@@ -21,12 +21,14 @@ usage:
             [--no-passphrase] [--kdf-memory-kib <n>] [--kdf-iterations <n>] [--force] [--json]
                                    create a voter key; seed and passphrase never come from argv; the key file is
                                    passphrase-protected (QVKEY1, Argon2id) unless --no-passphrase
+                                   keep the exact passphrase spelling; web-generated words use lower-case and single spaces
   qv ballot encrypt --election <bundle> --key <keyfile> [--manifest-hash <hex>] [--select contest=opt[,opt]]... --out <file>
                     [--intent cast|spoil] [--supersedes <hex>] [--audit-out <file>] [--publish-reveal]
                     [--passphrase-file <f> | --passphrase-stdin] [--json]
   qv ballot audit --election <bundle> --ballot <audit-file|envelope> [--manifest-hash <hex>] [--json]
   qv board verify <board-bundle|election-bundle> [--log-key <hex>] [--manifest-hash <hex>] [--author-key <hex>]...
                     [--witness-policy <file>] [--pin-file <f>] [--json]
+                                   --witness-policy applies only to standalone board bundles
   qv election inspect <bundle> [--json]
   qv election spoil-collect --election <bundle> --code <hex> --packet <file> [--packet <file>]... [--manifest-hash <hex>]
                     [--post-body-out <dir>] [--json]

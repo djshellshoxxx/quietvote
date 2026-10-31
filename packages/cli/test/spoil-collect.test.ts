@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { before, test } from 'node:test';
 import { bytesToHex, streamRng } from '@quietvote/crypto';
-import { ballotCode, shareToHex, signRecord, trusteeDecryptSpoiled, PROTO_ID, type SpoilShareBody } from '@quietvote/protocol';
+import { ballotCode, shareToHex, signRecord, trusteeDecryptSpoiled, PROTO_ID, type SpoilRecord, type SpoilShareBody } from '@quietvote/protocol';
 import { bundleOf, castBallot, closeElection, push, setup, spoilBallot, trusteeKeyFor, type Sim } from '../../protocol/test/helpers/sim.ts';
 import { analyzeBallotLog, makeSpoil, type ManifestContest } from '@quietvote/protocol';
 import { qv, tmp, writeJson } from './helpers.ts';
@@ -20,11 +20,13 @@ let election: string;
 let code: string;
 let castCode: string;
 let rewrapCode: string;
+let rewrapRecord: SpoilRecord;
 const analysis = (s: Sim): unknown => analyzeBallotLog(s.params!, new Set(s.rollHex), s.log.filter((e) => 'intent' in (e.entry as object)).map((e) => ({ seq: e.seq, raw: e.entry })), s.openSeq!, s.closeSeq!).spoiled;
 
 /** What `qv-trustee spoil-release` emits for one trustee and one code (same body, same signature scope). */
-function release(s: Sim, j: number, c: string): unknown {
-  const rec = [...(s as unknown as { __an: Map<string, never> }).__an.values()].find((r) => (r as { code: string }).code === c) as never;
+function release(s: Sim, j: number, c: string, candidate?: SpoilRecord): unknown {
+  const rec = candidate ?? (s as unknown as { __an: Map<string, SpoilRecord> }).__an.get(c);
+  assert.ok(rec, 'release fixture needs an exact spoil candidate');
   const r = trusteeDecryptSpoiled(s.params!, trusteeKeyFor(s, j), rec, streamRng(`rel${j}${c}`));
   if (!r.ok) throw new Error(r.error);
   const shares: SpoilShareBody['shares'] = [];
@@ -50,8 +52,10 @@ before(async () => {
   const body = structuredClone(built.body);
   body.supersedes = '11'.repeat(32);
   const rewrapped = { ...built, body, code: ballotCode(sim.params!.ctx, body) };
-  push(sim, makeSpoil(sim.params!, sim.voters[2]!.secretKey, rewrapped, 'trustees'));
+  const env = makeSpoil(sim.params!, sim.voters[2]!.secretKey, rewrapped, 'trustees');
+  const seq = push(sim, env);
   rewrapCode = H(rewrapped.code);
+  rewrapRecord = { seq, env, code: rewrapCode, voter: H(sim.voters[2]!.publicKey) };
   closeElection(sim);
   election = writeJson(dir, 'election.json', bundleOf(sim));
   (sim as unknown as { __an: unknown }).__an = analysis(sim);
@@ -121,10 +125,14 @@ test('wrong code, cast code, unknown code are refused (exit 1)', async () => {
 });
 
 test('re-wrapped spoil (ciphertexts of a cast ballot) is refused even with t valid shares', async () => {
-  const pk = [1, 2, 3].map((j) => packet(dir, `rw${j}.json`, [release(sim, j, rewrapCode)]));
-  const r = await qv(base(['--code', rewrapCode, ...pk.flatMap((f) => ['--packet', f])]));
+  // A malicious quorum can manufacture valid shares even though CP-01 excludes this candidate from the verified spoil map.
+  const pk = [1, 2, 3].map((j) => packet(dir, `rw${j}.json`, [release(sim, j, rewrapCode, rewrapRecord)]));
+  const out = join(dir, 'post-rewrap');
+  const r = await qv(base(['--code', rewrapCode, ...pk.flatMap((f) => ['--packet', f]), '--post-body-out', out]));
   assert.equal(r.code, 1);
-  assert.match(r.err, /re-wraps/);
+  assert.match(r.err, /re-wraps|no verified spoil record/);
+  assert.equal(r.out, '');
+  assert.ok(!existsSync(out));
 });
 
 test('input and usage errors: bad code, no packet, junk packet, missing election', async () => {

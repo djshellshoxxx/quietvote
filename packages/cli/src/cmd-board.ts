@@ -28,6 +28,7 @@ export async function cmdBoardVerify(argv: string[], io: Io): Promise<number> {
   const authorKeys = p.all('author-key').map((a) => keyHex('author-key', a, 32));
 
   if (o.format === undefined && o.manifest !== undefined) {
+    if (p.has('witness-policy')) throw new UsageError('--witness-policy is only supported for standalone board bundles; election bundles use the manifest witness policy');
     // Election bundle with a `board` export: trust anchors come from the verified manifest. The pins the caller gives are
     // checked against that manifest: a different manifest hash or log key is a verification failure, not a partial result.
     const boundLogKey = boundLogKeyOf(o.manifest);
