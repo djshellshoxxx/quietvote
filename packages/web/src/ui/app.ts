@@ -68,7 +68,7 @@ export function startApp(env: AppEnv): void {
   const urgent = h('div', { id: 'live-urgent', role: 'alert', class: 'sr-only' });
   const say = new Announcer(polite, urgent);
   const main = h('main', { id: 'main', tabindex: -1 });
-  const nav = h('nav', { 'aria-label': t('qv.shell.nav') });
+  const nav = h('nav', { 'aria-label': t('qv.shell.nav'), class: 'site-nav' });
   const sealer = env.sealer ?? inlineSealer;
   const signers = new Map<string, Signer>();
   const loaded = new Map<string, Loaded>();
@@ -709,10 +709,10 @@ export function startApp(env: AppEnv): void {
 
   // ---------------------------------------------------------------- shell
   const skip = h('a', { href: '#main', class: 'skip', onclick: (e: Event) => { e.preventDefault(); main.focus(); } }, t('qv.shell.skip'));
-  const header = h('header', {}, h('p', { class: 'brand' }, t('qv.app.name')), nav, h('p', {}, link('/help', t('qv.shell.helpLink')), ' · ', link('/e', t('qv.shell.privacyLink'))));
-  const footer = h('footer', {}, h('p', {}, t('qv.shell.footer.build', { version: env.build.version, build: env.build.id })), h('p', {}, h('a', { href: '/verify' }, t('qv.shell.footer.verifyPage')), ' · ', h('a', { href: 'https://github.com/djshellshoxxx/quietvote' }, t('qv.shell.footer.source'))));
+  const header = h('header', {}, h('p', { class: 'brand' }, t('qv.app.name')), nav, h('p', {}, link('/e', t('qv.shell.privacyLink'))));
+  const footer = h('footer', {}, h('p', {}, t('qv.shell.footer.build', { version: env.build.version, build: env.build.id })), h('p', {}, h('a', { href: '/verify' }, t('qv.shell.footer.verifyPage')), ' · ', h('a', { href: 'https://github.com/djshellshoxxx/quietvote' }, t('qv.shell.footer.source')), ' · ', h('a', { href: 'https://djshellshoxxx.github.io/circuitdriftlabs/' }, t('qv.shell.footer.cdlCredit'))));
   clear(env.root);
-  add(env.root, [skip, h('p', { class: 'banner', role: 'note' }, t('qv.banner.experimental')), header, main, footer, polite, urgent,
+  add(env.root, [skip, h('p', { class: 'banner', role: 'note' }, t('qv.banner.experimental')), h('p', { class: 'banner', role: 'note' }, t('qv.banner.demo')), header, main, footer, polite, urgent,
     h('noscript', {}, t('qv.shell.noscript'))]);
   void route();
   void b64uEncode;

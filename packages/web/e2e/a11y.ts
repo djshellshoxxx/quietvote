@@ -177,6 +177,26 @@ try {
 
   // skip link
   for (const p of PAGES) {
+    await step(`responsive reflow at 320/768/1024/1440 on ${p.label}`, async () => {
+      await open(page, p.path);
+      const widths = [320, 768, 1024, 1440];
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 800 });
+        const metrics = await page.evaluate(() => ({
+          viewport: innerWidth,
+          document: document.documentElement.scrollWidth,
+          body: document.body.scrollWidth,
+          nav: document.querySelector('nav')?.scrollWidth ?? 0,
+          navClient: document.querySelector('nav')?.clientWidth ?? 0,
+        }));
+        need(metrics.document <= width && metrics.body <= width, `${width}px page overflow ${JSON.stringify(metrics)}`);
+        need(metrics.nav <= metrics.navClient, `${width}px navigation overflow ${JSON.stringify(metrics)}`);
+      }
+      return `${widths.join('/')}px; no horizontal page or navigation overflow`;
+    });
+  }
+
+  for (const p of PAGES) {
     await step(`skip link ${p.label}: first Tab after load focuses it`, async () => {
       await open(page, p.path); // fresh load, no scripted focus changes: this is what a keyboard user gets
       const initial = await page.evaluate(() => document.activeElement?.tagName.toLowerCase());
@@ -208,6 +228,30 @@ try {
     await open(page, '/no-such-page');
     const n = await page.locator('a[aria-current=page]').count();
     need(n === 0, `${n} current links`);
+  });
+
+  await step('main navigation separates links and wraps at mobile width', async () => {
+    await open(page, '/');
+    const nav = page.locator('nav[aria-label="Main"]');
+    const desktop = await nav.evaluate((el) => {
+      const style = getComputedStyle(el);
+      const links = [...el.querySelectorAll('a')];
+      return {
+        display: style.display,
+        columnGap: parseFloat(style.columnGap),
+        rowGap: parseFloat(style.rowGap),
+        links: links.length,
+        minLinkHeight: Math.min(...links.map((a) => a.getBoundingClientRect().height)),
+      };
+    });
+    need(desktop.display === 'flex', `navigation display ${desktop.display}`);
+    need(desktop.columnGap >= 8 && desktop.rowGap >= 8, `navigation gaps ${desktop.columnGap}px/${desktop.rowGap}px`);
+    need(desktop.links >= 4, `navigation links ${desktop.links}`);
+    need(desktop.minLinkHeight >= 44, `navigation target height ${desktop.minLinkHeight}px`);
+    await page.setViewportSize({ width: 320, height: 640 });
+    const mobile = await nav.evaluate((el) => ({ width: el.getBoundingClientRect().width, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
+    need(mobile.width > 0 && mobile.scrollWidth <= mobile.clientWidth, `mobile navigation overflow ${JSON.stringify(mobile)}`);
+    return `${desktop.links} links with ${desktop.columnGap}px spacing and ${desktop.minLinkHeight}px minimum height; mobile width ${mobile.clientWidth}px`;
   });
 
   // keyboard order + focus indicator

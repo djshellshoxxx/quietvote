@@ -2,10 +2,12 @@ import ts from 'typescript';
 
 export interface MessageReference { file: string; line: number; key: string }
 export interface DynamicReference { file: string; line: number; expression: string; reason: string }
-export type ResolvedForm = 'object-map' | 'conditional' | 'template-pattern' | 'literal';
+export type ResolvedForm = 'object-map' | 'conditional' | 'template-pattern' | 'literal' | 'binding' | 'array-element' | 'call';
 /** A translator call whose argument was statically resolved to a bounded set of keys. */
 export interface ResolvedReference { file: string; line: number; expression: string; form: ResolvedForm; keys: string[]; patterns: string[] }
 export interface UnknownResolvedReference extends MessageReference { reason: string }
+/** A translator call inside a translator wrapper, forwarding the wrapper's key parameter; the wrapper's call sites are scanned instead. */
+export interface ForwardedReference { file: string; line: number; expression: string }
 
 type Alt = (string | null)[]; // null = wildcard segment
 type Resolution = { alts: Alt[]; form: ResolvedForm } | { reason: string };
@@ -16,38 +18,290 @@ function unwrap(node: ts.Node): ts.Expression {
   return n;
 }
 
-function resolveExpression(node: ts.Expression): Resolution {
+type Env = ReadonlyMap<ts.ParameterDeclaration, Resolution>; // parameter -> resolution of its call argument
+const MAX_DEPTH = 16;
+/** Bound on alternatives per expression; beyond it the expression and any expression built from it are unresolvable. */
+const MAX_ALTS = 1000;
+const TOO_MANY = 'too many alternatives';
+const TOO_DEEP = 'resolution depth exceeded';
+const TOO_LONG = 'resolution step budget exceeded';
+/** Bound on resolution steps per translator call, so pathological sources fail fast instead of stalling the check. */
+const MAX_STEPS = 20_000;
+let steps = 0;
+/** Analysis limits: the value is unbounded, not one unknown key segment, so these never become a template wildcard. */
+const isLimit = (v: Resolution): v is { reason: string } => 'reason' in v && (v.reason === TOO_MANY || v.reason === TOO_DEEP || v.reason === TOO_LONG);
+/** Failure reason for a wrapping form: a limit propagates as is; other failures take the form's reason. */
+const failure = (v: { reason: string }, reason: string): { reason: string } => (isLimit(v) ? v : { reason });
+/** Array methods that read but never add elements; any other use of an array binding may mutate it. */
+const ARRAY_READS = new Set(['at', 'every', 'filter', 'find', 'flatMap', 'forEach', 'includes', 'indexOf', 'join', 'length', 'map', 'slice', 'some']);
+/** Callbacks whose first parameter is an element of the receiver array. */
+const ELEMENT_CALLBACKS = new Set(['every', 'filter', 'find', 'flatMap', 'forEach', 'map', 'some']);
+
+function declaresName(name: ts.BindingName, text: string): boolean {
+  if (ts.isIdentifier(name)) return name.text === text;
+  return name.elements.some((el) => !ts.isOmittedExpression(el) && declaresName(el.name, text));
+}
+
+type Binding = { kind: 'const'; decl: ts.VariableDeclaration; scope: ts.Node } | { kind: 'param'; param: ts.ParameterDeclaration; fn: ts.SignatureDeclaration } | { kind: 'other' };
+
+function statementsBinding(stmts: readonly ts.Statement[], text: string, scope: ts.Node): Binding | undefined {
+  for (const s of stmts) {
+    if (ts.isVariableStatement(s)) {
+      for (const d of s.declarationList.declarations) {
+        if (!declaresName(d.name, text)) continue;
+        const isConst = (s.declarationList.flags & ts.NodeFlags.Const) !== 0;
+        return isConst && ts.isIdentifier(d.name) && d.initializer ? { kind: 'const', decl: d, scope } : { kind: 'other' };
+      }
+    } else if ((ts.isFunctionDeclaration(s) || ts.isClassDeclaration(s) || ts.isEnumDeclaration(s)) && s.name?.text === text) return { kind: 'other' };
+    else if (ts.isImportDeclaration(s) && s.importClause && s.importClause.getText().split(/[^\w$]+/).includes(text)) return { kind: 'other' };
+  }
+  return undefined;
+}
+
+/** True when the file declares the name with `var` anywhere; hoisting makes lexical lookup unsound, so give up on it. */
+const varNamesCache = new WeakMap<ts.SourceFile, Set<string>>();
+function hasVarDeclaration(file: ts.SourceFile, text: string): boolean {
+  let names = varNamesCache.get(file);
+  if (!names) {
+    const found = new Set<string>();
+    const collect = (name: ts.BindingName): void => {
+      if (ts.isIdentifier(name)) found.add(name.text);
+      else for (const el of name.elements) if (!ts.isOmittedExpression(el)) collect(el.name);
+    };
+    const visit = (n: ts.Node): void => {
+      if (ts.isVariableDeclarationList(n) && (n.flags & ts.NodeFlags.BlockScoped) === 0) for (const d of n.declarations) collect(d.name);
+      ts.forEachChild(n, visit);
+    };
+    visit(file);
+    varNamesCache.set(file, (names = found));
+  }
+  return names.has(text);
+}
+
+/** True when the expression is written: assignment, compound assignment, ++/--, destructuring or for-in/of target. */
+function isWriteTarget(n: ts.Node): boolean {
+  let c = n;
+  for (let p = n.parent; p; c = p, p = p.parent) {
+    if (ts.isBinaryExpression(p)) return p.left === c && p.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && p.operatorToken.kind <= ts.SyntaxKind.LastAssignment;
+    if (ts.isPrefixUnaryExpression(p) || ts.isPostfixUnaryExpression(p)) return p.operator === ts.SyntaxKind.PlusPlusToken || p.operator === ts.SyntaxKind.MinusMinusToken;
+    if ((ts.isForOfStatement(p) || ts.isForInStatement(p)) && p.initializer === c) return true;
+    // Only climb through destructuring shapes and type-only wrappers; anything else means the value is read.
+    if (!(ts.isArrayLiteralExpression(p) || ts.isObjectLiteralExpression(p) || ts.isShorthandPropertyAssignment(p) || ts.isPropertyAssignment(p) || ts.isSpreadElement(p) || ts.isSpreadAssignment(p)
+      || ts.isParenthesizedExpression(p) || ts.isNonNullExpression(p) || ts.isAsExpression(p) || ts.isTypeAssertionExpression(p) || ts.isSatisfiesExpression(p))) return false;
+    if (ts.isPropertyAssignment(p) && p.name === c) return false;
+  }
+  return false;
+}
+
+/** True when the name is written anywhere under the node. Shadowed names count too. */
+function isAssignedIn(root: ts.Node, text: string): boolean {
+  let found = false;
+  const visit = (n: ts.Node): void => {
+    if (found) return;
+    if (ts.isIdentifier(n) && n.text === text && isWriteTarget(n)) found = true;
+    else ts.forEachChild(n, visit);
+  };
+  visit(root);
+  return found;
+}
+
+/** Nearest lexical binding of an identifier: a const with an initializer, a never-reassigned parameter, or something unresolvable. */
+function findBinding(id: ts.Identifier): Binding | undefined {
+  if (hasVarDeclaration(id.getSourceFile(), id.text)) return { kind: 'other' };
+  for (let a: ts.Node | undefined = id.parent; a; a = a.parent) {
+    if (ts.isBlock(a) || ts.isSourceFile(a) || ts.isModuleBlock(a)) {
+      const b = statementsBinding(a.statements, id.text, a);
+      if (b) return b;
+    } else if (ts.isCaseBlock(a)) {
+      for (const c of a.clauses) {
+        const b = statementsBinding(c.statements, id.text, a);
+        if (b) return b;
+      }
+    } else if (ts.isFunctionLike(a)) {
+      for (const p of a.parameters) if (declaresName(p.name, id.text)) return ts.isIdentifier(p.name) && !p.dotDotDotToken && !isAssignedIn(a, id.text) ? { kind: 'param', param: p, fn: a } : { kind: 'other' };
+      if (ts.isFunctionExpression(a) && a.name?.text === id.text) return { kind: 'other' };
+    } else if ((ts.isForStatement(a) || ts.isForOfStatement(a) || ts.isForInStatement(a)) && a.initializer && ts.isVariableDeclarationList(a.initializer) && a.initializer.declarations.some((d) => declaresName(d.name, id.text))) {
+      return { kind: 'other' };
+    } else if (ts.isCatchClause(a) && a.variableDeclaration && declaresName(a.variableDeclaration.name, id.text)) return { kind: 'other' };
+  }
+  return undefined;
+}
+
+/** An arrow callback that cannot reach the array: at most (element, index), so no third `array` parameter. */
+const isClosedElementCallback = (fn: ts.Node | undefined): boolean =>
+  fn !== undefined && ts.isArrowFunction(fn) && fn.parameters.length <= 2 && fn.parameters.every((p) => ts.isIdentifier(p.name) && !p.dotDotDotToken);
+
+/** True when every use of the name in the binding's scope only reads the array (conservative: shadowed names count too). */
+function arrayOnlyRead(b: { decl: ts.VariableDeclaration; scope: ts.Node }): boolean {
+  const statement = b.decl.parent.parent;
+  // Another module could mutate an exported array.
+  if (ts.isVariableStatement(statement) && statement.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) return false;
+  const name = (b.decl.name as ts.Identifier).text;
+  let ok = true;
+  const visit = (n: ts.Node): void => {
+    if (!ok) return;
+    if (ts.isIdentifier(n) && n.text === name && n !== b.decl.name) {
+      const p = n.parent;
+      if (!(ts.isPropertyAccessExpression(p) && p.expression === n && ARRAY_READS.has(p.name.text)) || isWriteTarget(p)) ok = false;
+      else if (ELEMENT_CALLBACKS.has(p.name.text)) {
+        // The callback receives the array itself as its third argument.
+        const call = p.parent;
+        if (!(ts.isCallExpression(call) && call.expression === p && call.arguments.length === 1 && isClosedElementCallback(call.arguments[0]))) ok = false;
+      }
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(b.scope);
+  return ok;
+}
+
+function resolveArray(node: ts.Expression, env: Env, depth: number): Resolution {
+  let e = unwrap(node);
+  if (ts.isIdentifier(e)) {
+    const b = findBinding(e);
+    if (!b || b.kind !== 'const') return { reason: 'bare identifier' };
+    if (!arrayOnlyRead(b)) return { reason: 'array binding may be mutated' };
+    e = unwrap(b.decl.initializer!);
+  }
+  if (!ts.isArrayLiteralExpression(e)) return { reason: 'bare identifier' };
+  const alts: Alt[] = [];
+  for (const el of e.elements) {
+    if (ts.isSpreadElement(el)) return { reason: 'array spread' };
+    const v = resolveExpression(el, env, depth + 1);
+    if ('reason' in v) return v;
+    alts.push(...v.alts);
+    if (alts.length > MAX_ALTS) return { reason: TOO_MANY };
+  }
+  return alts.length ? { alts, form: 'array-element' } : { reason: 'empty array' };
+}
+
+const constCache = new WeakMap<ts.VariableDeclaration, Resolution>();
+
+function resolveIdentifier(e: ts.Identifier, env: Env, depth: number): Resolution {
+  const b = findBinding(e);
+  if (!b || b.kind === 'other') return { reason: 'bare identifier' };
+  if (b.kind === 'const') {
+    // A const initializer lies outside every key-builder body, so it never depends on env; limits are not cached.
+    const cached = constCache.get(b.decl);
+    if (cached) return cached;
+    const v = resolveExpression(b.decl.initializer!, env, depth + 1);
+    const out: Resolution = 'reason' in v ? failure(v, 'bare identifier') : { alts: v.alts, form: 'binding' };
+    if (!isLimit(out)) constCache.set(b.decl, out);
+    return out;
+  }
+  const bound = env.get(b.param);
+  if (bound) return bound;
+  // First parameter of an element callback over a bounded, read-only array literal.
+  const fn = b.fn;
+  const call = fn.parent;
+  if (b.param === fn.parameters[0] && isClosedElementCallback(fn) && ts.isCallExpression(call) && call.arguments.length === 1 && call.arguments[0] === fn) {
+    const callee = call.expression;
+    if (ts.isPropertyAccessExpression(callee) && ELEMENT_CALLBACKS.has(callee.name.text)) {
+      const v = resolveArray(callee.expression, env, depth);
+      return 'reason' in v ? failure(v, 'bare identifier') : v;
+    }
+  }
+  return { reason: 'bare identifier' };
+}
+
+/** A call to a local const arrow whose body is a single expression, resolved with its arguments substituted. */
+function resolveCall(e: ts.CallExpression, env: Env, depth: number): Resolution {
+  if (!ts.isIdentifier(e.expression)) return { reason: 'call expression' };
+  const b = findBinding(e.expression);
+  if (!b || b.kind !== 'const') return { reason: 'call expression' };
+  const fn = unwrap(b.decl.initializer!);
+  if (!ts.isArrowFunction(fn) || ts.isBlock(fn.body) || e.arguments.length > fn.parameters.length) return { reason: 'call expression' };
+  const inner = new Map(env);
+  for (const [i, p] of fn.parameters.entries()) {
+    const arg = e.arguments[i];
+    if (!ts.isIdentifier(p.name) || p.dotDotDotToken || (!arg && !p.initializer) || (arg && ts.isSpreadElement(arg))) return { reason: 'call expression' };
+    inner.set(p, resolveExpression(arg ?? p.initializer!, env, depth + 1));
+  }
+  const v = resolveExpression(fn.body, inner, depth + 1);
+  return 'reason' in v ? failure(v, 'call expression') : { alts: v.alts, form: 'call' };
+}
+
+function resolveExpression(node: ts.Expression, env: Env = new Map(), depth = 0): Resolution {
+  if (depth > MAX_DEPTH) return { reason: TOO_DEEP };
+  if (++steps > MAX_STEPS) return { reason: TOO_LONG };
   const e = unwrap(node);
   if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return { alts: [[e.text]], form: 'literal' };
   if (ts.isConditionalExpression(e)) {
-    const a = resolveExpression(e.whenTrue);
+    const a = resolveExpression(e.whenTrue, env, depth + 1);
     if ('reason' in a) return a;
-    const b = resolveExpression(e.whenFalse);
+    const b = resolveExpression(e.whenFalse, env, depth + 1);
     if ('reason' in b) return b;
+    if (a.alts.length + b.alts.length > MAX_ALTS) return { reason: TOO_MANY };
     return { alts: [...a.alts, ...b.alts], form: 'conditional' };
   }
   if (ts.isElementAccessExpression(e) && ts.isObjectLiteralExpression(unwrap(e.expression))) {
     const alts: Alt[] = [];
     for (const prop of (unwrap(e.expression) as ts.ObjectLiteralExpression).properties) {
       if (!ts.isPropertyAssignment(prop)) return { reason: 'object map entry is not a plain property' };
-      const v = resolveExpression(prop.initializer);
-      if ('reason' in v) return { reason: `object map value not statically resolvable: ${v.reason}` };
+      const v = resolveExpression(prop.initializer, env, depth + 1);
+      if ('reason' in v) return failure(v, `object map value not statically resolvable: ${v.reason}`);
       alts.push(...v.alts);
+      if (alts.length > MAX_ALTS) return { reason: TOO_MANY };
     }
     return alts.length ? { alts, form: 'object-map' } : { reason: 'empty object map' };
   }
   if (ts.isTemplateExpression(e)) {
     let alts: Alt[] = [[e.head.text]];
     for (const span of e.templateSpans) {
-      const inner = resolveExpression(span.expression);
+      const inner = resolveExpression(span.expression, env, depth + 1);
+      if (isLimit(inner)) return inner;
       const options: Alt[] = 'reason' in inner || inner.alts.some((a) => a.includes(null)) ? [[null]] : inner.alts;
+      // Values may hold dots, so a truncated product cannot be stood in for by a one-segment wildcard.
+      if (alts.length * options.length > MAX_ALTS) return { reason: TOO_MANY };
       alts = alts.flatMap((prefix) => options.map((o) => [...prefix, ...o, span.literal.text]));
     }
     return { alts, form: 'template-pattern' };
   }
-  if (ts.isIdentifier(e)) return { reason: 'bare identifier' };
-  if (ts.isCallExpression(e)) return { reason: 'call expression' };
+  if (ts.isIdentifier(e)) return resolveIdentifier(e, env, depth);
+  if (ts.isCallExpression(e)) return resolveCall(e, env, depth);
   return { reason: 'unsupported expression' };
+}
+
+/**
+ * True when every use of the name `t` under the node is a direct call (scanned here), `x.t(...)`, or an object property `t`
+ * handed to another module, which is safe only if that module is scanned too (all scanned files are checked).
+ * Any other use could pass keys the scan never sees.
+ */
+function translatorOnlyCalled(root: ts.SourceFile, evidence: TranslatorEvidence): boolean {
+  let ok = true;
+  const visit = (n: ts.Node): void => {
+    if (!ok) return;
+    if (ts.isIdentifier(n) && n.text === 't') {
+      const p = n.parent;
+      const declaration = (ts.isVariableDeclaration(p) || ts.isParameter(p) || ts.isBindingElement(p) || ts.isFunctionDeclaration(p)) && p.name === n;
+      // `x.t` is fine only as a callee; read as a value it may be a handed-on wrapper escaping the scan.
+      const memberRead = ts.isPropertyAccessExpression(p) && p.name === n
+        && ((ts.isCallExpression(p.parent) && p.parent.expression === p) || evidence.primitiveMemberReads.has(`${root.fileName}:${n.getStart(root)}`));
+      const memberName = memberRead || ((ts.isPropertyAssignment(p) || ts.isPropertySignature(p) || ts.isPropertyDeclaration(p) || ts.isMethodDeclaration(p) || ts.isMethodSignature(p)) && p.name === n);
+      const called = ts.isCallExpression(p) && p.expression === n;
+      const handedOn = (ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n && ts.isIdentifier(p.name) && p.name.text === 't'))
+        && evidence.scannedHandOffs.has(`${root.fileName}:${n.getStart(root)}`);
+      if (!(declaration || memberName || called || handedOn)) ok = false;
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(root);
+  return ok;
+}
+
+/** A translator wrapper such as `const t = (k: MessageKey) => tr.t(k)`: its own call sites are the references. */
+function forwarding(arg: ts.Expression, translatorContained: boolean): 'forwarded' | 'escapes' | undefined {
+  const e = unwrap(arg);
+  if (!ts.isIdentifier(e)) return undefined;
+  const b = findBinding(e);
+  if (!b || b.kind !== 'param' || b.param !== b.fn.parameters[0]) return undefined;
+  const fn = b.fn;
+  const named = ts.isFunctionDeclaration(fn) ? fn.name?.text === 't'
+    : (ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) && ts.isVariableDeclaration(fn.parent) && fn.parent.initializer === fn && ts.isIdentifier(fn.parent.name) && fn.parent.name.text === 't';
+  if (!named) return undefined;
+  const holder = ts.isFunctionDeclaration(fn) ? fn : fn.parent.parent.parent; // declaration list -> variable statement
+  const exported = ts.canHaveModifiers(holder) && ts.getModifiers(holder)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+  return translatorContained && !exported ? 'forwarded' : 'escapes';
 }
 
 const patternOf = (alt: Alt): string => alt.map((p) => p ?? '*').join('');
@@ -66,13 +320,155 @@ function isVerifyViewDeclaration(node: ts.Node): boolean {
 }
 
 /** Find static catalog keys and dynamic translator calls. Results are stable regardless of input order. */
-export function extractReferences(files: Readonly<Record<string, string>>, catalog?: Readonly<Record<string, unknown>>): { static: MessageReference[]; dynamic: DynamicReference[]; resolved: ResolvedReference[] } {
+/**
+ * Type-checked evidence that the translator wrapper cannot escape the scan, keyed by `file:offset` of a `t` identifier.
+ * Without it every `x.t` value read and every `{ t }` hand-off counts as an escape.
+ */
+export interface TranslatorEvidence {
+  /** `x.t` read as a value whose type is primitive, so it cannot hold the wrapper. */
+  primitiveMemberReads: ReadonlySet<string>;
+  /** `{ t }` / `{ t: t }` in an object literal passed directly to a function declared in a scanned file. */
+  scannedHandOffs: ReadonlySet<string>;
+}
+export interface ExtractOptions { evidence?: TranslatorEvidence }
+
+/** Inside a declaration file or under a `declare` modifier: a type, not running code. */
+function isAmbient(node: ts.Node): boolean {
+  if (node.getSourceFile().isDeclarationFile) return true;
+  for (let n: ts.Node | undefined = node; n; n = n.parent) if (ts.canHaveModifiers(n) && ts.getModifiers(n)?.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)) return true;
+  return false;
+}
+
+const PRIMITIVE = ts.TypeFlags.StringLike | ts.TypeFlags.NumberLike | ts.TypeFlags.BigIntLike | ts.TypeFlags.BooleanLike | ts.TypeFlags.ESSymbolLike
+  | ts.TypeFlags.Undefined | ts.TypeFlags.Null | ts.TypeFlags.Void | ts.TypeFlags.Never;
+
+/**
+ * Build `TranslatorEvidence` with a type checker. `files` maps each scanned file key to its path in `program`, which must
+ * have read the same text. Returns no evidence when a scanned file has type errors or suppresses diagnostics.
+ */
+export function translatorEvidence(program: ts.Program, files: Readonly<Record<string, string>>): TranslatorEvidence {
+  const checker = program.getTypeChecker();
+  const scannedPaths = new Set(Object.values(files).map((p) => program.getSourceFile(p)?.fileName));
+  const primitiveMemberReads = new Set<string>();
+  const scannedHandOffs = new Set<string>();
+  const inScan = (n: ts.Node): boolean => scannedPaths.has(n.getSourceFile().fileName);
+  const symbolOf = (n: ts.Node): ts.Symbol | undefined => {
+    const symbol = checker.getSymbolAtLocation(n);
+    return symbol && symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+  };
+  // The code that runs, not merely a type: a function with a body or a const function value, never a parameter,
+  // interface/type member, ambient declaration, class method (overridable) or other variable.
+  const implementedInScan = (n: ts.Node, argIndex: number): boolean => {
+    const decls = symbolOf(n)?.declarations ?? [];
+    const isFunction = (d: ts.Declaration): boolean => ts.isFunctionDeclaration(d) && !isAmbient(d);
+    const constFunction = (d: ts.Declaration): boolean => ts.isVariableDeclaration(d) && (d.parent.flags & ts.NodeFlags.Const) !== 0 && d.initializer !== undefined
+      && (ts.isArrowFunction(d.initializer) || ts.isFunctionExpression(d.initializer)) && !isAmbient(d);
+    if (!(decls.length > 0 && decls.every((d) => inScan(d) && (isFunction(d) || constFunction(d))))) return false;
+    type Fn = ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression;
+    const bodies = decls.flatMap((d): Fn[] => (ts.isFunctionDeclaration(d) ? (d.body ? [d] : []) : [(d as ts.VariableDeclaration).initializer as ts.ArrowFunction | ts.FunctionExpression]));
+    return bodies.length > 0 && bodies.every((fn) => parameterStaysLocal(fn, argIndex));
+  };
+  // The receiving parameter is a plain name used only as `env.x`, so the object (and the wrapper in it) is not passed on;
+  // its `env.t` reads are then checked in the scanned file like any other.
+  const parameterStaysLocal = (fn: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression, index: number): boolean => {
+    const param = fn.parameters[index];
+    if (!param || !ts.isIdentifier(param.name) || param.dotDotDotToken || fn.parameters.slice(0, index).some((p) => p.dotDotDotToken)) return false;
+    const symbol = checker.getSymbolAtLocation(param.name);
+    let ok = symbol !== undefined;
+    const visit = (n: ts.Node): void => {
+      if (!ok) return;
+      if (ts.isIdentifier(n) && n !== param.name) {
+        // `{ env }` resolves to the property's symbol; its value symbol is the parameter.
+        const refers = checker.getSymbolAtLocation(n) === symbol || (ts.isShorthandPropertyAssignment(n.parent) && checker.getShorthandAssignmentValueSymbol(n.parent) === symbol);
+        if (n.text === 'arguments' && !ts.isArrowFunction(fn)) ok = false;
+        else if (refers && !(ts.isPropertyAccessExpression(n.parent) && n.parent.expression === n && !isWriteTarget(n.parent))) ok = false;
+      }
+      ts.forEachChild(n, visit);
+    };
+    // Parameter defaults run in the same scope as the body.
+    for (const p of fn.parameters) visit(p);
+    if (fn.body) visit(fn.body);
+    return ok;
+  };
+  // `x` in `x.f(...)` must be the real namespace of a scanned module: `import * as x` or `const x = await import('…')`.
+  const scannedNamespace = (receiver: ts.Expression): boolean => {
+    if (!ts.isIdentifier(receiver)) return false;
+    const decls = checker.getSymbolAtLocation(receiver)?.declarations ?? [];
+    if (decls.length !== 1) return false;
+    const d = decls[0]!;
+    let specifier: ts.Expression | undefined;
+    if (ts.isNamespaceImport(d)) specifier = d.parent.parent.moduleSpecifier;
+    else if (ts.isVariableDeclaration(d) && (d.parent.flags & ts.NodeFlags.Const) !== 0 && d.initializer) {
+      let e = unwrap(d.initializer);
+      if (ts.isAwaitExpression(e)) e = unwrap(e.expression);
+      // `import(…).catch(() => undefined)` keeps the namespace or yields undefined.
+      if (ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression) && e.expression.name.text === 'catch') {
+        const handler = e.arguments[0];
+        if (e.arguments.length !== 1 || !handler || !ts.isArrowFunction(handler) || ts.isBlock(handler.body) || handler.body.kind !== ts.SyntaxKind.Identifier || (handler.body as ts.Identifier).text !== 'undefined') return false;
+        e = unwrap(e.expression.expression);
+      }
+      if (ts.isCallExpression(e) && e.expression.kind === ts.SyntaxKind.ImportKeyword) specifier = e.arguments[0];
+    }
+    const module = specifier && ts.isStringLiteral(specifier) ? checker.getSymbolAtLocation(specifier) : undefined;
+    const file = module?.declarations?.[0];
+    return file !== undefined && ts.isSourceFile(file) && inScan(file);
+  };
+  // The handed-on literal holds only the wrapper and primitive data: no methods, accessors, spreads or other values
+  // that could carry the object out through `this`.
+  const plainCarrier = (literal: ts.ObjectLiteralExpression): boolean => literal.properties.every((p) => {
+    if (ts.isShorthandPropertyAssignment(p)) return p.name.text === 't' && !p.objectAssignmentInitializer;
+    if (!ts.isPropertyAssignment(p) || !(ts.isIdentifier(p.name) || ts.isStringLiteral(p.name))) return false;
+    if (p.name.text === 't') return ts.isIdentifier(p.initializer) && p.initializer.text === 't';
+    const type = checker.getTypeAtLocation(p.initializer);
+    return (type.isUnion() ? type.types : [type]).every((x) => (x.flags & PRIMITIVE) !== 0);
+  });
+  const declaredInScan = (call: ts.CallExpression, literal: ts.Expression): boolean => {
+    const index = call.arguments.indexOf(literal);
+    if (index < 0 || call.arguments.slice(0, index).some(ts.isSpreadElement)) return false;
+    const c = unwrap(call.expression);
+    if (ts.isIdentifier(c)) return implementedInScan(c, index);
+    return ts.isPropertyAccessExpression(c) && scannedNamespace(unwrap(c.expression)) && implementedInScan(c.name, index);
+  };
+  // Types are only evidence when the scanned files type-check without suppressed diagnostics.
+  for (const path of Object.values(files)) {
+    const source = program.getSourceFile(path);
+    if (source && (/@ts-(?:ignore|expect-error|nocheck)\b/.test(source.text) || program.getSyntacticDiagnostics(source).length || program.getSemanticDiagnostics(source).length)) {
+      return { primitiveMemberReads: new Set(), scannedHandOffs: new Set() };
+    }
+  }
+  for (const [key, path] of Object.entries(files)) {
+    const source = program.getSourceFile(path);
+    if (!source) throw new Error(`program does not contain ${path}`);
+    const visit = (n: ts.Node): void => {
+      if (ts.isIdentifier(n) && n.text === 't') {
+        const p = n.parent;
+        if (ts.isPropertyAccessExpression(p) && p.name === n) {
+          const type = checker.getTypeAtLocation(p);
+          if ((type.isUnion() ? type.types : [type]).every((x) => (x.flags & PRIMITIVE) !== 0)) primitiveMemberReads.add(`${key}:${n.getStart(source)}`);
+        } else if (ts.isShorthandPropertyAssignment(p) || (ts.isPropertyAssignment(p) && p.initializer === n)) {
+          const literal = p.parent;
+          const call = literal.parent;
+          if (ts.isObjectLiteralExpression(literal) && plainCarrier(literal) && ts.isCallExpression(call) && declaredInScan(call, literal)) scannedHandOffs.add(`${key}:${n.getStart(source)}`);
+        }
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(source);
+  }
+  return { primitiveMemberReads, scannedHandOffs };
+}
+
+export function extractReferences(files: Readonly<Record<string, string>>, catalog?: Readonly<Record<string, unknown>>, options: ExtractOptions = {}): { static: MessageReference[]; dynamic: DynamicReference[]; resolved: ResolvedReference[]; forwarded: ForwardedReference[] } {
   const catalogKeys = catalog ? Object.keys(catalog).sort() : [];
   const resolved: ResolvedReference[] = [];
   const statics: MessageReference[] = [];
   const dynamics: DynamicReference[] = [];
-  for (const file of Object.keys(files).sort()) {
-    const source = ts.createSourceFile(file, files[file]!, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const forwarded: ForwardedReference[] = [];
+  const sources = Object.keys(files).sort().map((file) => ts.createSourceFile(file, files[file]!, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS));
+  const evidence = options.evidence ?? { primitiveMemberReads: new Set<string>(), scannedHandOffs: new Set<string>() };
+  const translatorContained = sources.every((source) => translatorOnlyCalled(source, evidence));
+  for (const source of sources) {
+    const file = source.fileName;
     const visit = (node: ts.Node): void => {
       if (isVerifyViewDeclaration(node)) return;
       if (ts.isCallExpression(node) && isTranslatorCall(node)) {
@@ -82,7 +478,12 @@ export function extractReferences(files: Readonly<Record<string, string>>, catal
           statics.push({ file, line, key: first.text });
         } else if (!first) {
           dynamics.push({ file, line, expression: '(missing argument)', reason: 'missing argument' });
+        } else if (forwarding(first, translatorContained) === 'forwarded') {
+          forwarded.push({ file, line, expression: first.getText(source) });
+        } else if (forwarding(first, translatorContained) === 'escapes') {
+          dynamics.push({ file, line, expression: first.getText(source), reason: 'translator wrapper used as a value' });
         } else {
+          steps = 0;
           const r = resolveExpression(first);
           if ('reason' in r) dynamics.push({ file, line, expression: first.getText(source), reason: r.reason });
           else {
@@ -108,7 +509,8 @@ export function extractReferences(files: Readonly<Record<string, string>>, catal
   statics.sort(byRef);
   dynamics.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.expression.localeCompare(b.expression));
   resolved.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
-  return { static: statics, dynamic: dynamics, resolved };
+  forwarded.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+  return { static: statics, dynamic: dynamics, resolved, forwarded };
 }
 
 export function unknownReferences(refs: readonly MessageReference[], catalog: Readonly<Record<string, unknown>>): MessageReference[] {
