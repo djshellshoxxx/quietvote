@@ -1,0 +1,878 @@
+{
+  "ok": false,
+  "cases": 27,
+  "verdict_agreements": 27,
+  "failures": 12,
+  "rows": [
+    {
+      "id": "elections/log-layer-4v",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "elections/small-approval-20v",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "elections/tiny-yesno-3v",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/aggregate-altered",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/ballot-replayed",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/ciphertext-bit-flip",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/count-altered",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.result.rules: TS=\"not_run\" Python=\"pass\"",
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ]
+    },
+    {
+      "id": "mutations/counted-ballot-dropped",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/fewer-than-t-partials",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/manifest-field-flip",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/manifest-signature-removed",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.keys.trustees: TS=\"not_run\" Python=\"pass\"",
+        "chk.ballots.valid: TS=\"not_run\" Python=\"pass\"",
+        "chk.ballots.latest: TS=\"not_run\" Python=\"pass\"",
+        "chk.tally.aggregate: TS=\"not_run\" Python=\"pass\"",
+        "chk.tally.decrypt: TS=\"not_run\" Python=\"pass\"",
+        "chk.result.rules: TS=\"not_run\" Python=\"pass\"",
+        "chk.benaloh.spoiled: TS=\"not_run\" Python=\"pass\"",
+        "chk.encoding.canonical: TS=\"not_run\" Python=\"pass\"",
+        "chk.time.window: TS=\"not_run\" Python=\"pass\"",
+        "counts.cast: TS=0 Python=4",
+        "counts.spoiled: TS=0 Python=1",
+        "counts.counted: TS=0 Python=4",
+        "ctx_prefix: TS=undefined Python=\"bb914d504e8e9247\"",
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ]
+    },
+    {
+      "id": "mutations/non-canonical-hex",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/open-binding-fields-absent",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ]
+    },
+    {
+      "id": "mutations/open-joint-key-ref-forward",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ]
+    },
+    {
+      "id": "mutations/open-joint-key-ref-mismatch",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ]
+    },
+    {
+      "id": "mutations/open-manifest-hash-mismatch",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ]
+    },
+    {
+      "id": "mutations/open-roll-ref-absent",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ]
+    },
+    {
+      "id": "mutations/open-roll-ref-forward",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ]
+    },
+    {
+      "id": "mutations/open-roll-ref-nonexistent",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ]
+    },
+    {
+      "id": "mutations/open-roll-ref-wrong-record",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ]
+    },
+    {
+      "id": "mutations/partial-decryption-wrong",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/result-flipped",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ]
+    },
+    {
+      "id": "mutations/spoil-wrong-plaintext",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/spoiled-also-cast",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/tally-wrong-ctx",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    },
+    {
+      "id": "mutations/unknown-field-in-tally",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": [
+        "chk.tally.aggregate: TS=\"not_run\" Python=\"pass\"",
+        "chk.tally.decrypt: TS=\"not_run\" Python=\"pass\"",
+        "chk.result.rules: TS=\"not_run\" Python=\"pass\"",
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ]
+    },
+    {
+      "id": "canary/canary-election",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "compared": [
+        "verdict",
+        "chk.manifest.hash",
+        "chk.manifest.sig",
+        "chk.keys.trustees",
+        "chk.ballots.valid",
+        "chk.ballots.latest",
+        "chk.tally.aggregate",
+        "chk.tally.decrypt",
+        "chk.result.rules",
+        "chk.benaloh.spoiled",
+        "chk.encoding.canonical",
+        "chk.time.window",
+        "counts.cast",
+        "counts.spoiled",
+        "counts.counted",
+        "ctx_prefix",
+        "results"
+      ],
+      "skipped": [
+        "chk.board.append_only: Python not implemented",
+        "chk.board.witness: Python not implemented",
+        "chk.receipts.sample: Python not implemented"
+      ],
+      "differences": []
+    }
+  ],
+  "source_sha": "247df393ea1ace300fe5ed1f569a12090e1364dc",
+  "exit_code": 1,
+  "command_receipt": "docs/reports/consolidation-validation-2026-10-30.json"
+}
