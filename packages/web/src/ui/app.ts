@@ -668,6 +668,7 @@ export function startApp(env: AppEnv): void {
     // The chart code is a separate chunk, fetched only when a tally exists. Without it the table below still shows every number.
     const charts = await import('./charts.ts').catch(() => undefined);
     if (!currentRoute(epoch)) return;
+    if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
     const sections = (): HTMLElement[] => {
       const cur = ctx;
       const tally = ctx.tally!;

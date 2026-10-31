@@ -91,3 +91,35 @@ test('recorded delivery stays recorded and downloadable if saving the local rece
   assert.ok(result?.receipt);
   assert.equal(result.storageFailed, true);
 });
+
+test('unlock wipes the unwrapped seed when key upgrade or its storage write fails', async (t) => {
+  const { unlockKey } = await import('../src/flow/onboarding.ts');
+  const { defaultDeps, FLOOR_PARAMS, wrapSeed } = await import('../src/key/keystore.ts');
+  const { sha256 } = await import('@quietvote/crypto');
+  for (const failure of ['rewrap', 'storage']) {
+    const storage = new MemoryStorage();
+    const seed = streamRng(`failure-seed-${failure}`).bytes(32);
+    let kdfCalls = 0;
+    const deps = { ...defaultDeps(), rng: streamRng(`failure-rng-${failure}`), kdf: async (pw: Uint8Array, salt: Uint8Array) => {
+      if (++kdfCalls === 3 && failure === 'rewrap') throw new Error('upgrade KDF failed');
+      return sha256(new Uint8Array([...pw, ...salt]));
+    } };
+    const wrapped = await wrapSeed(seed, 'correct horse battery staple', deps, FLOOR_PARAMS);
+    await storage.putKey('upgrade', wrapped.container);
+    if (failure === 'storage') storage.putKey = async () => { throw new Error('upgrade storage failed'); };
+    // Observe ownership of the decrypted seed copy without exposing it or replacing key operations.
+    const originalSlice = Uint8Array.prototype.slice;
+    const unwrapped: Uint8Array[] = [];
+    const spy = t.mock.method(Uint8Array.prototype, 'slice', function(this: Uint8Array, start?: number, end?: number) {
+      const result = originalSlice.call(this, start, end);
+      if (this.length === 64 && start === 0 && end === 32 && seed.every((b, i) => result[i] === b)) unwrapped.push(result);
+      return result;
+    });
+    let clockCalls = 0;
+    try {
+      await assert.rejects(unlockKey({ storage, slot: 'upgrade', passphrase: 'correct horse battery staple', deps, now: () => clockCalls++ === 0 ? 0 : 100 }), new RegExp(`upgrade ${failure === 'rewrap' ? 'KDF' : 'storage'} failed`));
+      assert.equal(unwrapped.length, 1, 'observed the caller-owned unwrapped seed');
+      assert.ok(unwrapped[0]!.every((b) => b === 0), `${failure}: unwrapped seed is wiped on rejection`);
+    } finally { spy.mock.restore(); }
+  }
+});
