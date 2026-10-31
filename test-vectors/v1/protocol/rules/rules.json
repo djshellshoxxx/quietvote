@@ -1,0 +1,677 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "protocol/rules",
+  "operation": "rules.evaluate",
+  "description": "Exact-integer outcome evaluation (QV-16 §5.19.3)",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "majority-51-50",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        "counts": {
+          "yes": 51,
+          "no": 50
+        },
+        "participation": 101,
+        "roll_size": 200
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 101,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "passed"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "majority-tie-status-quo-no",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        "counts": {
+          "yes": 50,
+          "no": 50
+        },
+        "participation": 100,
+        "roll_size": 200
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 100,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "rejected",
+              "reason": "tie-break"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "majority-tie-status-quo-yes",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "yes"
+          }
+        },
+        "counts": {
+          "yes": 50,
+          "no": 50
+        },
+        "participation": 100,
+        "roll_size": 200
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 100,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "passed",
+              "reason": "tie-break"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "majority-tie-declare",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "declare-tie"
+          }
+        },
+        "counts": {
+          "yes": 50,
+          "no": 50
+        },
+        "participation": 100,
+        "roll_size": 200
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 100,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "tie",
+              "tied": [
+                "no",
+                "yes"
+              ]
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "two-thirds-exact",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 2,
+            "den": 3,
+            "basis": "yes+no",
+            "strict": false
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        "counts": {
+          "yes": 2,
+          "no": 1
+        },
+        "participation": 3,
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 3,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "passed"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "two-thirds-one-short",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 2,
+            "den": 3,
+            "basis": "yes+no",
+            "strict": false
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        "counts": {
+          "yes": 66,
+          "no": 34
+        },
+        "participation": 100,
+        "roll_size": 200
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 100,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "rejected"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "quorum-boundary-met",
+      "input": {
+        "manifest_quorum": {
+          "type": "fraction",
+          "basis": "roll",
+          "num": 1,
+          "den": 3
+        },
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        "counts": {
+          "yes": 3,
+          "no": 0
+        },
+        "participation": 34,
+        "roll_size": 100
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 34,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "passed"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "quorum-boundary-missed",
+      "input": {
+        "manifest_quorum": {
+          "type": "fraction",
+          "basis": "roll",
+          "num": 1,
+          "den": 3
+        },
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": true
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        "counts": {
+          "yes": 3,
+          "no": 0
+        },
+        "participation": 33,
+        "roll_size": 100
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 33,
+            "quorum_met": false,
+            "outcome": {
+              "kind": "no-quorum"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "zero-base",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "budget",
+          "title": "Adopt the budget?",
+          "method": "yes-no",
+          "options": [
+            {
+              "id": "yes",
+              "label": "YES"
+            },
+            {
+              "id": "no",
+              "label": "NO"
+            }
+          ],
+          "selection_limit": 1,
+          "min_selections": 0,
+          "rule": {
+            "type": "threshold",
+            "num": 1,
+            "den": 2,
+            "basis": "yes+no",
+            "strict": false
+          },
+          "tie_break": {
+            "type": "status-quo",
+            "option": "no"
+          }
+        },
+        "counts": {
+          "yes": 0,
+          "no": 0
+        },
+        "participation": 0,
+        "roll_size": 100
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "budget",
+            "participation": 0,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "rejected",
+              "reason": "no-base"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "approval-tie-at-cutoff",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "topics",
+          "title": "Topics",
+          "method": "approval",
+          "options": [
+            {
+              "id": "a",
+              "label": "A"
+            },
+            {
+              "id": "b",
+              "label": "B"
+            },
+            {
+              "id": "c",
+              "label": "C"
+            },
+            {
+              "id": "d",
+              "label": "D"
+            }
+          ],
+          "min_selections": 0,
+          "winners": 2,
+          "tie_break": {
+            "type": "declare-tie"
+          }
+        },
+        "counts": {
+          "a": 5,
+          "b": 3,
+          "c": 3,
+          "d": 0
+        },
+        "participation": 6,
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "topics",
+            "participation": 6,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "tie",
+              "winners": [
+                "a"
+              ],
+              "tied": [
+                "b",
+                "c"
+              ]
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "id": "kofn-lexicographic",
+      "input": {
+        "manifest_quorum": null,
+        "contest": {
+          "id": "board",
+          "title": "Board",
+          "method": "k-of-n",
+          "options": [
+            {
+              "id": "p",
+              "label": "P"
+            },
+            {
+              "id": "q",
+              "label": "Q"
+            },
+            {
+              "id": "r",
+              "label": "R"
+            },
+            {
+              "id": "s",
+              "label": "S"
+            },
+            {
+              "id": "t",
+              "label": "T"
+            }
+          ],
+          "selection_limit": 2,
+          "min_selections": 0,
+          "tie_break": {
+            "type": "lexicographic"
+          }
+        },
+        "counts": {
+          "p": 4,
+          "q": 4,
+          "r": 4,
+          "s": 1,
+          "t": 0
+        },
+        "participation": 6,
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "result": {
+            "contest": "board",
+            "participation": 6,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "winners",
+              "winners": [
+                "p",
+                "q"
+              ],
+              "reason": "tie-break"
+            }
+          }
+        }
+      },
+      "tags": [
+        "boundary"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+// B3 audit PoC: which nodes does axe-core 4.13 flag on the Results page (chart + table)? (information only, not a conformance statement)
+import { readFileSync } from 'node:fs';
+import { FakeBoard, TEST_CONTESTS } from '../test/helpers/fake-board.ts';
+import { castBallot, closeElection, publishTally, setup } from '../../protocol/test/helpers/sim.ts';
+import { AXE, exe, pw, startStack } from './harness.ts';
+const sim = await setup({ seed: 'b3-axe-results', n: 3, t: 2, voters: 4, contests: TEST_CONTESTS()!, minCounted: 3 });
+for (let i = 0; i < 4; i++) castBallot(sim, i, { budget: [i < 3 ? 'yes' : 'no'], board: ['p', 'q'] });
+closeElection(sim); publishTally(sim, [1, 2]);
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext({ bypassCSP: true })).newPage();
+await p.goto(`${stack.origin}/e/${board.apiId}/results`);
+await p.locator('main table').first().waitFor({ timeout: 30000 });
+await p.evaluate(readFileSync(AXE, 'utf8'));
+const r = await p.evaluate(async () => {
+  const res = await (globalThis as any).axe.run();
+  return res.violations.map((v: any) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.map((n: any) => n.html.slice(0, 200)) }));
+});
+console.log(JSON.stringify(r, null, 1));
+await browser.close();
+stack.close();

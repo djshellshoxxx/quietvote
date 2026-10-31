@@ -1,0 +1,25 @@
+{
+  "verdict": "FAIL",
+  "checks": {
+    "chk.manifest.hash": "pass",
+    "chk.manifest.sig": "pass",
+    "chk.keys.trustees": "pass",
+    "chk.board.append_only": "not_run",
+    "chk.board.witness": "not_run",
+    "chk.ballots.valid": "fail",
+    "chk.ballots.latest": "pass",
+    "chk.tally.aggregate": "fail",
+    "chk.tally.decrypt": "not_run",
+    "chk.result.rules": "not_run",
+    "chk.benaloh.spoiled": "pass",
+    "chk.receipts.sample": "not_run",
+    "chk.encoding.canonical": "pass",
+    "chk.time.window": "pass"
+  },
+  "counts": {
+    "cast": 4,
+    "spoiled": 1,
+    "counted": 3
+  },
+  "ctx_prefix": "bb914d504e8e9247"
+}

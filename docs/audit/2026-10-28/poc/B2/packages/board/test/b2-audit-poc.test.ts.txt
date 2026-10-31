@@ -1,0 +1,14 @@
+// B2 audit proof-of-concept (AI-assisted audit, 2026-10-28; report: /home/user/audit/reports/B2-quietvote-server-board.md).
+// NOT an independent audit. Asserts the CURRENT behaviour at SHA 424110d for known findings whose fixes are on unmerged branches.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { checkBrokenPromise, verifyLog } from '../src/index.ts';
+
+test('KNOWN BC-10 (PR #11 unmerged) still present: verifyLog(null) throws instead of returning FAILED', () => {
+  assert.throws(() => verifyLog(null as never), /Cannot read properties of null/);
+});
+
+test('KNOWN BC-09: fixed at this SHA (checkBrokenPromise is total on out-of-range receipt numbers)', () => {
+  const r = checkBrokenPromise({ origin: 'quietvote/v1/abcdefghijklmnopqrstuvwxyz', seq: -5, leafHash: new Uint8Array(32), sequencedAt: 1, checkpointDeadline: 31, promiseSig: new Uint8Array(64) } as never, 'x', new Uint8Array(32), [], new Uint8Array(32));
+  assert.equal(r.ok, false);
+});

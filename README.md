@@ -1,10 +1,23 @@
 # QuietVote
 
+**Software artwork:** an experimental software and documentation project exploring private decision-making for voluntary groups.
+
+**Studio credit:** QuietVote is a Circuit Drift Labs development project. [Visit Circuit Drift Labs](https://djshellshoxxx.github.io/circuitdriftlabs/).
+
 **A private, verifiable decision-making tool for voluntary groups.**
 
 QuietVote is a proposed platform for organizations that want members to make collective decisions without publishing each person's ballot. It is intended for groups such as cooperatives, member associations, unions, collectives, and online communities. The project explores how a group can verify that eligible members participated, prevent duplicate voting, and audit the result while keeping individual choices private.
 
-QuietVote is at the **documentation and specification framework stage**. This repository defines the questions, capabilities, and assurance work that must be settled before implementation. It does not yet claim to provide anonymous voting, cryptographic verifiability, or production-ready election software.
+This branch contains a **consolidated experimental prototype** across eight TypeScript packages and a separate Python verifier. The specifications remain drafts. Security, protocol and authority-policy review are still required; this is **unaudited software, not for real elections**.
+
+## What is QuietVote?
+
+- QuietVote is a tool that lets a group vote in secret and still check that the result is right.
+- It is for clubs, co-ops, unions, open-source groups and other voluntary groups.
+- Your choice is locked away. Nobody can read it alone, not even the server.
+- Anyone can check the final count, so you do not have to trust the people who run it.
+- It is an unaudited draft, not ready for real votes. In version 1, others can see who voted, but not how.
+- It does not protect you from someone watching you vote, a hacked phone, or being forced to vote a certain way.
 
 ## Product direction
 
@@ -20,9 +33,9 @@ The design should favor user-controlled disclosure, minimal data collection, tra
 
 ## Cryptography and technology
 
-QuietVote uses **cryptography as a trust-reduction tool**, not necessarily cryptocurrency. Candidate design elements include encrypted ballots, zero-knowledge eligibility and ballot-validity proofs, decision-scoped nullifiers to prevent duplicate voting, threshold tally keys, digital signatures, and tamper-evident audit records. The proposed technical flow and the limits of these guarantees are documented in [Cryptography and Technical Design](docs/15-cryptography-and-technical-design.md).
+QuietVote uses **cryptography as a trust-reduction tool**, not necessarily cryptocurrency. Candidate design elements include encrypted ballots, zero-knowledge eligibility and ballot-validity proofs, decision-scoped nullifiers to prevent duplicate voting, threshold tally keys, digital signatures, and tamper-evident audit records. The byte-level draft is [Cryptographic protocol (QV-16)](docs/16-crypto-protocol.md). The older [Cryptography and Technical Design](docs/15-cryptography-and-technical-design.md) is a retained, non-authoritative draft.
 
-A token or public blockchain is not a core requirement. Existing voting protocols and standards are research starting points; the project has not selected or implemented a protocol. See the [Future Ideas backlog](IDEAS.md) for optional extensions such as portable credentials, federated group decisions, and forkable governance rules.
+A token or public blockchain is not a core requirement. The prototype implements the draft QV-16 protocol; implementation does not establish approval or security. See the [Future Ideas backlog](IDEAS.md) for optional extensions such as portable credentials, federated group decisions, and forkable governance rules.
 
 ## Intended users
 
@@ -41,14 +54,25 @@ QuietVote is initially scoped for **internal decisions in voluntary organization
 
 Start with the [specification index](docs/SPEC-INDEX.md), which tracks each specification, dependencies, status, and open decisions. The [project charter](docs/00-project-charter.md) records the current product intent. The [capability map](docs/01-capability-map.md) proposes module boundaries and build order. Use the [spec template](docs/templates/SPEC-TEMPLATE.md) when expanding a module into an implementation-ready contract.
 
+Web translation contributors can use the [translation workflow and review checklist](docs/TRANSLATING.md).
+
+For exact source refs, branch/PR accounting, validation and remaining gates, use the [consolidation handoff](docs/handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md) and [integration ledger](docs/plan/CONSOLIDATION.md). The [restart entry](docs/handoffs/QUIETVOTE-NEXT.md) preserves earlier checkpoint receipts. These status documents are not approved specifications or an independent audit.
+
+The [wiki](wiki/) provides voter, organizer, trustee, auditor and developer guides. Screenshots are not included here; the production web build and reproducible browser checks are described in the handoff.
+
 ## Current status
 
-**Stage:** Framework / pre-implementation  
-**Implementation:** None  
-**Specification status:** Draft; decisions and acceptance criteria remain to be completed  
+**Stage:** Consolidated prototype; review milestone remains blocked<br>
+**Implementation:** Code exists in all eight packages (`crypto`, `protocol`, `board`, `server`, `trustee`, `verifier`, `cli`, `web`) and in `verifier-py/`. The integration and audit ledgers record tested repairs and remaining gaps. The web/server registration wire contract is blocked pending protocol review, as explicitly retained by the owner; the working server registration path must not be mistaken for a successful real-client registration journey.<br>
+**Specification status:** Drafted; decisions and acceptance criteria remain to be completed  
+**Use:** **Not for real elections.** Do not rely on this software for any real decision.  
 **Release status:** No release
 
 Do not treat placeholder requirements or proposed capability boundaries as approved product decisions.
+
+Independent security/protocol review, unresolved owner decisions, native translation review and assistive-technology qualification remain external gates. All five translated catalogs remain unreviewed and unoffered. Automated browser checks are not WCAG or screen-reader acceptance. Main has not been merged, and nothing has been released or deployed.
+
+For the consolidated list of open work, see [docs/plan/TODO.md](docs/plan/TODO.md). The roadmap, backlog and decisions are in [docs/plan/](docs/plan/), and simple summaries are in [wiki/](wiki/).
 
 ## Guiding principles
 
@@ -62,7 +86,7 @@ Do not treat placeholder requirements or proposed capability boundaries as appro
 
 ## Contributing
 
-The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md) when available.
+The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md) for DCO sign-off and the development workflow.
 
 ## Repository description
 
@@ -70,4 +94,4 @@ Suggested GitHub description: **Private, verifiable decision-making for cooperat
 
 ## License
 
-**To be decided.** No license has been selected yet. Until a license file is added, reuse permissions are not granted by this repository.
+QuietVote is licensed under the **GNU Affero General Public License v3.0 or later** (AGPL-3.0-or-later). See [`LICENSE`](LICENSE). The software is unaudited and not for real elections.

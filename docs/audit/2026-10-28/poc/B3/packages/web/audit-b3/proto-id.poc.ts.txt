@@ -1,0 +1,26 @@
+// B3 audit PoC: a manifest whose contest id is "constructor" (valid per ID_RE) vs the vote view's plain-object selections map.
+import { FakeBoard } from '../test/helpers/fake-board.ts';
+import { defaultContests, setup } from '../../protocol/test/helpers/sim.ts';
+import { PASS, exe, pw, startStack } from './harness.ts';
+
+const c = defaultContests();
+const sim = await setup({ seed: 'b3-proto', n: 3, t: 2, voters: 4, contests: [{ ...c[0]!, id: 'constructor' }], minCounted: 3 });
+console.log('manifest accepted with contest id:', sim.manifest.contests[0]!.id);
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+const errs: string[] = [];
+p.on('pageerror', (e) => errs.push(e.message));
+await p.goto(`${stack.origin}/e/${board.apiId}/key`);
+await p.getByLabel('Use a key file I saved before').check();
+await p.getByLabel('Key file', { exact: true }).setInputFiles(stack.keyFile);
+await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+await p.getByRole('button', { name: 'Create key' }).click();
+await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+await p.getByRole('link', { name: 'Vote' }).first().click();
+await p.waitForTimeout(1500);
+console.log('vote view text:', (await p.locator('main').innerText()).replace(/\n+/g, ' | ').slice(-260));
+console.log('page errors:', errs.join(' || ') || 'none');
+await browser.close();
+stack.close();

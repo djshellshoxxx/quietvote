@@ -1,0 +1,227 @@
+// B1 audit PoC (2026-10-28): election-level scenarios built with the protocol test simulator (honest coordinator and trustees run
+// the TS reference code: analyzeBallotLog + trusteeDecryptTally + buildTally). Each bundle is written to out/<name>.bundle.json and
+// verified with the TS reference verifier (protocol.verifyElection, no log evidence). py_diff.py then runs the Python second
+// verifier on the same files and prints both verdicts side by side.
+// Synthetic data only (seeded keys). Run: node audit-b1-poc/gen.ts
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { bytesToHex, ed25519Keypair, sha256, utf8 } from '../packages/crypto/src/index.ts';
+import {
+  NO_SUPERSEDES, PROTO_ID, buildBallot, makeCast, makeSpoil, signRecordRaw, verifyElection,
+  type ManifestContest, type VerificationReport,
+} from '../packages/protocol/src/index.ts';
+import {
+  bundleOf, castBallot, closeElection, marker, multiSign, publishTally, push, setup, type Sim, type SimOpts,
+} from '../packages/protocol/test/helpers/sim.ts';
+
+const H = bytesToHex;
+const here = dirname(fileURLToPath(import.meta.url));
+const out = join(here, 'out');
+mkdirSync(out, { recursive: true });
+
+const yesNo = (rule: ManifestContest['rule'], tb: ManifestContest['tie_break']): ManifestContest => ({
+  id: 'budget', title: 'Budget?', method: 'yes-no', options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }],
+  selection_limit: 1, min_selections: 0, rule: rule!, tie_break: tb,
+});
+const simpleMajority = yesNo({ type: 'threshold', num: 1, den: 2, basis: 'yes+no', strict: true }, { type: 'status-quo', option: 'no' });
+const base = (seed: string, extra: Partial<SimOpts> = {}): SimOpts => ({ seed, n: 3, t: 2, voters: 4, contests: [simpleMajority], ...extra });
+
+const results: Record<string, unknown> = {};
+async function finish(name: string, sim: Sim, note: string, extra: (b: any) => void = () => {}): Promise<VerificationReport> {
+  const b = bundleOf(sim) as any;
+  extra(b);
+  writeFileSync(join(out, `${name}.bundle.json`), JSON.stringify(b));
+  const r = await verifyElection(JSON.parse(JSON.stringify(b)));
+  const failed = Object.entries(r.checks).filter(([, s]) => s === 'fail').map(([k]) => k);
+  results[name] = {
+    note, verdict: r.verdict, failed, counted: r.counts.counted,
+    findings: r.findings.filter((f) => f.cls !== 'I').map((f) => `${f.code}/${f.cls}${f.seq === undefined ? '' : `@${f.seq}`}`),
+    results: r.results,
+  };
+  console.log(name.padEnd(28), r.verdict.padEnd(10), JSON.stringify(failed), JSON.stringify((results[name] as any).findings));
+  return r;
+}
+
+// E0 baseline
+{
+  const s = await setup(base('b1-e0'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E0-baseline', s, 'honest election');
+}
+
+// E1: QV-16-REQ-015. max_spoils_per_voter = 0: the voter publishes a revealed spoil of ballot X, then casts the SAME ballot X.
+async function spoilThenCast(name: string, maxSpoils: number): Promise<void> {
+  const s = await setup(base(`b1-${name}`, { maxSpoils }));
+  const p = s.params!;
+  const v = s.voters[0]!;
+  const b = buildBallot(p, v.secretKey, v.publicKey, NO_SUPERSEDES, { budget: ['yes'] }, s.rng, 0);
+  if (!b.ok) throw new Error('build');
+  push(s, makeSpoil(p, v.secretKey, b.value, 'publish')); // reveal (xi + selections) published on the log
+  push(s, makeCast(p, v.secretKey, b.value)); // same body, same ballot code, now cast
+  s.lastCode.set(H(v.publicKey), H(b.value.code));
+  castBallot(s, 1, { budget: ['no'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish(name, s, `spoil(publish) then cast of the same code; max_spoils_per_voter=${maxSpoils}`);
+}
+await spoilThenCast('E1-spoil-over-limit', 0);
+await spoilThenCast('E1c-spoil-within-limit', 16);
+
+// E2: count quorum (QV-16 §5.19.3 "count: met iff V >= n"; field name unspecified, errata QV-ERR-PY-003(d))
+{
+  const s = await setup(base('b1-e2', { quorum: { type: 'count', value: 2 } }));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E2-count-quorum', s, 'manifest quorum {type:count,value:2}');
+}
+
+// E3: yes-no, basis counted, strict 1/2, declare-tie; yes=2, no=1, blank=1 (y != n, lhs == rhs)
+{
+  const s = await setup(base('b1-e3', { contests: [yesNo({ type: 'threshold', num: 1, den: 2, basis: 'counted', strict: true }, { type: 'declare-tie' })] }));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: [] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E3-tie-basis-counted', s, 'yes=2 no=1 blank=1, basis counted, strict 1/2, declare-tie');
+}
+
+// E3b: yes-no, non-strict 2/3 on yes+no, status-quo "yes"; yes=2, no=2 (rule clearly not met)
+{
+  const s = await setup(base('b1-e3b', { contests: [yesNo({ type: 'threshold', num: 2, den: 3, basis: 'yes+no', strict: false }, { type: 'status-quo', option: 'yes' })] }));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['no'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E3b-2of3-status-quo-yes', s, 'yes=2 no=2, rule 2/3 non-strict, status-quo yes');
+}
+
+// E4: k-of-n, manifest option order not alphabetical, tie above the cut
+{
+  const c: ManifestContest = {
+    id: 'board', title: 'Board', method: 'k-of-n', selection_limit: 2, winners: 3, min_selections: 0, tie_break: { type: 'lexicographic' },
+    options: ['zeta', 'alpha', 'mid', 'low'].map((id) => ({ id, label: id })),
+  };
+  const s = await setup(base('b1-e4', { contests: [c] }));
+  castBallot(s, 0, { board: ['zeta', 'alpha'] }); castBallot(s, 1, { board: ['zeta', 'alpha'] }); castBallot(s, 2, { board: ['mid', 'low'] }); castBallot(s, 3, { board: [] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E4-kofn-winner-order', s, 'counts zeta=2 alpha=2 mid=1 low=1, winners=3, lexicographic');
+}
+
+// E5: approval contest without `winners` (QV-20 §5.3: single winner unless seats given)
+{
+  const c: ManifestContest = {
+    id: 'topics', title: 'Topics', method: 'approval', min_selections: 0, tie_break: { type: 'lexicographic' },
+    options: ['a', 'b', 'c'].map((id) => ({ id, label: id })),
+  };
+  const s = await setup(base('b1-e5', { contests: [c] }));
+  castBallot(s, 0, { topics: ['a'] }); castBallot(s, 1, { topics: ['a', 'b'] }); castBallot(s, 2, { topics: ['c'] }); castBallot(s, 3, { topics: ['a'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E5-approval-no-winners', s, 'approval without winners field');
+}
+
+// E7: an election-close marker with an invalid signature precedes the valid one
+{
+  const s = await setup(base('b1-e7'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  const rogue = ed25519Keypair(sha256(utf8('b1-e7/rogue')));
+  const body = { proto: PROTO_ID, type: 'marker' as const, name: 'election-close' as const };
+  push(s, { body, sigs: [signRecordRaw(rogue.secretKey, rogue.publicKey, s.params!.ctx, 'marker', body)] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E7-bad-close-then-good', s, 'unsigned (non-coordinator) election-close before the real one');
+}
+
+// E8 (KNOWN P4): spoil whose attached reveal does not match its signed reveal_digest, then cast of the same code
+{
+  const s = await setup(base('b1-e8'));
+  const p = s.params!;
+  const v = s.voters[0]!;
+  const b = buildBallot(p, v.secretKey, v.publicKey, NO_SUPERSEDES, { budget: ['yes'] }, s.rng, 0);
+  if (!b.ok) throw new Error('build');
+  const sp = makeSpoil(p, v.secretKey, b.value, 'publish') as any;
+  sp.reveal = { ...sp.reveal, selections: { budget: ['no'] } }; // attached reveal no longer matches the signed digest
+  push(s, sp);
+  push(s, makeCast(p, v.secretKey, b.value));
+  s.lastCode.set(H(v.publicKey), H(b.value.code));
+  castBallot(s, 1, { budget: ['no'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E8-P4-bad-reveal-then-cast', s, 'signed spoil with mismatching attached reveal, then cast of the same code');
+}
+
+// E10 (KNOWN CP-03): cast envelope carries an extra top-level member named "constructor" (inherited Object.prototype name)
+{
+  const s = await setup(base('b1-e10'));
+  const r0 = castBallot(s, 0, { budget: ['yes'] });
+  (r0.env as any).constructor = 1; // mutate the logged envelope object in place (same object pushed to the log)
+  castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E10-CP03-constructor-field', s, 'cast envelope with extra member "constructor"');
+}
+
+// E11: QV-ADR-022 control entry (pause/resume) on the protocol log, multi-signed by the coordinator under manifest_hash
+{
+  const s = await setup(base('b1-e11'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] });
+  push(s, multiSign(s, s.mh, { proto: PROTO_ID, type: 'control', action: 'pause', reason: 'outage' }));
+  push(s, multiSign(s, s.mh, { proto: PROTO_ID, type: 'control', action: 'resume' }));
+  castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E11-control-entries', s, 'coordinator pause/resume control records (QV-ADR-022)');
+}
+
+// E12: dkg-final marker published without the optional convenience fields qmask/K
+{
+  const s = await setup(base('b1-e12'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E12-dkg-final-no-qmask', s, 'dkg-final without qmask/K (re-signed)', (b) => {
+    const e = b.log.find((x: any) => x.entry?.body?.name === 'dkg-final');
+    delete e.entry.body.qmask; delete e.entry.body.K;
+    const c = s.coord[0]!;
+    e.entry.sigs = [signRecordRaw(c.secretKey, c.publicKey, s.mh, 'marker', e.entry.body)];
+  });
+}
+// E13 (COMPLETION.md item C3): a coordinator-signed election-close that carries the election-open binding fields precedes the
+// real close. TS: E_SCHEMA class L, marker ignored. Python: E_SCHEMA fatal.
+{
+  const s = await setup(base('b1-e13'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  push(s, multiSign(s, s.params!.ctx, { proto: PROTO_ID, type: 'marker', name: 'election-close', manifest_hash: H(s.mh), joint_key_seq: 1, roll_commit_seq: 1 }));
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E13-C3-close-with-binding', s, 'election-close carrying manifest_hash/joint_key_seq/roll_commit_seq, then a clean close');
+}
+// E14: tally decryption share `M` published as UPPER-case hex (QV-16 §5.5 item 3: rejected, never normalised); tally re-signed
+{
+  const s = await setup(base('b1-e14'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E14-tally-share-uppercase-hex', s, 'tally share M in upper-case hex', (b) => {
+    const t = b.log[b.log.length - 1].entry;
+    t.body.contests[0].options[0].shares[0].M = t.body.contests[0].options[0].shares[0].M.toUpperCase();
+    const c = s.coord[0]!;
+    t.sig = signRecordRaw(c.secretKey, c.publicKey, s.params!.ctx, 'tally', t.body);
+  });
+}
+// E15 (KNOWN spec gap QV-ERR-PY-010): voter casts X1, then audits X2 (publish) and casts the same X2; which ballot counts?
+{
+  const s = await setup(base('b1-e15'));
+  const p = s.params!;
+  const v = s.voters[0]!;
+  const x1 = castBallot(s, 0, { budget: ['no'] });
+  const b = buildBallot(p, v.secretKey, v.publicKey, H(x1.built.code), { budget: ['yes'] }, s.rng, 1);
+  if (!b.ok) throw new Error('build');
+  push(s, makeSpoil(p, v.secretKey, b.value, 'publish'));
+  push(s, makeCast(p, v.secretKey, b.value));
+  castBallot(s, 1, { budget: ['no'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  await finish('E15-excluded-latest-cast', s, 'X1 cast; X2 spoiled then cast (excluded): does X1 count?');
+}
+
+// E17: the coordinator posts the identical tally record twice (e.g. a retried POST)
+{
+  const s = await setup(base('b1-e17'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  push(s, JSON.parse(JSON.stringify(s.log[s.log.length - 1]!.entry)));
+  await finish('E17-tally-posted-twice', s, 'identical tally record appended twice');
+}
+void marker;
+
+writeFileSync(join(out, 'ts-results.json'), JSON.stringify(results, null, 2));
+console.log(`wrote ${Object.keys(results).length} scenarios to ${out}`);
