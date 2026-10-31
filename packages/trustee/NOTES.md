@@ -68,7 +68,10 @@ POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"g
 * Same gate as the tally (full log verification, key binding, election-close present, log evidence, witnessed checkpoint or typed override). Also refused:
   manifest without `spoil_trustee_decrypt` (`SPOIL_MODE_OFF`); code without a verified spoil record (`NOT_SPOILED`); spoil that is not in
   trustee mode (`reveal_digest` != 0, `NOT_TRUSTEE_MODE`); any code that appears in a cast envelope anywhere in the log, valid or not, or in
-  the counted set (`BALLOT_WAS_CAST`; a cast ballot is never decryptable); malformed/duplicate/oversize (>`MAX_SPOIL_REQUEST` = 64) requests.
+  the counted set (`BALLOT_WAS_CAST`; a cast ballot is never decryptable); a spoiled ballot that shares any ciphertext A component
+  with any cast envelope in the log (`CIPHERTEXT_WAS_CAST`, audit TR-01: a partial decryption depends only on A, and a voter-key holder
+  can re-wrap a cast ballot's ciphertexts and voter-bound proofs under a new code by changing `supersedes`); malformed/duplicate/oversize
+  (>`MAX_SPOIL_REQUEST` = 64) requests.
   A request is all-or-nothing.
 * Replay: each code is released at most once per share (`SPOIL_REPLAY`); the signed record is kept in the sealed bundle (`out.spoil`).
   Trade-off: a lost response cannot be re-fetched from the trustee; the requester must keep the packet. Re-serving the stored record would be a
@@ -78,6 +81,24 @@ POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"g
   coordinator/verifier need not use trustee-local types, and publishing into the tally record's `spoiled[].shares` (types exist).
 * Unaudited; not for real elections.
 
+## Audit 2026-10-21 (AI-assisted, see docs/audit/trustee.md)
+* TR-01 fixed: `CIPHERTEXT_WAS_CAST` refusal in `releaseSpoil` (above). Protocol/verifier should add the same rule (not done here).
+* TR-02 fixed: `releaseTally` from CONFIRMED/DRILLED (election-open never imported) passes through STANDBY instead of failing
+  `ILLEGAL_TRANSITION`; the full log gate still runs first.
+* TR-03 fixed (concurrency part; the backup-restore part was already closed by the T2 release ledger): every bundle write
+  (`Trustee.save`) is a compare-and-write under an exclusive lock file `<bundle>.lock` (created with O_EXCL, holds the pid, removed in
+  `finally`). Inside the lock the sealed file on disk must hash to what this object opened or last wrote, else `BUNDLE_CHANGED`
+  (STATE, 40) and nothing is written; a lock already held is `BUNDLE_LOCKED` (40, no waiting). The release ledger sync runs inside the
+  same lock, so a second process/Trustee object with a stale copy can neither persist nor emit a second tally/spoil share. Behaviour
+  change: two processes on one bundle now fail fast instead of last-writer-wins; re-run the command. A hard kill inside the write
+  section leaves `<bundle>.lock` behind: delete it after checking no qv-trustee process runs. `--out`/backup may not target the lock path.
+* TR-04 fixed: `verifiedElection` first compares the presented log with the trustee's imported log (`assertNoFork`): a different entry
+  at a known seq, a known seq missing while later seqs are present, or a duplicated seq -> `LOG_FORK` (VERIFY, 20) before any other
+  work (applies to `releaseTally` and `releaseSpoil`; refusal does not consume the release). Only entries the trustee validated on
+  import (DKG records, markers) are known, so ballots are covered by the log evidence check, not by this one.
+* TR-05 was already fixed by T8 (passphrase files are read via `readSecretFile`, group/other bits refused on POSIX, skipped on win32).
+* Tests: `test/audit.test.ts` (TR-03/TR-04 tests failed before the fix: a second share over a different counted set was released, and
+  a forked bundle was released against), `test/hardening.test.ts` T2 (restore) and T8 (passphrase file mode).
 ## QV-ADR-015 election-open binding
 Test harness now posts a `roll-commit` and an `election-open` built with `electionOpenBody()` (binds manifest hash, `dkg-final` seq, roll-commit seq).
 Trustee code needed no change: it ignores `roll-commit` entries and relies on the full-log `verifyElection` gate.

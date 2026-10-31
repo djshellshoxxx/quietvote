@@ -114,11 +114,13 @@ export function encodeBundle(d: BundleData): Uint8Array {
   return utf8(JSON.stringify(d));
 }
 
-export async function writeBundle(path: string, d: BundleData, pass: string, deps: VaultDeps): Promise<void> {
+/** Seals and atomically writes the bundle; returns the sealed bytes written. */
+export async function writeBundle(path: string, d: BundleData, pass: string, deps: VaultDeps): Promise<Uint8Array> {
   const plain = encodeBundle(d);
   try {
     const sealed = await sealWithPassphrase(plain, pass, deps.rng, { aad: AAD, ...(deps.logN !== undefined ? { logN: deps.logN } : {}), ...(deps.allowWeak === true ? { allowWeak: true } : {}) });
     await atomicWrite(path, sealed, 0o600);
+    return sealed;
   } finally {
     wipe(plain);
   }
@@ -136,6 +138,11 @@ export function decodeBundle(plain: Uint8Array): BundleData {
 }
 
 export async function readBundle(path: string, pass: string, deps: Pick<VaultDeps, 'allowWeak'>): Promise<BundleData> {
+  return (await readBundleSealed(path, pass, deps)).data;
+}
+
+/** As `readBundle`, plus the sealed file bytes that were opened (for the compare-before-write check, audit TR-03). */
+export async function readBundleSealed(path: string, pass: string, deps: Pick<VaultDeps, 'allowWeak'>): Promise<{ data: BundleData; sealed: Uint8Array }> {
   if (!(await exists(path))) {
     if (await exists(tombstonePath(path))) throw new TrusteeError('STATE', 'DESTROYED', 'this share was destroyed');
     throw new TrusteeError('USAGE', 'NO_SUCH_FILE', path);
@@ -152,7 +159,7 @@ export async function readBundle(path: string, pass: string, deps: Pick<VaultDep
     throw e;
   }
   try {
-    return decodeBundle(plain);
+    return { data: decodeBundle(plain), sealed: file };
   } finally {
     wipe(plain);
   }
