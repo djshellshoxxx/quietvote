@@ -260,3 +260,18 @@ test('a spoiled code that is later cast is excluded and the chain does not advan
   assert.equal(an.counted[0]!.code, H(good.built.code));
   void makeSpoil;
 });
+
+test('CP-05: a validly signed roll-commit replayed after election-open is fatal', async () => {
+  await init();
+  const b = clone(base);
+  const original = entries(b, (e) => e.body?.type === 'roll-commit')[0];
+  assert.ok(original, 'baseline election must contain a roll-commit');
+  const lastSeq = Math.max(...b.log.map((e) => e.seq));
+  // Keep the original signed body unchanged: this is a valid coordinator signature,
+  // not a malformed-record test. Only its log position is adversarial.
+  b.log.push({ seq: lastSeq + 1, entry: clone(original.entry) });
+  const r = await verifyElection(b);
+  assert.equal(r.verdict, 'FAIL');
+  assert.ok(r.findings.some((f) => f.code === 'E_ROLL' && /precede election-open/.test(f.detail)), JSON.stringify(r.findings));
+  assert.equal(r.checks['chk.time.window'], 'fail');
+});

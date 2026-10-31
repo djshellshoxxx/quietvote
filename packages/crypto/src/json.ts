@@ -187,22 +187,30 @@ function ser(v: unknown, depth: number): string {
     if (!Number.isSafeInteger(v) || Object.is(v, -0)) return fail('number outside QV-JSON profile');
     return String(v);
   }
-  if (typeof v === 'string') {
-    if (hasLoneSurrogate(v)) fail('lone surrogate');
-    return JSON.stringify(v);
-  }
+  if (typeof v === 'string') return serString(v);
   if (Array.isArray(v)) return '[' + v.map((x) => ser(x, depth + 1)).join(',') + ']';
   if (typeof v === 'object' && v !== null) {
+    // C5: only plain (or null-prototype) objects; Map, typed arrays, Date etc. would otherwise serialise silently.
+    const proto = Object.getPrototypeOf(v) as unknown;
+    if (proto !== Object.prototype && proto !== null) fail('value outside QV-JSON profile');
     const o = v as Record<string, unknown>;
     const keys = Object.keys(o).sort(); // default sort = UTF-16 code unit order, as RFC 8785 requires
     const parts: string[] = [];
     for (const k of keys) {
+      serString(k);
       if (o[k] === undefined) fail('undefined value');
       parts.push(JSON.stringify(k) + ':' + ser(o[k], depth + 1));
     }
     return '{' + parts.join(',') + '}';
   }
   return fail('value outside QV-JSON profile');
+}
+
+/** C5: the same string rules parseQvJson enforces (no lone surrogate, NFC), so canonicalize never emits what the parser rejects. */
+function serString(s: string): string {
+  if (hasLoneSurrogate(s)) fail('lone surrogate');
+  if (s !== s.normalize('NFC')) fail('string is not NFC');
+  return JSON.stringify(s);
 }
 
 /** JCS(v) as UTF-8 bytes. */

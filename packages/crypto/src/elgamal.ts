@@ -1,6 +1,7 @@
 import {
   G,
   IDENTITY,
+  ORDER,
   baseMul,
   pointAdd,
   pointMul,
@@ -17,7 +18,8 @@ export interface Ciphertext {
 }
 
 export function elgamalEncrypt(K: Point, m: bigint | number, r: Scalar): Ciphertext {
-  if (r === 0n) throw new Error('ElGamal randomness must be non-zero');
+  // C4: r must be a canonical non-zero scalar; r = l (or any multiple) would reduce to 0 and give A = O.
+  if (typeof r !== 'bigint' || r <= 0n || r >= ORDER) throw new Error('ElGamal randomness must be in [1, l)');
   return { A: baseMul(r), B: pointAdd(baseMul(BigInt(m)), pointMul(K, r)) };
 }
 

@@ -256,3 +256,28 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
   `collectAlphas`). `verifyElection` fails `chk.benaloh.spoiled` with ALARM `E_SPOILED_CODE_CAST` when a trustees-mode spoil in the tally shares
   any `a` with a cast envelope: spoils are not chain-checked and proofs bind only (ctx, voter), so a voter could re-wrap a cast ballot's
   ciphertexts under a new code (`supersedes`) and have trustees decrypt it. Test: `tally.test.ts` (fails without the check).
+* **CP-01 (crypto-protocol audit)**: the TR-01 rule is enforced in `analyzeBallotLog` itself (any mode, either order), not only for tally-listed
+  trustees-mode spoils. **CP-03**: closed schemas use `Object.hasOwn`. **CP-04**: `ed25519IsStrictPoint` (crypto) now also requires a
+  torsion-free point (mixed-order roll/author keys and signature R values are rejected). See `docs/audit/crypto-protocol.md`.
+
+## Second-wave triage (crypto-protocol audit, 2026-10-21)
+Details and evidence: `docs/audit/crypto-protocol.md` § "Second-wave triage". Regression tests: `protocol/test/second-wave.test.ts`,
+`crypto/test/second-wave.test.ts` (every test failed before its fix). Behaviour changes:
+* `verifyElection`: a later tally record whose body differs from the first is F `E_RESULT` (identical repeats stay L) (P3).
+  `chk.tally.decrypt` is `pass` only after share verification + combination actually ran; it stays `not_run` below the floor or when
+  the aggregate check failed, and a `chk.result.rules` failure (e.g. `E_BELOW_FLOOR`) is no longer overwritten with `not_run` (P7, TSV-03;
+  vectors regenerated: only the affected `chk.tally.decrypt` statuses change). `tally.decrypters` must equal the recomputed `T_valid`
+  (F `E_DEC_PROOF`, `chk.tally.decrypt` fail) (P11); `buildTally` now emits `T_valid`. A keyconf only settles trustee j when it verifies,
+  so an invalid earlier keyconf no longer shadows a later valid one (P9, §5.7.8).
+* `analyzeBallotLog`: a voter-signed spoil whose attached `reveal` fails `reveal_digest` is still registered as spoiled (ALARM
+  `E_SPOIL_MISMATCH`, benaloh fail), so the same code cast later is excluded (P4, REQ-015).
+* `trusteeDecryptTally` refuses a counted list with a repeated voter or ballot code (`E_TRUSTEE_REFUSE`) (P2: floor padding).
+* `validateManifest`: trustee and witness names get the NFC / bidi-control check (P6).
+* crypto (no NOTES of its own): `encryptShare` rejects identity `E_j`; `elgamalEncrypt` requires `0 < r < l`; `canonicalize` rejects
+  non-plain objects (Map, typed arrays, Date), non-NFC strings/keys and lone-surrogate keys; `limitVerify` returns false for non-u32 `L`;
+  `lagrangeAtZero`/`feldmanVerifyShare` reject index 0; `dhVerify` rejects identity `Ej`/`R`/`S`, `decVerify` identity `Yj`;
+  `BUNDLE_MAX_LOGN` 22 -> 20 (bundles sealed at 21/22 can no longer be opened; none in this repo) and `openWithPassphrase` takes an
+  optional lower `maxLogN` cap (trustee does not pass it yet).
+* Open / design (no code change): P1 (PASS without `opts.log`, TSV-05), P10 (duplicate election markers first-wins, L), C3 (unhedged
+  DKG/complaint nonces, OQ-7), CP-02/C2, C11 (test RNGs exported from the index; other packages' tests import them).
+* Second-wave vector change: the canary `expected-report.json` now has `chk.tally.decrypt: not_run` (was `pass`): the check is `pass` only after decryption actually ran (P7/TSV-03); the canary's wrong aggregate stops the pipeline earlier. Regenerated with `node packages/protocol/test/vecgen/write.ts`.
