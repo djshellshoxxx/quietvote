@@ -102,3 +102,18 @@ votes. The banner/link change passed root typecheck, 9/9 catalog tests, `i18n:ch
 13 resolved dynamic, 0 unresolved, 1 forwarder and 1 explicit restricted exclusion), and the
 Help/Home browser check (16/16 in light/dark at 320px and 1280px). No test server for the server
 component or real election was run.
+
+## Continuation reconciliation — 2026-11-01
+
+The owned checkpoint and local branch were clean and matched at
+`653bb039d8fb7774889a03194589ee6a13056c40`; main remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`. A live mixed integration branch
+`integration/quietvote-consolidated-20261030` exists at
+`aae414e6f303d277cf1c5f79d7e2a34c47c45f42`. It touches the ordinary CI/browser harness as well as
+excluded audit, crypto, protocol, server, trustee, and verifier areas. Its code and validation were
+not reviewed, and its PR status is unknown; do not duplicate or merge its work without owner review.
+The PR20-associated ref remains at the handoff-recorded SHA; PR metadata was not retried after the
+prior 403. No safe, independent ordinary code change was identified in this pass. REQ-063 still
+needs an owner/spec decision; REQ-065 remains partial pending a scoped, reviewed browser-CI path.
+Earlier test results remain historical evidence; this documentation-only reconciliation ran no
+tests and did not change or publish source.
