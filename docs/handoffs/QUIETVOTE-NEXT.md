@@ -1121,3 +1121,28 @@ Next safe action: wait for an owner-reviewed handoff or merge decision for the m
 branch and the QV-13 REQ-063 contract decision. If either changes, reconcile refs first and work only
 the newly unblocked ordinary slice; otherwise keep the owned checkpoint unchanged. Main stays at
 `019f4e789be2ff38a5fb2d348c3b225cc87cf296`; no new commit or push was made in this reconciliation.
+
+## Focused ordinary QA checkpoint — 2026-11-02
+
+Starting from clean local `feature/ordinary-ux-20261024` at
+`b68ba29c94ea5b88779cd9eda7efbb90838b8354`, the live owned checkpoint matched. Main was
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`, the mixed integration ref was
+`aae414e6f303d277cf1c5f79d7e2a34c47c45f42`, and the PR20-associated ref was
+`2a02bd3249f3c988ef5afd8e9559fa13a959bdef`. PR metadata was not queried; the prior 403 remains the
+last known access result. No branches were checked out or modified.
+
+Fresh bounded checks on the owned checkpoint:
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | passed |
+| `npm run i18n:check -w @quietvote/web` | passed: 283 static, 13 resolved dynamic, 0 unresolved, 1 forwarder, 1 explicit restricted `verifyView` exclusion |
+| `node --test --test-reporter=spec packages/web/test/navigation.test.ts packages/web/test/i18n-catalogs.test.ts packages/web/test/i18n-lint.test.ts` | 45/45 passed |
+
+No new reproducible defect or unowned, independently executable accepted feature was found. The
+integration branch already touches `.github/workflows/ci.yml` and `packages/web/e2e/a11y.ts` along
+with excluded areas; do not duplicate or accept that work without an owner-reviewed scope and
+validation receipt. REQ-063 still needs an owner/spec choice, while human language and accessibility
+acceptance remains outstanding. No browser harness, build, server, full web suite, election, or
+security/verifier test was run. These results verify only the listed type, localization, and
+navigation checks; they do not change the Pages, audit, DCO, or human-review gates.

@@ -117,3 +117,14 @@ prior 403. No safe, independent ordinary code change was identified in this pass
 needs an owner/spec decision; REQ-065 remains partial pending a scoped, reviewed browser-CI path.
 Earlier test results remain historical evidence; this documentation-only reconciliation ran no
 tests and did not change or publish source.
+
+## Focused ordinary QA — 2026-11-02
+
+On the clean owned checkpoint `b68ba29c94ea5b88779cd9eda7efbb90838b8354`, fresh checks passed:
+`npm run typecheck`; `npm run i18n:check -w @quietvote/web` (283 static references, 13 resolved
+dynamic, 0 unresolved, 1 forwarder and 1 explicit restricted `verifyView` exclusion); and 45/45
+focused catalog, lint, and navigation tests. No application files changed. No browser test, web
+build, full web suite, server integration or election was run. This does not close REQ-063/065,
+human translation/accessibility gates, full requirement traceability, independent audit, DCO, or
+Pages setup. The separate mixed integration branch touches the browser/CI files but remains
+unreviewed and was not used as evidence.
