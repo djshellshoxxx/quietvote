@@ -1146,3 +1146,92 @@ validation receipt. REQ-063 still needs an owner/spec choice, while human langua
 acceptance remains outstanding. No browser harness, build, server, full web suite, election, or
 security/verifier test was run. These results verify only the listed type, localization, and
 navigation checks; they do not change the Pages, audit, DCO, or human-review gates.
+
+## REQ-063/065 continuation — 2026-11-02
+
+This newest entry supersedes older statements that REQ-063 still needed a storage-policy decision
+and that no isolated REQ-065 browser-CI path was available. The owner approved IndexedDB device
+settings for the saved browser-client locale and limited `Accept-Language` to server-rendered
+no-JavaScript display selection without logging or persistence. The owner transferred only the
+isolated ordinary browser-CI slice. One integrator completed both; no other worker or external
+branch was used.
+
+### Exact state and refs
+
+- Repository `/workspace/quietvote`, owned branch `feature/ordinary-ux-20261024`.
+- Source commit `57f8498d4456bb67644569aa897207a021267a63`
+  (`feat(web): persist locale and add pseudo-locale CI`), currently local/unpublished.
+- Remote `checkpoint/quietvote-ordinary-ux-20261024` is still
+  `56103ab4086339deeed86966f22e033f12493ff3`; source commit is a descendant and can be pushed
+  fast-forward after the handoff receipt is committed and scanned.
+- `main` remains `019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
+- Mixed integration ref remains `aae414e6f303d277cf1c5f79d7e2a34c47c45f42`; PR20-associated ref
+  remains `2a02bd3249f3c988ef5afd8e9559fa13a959bdef`. Neither was checked out or inspected. PR
+  metadata was not queried; the historical 403 remains binding. No external branch was changed.
+- Source commit changes 17 ordinary UI/localization/spec/test/workflow paths. Existing `.github/workflows/ci.yml`
+  and `packages/web/e2e/a11y.ts` were not edited.
+
+### Implemented
+
+1. `DeviceSettings` has optional BCP 47 `language`; the new preference helper reads with fail-open
+   behavior and writes while preserving unrelated settings. App startup loads that preference with
+   locale definitions. Negotiation is query > stored > `navigator.languages` > English. A selector
+   appears only when multiple locales pass the existing offer gate. A selection is stored in
+   IndexedDB, `?lang` is removed, and the client reloads. A write failure restores the old URL and
+   selection and announces catalog copy.
+2. Locale offer/review rules are unchanged. English remains the only offered locale today. The new
+   translated strings are drafts; no review records were added.
+3. REQ-063 and §10 now specify IndexedDB for the client language preference, plus the approved
+   server-rendered-only `Accept-Language` rule. The server-rendered behavior remains unimplemented
+   and untested; no test server was created.
+4. New `.github/workflows/pseudo-locale-visual.yml` and
+   `packages/web/e2e/pseudo-locale-visual-ci.mjs` bundle `startApp` with test-only `en-XA`/`ar-XB`
+   tables, fulfill every request through Playwright routes, and start no web/API server. They check
+   locale persistence/query override, `lang`/`dir`, Home/Help layout/navigation and horizontal
+   overflow at 320px and 1280px, plus external requests and uncaught errors. The workflow is
+   read-only (`contents: read`), has pinned actions and no deploy/release step, and is configured
+   for relevant PRs and `main` pushes. GitHub has not run it. This is layout smoke testing, not
+   screenshot-baseline visual regression or full app-flow coverage.
+5. `COPY.md`, web `NOTES.md`, completion checklist, and this handoff record the change and evidence.
+   Overall specifications remain Draft.
+
+### Validation and resolved failures
+
+- `node --test --test-reporter=spec packages/web/test/locale-preference.test.ts packages/web/test/i18n-catalogs.test.ts` — 12/12 pass.
+- `npm run typecheck` — pass.
+- `npm run i18n:check -w @quietvote/web` — pass: 285 static, 13 resolved dynamic, 0 unresolved,
+  1 translator forwarder, 1 explicit restricted `verifyView` exclusion.
+- `npm test -w @quietvote/web` — final rerun 180/180 pass. The first run caught `COPY.md` missing
+  the new source key; generated copy documentation was updated and the suite passed without relaxing
+  assertions.
+- `npm run build -w @quietvote/web` — pass, build `9d2de76e0a92`, 190.9 KiB JS gzip total / 93.5
+  KiB entry; existing size limits unchanged.
+- `QV_PLAYWRIGHT_MODULE_ROOT=/tmp/qv-playwright/node_modules QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/pseudo-locale-visual-ci.mjs`
+  — pass for `en-XA`/`ar-XB`, Home/Help, 320/1280px (eight combinations). First bundle attempt
+  failed because IIFE output cannot contain top-level `await`; switching fixture output to ES module
+  resolved it. No server, election, or user data.
+- `node .github/scripts/check-action-pins.mjs` and `git diff --check` — pass.
+- detect-secrets 1.5.0 default plugins/filters with `--all-files --no-verify` scanned all 17
+  source-commit blob versions; zero potential findings. A stale scanner path was replaced by an
+  isolated install under `/tmp`; no project credentials/files changed.
+
+### Remaining gates and next steps
+
+- The SPA preference path and tests are complete. REQ-065 is partial until the workflow runs on
+  GitHub; no additional clearly unowned accepted ordinary code task was identified.
+- Human work remains: translation/terminology review before any second real locale is offered;
+  screen-reader, voice-control, switch, disabled-user, manual RTL, and broader usability review.
+  Automated checks do not establish WCAG conformance.
+- Server-rendered no-JS `Accept-Language` behavior is specified, not implemented or tested.
+- Main merge remains inappropriate while external audit ownership/status is unverified, owner
+  review is outstanding, and valid DCO sign-off is missing. Do not approve or merge main, forge
+  DCO, inspect PR20 code, or modify external branches. Pages/admin, demo-path, independent audit,
+  security and release gates remain open.
+- Crypto/nonce, export-role/authorization, trust/authority, ballot/election verification and stopped
+  browser-verifier work remain excluded; do not inspect, modify, review, delegate, or route around
+  them. No security acceptance, election readiness, Pages deployment, release, credential/security
+  setting change or real-election readiness is claimed.
+- Before publishing, confirm the source and handoff commits remain descendants of the live owned
+  checkpoint, scan the handoff blob version, inspect outgoing diff/workflow effects, push only the
+  checkpoint fast-forward, and read back exact SHA. A checkpoint push does not trigger this PR/main
+  workflow. Do not merge main or invent features after the owned ordinary queue is empty.
