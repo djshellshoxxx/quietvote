@@ -1235,3 +1235,15 @@ branch was used.
   checkpoint, scan the handoff blob version, inspect outgoing diff/workflow effects, push only the
   checkpoint fast-forward, and read back exact SHA. A checkpoint push does not trigger this PR/main
   workflow. Do not merge main or invent features after the owned ordinary queue is empty.
+
+### Publication receipt
+
+The fast-forward push published source `57f8498d4456bb67644569aa897207a021267a63` and handoff
+`287f9c560c156e3f4ac3f2b3fac5fc154099e1b8` from the previous checkpoint
+`56103ab4086339deeed86966f22e033f12493ff3`. A fresh `git ls-remote --heads origin` returned the
+owned checkpoint at exactly `287f9c560c156e3f4ac3f2b3fac5fc154099e1b8`. `main` remained
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`; mixed integration remained
+`aae414e6f303d277cf1c5f79d7e2a34c47c45f42`; the PR20-associated ref remained
+`2a02bd3249f3c988ef5afd8e9559fa13a959bdef`. The local worktree was clean. No CI, release,
+deployment, main merge, PR approval, or external branch operation was triggered. Source and handoff
+outgoing blob versions were scanned before the push; zero potential secret findings.
