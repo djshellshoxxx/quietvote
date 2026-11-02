@@ -32,6 +32,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.shell.electionTitle`: Election
 - `qv.shell.adminTitle`: Admin
 - `qv.shell.unsupportedBrowser`: This browser can’t vote here. Use a newer browser or the command-line voter.
+- `qv.shell.footer.cdlCredit`: A Circuit Drift Labs project
 
 ## Banners and status
 
