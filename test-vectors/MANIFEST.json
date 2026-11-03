@@ -1,0 +1,188 @@
+{
+  "protocol_version": "qv1",
+  "generator": "vecgen@0.1.0",
+  "signature": "unsigned (release job signs)",
+  "merkle_root_sha256_rfc9162": "f725dc9d458bf1a44b3fcbcc63173dcbffe60386d8ce006fb5ef512c97c65c5d",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "3498906365af954e7c57b29b09c4dea91ca1fe3bbad278c93715197b38ad1be4"
+    },
+    {
+      "path": "schema/check-ids.json",
+      "sha256": "7a87c91905a794968449c4f069871b9f44186c0a3d286f78529452a225ea2b3a"
+    },
+    {
+      "path": "schema/error-codes.json",
+      "sha256": "c14fe9142e8b05aa0c42e84a050ce68ee4800d368e878145d7aa549bfc8de147"
+    },
+    {
+      "path": "v1/canary/canary-election.json",
+      "sha256": "b3a71a55592c36e6e9f46cd0cd9c7873203dce970e483f200f9fcfe06380f2fc"
+    },
+    {
+      "path": "v1/canary/expected-report.json",
+      "sha256": "a1ec032b1bc636d062a10fd44bdd31ed28d7e260acbbb524cbe21bc5181541e0"
+    },
+    {
+      "path": "v1/elections/small-approval-20v/bundle.json",
+      "sha256": "c1ee501ebb2b18a91a3cb5b052bc5e619decabf8bed717098e182332589f9d9d"
+    },
+    {
+      "path": "v1/elections/small-approval-20v/expected-report.json",
+      "sha256": "1f63e29aecea1fb7027bc6afa0271f8d28b998dcce9888c963a78069bc947019"
+    },
+    {
+      "path": "v1/elections/tiny-yesno-3v/bundle.json",
+      "sha256": "7752c263ca1b22fedbe3de349b6b68de8fbb9f804bea7c76f2f5d25cb6f56769"
+    },
+    {
+      "path": "v1/elections/tiny-yesno-3v/expected-report.json",
+      "sha256": "a9b1a8905d399ea661ef5f959dbc3e5f99d22c5122bb5faa779e6247b0f95f7c"
+    },
+    {
+      "path": "v1/mutations/aggregate-altered.json",
+      "sha256": "90e577816051b6f74b81d68e1d067f839710a4fd49d5611c31acd8dfaa914523"
+    },
+    {
+      "path": "v1/mutations/ballot-replayed.json",
+      "sha256": "742494f507828e5e46b16762717eb385825d8da087a157361eb4598ac9a66c3d"
+    },
+    {
+      "path": "v1/mutations/ciphertext-bit-flip.json",
+      "sha256": "4dfb057096b777746c0a98b10cd12736aef6a20ee83fcf829be429ca8fa8b4cf"
+    },
+    {
+      "path": "v1/mutations/count-altered.json",
+      "sha256": "f2764dff5afa9ec028afbee116f06c145e09fb5ee5b8751fbee86508f9441e3f"
+    },
+    {
+      "path": "v1/mutations/counted-ballot-dropped.json",
+      "sha256": "a24f573a323bd6ec5882bcb9ab34d1684246d652fc37a2902182acd3d15237dd"
+    },
+    {
+      "path": "v1/mutations/fewer-than-t-partials.json",
+      "sha256": "0e7967fd464e46bd034fa913bd400c499aad792dc1ea3ddaf9f189ab5d6dba7f"
+    },
+    {
+      "path": "v1/mutations/manifest-field-flip.json",
+      "sha256": "52551476c9a1dc7d2246ec8f8b0e80ff346db4a657a7a2f9d8d43eb24dc5aef1"
+    },
+    {
+      "path": "v1/mutations/manifest-signature-removed.json",
+      "sha256": "789e8e4bc19dc95e35142f122db79bf22334f29280d98a18881d6de84ee1a35b"
+    },
+    {
+      "path": "v1/mutations/non-canonical-hex.json",
+      "sha256": "5570102eea188871a693e1a92d5835ad2ed3be09619243048072347fb347798e"
+    },
+    {
+      "path": "v1/mutations/partial-decryption-wrong.json",
+      "sha256": "ae4653c184ec08808b3e89bc01a10c00ace04bd253fb835776817892f8d95b37"
+    },
+    {
+      "path": "v1/mutations/result-flipped.json",
+      "sha256": "6f46fa0b7ebee86be4ac629df8af4ac4cc05822898d9ac085f0b5d4770fbe41e"
+    },
+    {
+      "path": "v1/mutations/spoil-wrong-plaintext.json",
+      "sha256": "7c247841b5b9fe4fd7b03f29735c633b9b7925d9da20f6b547e8cadd116a1faf"
+    },
+    {
+      "path": "v1/mutations/spoiled-also-cast.json",
+      "sha256": "c823921a412886571cb4212294c0c3fa8afdb9276f88d7630a0b92302888b470"
+    },
+    {
+      "path": "v1/mutations/tally-wrong-ctx.json",
+      "sha256": "d14a765bfe92da2cc4836ac646580518fe97827ce4d131bd643a9e897319dd00"
+    },
+    {
+      "path": "v1/mutations/unknown-field-in-tally.json",
+      "sha256": "2a498b90c740669a9f8d696e33d36fffae9cf0664e7fd8d363d04b6c4542aba7"
+    },
+    {
+      "path": "v1/primitives/ed25519/sign.json",
+      "sha256": "8e37d3a1b1726817d6ae0add1f09c7914174b6ecdefc31961234d9c71992476e"
+    },
+    {
+      "path": "v1/primitives/ed25519/verify.json",
+      "sha256": "f4ee792eb2cb6f18946855fc1206f30c3e77c7e836b304a9ab90da9ac2386d63"
+    },
+    {
+      "path": "v1/primitives/encoding/canonical-json.json",
+      "sha256": "a58a006a7108d746ed5cdf7e07075e7ad88147991fd078ee39ee86b8ab53288d"
+    },
+    {
+      "path": "v1/primitives/hash/sha256.json",
+      "sha256": "2968e03e86e7cd3ac9d1a0fa0d5870548d2896bc2032f43cf8c1624a549dbc91"
+    },
+    {
+      "path": "v1/primitives/hash/sha512.json",
+      "sha256": "45ccf61500a469439662db862587d986ae8eadf2b3bcd2505908e4b05eeb892c"
+    },
+    {
+      "path": "v1/primitives/hash/tagged-hash.json",
+      "sha256": "83cb7f667b0946ad817b065b2206fe702b91ff0ba6f39cd54a2983fc21902bfa"
+    },
+    {
+      "path": "v1/primitives/ristretto/base-multiples.json",
+      "sha256": "858cdceb5e32eeb118f178524545a6b6f065f4776868eda221e1ca470d284859"
+    },
+    {
+      "path": "v1/primitives/ristretto/decode.json",
+      "sha256": "c317dee73ab1f18ca8a5eaf1a1d33b2cce817fc4c83f2e815d7c8b3bbc76ead0"
+    },
+    {
+      "path": "v1/primitives/ristretto/scalars.json",
+      "sha256": "9771105a11aaebe2286e490c0bd7e9b3d73dbc427114823ca2c4ddb611d6e25f"
+    },
+    {
+      "path": "v1/protocol/ballot/ballot-encrypt.json",
+      "sha256": "5ee0d381b0930e116c5c45fcade03742e30f5f5bf69a826867fc42b6ae3e623c"
+    },
+    {
+      "path": "v1/protocol/ballot/ballot-verify.json",
+      "sha256": "eb2217bee6fa644c79f240487ec9257cbbb2ee7819b844e63a11b2c3b8f12297"
+    },
+    {
+      "path": "v1/protocol/benaloh/spoil-reveal.json",
+      "sha256": "6dc38320960bf458d0b3df45d5790a83105bb6f32913b714f0a9eb7196982077"
+    },
+    {
+      "path": "v1/protocol/board/roll-merkle.json",
+      "sha256": "d16dea0a632e64081474a67fb717185751bdb9627c9a0e3bf73a79040642fcdf"
+    },
+    {
+      "path": "v1/protocol/dkg/dkg.json",
+      "sha256": "6566169dc3d636a8ef028566a28e432cfa62f91e67ee81876c8988794ad7e9ec"
+    },
+    {
+      "path": "v1/protocol/manifest/manifest.json",
+      "sha256": "cd457dc9014264a4b88c76bf5284b44fadc14917c72379b86a9419c508bd270b"
+    },
+    {
+      "path": "v1/protocol/proofs/cds-disjunctive/cds.json",
+      "sha256": "d6372d7e8ebad8badbf08b53cbb27127dd86d444d6d903f87b8f9cf6df3381db"
+    },
+    {
+      "path": "v1/protocol/proofs/contest-limit/limit.json",
+      "sha256": "ba9d5f7c4fb10e1730753f08643ca6904108b29f39ae91e75e17b21eb43bb253"
+    },
+    {
+      "path": "v1/protocol/proofs/cp-dleq/dh-reveal.json",
+      "sha256": "ff903ef3ae3423ed0c6b9926b97ae57be1b5e9787d27d6b28d1292fda8d14c7a"
+    },
+    {
+      "path": "v1/protocol/proofs/schnorr-pok/pok.json",
+      "sha256": "89284ddcbf928716dc1c7959f506531579c313b57c629de85a4708b61c9979fc"
+    },
+    {
+      "path": "v1/protocol/rules/rules.json",
+      "sha256": "5c104ac71bd4886d2f6cb3f241f20e2b0d45ddfc50b25d15ee310595aaec82ca"
+    },
+    {
+      "path": "v1/protocol/tally/partial-decrypt/dec.json",
+      "sha256": "178e7a04d5c07a0922b12274038dc5ef903eb266784a961910c72304f04b92e7"
+    }
+  ]
+}
