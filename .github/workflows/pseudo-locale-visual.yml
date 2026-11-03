@@ -39,7 +39,8 @@ jobs:
       - name: Install temporary pinned Playwright runner
         run: npm install --prefix "$RUNNER_TEMP/qv-playwright" --no-save --no-package-lock playwright@1.62.0
       - name: Install Chromium for the pinned Playwright runner
-        run: "$RUNNER_TEMP/qv-playwright/node_modules/.bin/playwright" install --with-deps chromium
+        run: |
+          "$RUNNER_TEMP/qv-playwright/node_modules/.bin/playwright" install --with-deps chromium
       - name: Check pseudo locales, responsive layout, and saved language
         run: node packages/web/e2e/pseudo-locale-visual-ci.mjs
         env:
