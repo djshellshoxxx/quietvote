@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, linkSync, mkdirSync, mkdtempSync, realpathSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { Trustee } from '../src/trustee.ts';
@@ -8,7 +8,7 @@ import { writeBundle } from '../src/bundle.ts';
 import { atomicWrite, shred } from '../src/fsutil.ts';
 import { mkDeps, PASS } from './helpers/harness.ts';
 
-const temp = (): string => mkdtempSync(join(tmpdir(), 'qv-custody-'));
+const temp = (): string => realpathSync(mkdtempSync(join(tmpdir(), 'qv-custody-')));
 
 test('B2-08: relative backups stay anchored across cwd changes and parent symlink retargeting', async () => {
   const originalCwd = process.cwd();
