@@ -6,7 +6,7 @@ import { ApiError, BAD_RESPONSE, NETWORK, TIMEOUT, isRetryable } from './errors.
 import { qvSigHeader, type RequestSigning } from './signing.ts';
 import type {
   AppendResult, Challenge, ConsistencyProofView, ElectionState, ElectionSummary, EntryPage, EntryView, InclusionProofView,
-  Instance, InviteResult, RegistrationBody, RegistrationResult, RollPage, Session, VoterStatus,
+  Instance, InviteResult, RegistrationBody, RegistrationResult, RollPage, Session, SpoilShareIndex, SpoilShareList, SpoilSharePosted, VoterStatus,
 } from './types.ts';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -166,6 +166,24 @@ export class ApiClient {
       ...(o.lastEventId === undefined ? {} : { headers: { 'Last-Event-ID': String(o.lastEventId) } }),
       ...(o.signal === undefined ? {} : { signal: o.signal }),
     });
+  }
+
+  // ---- trustees-mode spoil shares (QV-ADR-020). Not log records: they have their own endpoints and need no credential.
+  /** Without `code`: the index of codes and posting trustees. With `code` (64 lower-case hex): the stored signed records for that code. */
+  async getSpoilShares(id: string): Promise<SpoilShareIndex>;
+  async getSpoilShares(id: string, code: string): Promise<SpoilShareList>;
+  async getSpoilShares(id: string, code?: string): Promise<SpoilShareIndex | SpoilShareList> {
+    return this.json(await this.req('GET', `${API}/elections/${enc(id)}/spoil-shares`, { query: { code } }));
+  }
+  /**
+   * Posts one trustee-signed `spoil-share` record exactly as `qv-trustee spoil-release` produced it: the body IS the record
+   * ({body, sig}), not wrapped. 201 accepted, 200 duplicate; 409 WRONG_PHASE (not closed / tally posted), 409 STATE_CONFLICT (that
+   * trustee already posted different shares for the code), 422 ENTRY_INVALID with reason E_SCHEMA|E_CTX|E_SIG|E_SPOIL_MISMATCH|
+   * E_DEC_PROOF|E_TRUSTEE_REFUSE, 403 AUTHOR_NOT_AUTHORIZED, 404 NOT_FOUND (no spoiled ballot with that code), 429 RATE_LIMITED.
+   * Idempotent for identical bytes, so a retry resends the same record.
+   */
+  async postSpoilShare(id: string, record: unknown): Promise<SpoilSharePosted> {
+    return this.json(await this.req('POST', `${API}/elections/${enc(id)}/spoil-shares`, { body: record }));
   }
 
   // ---- voter

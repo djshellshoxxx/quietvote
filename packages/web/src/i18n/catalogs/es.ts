@@ -496,4 +496,23 @@ export const ES = {
   // Machine-drafted with the rest of this table (B3-18/B3-23); no native review, locale stays unoffered.
   'qv.org.inviteCopy': 'Copiar enlace de invitación {n}',
   'qv.phish.announce': 'Alto. Este ID de elección no coincide. No introduzca nada. Avise a su organizador.',
+  // Machine-drafted, unreviewed (trustee-opened test ballots, QV-ADR-020).
+  'qv.spoil.title': 'Papeletas de prueba',
+  'qv.spoil.unavailable': 'Los fideicomisarios no abren papeletas de prueba en esta elección, o la votación aún no ha cerrado.',
+  'qv.spoil.reason.invalid': 'no pasó la verificación',
+  'qv.spoil.none': 'Ninguna papeleta de prueba espera ser abierta.',
+  'qv.spoil.refresh': 'Comprobar de nuevo',
+  'qv.spoil.code': 'Código de papeleta {code}',
+  'qv.spoil.waiting': 'En espera: {have} de {need} partes verificadas.',
+  'qv.spoil.decoded': 'Abierta con {have} partes verificadas.',
+  'qv.spoil.invalid': 'No abierta: {have} de {need} partes verificadas.',
+  'qv.spoil.bad': 'Fideicomisario {j}: {reason}',
+  'qv.spoil.reason.other': 'no corresponde a ninguna papeleta de prueba de esta elección',
+  'qv.spoil.add.title': 'Añadir una parte de fideicomisario',
+  'qv.spoil.add.file': 'O elija un archivo',
+  'qv.spoil.add.send': 'Comprobar y enviar',
+  'qv.spoil.add.unreadable': 'Pegue un registro de parte legible o elija su archivo.',
+  'qv.spoil.out.accepted': 'Fideicomisario {j}: parte aceptada.',
+  'qv.spoil.out.local': 'No enviada: {reason}',
+  'qv.spoil.out.server': 'El tablón rechazó esta parte (estado {status}).',
 } as const satisfies Record<MessageKey, string>;

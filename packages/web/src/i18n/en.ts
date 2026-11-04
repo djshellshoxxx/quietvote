@@ -519,6 +519,27 @@ export const EN = {
   'qv.a11y.checkNotRun': n('{name}: not run', 'Accessible name of a check that did not run.'),
   'qv.a11y.table': n('Showing {from}–{to} of {total}', 'Pagination text.'),
   'qv.a11y.working': n('Working', 'Busy indicator name.'),
+
+  // ---- trustee-opened test ballots (QV-ADR-020). Locale text for these keys is machine-drafted and unreviewed (packages/web/NOTES.md).
+  // Translator notes: share = one trustee's partial decryption; opened = decrypted; board = the public bulletin board; keep 'trustee' as in qv.org.trustee*.
+  'qv.spoil.title': n('Test ballots', 'Heading and tab label.'),
+  'qv.spoil.unavailable': n('Test ballots are not opened by trustees in this election, or voting has not closed yet.', 'Shown when this election has no trustee-opened test ballots or is still open.'),
+  'qv.spoil.reason.invalid': n('failed verification', 'Fragment after a colon; no full stop.'),
+  'qv.spoil.none': n('No test ballots are waiting to be opened.', 'Empty list.'),
+  'qv.spoil.refresh': n('Check again', 'Button.'),
+  'qv.spoil.code': n('Ballot code {code}', 'Heading; {code} is the ballot code.'),
+  'qv.spoil.waiting': n('Waiting: {have} of {need} trustee shares verified.', 'Status; numbers.'),
+  'qv.spoil.decoded': n('Opened with {have} verified trustee shares.', 'Status; opened.'),
+  'qv.spoil.invalid': n('Not opened: {have} of {need} shares verified.', 'Status; shares listed below failed checks.'),
+  'qv.spoil.bad': n('Trustee {j}: {reason}', '{reason} is a qv.spoil.reason.* text; {j} may be ?.'),
+  'qv.spoil.reason.other': n('does not match any test ballot of this election', 'Fragment after a colon.'),
+  'qv.spoil.add.title': n('Add a trustee share', 'Heading and paste-box label.'),
+  'qv.spoil.add.file': n('Or choose a file', 'File input label.'),
+  'qv.spoil.add.send': n('Check and send', 'Button.'),
+  'qv.spoil.add.unreadable': n('Paste a readable share record or choose its file.', 'Validation.'),
+  'qv.spoil.out.accepted': n('Trustee {j}: share accepted.', 'Result line.'),
+  'qv.spoil.out.local': n('Not sent: {reason}', '{reason} is a qv.spoil.reason.* text.'),
+  'qv.spoil.out.server': n('The board refused this share (status {status}).', '{status} is an HTTP status.'),
 } as const satisfies Record<string, CatalogEntry>;
 
 export type MessageKey = keyof typeof EN;

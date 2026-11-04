@@ -496,4 +496,23 @@ export const FR = {
   // Machine-drafted with the rest of this table (B3-18/B3-23); no native review, locale stays unoffered.
   'qv.org.inviteCopy': 'Copier le lien d’invitation {n}',
   'qv.phish.announce': 'Stop. Cet identifiant d’élection ne correspond pas. Ne saisissez rien. Prévenez votre organisateur.',
+  // Machine-drafted, unreviewed (trustee-opened test ballots, QV-ADR-020).
+  'qv.spoil.title': 'Bulletins d\'essai',
+  'qv.spoil.unavailable': 'Les gardiens n\'ouvrent pas de bulletins d\'essai dans cette élection, ou le vote n\'est pas encore clos.',
+  'qv.spoil.reason.invalid': 'a échoué à la vérification',
+  'qv.spoil.none': 'Aucun bulletin d\'essai n\'attend d\'être ouvert.',
+  'qv.spoil.refresh': 'Vérifier à nouveau',
+  'qv.spoil.code': 'Code du bulletin {code}',
+  'qv.spoil.waiting': 'En attente : {have} parts sur {need} vérifiées.',
+  'qv.spoil.decoded': 'Ouvert avec {have} parts vérifiées.',
+  'qv.spoil.invalid': 'Non ouvert : {have} parts sur {need} vérifiées.',
+  'qv.spoil.bad': 'Gardien {j} : {reason}',
+  'qv.spoil.reason.other': 'ne correspond à aucun bulletin d\'essai de cette élection',
+  'qv.spoil.add.title': 'Ajouter une part de gardien',
+  'qv.spoil.add.file': 'Ou choisissez un fichier',
+  'qv.spoil.add.send': 'Vérifier et envoyer',
+  'qv.spoil.add.unreadable': 'Collez un enregistrement de part lisible ou choisissez son fichier.',
+  'qv.spoil.out.accepted': 'Gardien {j} : part acceptée.',
+  'qv.spoil.out.local': 'Non envoyée : {reason}',
+  'qv.spoil.out.server': 'Le tableau a refusé cette part (état {status}).',
 } as const satisfies Record<MessageKey, string>;
