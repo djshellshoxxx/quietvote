@@ -101,7 +101,7 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B3-23 | Low | pending | pending | fixed (2026-11-04) | [421c879](https://github.com/djshellshoxxx/quietvote/commit/421c8792c030f16f907fe454da98127e934b2a97); unit-tested, no organizer browser journey yet. |
 | B3-24 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-25 | Low | pending | pending | blocked | No semantic repair commit; open/owner gate. |
-| B3-26 | Low | pending | pending | fixed (2026-11-04) | [eb94357](https://github.com/djshellshoxxx/quietvote/commit/eb943575e0b41af50b5d84492d550b41ac823114); blob: worker from the hashed page script; no worker pool/resume; CSP change pending owner review. |
+| B3-26 | Low | pending | pending | open (2026-11-04) | QV-ADR-027 option A approved (main-thread yielding + progress, no Worker); a blob: Worker version was merged and reverted; waiting on a verifyElection progress hook. |
 | B3-27 | Low | pending | pending | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-28 | Info | pending | pending | open | No semantic repair commit; open/owner gate. |
 | B3-29 | Info | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
