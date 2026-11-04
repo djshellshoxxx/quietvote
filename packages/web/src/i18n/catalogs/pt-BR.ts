@@ -493,4 +493,7 @@ export const PT_BR = {
   'qv.a11y.checkNotRun': '{name}: não executada',
   'qv.a11y.table': 'Mostrando {from}–{to} de {total}',
   'qv.a11y.working': 'Trabalhando',
+  // Machine-drafted with the rest of this table (B3-18/B3-23); no native review, locale stays unoffered.
+  'qv.org.inviteCopy': 'Copiar link de convite {n}',
+  'qv.phish.announce': 'Pare. Este ID da eleição não corresponde. Não digite nada. Avise seu organizador.',
 } as const satisfies Record<MessageKey, string>;

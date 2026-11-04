@@ -493,4 +493,7 @@ export const DE = {
   'qv.a11y.checkNotRun': '{name}: nicht ausgeführt',
   'qv.a11y.table': 'Zeige {from}–{to} von {total}',
   'qv.a11y.working': 'Wird verarbeitet',
+  // Machine-drafted with the rest of this table (B3-18/B3-23); no native review, locale stays unoffered.
+  'qv.org.inviteCopy': 'Einladungslink {n} kopieren',
+  'qv.phish.announce': 'Stopp. Diese Wahl-ID stimmt nicht überein. Geben Sie nichts ein. Informieren Sie Ihre Organisation.',
 } as const satisfies Record<MessageKey, string>;

@@ -360,6 +360,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 ## Anti-phishing
 
 - `qv.phish.mismatch` **[normative]**: Stop. This Election ID does not match the one you were given. You may be on a copy of the real site. Don't enter anything. Tell your organizer, and use the link or ID they gave you in person or by another channel.
+- `qv.phish.announce`: Stop. This Election ID does not match. Do not enter anything. Tell your organizer.
 - `qv.phish.unconfirmed` **[normative]**: You haven't confirmed the Election ID yet.
 - `qv.phish.verifierwarn` **[normative]**: A checker you didn't download or compare yourself can lie. See "How to trust a verifier".
 - `qv.phish.neverask` **[normative]**: We will never ask for your voting key file or passphrase by email, chat, or on any page other than the one that created it.
@@ -499,6 +500,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.org.closed`: Voting is closed.
 - `qv.org.invites`: Create invitation links
 - `qv.org.inviteCount`: How many invitations
+- `qv.org.inviteCopy`: Copy invitation link {n}
 - `qv.org.inviteList`: Invitation links (shown once)
 - `qv.org.dashboard`: Dashboard
 - `qv.org.ballotsReceived`: Valid ballots received: {count}
