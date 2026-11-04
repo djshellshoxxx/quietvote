@@ -392,6 +392,7 @@ export const EN = {
   'qv.org.closed': n('Voting is closed.', 'Status.'),
   'qv.org.invites': n('Create invitation links', 'Button.'),
   'qv.org.inviteCount': n('How many invitations', 'Field.'),
+  'qv.org.inviteCopy': n('Copy invitation link {n}', 'Accessible name of the per-row copy button in the invitation list. {n} is the 1-based row number; keep the number so the buttons are told apart.'),
   'qv.org.inviteList': n('Invitation links (shown once)', 'Heading.'),
   'qv.org.dashboard': n('Dashboard', 'Heading.'),
   'qv.org.ballotsReceived': n('Valid ballots received: {count}', 'Dashboard.'),
@@ -480,6 +481,7 @@ export const EN = {
   'qv.err.E-READ-KEY.body': n('Ask your organizer for the complete link.', 'Error body.'),
   // ---- phishing: UX 7.7
   'qv.phish.mismatch': g('Stop. This Election ID does not match the one you were given. You may be on a copy of the real site. Don\'t enter anything. Tell your organizer, and use the link or ID they gave you in person or by another channel.', 'Phishing stop.'),
+  'qv.phish.announce': n('Stop. This Election ID does not match. Do not enter anything. Tell your organizer.', 'Short screen-reader announcement (under 140 characters) played with the full qv.phish.mismatch text shown on screen. Keep it under 140 characters.'),
   'qv.phish.unconfirmed': g('You haven\'t confirmed the Election ID yet.', 'Persistent chip text.'),
   'qv.phish.verifierwarn': g('A checker you didn\'t download or compare yourself can lie. See "How to trust a verifier".', 'Fake verifier.'),
   'qv.phish.neverask': g('We will never ask for your voting key file or passphrase by email, chat, or on any page other than the one that created it.', 'Never ask.'),

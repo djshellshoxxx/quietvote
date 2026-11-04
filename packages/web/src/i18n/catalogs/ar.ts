@@ -494,4 +494,7 @@ export const AR = {
   'qv.a11y.checkNotRun': '{name}: لم يُشغّل',
   'qv.a11y.table': 'عرض {from}–{to} من {total}',
   'qv.a11y.working': 'جارٍ العمل',
+  // Machine-drafted with the rest of this table (B3-18/B3-23); no native review, locale stays unoffered.
+  'qv.org.inviteCopy': 'نسخ رابط الدعوة {n}',
+  'qv.phish.announce': 'توقف. معرّف الانتخاب هذا لا يطابق المعرّف الذي أُعطي لك. لا تُدخل أي شيء. أخبر منظّم الانتخاب.',
 } as const satisfies Record<MessageKey, string>;

@@ -493,4 +493,7 @@ export const FR = {
   'qv.a11y.checkNotRun': '{name} : non exécuté',
   'qv.a11y.table': 'Affichage de {from} à {to} sur {total}',
   'qv.a11y.working': 'Traitement en cours',
+  // Machine-drafted with the rest of this table (B3-18/B3-23); no native review, locale stays unoffered.
+  'qv.org.inviteCopy': 'Copier le lien d’invitation {n}',
+  'qv.phish.announce': 'Stop. Cet identifiant d’élection ne correspond pas. Ne saisissez rien. Prévenez votre organisateur.',
 } as const satisfies Record<MessageKey, string>;
