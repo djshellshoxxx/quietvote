@@ -8,6 +8,7 @@ export const ES = {
   'qv.shell.skip': 'Ir al contenido principal',
   'qv.shell.nav': 'Principal',
   'qv.shell.language': 'Idioma',
+  'qv.locale.saveFailed': 'No se pudo guardar la preferencia de idioma en este dispositivo.',
   'qv.shell.privacyLink': 'Privacidad y límites',
   'qv.shell.helpLink': 'Ayuda y accesibilidad',
   'qv.shell.electionId': 'ID de la elección',
