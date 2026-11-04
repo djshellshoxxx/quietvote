@@ -262,8 +262,12 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   signature, tree, checkpoints), tar parsing and checksums still run on the main thread (the PoC's multi-second stall was `verifyElection`); a bundle that fails
   a later check (e.g. wrong `manifest_hash`) still costs one worker verification; there is no per-org import rate beyond the class-X limit and quota. Memory
   of a 64 MiB bundle is held twice while verifying (copy for the worker). The statement at "Verification yields between stages" above is superseded: yields still
-  happen between stages, and the proof work is off-thread. Tests: `test/b2-fixes.test.ts` (duplicate refused with zero verifications, event-loop lag bound,
-  timeout path, one slot -> second import 503 BUSY).
+  happen between stages, and the proof work is off-thread. Measured 2026-11-04 on the 4-voter test bundle: main-thread `verifyElection` takes ~1 s wall
+  with only ~5 ms max loop lag (the current protocol verifier yields between steps), so the worker's effect is CPU isolation from this thread plus the hard
+  timeout, not lag removal; the import-path lag seen under full-suite CPU load comes from contention and the main-thread residual above. Tests:
+  `test/b2-fixes.test.ts` (duplicate refused with zero verifications; event-loop-utilisation ratio, main-thread control vs worker path, which a
+  main-thread mutant of `verifyElectionOffThread` fails; timeout path; one slot -> second import 503 BUSY). The first version asserted an absolute 600 ms
+  lag bound, which failed 2 of 3 full-suite runs under load and was replaced.
 * **B2-16 (logging).** `logger.ts` now emits only the QV-31 §4.2 allowlist (`ts`, `level`, `event`, `route`, `status`, `dur_bucket`, `code`, `component`, `msg`,
   `tree_size`; `LOG_ALLOWLIST`), every `ts` is rounded to the minute (the second-precision default is gone), exact `latency_ms` becomes `dur_bucket`, `outcome`
   becomes `level`, `error_code` becomes `code`, `rate_class` becomes `component`, `note` becomes `msg` only if it is a static token (`[a-z0-9_ ./-]{1,64}`).

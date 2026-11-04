@@ -2,10 +2,13 @@
 // B2-16 (QV-31 log allowlist and minute rounding) and B2-11 (QV-28 §11.1 invite data retention).
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { monitorEventLoopDelay } from 'node:perf_hooks';
 import { b64u } from '@quietvote/board';
 import { bytesToHex, ed25519Sign, utf8 } from '@quietvote/crypto';
+import { parseQvJson } from '@quietvote/crypto';
+import { verifyElection } from '@quietvote/protocol';
 import { resolveConfig } from '../src/config.ts';
+import { verifyElectionOffThread } from '../src/imports.ts';
+import { readTarStrict } from '../src/tar.ts';
 import { Logger, LOG_ALLOWLIST } from '../src/logger.ts';
 import { exportQvb, fullElection, importAndWait, upload, waitJob } from './helpers/full.ts';
 import { World, kp } from './helpers/world.ts';
@@ -46,15 +49,25 @@ function describe_import(): void {
     assert.equal(t.server.env.stats.importVerifications, 1, 'the duplicate never reached verifyElection');
   });
 
-  test('B2-02: proof verification does not block the event loop', { timeout: 120_000 }, async () => {
+  test('B2-02: proof verification runs off the event-loop thread', { timeout: 180_000 }, async () => {
+    // Load-independent: compare main-thread event-loop utilisation (ELU, busy time / wall time of THIS thread) for the same
+    // verifyElection input run on the main thread (control) and through the import worker. Current protocol verification yields
+    // between steps, so max loop lag alone no longer distinguishes the two (and an absolute lag bound flaked under CI load); ELU
+    // shows where the CPU work runs.
+    const electionJson = readTarStrict(tar, { maxFiles: 64 }).get('election.json');
+    assert.ok(electionJson, 'bundle carries election.json');
+    const eluOf = async (run: () => Promise<unknown>): Promise<number> => {
+      const e0 = performance.eventLoopUtilization();
+      await run();
+      return performance.eventLoopUtilization(e0).utilization;
+    };
+    const main = await eluOf(() => verifyElection(parseQvJson(electionJson)));
+    const off = await eluOf(() => verifyElectionOffThread(electionJson, 120_000));
+    assert.ok(main > 0.5, `control: main-thread verification keeps this thread busy (ELU ${main})`);
+    assert.ok(off < main / 3, `worker path leaves this thread mostly idle (ELU ${off} vs control ${main})`);
+    // the full import path still completes with the worker in place
     const t = await target({}, 'b2fix-loop');
-    const h = monitorEventLoopDelay({ resolution: 5 });
-    h.enable();
-    const job = await importAndWait(t, tar);
-    h.disable();
-    assert.equal(job.state, 'done');
-    // the PoC measured ~1 s stalls for this bundle size; the worker keeps the main loop responsive (generous bound for slow CI)
-    assert.ok(h.max / 1e6 < 600, `max event-loop lag ${h.max / 1e6} ms`);
+    assert.equal((await importAndWait(t, tar)).state, 'done');
   });
 
   test('B2-02: verification beyond its wall-clock budget is terminated and refused, leaving nothing behind', { timeout: 120_000 }, async () => {
