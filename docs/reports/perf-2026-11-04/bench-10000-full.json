@@ -1,0 +1,286 @@
+{
+  "machine": {
+    "nproc": 4,
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "node": "v22.23.4",
+    "platform": "linux",
+    "arch": "x64",
+    "totalMemGiB": 15.7,
+    "loadavgStart": [
+      2.53,
+      4.02,
+      5.79
+    ],
+    "loadavgEnd": [
+      1.34,
+      2.68,
+      4.47
+    ]
+  },
+  "config": {
+    "n": 10000,
+    "sample": 200,
+    "runs": 3,
+    "shape": "full",
+    "ciphertextsPerBallot": 18,
+    "limitProofsPerBallot": 3,
+    "trustees": "t=3 of n=5",
+    "fullSizes": []
+  },
+  "setupDkgMs": 1092.063849,
+  "encrypt": {
+    "perBallot": {
+      "medianMs": 166.9720860799999,
+      "runsMs": [
+        166.9720860799999
+      ],
+      "extrapolated": false,
+      "note": "mean over 200 ballots (buildBallot + makeCast)"
+    },
+    "perBallotMedianMs": 157.878875,
+    "perBallotP95Ms": 244.229616,
+    "buildBallotMs": 166.01423899499997,
+    "makeCastSignMs": 0.9578470849999996,
+    "projectedNMs": 1669720.8607999992
+  },
+  "verify": {
+    "perBallot": {
+      "medianMs": 201.04518834499999,
+      "runsMs": [
+        220.49691330000002,
+        191.287544885,
+        201.04518834499999
+      ],
+      "extrapolated": false,
+      "note": "median of 3 passes over 200 ballots (per-ballot mean per pass)"
+    },
+    "ballotsPerSecond": 4.974006133804943,
+    "ed25519PartMs": 5.2020421599999995,
+    "contentPartMs": 183.23553167999998,
+    "projectedNMs": 2010451.8834499998
+  },
+  "aggregation": {
+    "medianMs": 51255.246828,
+    "runsMs": [
+      54673.195838,
+      51255.246828,
+      50825.744375
+    ],
+    "extrapolated": false,
+    "note": "aggregate() over N=10000 counted ballots (280000 point decodes)"
+  },
+  "trusteeDecrypt": {
+    "perTrustee": {
+      "medianMs": 52999.87032,
+      "runsMs": [
+        52999.87032,
+        53035.118306,
+        50396.33852
+      ],
+      "extrapolated": false,
+      "note": "trusteeDecryptTally per trustee (includes its own re-aggregation of N ballots + one decProve per option)"
+    },
+    "trustees": 3
+  },
+  "combine": {
+    "medianMs": 302.23306,
+    "runsMs": [
+      334.70672,
+      302.23306,
+      212.899778
+    ],
+    "extrapolated": false,
+    "note": "decryptAggregates: decVerify of every share, Lagrange combination, BSGS table (bound N) + solve per option"
+  },
+  "countsMatch": true,
+  "bsgs": [
+    {
+      "bound": 10000,
+      "m": 101,
+      "tableMs": {
+        "medianMs": 8.173426,
+        "runsMs": [
+          8.173426,
+          6.999164,
+          8.287804
+        ],
+        "extrapolated": false
+      },
+      "solveMaxMs": {
+        "medianMs": 7.737964,
+        "runsMs": [
+          8.370657,
+          7.309061,
+          7.737964
+        ],
+        "extrapolated": false
+      },
+      "ok": true
+    }
+  ],
+  "full": [],
+  "ed25519": {
+    "verifyMs": {
+      "medianMs": 4.02579024,
+      "runsMs": [
+        4.9621010000000005,
+        4.02579024,
+        3.5543686
+      ],
+      "extrapolated": false,
+      "note": "ed25519Verify: 2 strict point checks (canonical, not small order, torsion-free) + noble verify zip215:false"
+    },
+    "strictPointMs": {
+      "medianMs": 0.99251738,
+      "runsMs": [
+        1.04627162,
+        0.99251738,
+        0.93592716
+      ],
+      "extrapolated": false,
+      "note": "ed25519IsStrictPoint (A and R alternately)"
+    },
+    "signMs": {
+      "medianMs": 0.57627996,
+      "runsMs": [
+        0.71279152,
+        0.57627996,
+        0.5728233
+      ],
+      "extrapolated": false
+    },
+    "reference": {
+      "verifyNoTorsionMs": {
+        "medianMs": 1.8454066,
+        "runsMs": [
+          1.4887296399999999,
+          1.8454066,
+          2.19520424
+        ],
+        "extrapolated": false,
+        "note": "reconstruction of the pre-CP-04 verify (same checks without isTorsionFree)"
+      },
+      "strictNoTorsionMs": {
+        "medianMs": 0.14328152,
+        "runsMs": [
+          0.14328152,
+          0.1528872,
+          0.13696628
+        ],
+        "extrapolated": false
+      },
+      "nobleVerifyOnlyMs": {
+        "medianMs": 1.8377648400000002,
+        "runsMs": [
+          1.84580782,
+          1.8377648400000002,
+          1.6126505599999998
+        ],
+        "extrapolated": false,
+        "note": "noble ed25519.verify zip215:false alone"
+      }
+    }
+  },
+  "micro": {
+    "baseMul (G, noble precomputed table)": {
+      "medianMs": 0.41512532,
+      "runsMs": [
+        0.55730566,
+        0.41512532,
+        0.40881848
+      ],
+      "extrapolated": false
+    },
+    "pointMul K (constant-time, no precompute; production)": {
+      "medianMs": 1.0145421399999999,
+      "runsMs": [
+        1.47980516,
+        0.94840786,
+        1.0145421399999999
+      ],
+      "extrapolated": false
+    },
+    "K.multiplyUnsafe (variable-time, public scalars only)": {
+      "medianMs": 0.76861852,
+      "runsMs": [
+        1.2244973799999999,
+        0.76861852,
+        0.6953413399999999
+      ],
+      "extrapolated": false
+    },
+    "K.multiply with precompute(8) (what-if)": {
+      "medianMs": 0.11963086,
+      "runsMs": [
+        0.11963086,
+        0.12842868,
+        0.1135979
+      ],
+      "extrapolated": false
+    },
+    "pointMul A (fresh ciphertext point; production)": {
+      "medianMs": 0.81943684,
+      "runsMs": [
+        0.7807827,
+        0.81943684,
+        0.85083614
+      ],
+      "extrapolated": false
+    },
+    "A.multiplyUnsafe (what-if)": {
+      "medianMs": 0.70998,
+      "runsMs": [
+        0.70998,
+        0.71969942,
+        0.7022716200000001
+      ],
+      "extrapolated": false
+    },
+    "pointFromBytes (strict decode + re-encode)": {
+      "medianMs": 0.14198539999999998,
+      "runsMs": [
+        0.12178642,
+        0.14198539999999998,
+        0.15914772
+      ],
+      "extrapolated": false
+    },
+    "pointToBytes": {
+      "medianMs": 0.07862104,
+      "runsMs": [
+        0.08441293999999999,
+        0.07862104,
+        0.0704876
+      ],
+      "extrapolated": false
+    },
+    "elgamalEncrypt": {
+      "medianMs": 1.22614896,
+      "runsMs": [
+        1.29474972,
+        1.22614896,
+        1.22444344
+      ],
+      "extrapolated": false
+    },
+    "cdsProve (one ciphertext)": {
+      "medianMs": 5.35266562,
+      "runsMs": [
+        4.362992080000001,
+        5.35266562,
+        6.3170398599999995
+      ],
+      "extrapolated": false
+    },
+    "cdsVerify (one ciphertext)": {
+      "medianMs": 8.416390139999999,
+      "runsMs": [
+        8.416390139999999,
+        9.72229506,
+        6.22639186
+      ],
+      "extrapolated": false
+    }
+  },
+  "fullSkippedReason": "--full=none"
+}
