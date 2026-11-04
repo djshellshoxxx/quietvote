@@ -298,3 +298,25 @@ Details and evidence: `docs/audit/crypto-protocol.md` § "Second-wave triage". R
 * Open / design (no code change): P1 (PASS without `opts.log`, TSV-05), P10 (duplicate election markers first-wins, L), C3 (unhedged
   DKG/complaint nonces, OQ-7), CP-02/C2, C11 (test RNGs exported from the index; other packages' tests import them).
 * Second-wave vector change: the canary `expected-report.json` now has `chk.tally.decrypt: not_run` (was `pass`): the check is `pass` only after decryption actually ran (P7/TSV-03); the canary's wrong aggregate stops the pipeline earlier. Regenerated with `node packages/protocol/test/vecgen/write.ts`.
+
+## Performance baseline (2026-11-04)
+* New `bench/tally-bench.ts` (`npm run bench -- [N] [--shape=referendum|full] [--full=auto|none|1000,2000] ...`, protocol package only):
+  a seeded, network-free synthetic 3-of-5 election with trustee-mode spoils enabled. It times ballot encryption+proofs+signature and
+  `verifyEnvelope` on a 200-ballot sample (N-totals are **extrapolated** and labelled so), and measures aggregation,
+  `trusteeDecryptTally`, `decryptAggregates` and BSGS (`dlogTable`/`dlogSolve` for T = bound) **at N** over a synthetic counted set
+  that cycles the sample's valid ciphertexts. It runs `verifyElectionText` on real sim-built bundles (at N when the estimate fits
+  ~10 min, else at 1000/2000), plus Ed25519 (CP-04 strict torsion check, with a no-torsion reference) and ristretto255 micro costs.
+  It self-checks: decrypted counts equal the plaintext, BSGS returns the bound, the bundle verdict is PASS.
+  Coordinator shortcut in the full-bundle phase: the counted set comes from the generator, not from `analyzeBallotLog`. The
+  verifier recomputes everything, so a wrong shortcut shows up as FAIL.
+* `test/bench-smoke.test.ts` runs the whole bench at N=12 (about 5.4 s; see the 2026-11-04 follow-up bullet) and checks CLI parsing, so the bench cannot rot. It asserts
+  nothing about speed.
+* Results, machine and the recommended optimisation are in `docs/reports/performance-baseline-2026-11-04.md`. In short, at 10k
+  referendum ballots, `verifyElection` takes 426 s (measured, PASS) and per-ballot proof verification dominates. BSGS is negligible
+  (7-21 ms table plus 7-21 ms solve at V = 10^4, depending on load). No production code was changed.
+* Review fixes (same day): the smoke test now runs a deterministic N=12 election (`--shape=smoke --pattern=fixed`, see
+  `fixedSelections`; about 5.6 s) and asserts the exact decrypted, coordinator and published counts (yes 4, no 4, a 12, b 6).
+  Ballot 0 selects every option it may and approval option `a` totals V = N, so mutants `counted.slice(1)` in `aggregate()` and
+  `dlogTable(V - 1)` in `decryptAggregates` both fail it (applied, run and reverted; no `src/` change). The projections are now
+  Stats flagged `extrapolated: true` (`encrypt.projectedN`, `verify.projectedN`; `projectedNMs` kept), and the smoke test checks
+  that these are the only extrapolated Stats in the result. The 10k evidence JSON is in `docs/reports/perf-2026-11-04/`.
