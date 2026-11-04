@@ -37,7 +37,7 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | ID | Original severity | Interim verdict | Revised severity | Consolidation disposition | Fix/partial fix |
 |---|---|---|---|---|---|
 | B2-01 | High | confirmed | High | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B2-02 | Medium | confirmed | Medium | fixed (pending commit) | Repaired in packages/server (see NOTES.md); not independently audited. |
+| B2-02 | Medium | confirmed | Medium | fixed (2026-11-04) | [50b8639](https://github.com/djshellshoxxx/quietvote/commit/50b8639bfdbbd5d9eb8f0f5f69fea4de08d7042b), [b5956b2](https://github.com/djshellshoxxx/quietvote/commit/b5956b260d9740a3142b628d18118b4213c5ac10); residual main-thread verifyLog/tar work noted in server NOTES; not independently audited. |
 | B2-03 | Medium | confirmed | Medium | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-04 | Medium | confirmed | Medium | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-05 | Medium | confirmed | Medium | blocked_protocol_review | No semantic repair commit; open/owner gate. |
@@ -46,12 +46,12 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B2-08 | Medium | confirmed | Low | fixed | [8cf2669](https://github.com/djshellshoxxx/quietvote/commit/8cf26691f87af3a10c55c896f15bf4169aa862fa) |
 | B2-09 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-10 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
-| B2-11 | Low | confirmed | Low | fixed (pending commit) | Repaired in packages/server (see NOTES.md); not independently audited. |
+| B2-11 | Low | confirmed | Low | fixed (2026-11-04) | [50b8639](https://github.com/djshellshoxxx/quietvote/commit/50b8639bfdbbd5d9eb8f0f5f69fea4de08d7042b); 7-day default retention pending owner confirmation; backup retention not implemented. |
 | B2-12 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
 | B2-13 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-14 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-15 | Medium | confirmed | Low | documentation_reconciled | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2), [247df39](https://github.com/djshellshoxxx/quietvote/commit/247df393ea1ace300fe5ed1f569a12090e1364dc) |
-| B2-16 | Low | confirmed | Low | partially fixed (pending commit) | Log fields and minute rounding repaired; free-text control `reason` left open (owner gate, wire format). |
+| B2-16 | Low | confirmed | Low | partially fixed (2026-11-04) | [50b8639](https://github.com/djshellshoxxx/quietvote/commit/50b8639bfdbbd5d9eb8f0f5f69fea4de08d7042b): log fields and minute rounding repaired; free-text control `reason` left open (owner gate, wire format). |
 | B2-17 | Low | confirmed | Low | fixed_bounded_cache | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | KNOWN TR-07/TR-08 | Low | confirmed | Low | partially_fixed | [8cf2669](https://github.com/djshellshoxxx/quietvote/commit/8cf26691f87af3a10c55c896f15bf4169aa862fa) |
 | B1-01 | Medium | confirmed | Medium | fixed | [48a2b73](https://github.com/djshellshoxxx/quietvote/commit/48a2b73c6a4c77666284f094372eb683e2a5364a) |
@@ -93,21 +93,21 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B3-15 | Low | confirmed | Low | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-16 | Low | confirmed | Low | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-17 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [f58533b](https://github.com/djshellshoxxx/quietvote/commit/f58533b13c87f06af50f8d104c5a28b77bb8c270) |
-| B3-18 | Low | pending | pending | open | No semantic repair commit; open/owner gate. |
+| B3-18 | Low | pending | pending | fixed (2026-11-04) | [421c879](https://github.com/djshellshoxxx/quietvote/commit/421c8792c030f16f907fe454da98127e934b2a97); automated checks only, real screen-reader review still required. |
 | B3-19 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-20 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [f58533b](https://github.com/djshellshoxxx/quietvote/commit/f58533b13c87f06af50f8d104c5a28b77bb8c270) |
 | B3-21 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-22 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
-| B3-23 | Low | pending | pending | open | No semantic repair commit; open/owner gate. |
+| B3-23 | Low | pending | pending | fixed (2026-11-04) | [421c879](https://github.com/djshellshoxxx/quietvote/commit/421c8792c030f16f907fe454da98127e934b2a97); unit-tested, no organizer browser journey yet. |
 | B3-24 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-25 | Low | pending | pending | blocked | No semantic repair commit; open/owner gate. |
-| B3-26 | Low | pending | pending | open | No semantic repair commit; open/owner gate. |
+| B3-26 | Low | pending | pending | fixed (2026-11-04) | [eb94357](https://github.com/djshellshoxxx/quietvote/commit/eb943575e0b41af50b5d84492d550b41ac823114); blob: worker from the hashed page script; no worker pool/resume; CSP change pending owner review. |
 | B3-27 | Low | pending | pending | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-28 | Info | pending | pending | open | No semantic repair commit; open/owner gate. |
 | B3-29 | Info | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-30 | Info | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [963c577](https://github.com/djshellshoxxx/quietvote/commit/963c57716dbceced04114d5119c61740b0cfb0fb) |
 | B3-31 | Info | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
-| B3-32 | Info | pending | pending | open | No semantic repair commit; open/owner gate. |
+| B3-32 | Info | pending | pending | fixed (2026-11-04) | [421c879](https://github.com/djshellshoxxx/quietvote/commit/421c8792c030f16f907fe454da98127e934b2a97); axe not re-run, automated heuristics 49/49; manual AT review still required. |
 
 ### Disposition counts
 
