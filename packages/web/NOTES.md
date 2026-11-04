@@ -211,48 +211,9 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   labelled by its `figcaption`).
 * Unit coverage: `test/audit3-ui.test.ts` (fake DOM). Browser/axe-style confirmation is the e2e runs recorded by the integrator.
 
-## B3-26: standalone verifier Worker (2026-11-04, AI-assisted, unaudited)
+## B3-26: standalone verifier Worker reverted (2026-11-04)
 
-* `verifier.html` still has exactly one inline script (build entry `src/verifier/entry.ts`). In a Worker global (no
-  `document`) that script runs `src/verifier/worker-main.ts`; in the page it runs `startPage()` (`page.ts`), which captures its
-  own `document.currentScript.textContent` and starts a classic Worker from a `blob:` URL of exactly those bytes. No worker file
-  is fetched or emitted (the earlier separate `verify-worker.<hash>.js` was dropped by coordinator decision). The Worker runs
-  the bytes whose SHA-256 is the page's `script-src` hash, which is the hash a user compares with the release manifest.
-* Protocol: worker → page `ready`; page → worker one `{ text, anchor }`; worker → page `progress` (`parsing`, `verifying`),
-  then one `result` or `error`. packages/protocol exposes no progress hook, so only these coarse phases exist (no per-ballot
-  counts). `src/verifier/bundle.ts` (`verifyBundle`) is the shared job, equal to `verifyElectionText` (unit-tested on a corpus
-  bundle and unparsable input) plus the outside Election-ID comparison, which now also runs off the main thread.
-* `src/verifier/controller.ts` (unit-tested with a fake Worker/timers): progress goes to the visible output and the polite
-  live region; Cancel terminates the worker and shows “Checks cancelled: no result” (never a verdict; late messages ignored).
-  A worker `error` message, crash after `ready`, malformed report/message, `messageerror` or the 30-minute job timeout is
-  FAIL (the existing `showFailure` invariant). No Worker/Blob API, a throwing constructor (including a Trusted Types or CSP
-  refusal), a load error before `ready` or no `ready` within 15 s falls back to the previous in-thread path (same page code;
-  Cancel is not offered and a note says the page may stop responding). The 64 MiB check still runs on the main thread first.
-* CSP: the standalone policy is now `default-src 'none'; script-src '<hash>'; style-src '<hash>'; img-src data:;
-  connect-src 'none'; worker-src blob:; form-action 'none'; base-uri 'none'` (only `worker-src blob:` added; no `'self'`, no
-  `data:`). A blob: worker inherits this policy, so it has no network either. `packages/server/src/static.ts` recognizes
-  exactly this string. Generated `_headers`: hosts apply the common `/*` header to `/verifier.html` as well, so when the
-  verifier is included its `worker-src` becomes `'self' blob:` (like the existing verifier script/style hash additions). That
-  common header also covers the app; the app cannot use blob: workers because `new Worker()` is a Trusted Types sink and
-  its `qv-default` policy (`allowedWorkerUrl`) admits only same-origin `/assets/*.js` (unit-tested against blob:/data:).
-  docs/19 §7 has an appended note quoting the new policy, pending owner review.
-* B3-04 status: the standalone verifier's worker is now covered by the page hash (same bytes, checked in a build test and
-  in the browser by hashing the Blob the page creates). B3-04 stays partial for the app: lazy catalog/chart chunks and the
-  seal worker still lack SRI.
-* Works from `file://` too (Chromium: blob: worker from a file page, e2e-checked). Other browsers are not tested.
-* Not implemented: Worker pool/parallelism (one worker, same total time as before), per-ballot progress, resumability
-  (a cancelled or failed run restarts from the beginning), and performance validation on an M-tier (10,000-ballot) bundle.
-* Tests: `test/verifier-controller.test.ts` (11). `e2e/verifier.ts` adds 6 checks (now 22): worker run of the
-  `small-approval-20v` corpus bundle under generated `_headers` and the reference server, with a click handler running mid
-  verification and the Blob's SHA-256 equal to the CSP script hash; Cancel → cancelled not PASS (both servers); file://
-  worker run (pass and forged fail); refused worker (`worker-src 'none'`) → in-thread PASS. A negative control (worker
-  disabled) fails the responsiveness check.
-### Trustees-mode spoiled-ballot shares (QV-ADR-020, 2026-11-04)
-* New route `/e/<id>/spoils` (tab "Test ballots", shown only when the signed manifest sets `spoil_trustee_decrypt`). Logic in `src/flow/spoil-shares.ts`, DOM in `src/ui/spoil-shares.ts` (textContent only; announcements via the app's `Announcer`); `app.ts` only imports the panel, adds the tab and one view branch.
-* `ApiClient.getSpoilShares(id[, code])` and `postSpoilShare(id, record)` follow `packages/server/src/app.ts`: `GET .../spoil-shares` -> `{items:[{code,trustees}]}`, `?code=` -> `{code,items:[{j,spoil_seq,record}]}`; `POST` body is the signed record itself (`{body,sig}`, no wrapper), 201 `accepted` / 200 `duplicate`; errors 409 WRONG_PHASE (not closed, or tally posted), 409 STATE_CONFLICT, 422 ENTRY_INVALID (+`reason` E_SCHEMA/E_CTX/E_SIG/E_SPOIL_MISMATCH/E_DEC_PROOF/E_TRUSTEE_REFUSE), 403 AUTHOR_NOT_AUTHORIZED, 404 NOT_FOUND, 429.
-* The client never trusts the server list. `deriveElectionContext` now also returns the DKG share keys `Y_j` and the key-confirmed `decrypters` (same rule as the CLI's `deriveFromLog`); `deriveSpoilTargets` re-runs `analyzeBallotLog` and keeps only trustees-mode spoils that no cast envelope carries or re-wraps (TR-01). Each record is verified alone (`collectSpoilShares`, `spoilDecVerify`, `spoil_seq`, completeness, decrypter), so a forged first record cannot mask a trustee's honest one. At t distinct valid trustees `decryptSpoiled` decodes. Status per code: waiting(n of t) / decoded / invalid-share (trustee j, reason; reasons are mapped to two texts in the UI).
-* Paste/upload accepts a single record, an array, or the `qv-ceremony-packet/v1` round `spoil-share` packet that `qv-trustee spoil-release` writes; each record is verified locally and only passing ones are POSTed unchanged. No retry loop: a network failure stops the batch (idempotent, resend the same bytes).
-* i18n: 18 `qv.spoil.*` keys appended at the end of `en.ts`; es/fr/de/pt-BR/ar rows are machine drafts, unreviewed and unoffered (no review record created). The scoped `i18n:check` scans only app.ts/main.ts/dom.ts/charts.ts, so `ui/spoil-shares.ts` keys are checked only by the catalog tests and `build.test.ts` (literal `t('qv.…')` keys). The panel receives the `Translator` (`tr`), not `{ t }`, to keep the check's single-forwarder evidence intact.
-* Size: the 200 KiB all-JS budget was at 193.8 KiB before this change and is 199.8 KiB after (entry +3.8, locale chunks +2.2 KiB). Little headroom is left for concurrent features; trimming strings first (descriptions/translations count in locale chunks).
-* Not done / limits: no browser journey for the new view (the panel is covered by flow tests with real crypto and a fake board only); the list is refreshed by the button and after a successful send, not by SSE; the roll is paged from the server and used as the voter set for `analyzeBallotLog` exactly as the results view does (the manifest roll root is not re-checked here).
-* Tests: `test/spoil-shares.test.ts` (9): decode at t, waiting below t, forged/tampered shares (proof, signature, ctx, completeness, spoil_seq, out-of-range j) rejected and uncounted, cast/reveal/unknown code refused, GET/POST contract incl. body == signed record and the server's `spoilShareRecordSchema`, packet parsing.
+* A blob: Worker version of the offline verifier was merged and then reverted: QV-ADR-027 approved B3-26 option A (cooperative
+  yielding with progress on the main thread, closed offline verifier CSP kept, no Worker). Option A needs a progress/yield hook in
+  `@quietvote/protocol` `verifyElection` (owned by the #26 integration line); the page wiring follows once that hook lands.
+  B3-26 is therefore open again; the verifier CSP is unchanged (no worker-src).

@@ -38,7 +38,7 @@ export class StaticAssets implements StaticHandler {
       // Accept only the build's closed offline policy, with hashes recomputed from the actual inline bytes.
       // Unrecognized documents keep the default policy; an asset cannot supply arbitrary header directives.
       if (scripts.length === 1 && styles.length === 1) {
-        const policy = `default-src 'none'; script-src '${hash(scripts[0]![1]!)}'; style-src '${hash(styles[0]![1]!)}'; img-src data:; connect-src 'none'; worker-src blob:; form-action 'none'; base-uri 'none'`;
+        const policy = `default-src 'none'; script-src '${hash(scripts[0]![1]!)}'; style-src '${hash(styles[0]![1]!)}'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'`;
         const tag = `<meta http-equiv="Content-Security-Policy" content="${policy}">`;
         if (html.includes(tag)) this.verifierCsp = `${policy}; frame-ancestors 'none'`;
       }

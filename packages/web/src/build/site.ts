@@ -35,14 +35,8 @@ export function csp(boardOrigins: readonly string[] = []): { header: string; met
 export function headersFile(boardOrigins: readonly string[] = [], verifier?: { scriptHash: string; styleHash: string; policy: string }): string {
   let { header } = csp(boardOrigins);
   // Hosts can enforce every matching rule. Permit only these exact offline bytes in the common header; the app's
-  // own meta CSP still permits no inline code. The offline meta policy independently forbids network; its only worker is a
-  // blob: of its own hash-pinned inline script (B3-26), so the common header must also admit blob: workers or the
-  // intersection refuses it. The app cannot use that: `new Worker()` is a Trusted Types sink and the app's `qv-default`
-  // policy (worker/worker-sealer.ts allowedWorkerUrl) admits only same-origin /assets/*.js URLs, never blob:.
-  if (verifier) {
-    header = header.replace("script-src 'self'", `script-src 'self' '${verifier.scriptHash}'`).replace("style-src 'self'", `style-src 'self' '${verifier.styleHash}'`)
-      .replace("worker-src 'self'", "worker-src 'self' blob:");
-  }
+  // own meta CSP still permits no inline code. The offline meta policy independently forbids network and workers.
+  if (verifier) header = header.replace("script-src 'self'", `script-src 'self' '${verifier.scriptHash}'`).replace("style-src 'self'", `style-src 'self' '${verifier.styleHash}'`);
   return [
     '/*', `  Content-Security-Policy: ${header}`, '  Cross-Origin-Opener-Policy: same-origin', '  Cross-Origin-Embedder-Policy: require-corp',
     '  Cross-Origin-Resource-Policy: same-origin', '  Referrer-Policy: no-referrer',
@@ -99,23 +93,19 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
       b.onResolve({ filter: /catalogs\/(es|fr|de|pt-BR|ar)\.ts$/ }, () => ({ path: resolve('src/i18n/catalogs/verifier-stub.ts') }));
     },
   };
-  // entry.ts: the one inline script is both the page and (as a blob: of its own text) its verification Worker (B3-26).
-  const r = await esbuild({ ...common, format: 'iife', entryPoints: ['src/verifier/entry.ts'], outdir: 'out', plugins: [stubCatalogs] });
+  const r = await esbuild({ ...common, format: 'iife', entryPoints: ['src/verifier/page.ts'], outdir: 'out', plugins: [stubCatalogs] });
   const js = new TextDecoder().decode(r.outputFiles![0]!.contents).replace(/<\/script/gi, '<\\/script').replace(/<script/gi, (m) => `<\\x73${m.slice(2)}`).replace(/<!--/g, '<\\x21--');
   const css = 'body{font:1.1rem/1.6 system-ui,sans-serif;max-inline-size:44rem;margin:1rem auto;padding-inline:16px;background:#fff;color:#14213d}@media(prefers-color-scheme:dark){body{background:#10151f;color:#eef2f8}}label{display:block;font-weight:600;margin-block-start:1rem}input,button{font:inherit;min-block-size:44px}:focus-visible{outline:3px solid #b45309;outline-offset:2px}.sr{position:absolute;clip-path:inset(50%);inline-size:1px;block-size:1px}';
   const sh = `sha256-${hashOf('sha256', js, 'base64')}`;
   const st = `sha256-${hashOf('sha256', css, 'base64')}`;
-  // worker-src blob: (B3-26): the only worker is a blob: URL of this inline script's own text (hash `sh`); without the directive
-  // worker-src falls back to the hash-only script-src and refuses every worker. No 'self' (no fetched worker file), no data:.
-  // packages/server/src/static.ts recognizes exactly this policy string.
-  const policy = `default-src 'none'; script-src '${sh}'; style-src '${st}'; img-src data:; connect-src 'none'; worker-src blob:; form-action 'none'; base-uri 'none'`;
+  const policy = `default-src 'none'; script-src '${sh}'; style-src '${st}'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'`;
   const html = `<!doctype html>
 <html lang="en" dir="ltr"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuietVote verifier</title><style>${css}</style></head>
 <body><main><h1>Verify an election</h1><p>This page makes no network requests. You can disconnect before you load a bundle.</p>
 <p>A checker you didn’t download or compare yourself can lie. Compare this file’s SHA-256 with the signed release manifest.</p>
 <label for="file">Election bundle file (JSON)</label><input id="file" type="file" accept="application/json">
 <label for="anchor">Election ID you were told (from your organizer, not from this page)</label><input id="anchor" type="text" autocomplete="off" spellcheck="false">
-<p><button id="run" type="button">Run checks</button> <button id="cancel" type="button" hidden>Cancel checks</button></p><div id="out"></div><div id="live" class="sr" role="status" aria-live="polite"></div></main>
+<p><button id="run" type="button">Run checks</button></p><div id="out"></div><div id="live" class="sr" role="status" aria-live="polite"></div></main>
 <script>${js}</script></body></html>
 `;
   return { html, scriptHash: sh, styleHash: st, policy };

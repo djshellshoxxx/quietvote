@@ -4,8 +4,6 @@ import { closeSync, ftruncateSync, mkdtempSync, openSync, readFileSync, rmSync, 
 import { createServer, type ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { createHash } from 'node:crypto';
 import { signRecord } from '@quietvote/protocol';
 import { buildServer } from '../../server/src/index.ts';
 import { bundleOf, castBallot, clone, closeElection, publishTally, setup } from '../../protocol/test/helpers/sim.ts';
@@ -25,8 +23,6 @@ const body = (tally.entry as any).body; body.contests[0].options[0].T++;
 const coord = sim.coord[0]!; tally.entry = signRecord(coord.secretKey, coord.publicKey, sim.params!.ctx, body);
 const goodFile = join(dir, 'good.json'), badFile = join(dir, 'bad.json');
 writeFileSync(goodFile, JSON.stringify(good)); writeFileSync(badFile, JSON.stringify(forged));
-// B3-26: a corpus bundle large enough (~1 s to verify) that a main-thread run would visibly block input.
-const corpusFile = new URL('../../../test-vectors/v1/elections/small-approval-20v/bundle.json', import.meta.url).pathname;
 let board = new FakeBoard(sim);
 let waitForElection: Promise<void> | undefined;
 let electionRequested: (() => void) | undefined;
@@ -84,84 +80,6 @@ try {
   };
   await offline(origin); // all matching generated _headers policies enforced together
   await offline(address.url); // actual server StaticAssets policy, no routing interception
-  // B3-26: the standalone page verifies in a blob: Worker of its own inline script, shows progress, and keeps handling input.
-  const verifierScriptHash = /script-src '(sha256-[^']+)'/.exec(/Content-Security-Policy" content="([^"]+)"/.exec(readFileSync(join(dist, 'verifier.html'), 'utf8'))![1]!)![1]!;
-  // Records the text of every Blob the page turns into an object URL (CDP init script; the page's CSP does not apply to it).
-  const captureBlobs = async (p: import('playwright').Page) => p.addInitScript(() => {
-    const w = window as unknown as { __qvBlobs: Promise<string>[] }; w.__qvBlobs = [];
-    const orig = URL.createObjectURL.bind(URL);
-    URL.createObjectURL = (o: Blob | MediaSource) => { if (o instanceof Blob) w.__qvBlobs.push(o.text()); return orig(o); };
-  });
-  const blobHashes = async (p: import('playwright').Page) => (await p.evaluate(() => Promise.all((window as unknown as { __qvBlobs: Promise<string>[] }).__qvBlobs)))
-    .map((x) => `sha256-${createHash('sha256').update(x).digest('base64')}`);
-  const viaWorker = async (base: string) => {
-    const p = await browser.newPage();
-    await captureBlobs(p);
-    p.on('pageerror', (e) => errors.push(e.message));
-    p.on('console', (m) => { if (m.type() === 'error' && /Content Security|Trusted Type|inline script|inline style/i.test(m.text())) errors.push(m.text()); });
-    const workers: string[] = []; p.on('worker', (w) => workers.push(w.url()));
-    await p.goto(`${base}/verifier.html`);
-    await p.evaluate(() => {
-      const w = window as unknown as { __qvClicks: (string | null)[] };
-      w.__qvClicks = [];
-      document.querySelector('h1')!.addEventListener('click', () => w.__qvClicks.push(document.querySelector('#out h2')?.textContent ?? null));
-    });
-    await p.getByLabel('Election bundle file (JSON)').setInputFiles(corpusFile);
-    await p.getByRole('button', { name: 'Run checks' }).click();
-    await p.getByText('Checking signatures, proofs and the count', { exact: false }).first().waitFor({ timeout: 30000 });
-    assert.ok(await p.getByRole('button', { name: 'Cancel checks' }).isVisible(), 'cancel offered while the worker runs');
-    assert.match(await p.locator('#live').textContent() ?? '', /Checking signatures/, 'progress announced in the polite live region');
-    await p.locator('h1').click({ timeout: 2000 });
-    const clicks = await p.evaluate(() => (window as unknown as { __qvClicks: (string | null)[] }).__qvClicks);
-    assert.deepEqual(clicks, [null], 'click handler ran while verification was still in progress');
-    await p.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 60000 });
-    assert.equal(await p.locator('#out').getAttribute('data-engine'), 'worker');
-    assert.equal(workers.length, 1); assert.match(workers[0]!, /^blob:/);
-    assert.deepEqual(await blobHashes(p), [verifierScriptHash], 'worker source is exactly the CSP-hashed inline script');
-    assert.equal(await p.getByRole('button', { name: 'Cancel checks' }).isVisible(), false); checks++;
-    // Cancel terminates the worker; the page says cancelled and never later turns into a verdict.
-    await p.getByRole('button', { name: 'Run checks' }).click();
-    await p.getByText('Checking signatures, proofs and the count', { exact: false }).first().waitFor({ timeout: 30000 });
-    await p.getByRole('button', { name: 'Cancel checks' }).click();
-    await p.getByRole('heading', { name: 'Checks cancelled: no result', exact: true }).waitFor({ timeout: 5000 });
-    await p.waitForTimeout(2500);
-    assert.equal(await p.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
-    assert.equal(await p.locator('#live').textContent(), 'Checks cancelled: no result'); checks++;
-    await p.close();
-  };
-  await viaWorker(origin); // generated _headers policies (common header with Trusted Types + standalone policy)
-  await viaWorker(address.url); // reference server's recognized standalone policy
-  // file:// (the single downloaded file, REQ-016): the same blob: Worker of the page's own script; a forged bundle still fails.
-  {
-    const p = await browser.newPage();
-    await captureBlobs(p);
-    p.on('pageerror', (e) => errors.push(e.message));
-    const workers: string[] = []; p.on('worker', (w) => workers.push(w.url()));
-    await p.goto(pathToFileURL(join(dist, 'verifier.html')).href);
-    await p.getByLabel('Election bundle file (JSON)').setInputFiles(goodFile);
-    await p.getByRole('button', { name: 'Run checks' }).click();
-    await p.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
-    assert.equal(await p.locator('#out').getAttribute('data-engine'), 'worker');
-    await p.getByLabel('Election bundle file (JSON)').setInputFiles(badFile);
-    await p.getByRole('button', { name: 'Run checks' }).click();
-    await p.getByRole('heading', { name: 'A check failed', exact: true }).waitFor({ timeout: 30000 });
-    assert.equal(workers.length, 2); assert.deepEqual(await blobHashes(p), [verifierScriptHash]); await p.close(); checks++;
-  }
-  // A page where the blob: worker is refused (stricter policy than shipped) still verifies, in-thread, with the same code.
-  {
-    const p = await browser.newPage();
-    p.on('pageerror', (e) => errors.push(e.message));
-    await p.route(`${origin}/verifier.html`, async (r) => {
-      const res = await r.fetch();
-      const html = (await res.text()).replace("worker-src blob:;", "worker-src 'none';");
-      await r.fulfill({ status: 200, contentType: 'text/html', body: html });
-    });
-    await p.goto(`${origin}/verifier.html`);
-    await p.getByLabel('Election bundle file (JSON)').setInputFiles(goodFile);
-    await p.getByRole('button', { name: 'Run checks' }).click();
-    await p.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
-    assert.equal(await p.locator('#out').getAttribute('data-engine'), 'main-thread'); await p.close(); checks++;
-  }
   await page.goto(`${origin}/e/${board.apiId}/results`);
   await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
   assert.ok(await page.getByRole('table').count() > 0); checks++;
@@ -234,7 +152,7 @@ try {
   await tamperPage.close(); writeFileSync(join(dist, chunk), bytes); checks++;
   assert.deepEqual(errors, [], 'no CSP, Trusted Types, or uncaught page errors');
   assert.deepEqual(thirdParty, []); checks++;
-  console.log(`verifier browser: ${checks}/${checks} passed (generated policies, real server, proof gate, anchor, skipped checks, verify worker (page-hash source) progress/responsiveness/cancel, file:// worker, blocked-worker in-thread fallback, static SRI, stale navigation, blocked storage, size bounds, live append during chart import)`);
+  console.log(`verifier browser: ${checks}/${checks} passed (generated policies, real server, proof gate, anchor, skipped checks, static SRI, stale navigation, blocked storage, size bounds, live append during chart import)`);
 } finally {
   await browser.close(); await real.stop(); await new Promise<void>((resolve) => site.close(() => resolve())); rmSync(dir, { recursive: true, force: true });
 }
