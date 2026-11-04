@@ -210,3 +210,40 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
 * **B3-32:** the experimental/demo notices are inside `<header>` (`ui/shell.ts`); chart `<figure>` no longer has `role=group` (it is
   labelled by its `figcaption`).
 * Unit coverage: `test/audit3-ui.test.ts` (fake DOM). Browser/axe-style confirmation is the e2e runs recorded by the integrator.
+
+## B3-26: standalone verifier Worker (2026-11-04, AI-assisted, unaudited)
+
+* `verifier.html` still has exactly one inline script (build entry `src/verifier/entry.ts`). In a Worker global (no
+  `document`) that script runs `src/verifier/worker-main.ts`; in the page it runs `startPage()` (`page.ts`), which captures its
+  own `document.currentScript.textContent` and starts a classic Worker from a `blob:` URL of exactly those bytes. No worker file
+  is fetched or emitted (the earlier separate `verify-worker.<hash>.js` was dropped by coordinator decision). The Worker runs
+  the bytes whose SHA-256 is the page's `script-src` hash, which is the hash a user compares with the release manifest.
+* Protocol: worker → page `ready`; page → worker one `{ text, anchor }`; worker → page `progress` (`parsing`, `verifying`),
+  then one `result` or `error`. packages/protocol exposes no progress hook, so only these coarse phases exist (no per-ballot
+  counts). `src/verifier/bundle.ts` (`verifyBundle`) is the shared job, equal to `verifyElectionText` (unit-tested on a corpus
+  bundle and unparsable input) plus the outside Election-ID comparison, which now also runs off the main thread.
+* `src/verifier/controller.ts` (unit-tested with a fake Worker/timers): progress goes to the visible output and the polite
+  live region; Cancel terminates the worker and shows “Checks cancelled: no result” (never a verdict; late messages ignored).
+  A worker `error` message, crash after `ready`, malformed report/message, `messageerror` or the 30-minute job timeout is
+  FAIL (the existing `showFailure` invariant). No Worker/Blob API, a throwing constructor (including a Trusted Types or CSP
+  refusal), a load error before `ready` or no `ready` within 15 s falls back to the previous in-thread path (same page code;
+  Cancel is not offered and a note says the page may stop responding). The 64 MiB check still runs on the main thread first.
+* CSP: the standalone policy is now `default-src 'none'; script-src '<hash>'; style-src '<hash>'; img-src data:;
+  connect-src 'none'; worker-src blob:; form-action 'none'; base-uri 'none'` (only `worker-src blob:` added; no `'self'`, no
+  `data:`). A blob: worker inherits this policy, so it has no network either. `packages/server/src/static.ts` recognizes
+  exactly this string. Generated `_headers`: hosts apply the common `/*` header to `/verifier.html` as well, so when the
+  verifier is included its `worker-src` becomes `'self' blob:` (like the existing verifier script/style hash additions). That
+  common header also covers the app; the app cannot use blob: workers because `new Worker()` is a Trusted Types sink and
+  its `qv-default` policy (`allowedWorkerUrl`) admits only same-origin `/assets/*.js` (unit-tested against blob:/data:).
+  docs/19 §7 has an appended note quoting the new policy, pending owner review.
+* B3-04 status: the standalone verifier's worker is now covered by the page hash (same bytes, checked in a build test and
+  in the browser by hashing the Blob the page creates). B3-04 stays partial for the app: lazy catalog/chart chunks and the
+  seal worker still lack SRI.
+* Works from `file://` too (Chromium: blob: worker from a file page, e2e-checked). Other browsers are not tested.
+* Not implemented: Worker pool/parallelism (one worker, same total time as before), per-ballot progress, resumability
+  (a cancelled or failed run restarts from the beginning), and performance validation on an M-tier (10,000-ballot) bundle.
+* Tests: `test/verifier-controller.test.ts` (11). `e2e/verifier.ts` adds 6 checks (now 22): worker run of the
+  `small-approval-20v` corpus bundle under generated `_headers` and the reference server, with a click handler running mid
+  verification and the Blob's SHA-256 equal to the CSP script hash; Cancel → cancelled not PASS (both servers); file://
+  worker run (pass and forged fail); refused worker (`worker-src 'none'`) → in-thread PASS. A negative control (worker
+  disabled) fails the responsiveness check.

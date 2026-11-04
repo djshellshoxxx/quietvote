@@ -141,6 +141,7 @@ At any time `/receipt` re-fetches the inclusion proof against the latest STH and
 - Performance: M-tier bundle (10,000 ballots) verified in a Worker pool in < 5 min on a laptop (QV-08 §8.2), with progress and resumability.
 - Equivalence: the page and the `qv-verify` CLI share `packages/verifier` code and the same test vectors; QV-11 requires at least one **independent re-implementation** (different language) passing the vectors before 1.0 (Should).
 - Distribution: published to release assets, to mirrors, and offered in the repository; users are told to obtain it from a source other than the board operator and compare the SHA-256 against the signed release manifest.
+- Note (2026-11-04, audit B3-26, **pending owner review**): the shipped page runs verification in a Worker created from a `blob:` URL of its own inline script text, so the worker executes the same hash-pinned bytes. Its policy is therefore `default-src 'none'; script-src 'sha256-<hash>'; style-src 'sha256-<hash>'; img-src data:; connect-src 'none'; worker-src blob:; form-action 'none'; base-uri 'none'` (only `worker-src blob:` added to the policy quoted above; when the generated `_headers` common rule also matches the page, its `worker-src` is `'self' blob:`). One worker, coarse phases (parsing, verifying), cancel; no pool or resumability yet.
 
 ## 8. Browser hardening configuration
 
