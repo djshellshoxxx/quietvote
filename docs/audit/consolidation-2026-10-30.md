@@ -37,7 +37,7 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | ID | Original severity | Interim verdict | Revised severity | Consolidation disposition | Fix/partial fix |
 |---|---|---|---|---|---|
 | B2-01 | High | confirmed | High | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B2-02 | Medium | confirmed | Medium | open | No semantic repair commit; open/owner gate. |
+| B2-02 | Medium | confirmed | Medium | fixed (pending commit) | Repaired in packages/server (see NOTES.md); not independently audited. |
 | B2-03 | Medium | confirmed | Medium | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-04 | Medium | confirmed | Medium | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-05 | Medium | confirmed | Medium | blocked_protocol_review | No semantic repair commit; open/owner gate. |
@@ -46,12 +46,12 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B2-08 | Medium | confirmed | Low | fixed | [8cf2669](https://github.com/djshellshoxxx/quietvote/commit/8cf26691f87af3a10c55c896f15bf4169aa862fa) |
 | B2-09 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-10 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
-| B2-11 | Low | confirmed | Low | open | No semantic repair commit; open/owner gate. |
+| B2-11 | Low | confirmed | Low | fixed (pending commit) | Repaired in packages/server (see NOTES.md); not independently audited. |
 | B2-12 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
 | B2-13 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-14 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-15 | Medium | confirmed | Low | documentation_reconciled | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2), [247df39](https://github.com/djshellshoxxx/quietvote/commit/247df393ea1ace300fe5ed1f569a12090e1364dc) |
-| B2-16 | Low | confirmed | Low | open | No semantic repair commit; open/owner gate. |
+| B2-16 | Low | confirmed | Low | partially fixed (pending commit) | Log fields and minute rounding repaired; free-text control `reason` left open (owner gate, wire format). |
 | B2-17 | Low | confirmed | Low | fixed_bounded_cache | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | KNOWN TR-07/TR-08 | Low | confirmed | Low | partially_fixed | [8cf2669](https://github.com/djshellshoxxx/quietvote/commit/8cf26691f87af3a10c55c896f15bf4169aa862fa) |
 | B1-01 | Medium | confirmed | Medium | fixed | [48a2b73](https://github.com/djshellshoxxx/quietvote/commit/48a2b73c6a4c77666284f094372eb683e2a5364a) |

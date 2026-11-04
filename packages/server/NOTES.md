@@ -250,3 +250,37 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   while the web helper sends a token hash and invite-bound PoP (QV-19/QV-04). Neither acceptance set is broadened here.
   `test/consolidation.test.ts` drives actual `registrationBody` into the real HTTP server and retains the observed `401 BAD_SIGNATURE` as explicit
   unresolved evidence; permitted raw-token registration, roll freeze, vote/revote/refusal, spoil, close/tally/export and mirror behavior are exercised separately.
+
+## Consolidation repairs B2-02, B2-11, B2-16 (2026-11-04; AI-assisted, unaudited; supersedes the "still open" entries above for these three IDs)
+* **B2-02 (import DoS).** (a) `verifyBundle` now refuses an election id that already exists (`ELECTION_EXISTS`, 409, same failed-job contract) right after
+  tar framing/checksums and `bundle.json`, before any proof work; the id is derived from the bundle's claimed `origin` (cheap, unauthenticated), so the
+  authoritative check in `commitImport` still runs after verification (race, forged origin). (b) `verifyElection` (all protocol records, proofs, tally) runs in a
+  `node:worker_threads` Worker (`verify-worker.ts`, input = copy of `election.json` bytes) under a wall-clock budget `importVerifyTimeoutMs` (default 120 s,
+  hard max 1 h); on expiry the worker is terminated and the job fails `IMPORT_REJECTED` rule `IMPORT_TIMEOUT` (status 503). A worker crash/early exit fails
+  `PROTOCOL_VERIFY`. (c) Concurrency is unchanged and now documented: the job runner executes one job at a time and `importQueueMax` (2) bounds queued+running
+  imports (503 BUSY + Retry-After). `env.stats.importVerifications` counts verifications for tests. **Residual:** `verifyLog` (board layer: every entry
+  signature, tree, checkpoints), tar parsing and checksums still run on the main thread (the PoC's multi-second stall was `verifyElection`); a bundle that fails
+  a later check (e.g. wrong `manifest_hash`) still costs one worker verification; there is no per-org import rate beyond the class-X limit and quota. Memory
+  of a 64 MiB bundle is held twice while verifying (copy for the worker). The statement at "Verification yields between stages" above is superseded: yields still
+  happen between stages, and the proof work is off-thread. Tests: `test/b2-fixes.test.ts` (duplicate refused with zero verifications, event-loop lag bound,
+  timeout path, one slot -> second import 503 BUSY).
+* **B2-16 (logging).** `logger.ts` now emits only the QV-31 §4.2 allowlist (`ts`, `level`, `event`, `route`, `status`, `dur_bucket`, `code`, `component`, `msg`,
+  `tree_size`; `LOG_ALLOWLIST`), every `ts` is rounded to the minute (the second-precision default is gone), exact `latency_ms` becomes `dur_bucket`, `outcome`
+  becomes `level`, `error_code` becomes `code`, `rate_class` becomes `component`, `note` becomes `msg` only if it is a static token (`[a-z0-9_ ./-]{1,64}`).
+  `request_id`, `method`, `bytes_in`, `election_id`, `seq`, `entry_type` and the per-line counter `n` (and `v`) are no longer written; non-emitted fields are
+  counted in `Logger.droppedFields` (QV-31-REQ-001). Voter-path appends (`ballot`, `ballot_audit`) carry no `tree_size`. The `X-Request-Id` response header is
+  unchanged. Operational cost: logs no longer correlate a request line with a response header or election. Tests: `test/b2-fixes.test.ts` (unit + live lines).
+  **Not changed (owner gate):** the `control` record's free-text `reason` (`records.ts` `reason: str(256)`, copied into the public log). QV-07 §15.2 lists
+  reason codes (`OTHER` "with text") but defines no field layout for the record, and changing it alters the protocol wire format. Decide: enumerated
+  `reason_code` plus optional bounded `reason_text` only for `OTHER`, and whether existing free-text records stay accepted. QV-31-REQ-002 (CI check for new
+  fields) is not implemented.
+* **B2-11 (invite retention, QV-28 §11.1 / REQ-013).** Election DB migration 5 adds `voter_invite.closed_at` (hour-rounded time of registration or revocation;
+  legacy rows are backfilled with `registered_at`, else `created_at`, so they are purged no later than the spec allows). `label_enc` and `contact_enc` are NULLed
+  (`secure_delete` is ON) `inviteRetentionMs` (default 7 d, the QV-28 value; config bound 0..30 d) after the earliest of: invite registered, invite revoked,
+  invite `expires_at` passed while still issued/sent, or `election_open` entry received. Registration still NULLs the contact immediately (stricter than the
+  spec) and keeps the label until the grace ends. Two triggers: lazy purge on `POST/GET/DELETE .../invites` (`purgeInvites` in `app.ts`) and a periodic sweep
+  (`retention.ts`, `retentionSweepMs` default 1 h, 0 disables) that briefly opens each non-imported election DB (no runtime load). Each purge writes an
+  `invite.purge` operator-audit row with a row count only. **Owner decisions:** the 7 d period is QV-28's default and unconfirmed for production; the sweep period is
+  an implementation choice; contacts are still accepted although server-side delivery is unsupported (QV-28/QV-09 allow the optional field; refusing it
+  until delivery exists is the audit's stricter suggestion and would be an API change); `trustee_invite` (not implemented) is untouched; backups made before a
+  purge keep the data until the backup policy (QV-28 §11.1: 12 months) removes them, which is not implemented. Tests: `test/b2-fixes.test.ts`.
