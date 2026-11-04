@@ -330,3 +330,23 @@ The ADRs below resolve cross-spec conflicts found during the 2026-10-21 consiste
 - **Consequences:** Preserve strict app/offline CSP and negative checks. The browser suite covers production app/help/a11y/verifier paths, and the source lockfile/licence checks include the test tooling. Browser checks remain automated evidence, not WCAG, assistive-technology qualification or independent security review. No new action is added; existing actions retain full SHA pins.
 - **Requirements affected:** QV-11 browser/integration coverage, QV-19 build/CSP checks, QV-30 CI and dependency review.
 - **Review trigger:** Browser/Playwright update, licence/advisory change, a missing-browser skip in required CI, or evidence that a different supported browser route is needed.
+
+### QV-ADR-027 — Owner approval of the 2026-11-04 decision register (categories A–D)
+
+- **Status:** Accepted by project owner (2026-11-04).
+- **Context:** AI-assisted triage of the consolidation audit ledger, TODO and current source (`1133dc1`) found 49 open items that needed an owner choice before implementation. Each item, with options, consequences, sources and one recommended default, is recorded in [DECISIONS-2026-11-04](plan/DECISIONS-2026-11-04.md).
+- **Decision:** The owner approved the recommended default for every item in all four categories: **A** verifier and report semantics, **B** protocol and cryptography registry, **C** server, operations and dependency policy, **D** web, trustee and documentation. Where the register lists one recommendation per item, that recommendation is the decision. Spec text, errata and vectors are amended by the implementing commits, which cite this ADR and the item ID.
+- **Alternatives considered:** Approving categories separately; keeping all items blocked until external protocol review.
+- **Consequences:** Implementation may proceed on the approved defaults. Category B changes the QV-16 nonce-label registry once (decryption-nonce statement binding plus hedged PoK/share-key/DH nonces) and regenerates vectors once; existing negative-vector expectations are not weakened. Approval is an owner product/protocol decision, **not** independent cryptographic or security review. QV-ADR-004's review trigger and the external-review gates remain in force. QuietVote remains unaudited and not for real elections.
+- **Requirements affected:** As listed per item in the register (QV-05, QV-09, QV-13, QV-16, QV-18, QV-19, QV-29, QV-31, QV-34, QV-35 and others).
+- **Review trigger:** External protocol/security review contradicts an item; an implementation shows an item cannot be met without a further policy choice (record it as a new ADR rather than choosing silently).
+
+### QV-ADR-028 — Registration wire contract (B3-01): hashed invite and invite-bound PoP
+
+- **Status:** Accepted by project owner (2026-11-04). Supersedes the 2026-10-30 "keep blocked pending protocol review" hold for implementation purposes; external protocol review is still required before any non-experimental claim.
+- **Context:** QV-09 §3.3 and the reference server accepted a raw `invite_code` with a PoP over `(election_id, pk)`. QV-19 §6.1 and QV-04-REQ-005 specify a hashed invite and an invite-bound PoP, and the web client already sends that form. As a result, the actual web registration got `401 BAD_SIGNATURE` and no voter could register end to end.
+- **Decision:** The QV-19/QV-04 contract is normative. The client sends `b64u(SHA-256(token))` and a PoP over `(election_id, SHA-256(token), pk)`. The server stores and compares only the token hash and verifies the invite-bound PoP. QV-09 §3.3 and its schema are amended to match. The exact label and framing are the QV-19 §6.1 bytes as implemented by the web client, written into QV-09 by the implementing commit. Registration after roll commitment stays refused.
+- **Alternatives considered:** QV-09 raw token (smaller change; PoP not bound to the invite); accepting both versions (downgrade surface); keeping it blocked.
+- **Consequences:** Server, QV-09 schema, server tests and any CLI enrolment client change. A successful real web/server registration journey must be added while the committed-roll refusal is retained. The raw token never crosses the wire.
+- **Requirements affected:** QV-04-REQ-005, QV-09 §3.3, QV-19 §6.1 / REQ-010.
+- **Review trigger:** External protocol review; any finding that the hashed form weakens invite secrecy or enables replay.
