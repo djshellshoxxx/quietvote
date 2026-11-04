@@ -284,6 +284,7 @@ export function spoilDecProve(
 
 export function spoilDecVerify(st: SpoilDecStatement, p: CompactProof): boolean {
   return guard(() => {
+    if (isIdentity(st.Yj)) return false; // C8, as in decVerify: a key share is never the identity
     if (!inRange(p.c) || !inRange(p.s)) return false;
     const a = commit(G, st.Yj, p.c, p.s);
     const b = commit(st.alpha, st.M, p.c, p.s);

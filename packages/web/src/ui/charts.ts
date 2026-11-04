@@ -31,7 +31,7 @@ export function renderBarChart(env: ChartEnv, title: string, input: ChartInput):
       svgElement(barSvg(r, env.rtl, prefix)),
       h('span', { class: 'qv-bar-value' }, value));
   });
-  const fig = h('figure', { class: 'qv-chart', role: 'group', 'aria-labelledby': capId }, h('figcaption', { id: capId }, env.t('qv.results.chartLabel', { title })));
+  const fig = h('figure', { class: 'qv-chart', 'aria-labelledby': capId }, h('figcaption', { id: capId }, env.t('qv.results.chartLabel', { title })));
   add(fig, [defs, h('ul', { class: 'qv-bars' }, ...rows)]);
   return fig;
 }

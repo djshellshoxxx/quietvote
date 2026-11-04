@@ -4,7 +4,7 @@ export type Route =
   | { name: 'create' }
   | { name: 'verify' }
   | { name: 'help' }
-  | { name: 'election'; id: string; view: 'overview' | 'rules' | 'key' | 'vote' | 'receipt' | 'results' | 'admin' }
+  | { name: 'election'; id: string; view: 'overview' | 'rules' | 'key' | 'vote' | 'receipt' | 'results' | 'spoils' | 'admin' }
   | { name: 'notfound' };
 
 const ID = /^[a-z2-7]{26}$/;
@@ -17,7 +17,7 @@ export function parseRoute(path: string): Route {
   const m = /^\/e\/([^/]+)(?:\/([a-z]+))?$/.exec(p);
   if (m && ID.test(m[1]!)) {
     const v = m[2] ?? 'overview';
-    if (v === 'overview' || v === 'rules' || v === 'key' || v === 'vote' || v === 'receipt' || v === 'results' || v === 'admin') return { name: 'election', id: m[1]!, view: v };
+    if (v === 'overview' || v === 'rules' || v === 'key' || v === 'vote' || v === 'receipt' || v === 'results' || v === 'spoils' || v === 'admin') return { name: 'election', id: m[1]!, view: v };
   }
   return { name: 'notfound' };
 }

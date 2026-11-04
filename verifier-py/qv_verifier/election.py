@@ -17,6 +17,12 @@ docs/errata/spec-errata-log.md):
     §5.6.3 "pre-key scope"), every later record uses ctx; record_type is ``body.type``.
     The tally signature is a convenience signature and is reported only as a note.
   * Board consistency / witnesses / receipts are ``not_run`` (no STHs in v1 bundles).
+  * A stop makes only the checks that have not run yet ``not_run``; checks already completed
+    (``chk.manifest.sig`` after App. C steps 2-4, ``chk.keys.trustees`` after steps 5-10) keep their
+    result. ``chk.encoding.canonical`` is complete only once the voter envelopes were examined, so a
+    stop before C4 leaves it ``not_run`` unless a record already failed it (QV-35-REQ-003).
+  * A tally record rejected by QV-JSON, the closed schema or ``proto`` is not examined: aggregate,
+    decrypt and rules are ``not_run`` (QV-16 §5.5 item 7, App. C step 1, §5.20 E_SCHEMA class R/L).
 """
 
 from __future__ import annotations
@@ -67,6 +73,7 @@ class Finding:
 class State:
     findings: list[Finding] = field(default_factory=list)
     skipped: set[str] = field(default_factory=set)
+    completed: set[str] = field(default_factory=set)
     notes: list[str] = field(default_factory=list)
 
     def add(self, check: str, code: str, fatal: bool, detail: str = "") -> None:
@@ -74,6 +81,10 @@ class State:
 
     def skip(self, *checks: str) -> None:
         self.skipped.update(checks)
+
+    def complete(self, *checks: str) -> None:
+        """Mark checks whose whole scope has been examined: a later stop leaves their status alone."""
+        self.completed.update(checks)
 
     def failed(self, check: str) -> bool:
         return any(f.check == check for f in self.findings)
@@ -215,7 +226,13 @@ class _Stop(Exception):
 
 
 def _stop(st: State, *checks: str) -> None:
-    st.skip(*checks)
+    """Abort the pipeline; the named checks that have not run yet become ``not_run``.
+
+    A check that already ran to completion keeps its result (``pass``/``fail``): QV-35-REQ-005 and
+    QV-ERR-PY-015 make only the *later* checks ``not_run``, and QV-34 §9.1 has no status for "ran, but
+    is reported as not run".
+    """
+    st.skip(*(c for c in checks if c not in st.completed))
     raise _Stop
 
 
@@ -295,6 +312,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     roll = set(roll_pks)
     roll_root_hex = locals().get("roll_root_hex")
     n_roll = m["roll"].get("size", len(roll_pks))
+    st.complete("chk.manifest.sig")  # coordinator signatures, manifest fields and roll (App. C steps 2-4) are done
 
     # ------------------------------------------------ log structure
     log = bundle.get("log")
@@ -305,6 +323,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     if len(seqs) != len(log) or any(not integer(s) for s in seqs) or seqs != sorted(set(seqs)):
         st.add("chk.board.append_only", "E_LOG_ORDER", True, "sequence numbers not strictly increasing")
     envelopes, records = [], []
+    rejected_tally = False  # a tally record that fails QV-JSON / closed schema / proto is rejected, never examined
     for e in log:
         en = e.get("entry") if isinstance(e, dict) else None
         if not isinstance(en, dict):
@@ -313,17 +332,23 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         if "intent" in en:
             envelopes.append((e["seq"], en))
             continue
+        is_tally = isinstance(en.get("body"), dict) and en["body"].get("type") == "tally"
         try:
             qvjson.check_value(en)
         except QVError as ex:
             st.add("chk.encoding.canonical", ex.code, True, f"seq {e['seq']}: {ex.detail}")
+            rejected_tally |= is_tally
             continue
         if not _record_schema_ok(en):
+            # QV-16 §5.5 item 7 (closed schemas, "eliminating malleability through junk fields"), App. C step 1
+            # ("reject on E_PARSE/E_SCHEMA/E_VERSION") and §5.20 (E_SCHEMA is R/L: not counted): the record is
+            # rejected. A rejected tally is not examined, so its aggregate/decrypt/rules checks are not_run.
             st.add("chk.encoding.canonical", "E_SCHEMA", True, f"seq {e['seq']}: record schema")
-            if not (isinstance(en.get("body"), dict) and en["body"].get("type") == "tally"):
-                continue  # unusable; a tally with junk fields is still examined below
+            rejected_tally |= is_tally
+            continue
         if en["body"].get("proto") != PROTO:
             st.add("chk.encoding.canonical", "E_VERSION", True, f"seq {e['seq']}: proto")
+            rejected_tally |= is_tally
             continue
         records.append((e["seq"], en))
 
@@ -398,6 +423,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     if len(T_set) < t:
         st.add("chk.keys.trustees", "E_DKG_KEYCONF", True, f"|T| = {len(T_set)} < t")
         _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
+    st.complete("chk.keys.trustees")  # App. C steps 5-10 are done
 
     # ------------------------------------------------ C3 window markers
     opens = [(s, en) for s, en in later_markers if en["body"].get("name") == "election-open"]
@@ -532,6 +558,10 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     out["counts"]["counted"] = V
 
     # ------------------------------------------------ C6 tally
+    if not tally_recs and rejected_tally:
+        # The only tally record was rejected above (fatal E_SCHEMA/E_VERSION on chk.encoding.canonical);
+        # there is no admissible tally to aggregate, decrypt or evaluate.
+        _stop(st, "chk.tally.aggregate", "chk.tally.decrypt", "chk.result.rules")
     if len(tally_recs) != 1:
         st.add("chk.tally.aggregate", "E_SCHEMA", True, f"{len(tally_recs)} tally records")
         _stop(st, "chk.tally.decrypt", "chk.result.rules")

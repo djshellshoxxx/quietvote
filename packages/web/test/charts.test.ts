@@ -84,5 +84,5 @@ test('wiring: charts are a lazy chunk, the data table stays as the text alternat
   assert.match(css, /\.qv-track\{fill:none;stroke:var\(--border\)/);
   assert.match(css, /@media print/);
   const dom = readFileSync(new URL('../src/ui/charts.ts', import.meta.url), 'utf8');
-  assert.ok(dom.includes('aria-labelledby') && dom.includes("role: 'group'") && dom.includes("h('ul'"), 'figure group named by its caption, rows as a list');
+  assert.ok(dom.includes('aria-labelledby') && !dom.includes("role: 'group'") && dom.includes("h('ul'"), 'figure named by its caption (no disallowed role=group, B3-32), rows as a list');
 });

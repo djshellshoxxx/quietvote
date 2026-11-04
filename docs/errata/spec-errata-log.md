@@ -44,3 +44,20 @@ Append-only. Each entry records a place where the specification and the referenc
 |---|---|---|---|---|
 | E-001 | docs/16-crypto-protocol.md §5.12.1 (tracking-code display) | Crockford base32 (`0-9A-Z` without `I L O U`), 52 characters. Spec previously called this an "RFC 4648 alphabet variant", which is wrong: it is a separate alphabet. | `packages/protocol/src/logcheck.ts` (`B32`) and `packages/board/src/entry.ts` use the RFC 4648 lowercase alphabet `a-z2-7`, unpadded (log origin derivation). The tracking-code encoder was not checked in this docs pass. Source: part-2-standards-crypto.md S20. | **Open: owner decision needed** (change spec to RFC 4648 lowercase, or change implementation to Crockford). |
 | E-002 | docs/09-api-data-contracts.md (rate-limit headers) | Spec text still names `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`; note added that the current IETF httpapi draft (-11, May 2026, not final) uses `RateLimit-Policy` and `RateLimit`. | `packages/server/src/http.ts` emits the early-draft names. Source: part-2-standards-crypto.md S12. | **Open: owner decision needed** (keep early names, or move to the current draft names once it is final). |
+
+## Second-verifier resolution notes, 2026-11-04
+
+Append-only addendum to the 2026-10-21 rows above, made during the strict differential (`scripts/compare-verifiers.ts`).
+The full reasoning is in [OPEN-DECISIONS](../plan/OPEN-DECISIONS.md) §I.
+
+* **QV-ERR-PY-007, tally part, withdrawn.** The earlier reading "an unknown field in the tally fails only
+  `chk.encoding.canonical`, and the rest of the tally is still verified" is replaced. `unknown-field-in-tally.json` fixes
+  only `failed_checks`, and QV-16 §5.5 item 7, App. C step 1 and §5.20 (`E_SCHEMA` is R/L) reject the record. Python now
+  leaves a rejected tally (closed schema, QV-JSON or `proto`) unexamined: aggregate, decrypt and rules are `not_run`, as in TS.
+* **QV-ERR-PY-006/-015 (stop scope).** Python now applies its recorded choice literally: a stop makes only *later*
+  checks `not_run`. Checks that had already run keep their result (`chk.manifest.sig`, `chk.keys.trustees`).
+  `chk.encoding.canonical` is not `pass` before the voter envelopes were examined, in both verifiers (QV-35-REQ-003).
+  This changed the TS reference: `packages/protocol/src/verify.ts` no longer sets the check to `pass` right after the
+  manifest. No vector changed.
+* **Still open:** stopping after `E_MANIFEST_SIG` (D-92), rules after a published-`T` mismatch (D-93), the `results`
+  member after a failure (D-94), the zero-digest spoil without trustee mode (D-95, PY-01), INCOMPLETE (D-96, PY-02).

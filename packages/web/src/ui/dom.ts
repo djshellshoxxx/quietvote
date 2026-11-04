@@ -22,7 +22,7 @@ export function clear(el: Element): void {
 let uid = 0;
 export const nextId = (p: string): string => `${p}-${++uid}`;
 
-/** One polite and one assertive live region per page (QV-13-REQ-021), messages <= 140 chars. */
+/** One polite and one assertive live region per page (QV-13-REQ-021), callers keep messages short (<= 140 chars, a catalog rule); the text is never cut. */
 export class Announcer {
   private readonly polite: HTMLElement;
   private readonly assertive: HTMLElement;
@@ -33,6 +33,6 @@ export class Announcer {
   say(msg: string, urgent = false): void {
     const r = urgent ? this.assertive : this.polite;
     r.textContent = '';
-    setTimeout(() => (r.textContent = msg.slice(0, 140)), 30);
+    setTimeout(() => (r.textContent = msg), 30);
   }
 }

@@ -195,3 +195,25 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
 * Local validation: `node --test --test-reporter=spec packages/web/test/locale-preference.test.ts packages/web/test/i18n-catalogs.test.ts` (12/12); `npm run typecheck`; `npm test -w @quietvote/web` (180/180); `npm run build -w @quietvote/web` (190.9 KiB total JS gzip, 93.5 KiB entry); i18n check (285 static, 13 resolved dynamic, 0 unresolved, 1 translator forwarder, 1 explicit restricted `verifyView` exclusion); browser command `QV_PLAYWRIGHT_MODULE_ROOT=/tmp/qv-playwright/node_modules QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/pseudo-locale-visual-ci.mjs` passed all eight locale/page/viewport combinations. Action pins and `git diff --check` passed.
 * Earlier red checks were resolved: the first package suite found `packages/web/COPY.md` missing the new catalog entry, then the generated copy inventory was updated; the first browser bundle attempt used IIFE output with top-level `await`, then was changed to an ES module. No failed assertion was weakened.
 * Limits: GitHub has not run the new workflow; this is a local UI fixture smoke test, not a screenshot-baseline regression or full app-flow test. No server/API/election, human translation, RTL/AT acceptance, security review, WCAG conformance, Pages deployment or real-vote readiness is established.
+
+## B3 web UI audit fixes (B3-18, B3-23, B3-32)
+
+* **B3-18 live regions:** the shell owns the only two live regions (`#live-polite` role=status, `#live-urgent` role=alert). Local
+  status/alert nodes, `errorBox` and the Home error line no longer carry live roles; their text stays visible and is routed through
+  the `Announcer`. `Announcer` no longer slices to 140 characters. QV-13-REQ-021's 140-char limit is met by catalog copy instead:
+  the Election ID mismatch announces the short `qv.phish.announce` while the full normative `qv.phish.mismatch` stays on screen.
+  The five locale tables carry machine-drafted text for the two new keys (unreviewed; locales remain unoffered).
+* **B3-23 invitation links:** after publish, each invitation is shown as a complete link `<origin>/e/<id>#inv=<token>` (the format
+  `flow/invite.ts` `parseFragment` accepts) with a per-row Copy button (`ui/invites.ts`). Copy uses `navigator.clipboard`; if it is
+  unavailable or rejects, the link text is selected and the failure is announced. The token is the one the server already issued and
+  the page already showed once; no new exposure. A malformed code is shown unchanged.
+* **B3-32:** the experimental/demo notices are inside `<header>` (`ui/shell.ts`); chart `<figure>` no longer has `role=group` (it is
+  labelled by its `figcaption`).
+* Unit coverage: `test/audit3-ui.test.ts` (fake DOM). Browser/axe-style confirmation is the e2e runs recorded by the integrator.
+
+## B3-26: standalone verifier Worker reverted (2026-11-04)
+
+* A blob: Worker version of the offline verifier was merged and then reverted: QV-ADR-027 approved B3-26 option A (cooperative
+  yielding with progress on the main thread, closed offline verifier CSP kept, no Worker). Option A needs a progress/yield hook in
+  `@quietvote/protocol` `verifyElection` (owned by the #26 integration line); the page wiring follows once that hook lands.
+  B3-26 is therefore open again; the verifier CSP is unchanged (no worker-src).

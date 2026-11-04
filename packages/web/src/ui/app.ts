@@ -31,8 +31,11 @@ import { LockTimer } from '../key/lock.ts';
 import { ballotCodeDisplay, electionIdOf, sameElectionId, spokenForm } from '../util/crockford.ts';
 import { b64uDecode, b64uEncode } from '../util/hex.ts';
 import { Announcer, add, clear, h, nextId, type Child } from './dom.ts';
+import { inviteRows } from './invites.ts';
+import { buildHeader } from './shell.ts';
 import { electionPath, parseRoute, type Route } from './route.ts';
 import { isCurrentPage, shouldHandleNavigation } from './navigation.ts';
+import { spoilSharesPanel } from './spoil-shares.ts';
 
 export interface AppEnv {
   root: HTMLElement;
@@ -70,7 +73,7 @@ export function startApp(env: AppEnv): void {
   document.documentElement.lang = locale;
   document.documentElement.dir = tr.dir;
 
-  const polite = h('div', { id: 'live-polite', role: 'status', 'aria-live': 'polite', class: 'sr-only' });
+  const polite = h('div', { id: 'live-polite', role: 'status', class: 'sr-only' });
   const urgent = h('div', { id: 'live-urgent', role: 'alert', class: 'sr-only' });
   const say = new Announcer(polite, urgent);
   const main = h('main', { id: 'main', tabindex: -1 });
@@ -159,13 +162,25 @@ export function startApp(env: AppEnv): void {
     btn(t('qv.shell.copy'), () => {
       navigator.clipboard.writeText(text).then(() => say.say(t('qv.shell.copied')), () => say.say(t('qv.shell.copyFailed'), true));
     });
+  const copyText = (text: string, field: HTMLElement): void => {
+    const fallback = (): void => {
+      const sel = getSelection();
+      if (sel) { const r = document.createRange(); r.selectNodeContents(field); sel.removeAllRanges(); sel.addRange(r); }
+      say.say(t('qv.shell.copyFailed'), true);
+    };
+    if (!navigator.clipboard?.writeText) return fallback();
+    navigator.clipboard.writeText(text).then(() => say.say(t('qv.shell.copied')), fallback);
+  };
+  const inviteEnv = { origin: location.origin, copyLabel: (n: number): string => t('qv.org.inviteCopy', { n }), copy: copyText };
   const errorBox = (ux: string, extra: Args = {}, ref?: string): HTMLElement => {
     const k = (s: string): MessageKey => `qv.err.${ux}.${s}` as MessageKey;
-    const box = h('div', { class: 'error', role: 'alert' });
+    const box = h('div', { class: 'error' });
     try {
       add(box, [h('h2', {}, t(k('title'), extra)), h('p', {}, t(k('body'), extra))]);
+      say.say(t(k('title'), extra), true); // the one assertive region announces it; the box itself is not a live region (QV-13-REQ-021)
     } catch {
       add(box, [h('h2', {}, t('qv.err.E-GEN-UNKNOWN.title')), h('p', {}, t('qv.err.E-GEN-UNKNOWN.body'))]);
+      say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
     }
     if (ref) box.append(h('p', { class: 'hint' }, t('qv.err.reference', { code: ux, request: ref })));
     return box;
@@ -300,7 +315,7 @@ export function startApp(env: AppEnv): void {
   // ---------------------------------------------------------------- views
   function home(): void {
     const input = h('input', { type: 'text', autocomplete: 'off', spellcheck: false });
-    const err = h('p', { class: 'hint', role: 'alert' });
+    const err = h('p', { class: 'hint' });
     render(t('qv.nav.home'), heading(t('qv.home.title')), h('p', {}, t('qv.home.intro')),
       h('section', { 'aria-labelledby': 'how-h' }, h('h2', { id: 'how-h' }, t('qv.how.title')), h('ol', {}, h('li', {}, t('qv.how.s1')), h('li', {}, t('qv.how.s2')), h('li', {}, t('qv.how.s3')))), h('p', {}, t('qv.home.haveLink')),
       field(t('qv.home.openId'), input, t('qv.home.openIdHint')), err,
@@ -312,6 +327,7 @@ export function startApp(env: AppEnv): void {
           go(u.pathname + u.hash);
         } catch {
           err.textContent = t('qv.home.badLink');
+          say.say(t('qv.home.badLink'), true);
         }
       }, { primary: true }));
   }
@@ -357,7 +373,7 @@ export function startApp(env: AppEnv): void {
     const frag = parseFragment(location.hash);
     const L = await load(r.id, frag.readKey);
     if (!currentRoute(epoch)) return;
-    if (r.view === 'vote' && L.ctx !== undefined) {
+    if ((r.view === 'vote' || r.view === 'spoils') && L.ctx !== undefined) {
       const page = await L.api.allEntries(r.id);
       if (!currentRoute(epoch)) return;
       const records = page.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) }));
@@ -368,8 +384,8 @@ export function startApp(env: AppEnv): void {
     }
     startLive(L);
     const sub = r.view;
-    const tabs = h('ul', { class: 'tabs' }, ...(['overview', 'rules', 'key', 'vote', 'receipt', 'results'] as const).map((v) =>
-      h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results' } as const)[v]), '', r))));
+    const tabs = h('ul', { class: 'tabs' }, ...([...(['overview', 'rules', 'key', 'vote', 'receipt', 'results'] as const), ...(L.ctx?.manifest.spoil_trustee_decrypt === true ? (['spoils'] as const) : [])]).map((v) =>
+      h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results', spoils: 'qv.spoil.title' } as const)[v]), '', r))));
     const head = [electionHeader(L), tabs, liveLine];
     if (L.ctx === undefined) return render(t('qv.shell.electionTitle'), ...head, errorBox('E-ORG-MANIFEST', { detail: L.ctxError ?? '' }));
     const ctx = L.ctx;
@@ -379,7 +395,7 @@ export function startApp(env: AppEnv): void {
       const fmt = (iso: string): string => { const d = formatDeadline(iso, Intl.DateTimeFormat().resolvedOptions().timeZone, Intl.DateTimeFormat().resolvedOptions().timeZone, locale); return d.electionTime; };
       const typed = h('input', { type: 'text', autocomplete: 'off', spellcheck: false });
       const confirmed = settings.confirmed[ctx.manifestHashHex] === true;
-      const msg = h('div', { role: 'status' });
+      const msg = h('div', {});
       const setC = async (v: boolean): Promise<void> => { await env.storage.putSettings({ ...settings, confirmed: { ...settings.confirmed, [ctx.manifestHashHex]: v } }); };
       return render(t('qv.nav.home'), ...head, stepper(1), heading(ctx.manifest.title), h('p', {}, t('qv.election.invited')),
         h('p', {}, t('qv.election.opens', { when: fmt(ctx.manifest.voting_open) })), h('p', {}, t('qv.election.closes', { when: fmt(ctx.manifest.voting_close) })),
@@ -389,10 +405,10 @@ export function startApp(env: AppEnv): void {
           h('div', { class: 'row' },
             btn(t('qv.election.v1.match'), async () => {
               const v = (typed as HTMLInputElement).value.trim();
-              if (v !== '' && !sameElectionId(v, electionIdOf(hexToBytes(ctx.manifestHashHex, 32)))) { clear(msg); msg.append(h('p', { class: 'error' }, t('qv.phish.mismatch'))); say.say(t('qv.phish.mismatch'), true); return; }
+              if (v !== '' && !sameElectionId(v, electionIdOf(hexToBytes(ctx.manifestHashHex, 32)))) { clear(msg); msg.append(h('p', { class: 'error' }, t('qv.phish.mismatch'))); say.say(t('qv.phish.announce'), true); return; }
               await setC(true); go(location.pathname + location.hash);
             }, { primary: true }),
-            btn(t('qv.election.v1.mismatch'), () => { clear(msg); msg.append(h('p', { class: 'error' }, t('qv.phish.mismatch'))); say.say(t('qv.phish.mismatch'), true); }),
+            btn(t('qv.election.v1.mismatch'), () => { clear(msg); msg.append(h('p', { class: 'error' }, t('qv.phish.mismatch'))); say.say(t('qv.phish.announce'), true); }),
             btn(t('qv.election.v1.none'), () => go(electionPath(r.id, 'rules') + location.hash))), msg),
         h('p', {}, link(electionPath(r.id, 'rules') + location.hash, t('qv.nav.rules'))));
     }
@@ -401,6 +417,7 @@ export function startApp(env: AppEnv): void {
     if (sub === 'vote') return voteView(L, ctx, head);
     if (sub === 'receipt') return await receiptView(L, ctx, head, epoch);
     if (sub === 'results') return await resultsView(L, ctx, head, epoch);
+    if (sub === 'spoils') return render(t('qv.spoil.title'), ...head, spoilSharesPanel({ tr, say, api: L.api, apiId: L.apiId, ctx, records: () => L.records, roll: () => fullRoll(L), current: () => currentRoute(epoch) }));
     return render(t('qv.shell.adminTitle'), ...head, heading(t('qv.nav.admin')), h('p', {}, t('qv.org.nopeek')), h('p', {}, t('qv.org.export')));
   }
 
@@ -420,7 +437,7 @@ export function startApp(env: AppEnv): void {
 
   function keyView(L: Loaded, ctx: ElectionContext, head: Child[], token: Uint8Array | undefined): void {
     const slot = keySlot(L.apiId);
-    const status = h('div', { role: 'status', class: 'hint' });
+    const status = h('div', { class: 'hint' });
     const out = h('div', {});
     const backups = h('div', {});
     const recovery = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
@@ -548,7 +565,7 @@ export function startApp(env: AppEnv): void {
           h('tbody', {}, ...ctx.manifest.contests.map((c) => h('tr', {}, h('th', { scope: 'row' }, c.title), h('td', {}, (s.selections[c.id] ?? []).map((id) => c.options.find((o) => o.id === id)?.label ?? id).join(', ') || t('qv.ballot.noChoice'))))));
         tbl.setAttribute('translate', 'no');
         add(area, [h('p', {}, t('qv.ballot.reviewPrivate')), tbl, h('div', { class: 'row' }, btn(t('qv.shell.back'), () => { ctl.edit(); draw(); }), btn(t('qv.ballot.seal'), async () => { const p = ctl.seal(); draw(); await p; draw(); }, { primary: true })), h('p', { class: 'hint' }, t('qv.ballot.sealHelp'))]);
-      } else if (s.kind === 'sealing') add(area, [h('p', { role: 'status' }, t('qv.ballot.sealing')), h('progress', { 'aria-label': t('qv.a11y.working') })]);
+      } else if (s.kind === 'sealing') add(area, [h('p', {}, t('qv.ballot.sealing')), h('progress', { 'aria-label': t('qv.a11y.working') })]);
       else if (s.kind === 'sealed') {
         const disp = ctl.codeDisplay ?? '';
         const castB = btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true, disabled: !canCast(s), id: 'cast-btn' });
@@ -563,7 +580,7 @@ export function startApp(env: AppEnv): void {
           h('label', {}, h('input', { type: 'checkbox', id: 'rev-chk' }), ' ', t('qv.audit.publishReveal'))]);
         // The code is in the DOM now; only then do the buttons become usable (REQ-011).
         queueMicrotask(() => { ctl.codeRendered(); (castB as HTMLButtonElement).disabled = false; (testB as HTMLButtonElement).disabled = false; say.say(t('qv.ballot.sealedAnnounce')); (castB as HTMLElement).focus(); });
-      } else if (s.kind === 'casting' || s.kind === 'auditing') add(area, [h('p', { role: 'status' }, s.kind === 'casting' ? t('qv.ballot.casting') : t('qv.ballot.testing')), h('progress', { 'aria-label': t('qv.a11y.working') })]);
+      } else if (s.kind === 'casting' || s.kind === 'auditing') add(area, [h('p', {}, s.kind === 'casting' ? t('qv.ballot.casting') : t('qv.ballot.testing')), h('progress', { 'aria-label': t('qv.a11y.working') })]);
       else if (s.kind === 'audited') {
         const a = ctl.lastAudit;
         add(area, [h('h2', { tabindex: -1, class: 'step-heading' }, t('qv.audit.title')), h('p', {}, t('qv.audit.why')), h('h3', {}, t('qv.audit.autoChecks')), h('ul', {}, ...(a?.result.checks ?? []).map((c) => h('li', {}, `${t(({ context: 'qv.audit.check.code', code: 'qv.audit.check.code', proofs: 'qv.audit.check.proofs', plaintext: 'qv.audit.check.plain' } as const)[c.id])}: ${c.ok ? t('qv.verify.status.pass') : t('qv.verify.status.fail')}`))),
@@ -594,7 +611,7 @@ export function startApp(env: AppEnv): void {
   async function receiptView(L: Loaded, ctx: ElectionContext, head: Child[], epoch: number): Promise<void> {
     const stored = await env.storage.getReceipts(L.apiId);
     if (!currentRoute(epoch)) return;
-    const out = h('div', { role: 'status' });
+    const out = h('div', {});
     const check = async (seq: number, leafB64u: string): Promise<void> => {
       try {
         const leaf = b64uDecode(leafB64u);
@@ -750,7 +767,7 @@ export function startApp(env: AppEnv): void {
   }
 
   async function createView(epoch: number): Promise<void> {
-    const out = h('div', { role: 'status' });
+    const out = h('div', {});
     const title = h('input', { type: 'text' }) as HTMLInputElement;
     const tpl = h('select', {}, ...TEMPLATES.map((x) => h('option', { value: x }, t(`qv.org.tpl.${x}` as MessageKey)))) as HTMLSelectElement;
     const q = h('input', { type: 'text' }) as HTMLInputElement;
@@ -770,7 +787,7 @@ export function startApp(env: AppEnv): void {
     const publishSection = (): HTMLElement => {
       const orgIn = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
       const pw = h('input', { type: 'password', autocomplete: 'current-password', spellcheck: false, autocapitalize: 'off', autocorrect: 'off' }) as HTMLInputElement;
-      const pubOut = h('div', { role: 'status' });
+      const pubOut = h('div', {});
       const pubBtn = btn(t('qv.org.publish'), async () => {
         const prep = prepared;
         if (!prep) return;
@@ -788,7 +805,7 @@ export function startApp(env: AppEnv): void {
         if (o.kind === 'published') {
           pubState = o.state;
           add(pubOut, [h('p', {}, t('qv.org.published', { id: o.electionId })), h('h2', {}, t('qv.org.inviteList')), h('p', {}, t('qv.org.publishInvites')),
-            h('ul', {}, ...o.invites.map((i) => h('li', {}, codeEl(i.code ?? ''))))]);
+            inviteRows(inviteEnv, o.electionId, o.invites)]);
           say.say(t('qv.org.published', { id: o.electionId }));
           return;
         }
@@ -816,7 +833,7 @@ export function startApp(env: AppEnv): void {
         prepared = undefined;
         pubState = undefined;
         const roll = parseRoll(rollT.value);
-        if (roll.errors.length) return void add(out, [h('ul', { role: 'alert' }, ...roll.errors.map((e) => h('li', {}, t('qv.org.rollRow', { row: e.row, problem: t(e.problem === 'dup' ? 'qv.org.rollDup' : e.problem === 'badHex' ? 'qv.org.rollBadHex' : 'qv.org.rollBadKey') }))))]);
+        if (roll.errors.length) return void add(out, [h('ul', {}, ...roll.errors.map((e) => h('li', {}, t('qv.org.rollRow', { row: e.row, problem: t(e.problem === 'dup' ? 'qv.org.rollDup' : e.problem === 'badHex' ? 'qv.org.rollBadHex' : 'qv.org.rollBadKey') }))))]);
         const tl = trustees.value.split(/\r?\n/).filter(Boolean).map((l) => { const [n, k] = l.split(','); return { name: (n ?? '').trim(), signPkHex: (k ?? '').trim().toLowerCase() }; });
         const opensIso = isoUtc(opens.value);
         const closesIso = isoUtc(closes.value);
@@ -853,10 +870,10 @@ export function startApp(env: AppEnv): void {
     ...availableLocales.map((l) => h('option', { value: l.tag }, l.autonym)));
   (languageSelect as HTMLSelectElement).value = locale;
   const languagePicker = availableLocales.length > 1 ? h('p', { class: 'language-picker' }, h('label', {}, t('qv.shell.language'), ' ', languageSelect)) : null;
-  const header = h('header', {}, h('p', { class: 'brand' }, t('qv.app.name')), nav, languagePicker);
+  const header = buildHeader([t('qv.banner.experimental'), t('qv.banner.demo')], h('p', { class: 'brand' }, t('qv.app.name')), nav, languagePicker);
   const footer = h('footer', {}, h('p', {}, t('qv.shell.footer.build', { version: env.build.version, build: env.build.id })), h('p', {}, h('a', { href: '/verify' }, t('qv.shell.footer.verifyPage')), ' · ', h('a', { href: 'https://github.com/djshellshoxxx/quietvote' }, t('qv.shell.footer.source')), ' · ', h('a', { href: 'https://djshellshoxxx.github.io/circuitdriftlabs/' }, t('qv.shell.footer.cdlCredit'))));
   clear(env.root);
-  add(env.root, [skip, h('p', { class: 'banner', role: 'note' }, t('qv.banner.experimental')), h('p', { class: 'banner', role: 'note' }, t('qv.banner.demo')), header, lockNotice, main, footer, polite, urgent,
+  add(env.root, [skip, header, lockNotice, main, footer, polite, urgent,
     h('noscript', {}, t('qv.shell.noscript'))]);
   void route();
   void b64uEncode;

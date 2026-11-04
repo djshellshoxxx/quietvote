@@ -31,11 +31,29 @@ export function compileCatalog(messages: MessageTable): Readonly<Record<string, 
   return Object.fromEntries(Object.entries(messages).map(([key, source]) => [key, parse(source)]));
 }
 
+/** Compact encoding read by compiled-runtime expand(): text -> string; arg 0; num 1; date 2; list 3; hash 4; plural 5; select 6. */
+type Compact = string | readonly unknown[];
+function compact(nodes: readonly Node[]): Compact[] {
+  const cases = (c: Record<string, Node[]>): Record<string, Compact[]> => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, compact(v)]));
+  return nodes.map((n): Compact => {
+    switch (n.k) {
+      case 'text': return n.v;
+      case 'arg': return [0, n.name];
+      case 'num': return [1, n.name, n.style];
+      case 'date': return [2, n.name, n.kind, n.style];
+      case 'list': return [3, n.name];
+      case 'hash': return [4];
+      case 'plural': return [5, n.name, n.ordinal ? 1 : 0, n.offset, cases(n.cases)];
+      case 'select': return [6, n.name, cases(n.cases)];
+    }
+  });
+}
+
 function registration(tableName: string, messages: MessageTable): string {
   const asts = compileCatalog(messages);
   const formatters = Object.entries(asts)
     .filter(([key, ast]) => !(ast.length === 1 && ast[0]?.k === 'text' && ast[0].v === messages[key]))
-    .map(([key, ast]) => `${JSON.stringify(key)}: compiledFormatter(${JSON.stringify(ast)})`)
+    .map(([key, ast]) => `${JSON.stringify(key)}: compactFormatter(${JSON.stringify(compact(ast))})`)
     .join(',');
   // The source catalog has already been parsed here. Omitted entries are exact one-node text literals.
   return `registerCompiledMessages(${tableName}, {${formatters}}, true);`;
@@ -66,7 +84,7 @@ async function sourceModule(): Promise<string> {
   const reg = registration('EN', messages);
   return `
 import type { Args } from './icu.ts';
-import { compiledFormatter, formatCompiled, registerCompiledMessages } from './compiled-runtime.ts';
+import { compactFormatter, formatCompiled, registerCompiledMessages } from './compiled-runtime.ts';
 import { EN, MESSAGE_KEYS, type MessageKey } from './en.ts';
 import { SOURCE_ONLY, dirOf, type LocaleDef } from './locales-core.ts';
 export { EN, MESSAGE_KEYS, type MessageKey } from './en.ts';
@@ -111,6 +129,24 @@ export function precompileI18nPlugin(): Plugin {
         loader: 'ts',
         resolveDir: i18nDir,
       }));
+      // Translator notes (`description`) are tooling metadata read by the lint/extract scripts only; the shipped client needs just
+      // `message` and `sensitivity` (+ `maxLength`, unused at runtime). Emit the table without them.
+      build.onLoad({ filter: /[\\/]i18n[\\/]en\.ts$/ }, async (args) => {
+        const source = await readFile(args.path, 'utf8');
+        const raw = (await loadModule(args.path, source)).EN as Record<string, { message: string; sensitivity: string }>;
+        const rows = Object.entries(raw).map(([k, v]) => `${JSON.stringify(k)}: ${v.sensitivity === 'guarantee' ? 'g' : 'n'}(${JSON.stringify(v.message)})`).join(',\n');
+        return {
+          contents: `export type Sensitivity = 'guarantee' | 'normal';
+export interface CatalogEntry { message: string; sensitivity: Sensitivity }
+const g = (message: string): CatalogEntry => ({ message, sensitivity: 'guarantee' });
+const n = (message: string): CatalogEntry => ({ message, sensitivity: 'normal' });
+export const EN = {\n${rows}\n} as const satisfies Record<string, CatalogEntry>;
+export type MessageKey = string;
+export const MESSAGE_KEYS = Object.keys(EN) as MessageKey[];
+`,
+          loader: 'ts',
+        };
+      });
       build.onLoad({ filter: /[\\/]i18n[\\/]catalogs[\\/](?:es|fr|de|pt-BR|ar)\.ts$/ }, async (args) => {
         const normalizedPath = args.path.replace(/\\/g, '/');
         const name = /\/catalogs\/([^/]+)\.ts$/.exec(normalizedPath)?.[1] as typeof catalogNames[number] | undefined;
@@ -120,7 +156,7 @@ export function precompileI18nPlugin(): Plugin {
         const tableName = catalogExports[name];
         const messages = stringTable(mod[tableName], tableName);
         return {
-          contents: `${source}\nimport { compiledFormatter, registerCompiledMessages } from '../compiled-runtime.ts';\n${registration(tableName, messages)}\n`,
+          contents: `${source}\nimport { compactFormatter, registerCompiledMessages } from '../compiled-runtime.ts';\n${registration(tableName, messages)}\n`,
           loader: 'ts',
           resolveDir: dirname(args.path),
         };
