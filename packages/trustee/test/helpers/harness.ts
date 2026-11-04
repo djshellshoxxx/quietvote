@@ -88,7 +88,8 @@ export class Ceremony {
 
   constructor(o: Options) {
     this.o = o;
-    this.dir = realpathSync(mkdtempSync(join(tmpdir(), 'qvt-')));
+    // .native: same canonical form as production realpath, incl. Windows 8.3 short-name expansion.
+    this.dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'qvt-')));
     this.coord = kp(o.seed, 'coord');
     this.logKey = kp(o.seed, 'log');
     this.witnessKeys = [kp(o.seed, 'w1'), kp(o.seed, 'w2'), kp(o.seed, 'w3')];

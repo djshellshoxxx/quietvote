@@ -8,7 +8,8 @@ import { writeBundle } from '../src/bundle.ts';
 import { atomicWrite, shred } from '../src/fsutil.ts';
 import { mkDeps, PASS } from './helpers/harness.ts';
 
-const temp = (): string => realpathSync(mkdtempSync(join(tmpdir(), 'qv-custody-')));
+// .native matches production fs/promises.realpath: it also expands Windows 8.3 short names (RUNNER~1), which the JS realpathSync keeps.
+const temp = (): string => realpathSync.native(mkdtempSync(join(tmpdir(), 'qv-custody-')));
 
 test('B2-08: relative backups stay anchored across cwd changes and parent symlink retargeting', async () => {
   const originalCwd = process.cwd();
