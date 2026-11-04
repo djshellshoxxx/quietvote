@@ -8,6 +8,7 @@ export const FR = {
   'qv.shell.skip': 'Aller au contenu principal',
   'qv.shell.nav': 'Principal',
   'qv.shell.language': 'Langue',
+  'qv.locale.saveFailed': 'Impossible d’enregistrer la préférence de langue sur cet appareil.',
   'qv.shell.privacyLink': 'Confidentialité et limites',
   'qv.shell.helpLink': 'Aide et accessibilité',
   'qv.shell.electionId': 'Identifiant du scrutin',

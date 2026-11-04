@@ -19,6 +19,8 @@ export interface PinnedHead {
 export interface DeviceSettings {
   rememberReceipts: boolean;
   sharedDevice: boolean;
+  /** BCP 47 UI language preference; absent means use browser negotiation. */
+  language?: string;
   /** Per-election "Election ID confirmed" state (UX V1). */
   confirmed: Record<string, boolean>;
   /** Per-election "rules acknowledged" state (UX V2). */

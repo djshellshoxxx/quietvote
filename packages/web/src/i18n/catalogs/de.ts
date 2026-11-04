@@ -8,6 +8,7 @@ export const DE = {
   'qv.shell.skip': 'Zum Hauptinhalt springen',
   'qv.shell.nav': 'Hauptmenü',
   'qv.shell.language': 'Sprache',
+  'qv.locale.saveFailed': 'Die Spracheinstellung konnte auf diesem Gerät nicht gespeichert werden.',
   'qv.shell.privacyLink': 'Datenschutz und Grenzen',
   'qv.shell.helpLink': 'Hilfe und Barrierefreiheit',
   'qv.shell.electionId': 'Wahl-ID',

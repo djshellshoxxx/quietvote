@@ -16,6 +16,7 @@ export const EN = {
   'qv.shell.skip': n('Skip to main content', 'Skip link, first focusable element.'),
   'qv.shell.nav': n('Main', 'Accessible name of the main navigation.'),
   'qv.shell.language': n('Language', 'Label of the language switcher.'),
+  'qv.locale.saveFailed': n('Could not save your language preference on this device.', 'Live-region error shown if saving the selected UI language fails.'),
   'qv.shell.privacyLink': n('Privacy and limits', 'Link to the guarantee panel.'),
   'qv.shell.helpLink': n('Help and accessibility', 'Help link, same place on every page (WCAG 3.2.6).'),
   'qv.shell.electionId': n('Election ID', 'Label for the short fingerprint of an election.'),

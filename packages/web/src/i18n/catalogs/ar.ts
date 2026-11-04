@@ -9,6 +9,7 @@ export const AR = {
   'qv.shell.skip': 'الانتقال إلى المحتوى الرئيسي',
   'qv.shell.nav': 'الرئيسية',
   'qv.shell.language': 'اللغة',
+  'qv.locale.saveFailed': 'تعذّر حفظ تفضيل اللغة على هذا الجهاز.',
   'qv.shell.privacyLink': 'الخصوصية والحدود',
   'qv.shell.helpLink': 'المساعدة وإمكانية الوصول',
   'qv.shell.electionId': 'معرّف الاقتراع',
