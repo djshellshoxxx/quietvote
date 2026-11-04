@@ -2,6 +2,7 @@
 // B2-16 (QV-31 log allowlist and minute rounding) and B2-11 (QV-28 §11.1 invite data retention).
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { performance } from 'node:perf_hooks';
 import { b64u } from '@quietvote/board';
 import { bytesToHex, ed25519Sign, utf8 } from '@quietvote/crypto';
 import { parseQvJson } from '@quietvote/crypto';
