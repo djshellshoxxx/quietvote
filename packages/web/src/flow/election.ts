@@ -1,10 +1,10 @@
 // Deriving the election context (manifest, joint key K, ctx, phase) from the public log, the way a verifier does
 // (QV-16 App. C steps 1-6). The client never trusts server-provided K: it re-runs the DKG adjudication itself.
-import { bytesToHex, hexToBytes, pointToBytes } from '@quietvote/crypto';
+import { bytesToHex, hexToBytes, pointToBytes, type Point } from '@quietvote/crypto';
 import { b64uDecode } from '../util/hex.ts';
 import {
-  adjudicateDkg, logOrigin, manifestHash, rollRoot, validateManifest, verifyMultiSig, verifySig,
-  type CommitBody, type ComplaintBody, type DealingBody, type ElectionParams, type ErrorCode, type Manifest, type MarkerBody,
+  S, adjudicateDkg, check, logOrigin, manifestHash, rollRoot, validateManifest, verifyKeyconf, verifyMultiSig, verifySig,
+  type CommitBody, type ComplaintBody, type DealingBody, type ElectionParams, type ErrorCode, type KeyconfBody, type Manifest, type MarkerBody,
   type MarkerSeqs, type MultiSignedRecord, type RollCommitBody, type SharesBody, type SignedRecord, type TallyBody,
 } from '@quietvote/protocol';
 
@@ -24,6 +24,9 @@ export interface ElectionContext {
   rollRootHex: string | undefined;
   tally?: TallyBody;
   tallySeq?: number;
+  /** Trustee share public keys Y_j from the re-run DKG, and the trustees whose key confirmation verified (QV-ADR-020 spoil shares). */
+  shareKeys: ReadonlyMap<number, Point>;
+  decrypters: ReadonlySet<number>;
 }
 
 export type ContextResult = { ok: true; value: ElectionContext } | { ok: false; error: ErrorCode | 'E_NO_DKG'; detail: string };
@@ -61,6 +64,7 @@ export async function deriveElectionContext(entries: readonly Rec[], expectManif
   const dealings: { seq: number; body: DealingBody }[] = [];
   const shares: { seq: number; body: SharesBody }[] = [];
   const complaints: { seq: number; body: ComplaintBody }[] = [];
+  const keyconfs: { seq: number; body: KeyconfBody }[] = [];
   let finalMarker: MarkerBody | undefined;
   const tallies: { seq: number; rec: SignedRecord<TallyBody> }[] = [];
   for (const { seq, record } of entries) {
@@ -98,6 +102,11 @@ export async function deriveElectionContext(entries: readonly Rec[], expectManif
         if (r.body.accuser <= m.n && r.sig && verifySig(mh, r.body.type, r.body, r.sig, trusteeKey(r.body.accuser))) complaints.push({ seq, body: r.body });
         break;
       }
+      case 'dkg-keyconf': {
+        const r = record as SignedRecord<KeyconfBody>;
+        if (check(S.signed(S.dkgKeyconf), record) === null && r.body.j <= m.n && r.sig && verifySig(mh, r.body.type, r.body, r.sig, trusteeKey(r.body.j))) keyconfs.push({ seq, body: r.body });
+        break;
+      }
       case 'tally':
         tallies.push({ seq, rec: record as SignedRecord<TallyBody> });
         break;
@@ -122,6 +131,12 @@ export async function deriveElectionContext(entries: readonly Rec[], expectManif
   if (finalMarker?.qmask !== undefined && (finalMarker.qmask !== dkg.qmask || finalMarker.K !== H(pointToBytes(dkg.K)))) {
     return { ok: false, error: 'E_DKG_FINAL', detail: 'the coordinator\'s joint key differs from the recomputed one' };
   }
+  const decrypters = new Set<number>();
+  for (const k of keyconfs) {
+    const Yj = dkg.Y.get(k.body.j);
+    if (!(k.seq > mk['dkg-r3-close'] && k.seq < mk['dkg-final']) || Yj === undefined || decrypters.has(k.body.j)) continue;
+    if (verifyKeyconf(dkg.ctx, Yj, k.body)) decrypters.add(k.body.j);
+  }
   const params: ElectionParams = { manifest: m, mh, K: dkg.K, ctx: dkg.ctx };
   let openSeq: number | undefined;
   let closeSeq: number | undefined;
@@ -140,6 +155,7 @@ export async function deriveElectionContext(entries: readonly Rec[], expectManif
   const phase: Phase = tally ? 'tallied' : closeSeq !== undefined ? 'closed' : openSeq !== undefined ? 'open' : 'ready';
   const ctx: ElectionContext = {
     params, manifest: m, manifestHashHex: H(mh), warnings: mv.value.warnings, phase, rollSize, rollRootHex: rr ?? rcs[0]?.body.root,
+    shareKeys: dkg.Y, decrypters,
   };
   if (openSeq !== undefined) ctx.openSeq = openSeq;
   if (closeSeq !== undefined) ctx.closeSeq = closeSeq;

@@ -113,3 +113,19 @@ export interface VoterStatus {
   first_seq?: number;
   latest_seq?: number;
 }
+
+/** GET /elections/:id/spoil-shares (no `code`): which trustees have posted for which ballot code (QV-ADR-020). */
+export interface SpoilShareIndex {
+  items: { code: string; trustees: number[] }[];
+}
+/** GET /elections/:id/spoil-shares?code=: the stored trustee-signed records. The records are untrusted until verified locally. */
+export interface SpoilShareList {
+  code: string;
+  items: { j: number; spoil_seq: number; record: unknown }[];
+}
+/** POST /elections/:id/spoil-shares: 201 `accepted`, 200 `duplicate` (byte-identical replay). */
+export interface SpoilSharePosted {
+  status: 'accepted' | 'duplicate';
+  j: number;
+  code: string;
+}

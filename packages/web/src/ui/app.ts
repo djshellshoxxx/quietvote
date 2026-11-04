@@ -33,6 +33,7 @@ import { b64uDecode, b64uEncode } from '../util/hex.ts';
 import { Announcer, add, clear, h, nextId, type Child } from './dom.ts';
 import { electionPath, parseRoute, type Route } from './route.ts';
 import { isCurrentPage, shouldHandleNavigation } from './navigation.ts';
+import { spoilSharesPanel } from './spoil-shares.ts';
 
 export interface AppEnv {
   root: HTMLElement;
@@ -357,7 +358,7 @@ export function startApp(env: AppEnv): void {
     const frag = parseFragment(location.hash);
     const L = await load(r.id, frag.readKey);
     if (!currentRoute(epoch)) return;
-    if (r.view === 'vote' && L.ctx !== undefined) {
+    if ((r.view === 'vote' || r.view === 'spoils') && L.ctx !== undefined) {
       const page = await L.api.allEntries(r.id);
       if (!currentRoute(epoch)) return;
       const records = page.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) }));
@@ -368,8 +369,8 @@ export function startApp(env: AppEnv): void {
     }
     startLive(L);
     const sub = r.view;
-    const tabs = h('ul', { class: 'tabs' }, ...(['overview', 'rules', 'key', 'vote', 'receipt', 'results'] as const).map((v) =>
-      h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results' } as const)[v]), '', r))));
+    const tabs = h('ul', { class: 'tabs' }, ...([...(['overview', 'rules', 'key', 'vote', 'receipt', 'results'] as const), ...(L.ctx?.manifest.spoil_trustee_decrypt === true ? (['spoils'] as const) : [])]).map((v) =>
+      h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results', spoils: 'qv.spoil.title' } as const)[v]), '', r))));
     const head = [electionHeader(L), tabs, liveLine];
     if (L.ctx === undefined) return render(t('qv.shell.electionTitle'), ...head, errorBox('E-ORG-MANIFEST', { detail: L.ctxError ?? '' }));
     const ctx = L.ctx;
@@ -401,6 +402,7 @@ export function startApp(env: AppEnv): void {
     if (sub === 'vote') return voteView(L, ctx, head);
     if (sub === 'receipt') return await receiptView(L, ctx, head, epoch);
     if (sub === 'results') return await resultsView(L, ctx, head, epoch);
+    if (sub === 'spoils') return render(t('qv.spoil.title'), ...head, spoilSharesPanel({ tr, say, api: L.api, apiId: L.apiId, ctx, records: () => L.records, roll: () => fullRoll(L), current: () => currentRoute(epoch) }));
     return render(t('qv.shell.adminTitle'), ...head, heading(t('qv.nav.admin')), h('p', {}, t('qv.org.nopeek')), h('p', {}, t('qv.org.export')));
   }
 
