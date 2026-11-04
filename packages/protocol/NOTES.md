@@ -298,3 +298,11 @@ Details and evidence: `docs/audit/crypto-protocol.md` § "Second-wave triage". R
 * Open / design (no code change): P1 (PASS without `opts.log`, TSV-05), P10 (duplicate election markers first-wins, L), C3 (unhedged
   DKG/complaint nonces, OQ-7), CP-02/C2, C11 (test RNGs exported from the index; other packages' tests import them).
 * Second-wave vector change: the canary `expected-report.json` now has `chk.tally.decrypt: not_run` (was `pass`): the check is `pass` only after decryption actually ran (P7/TSV-03); the canary's wrong aggregate stops the pipeline earlier. Regenerated with `node packages/protocol/test/vecgen/write.ts`.
+
+## Report semantics (strict differential, 2026-11-04)
+* `verifyElection`: `chk.encoding.canonical` ("all objects canonically encoded", QV-34 §9.1 #13) becomes `pass` only after C4
+  has examined every voter envelope. A stop before that leaves it `not_run`, unless a record already failed it
+  (QV-35-REQ-003: "no check reported as `pass` without its evidence"). Before this change it was set to `pass` right after the
+  manifest. That was visible on the 8 `mutations/open-*` binding failures, where `verifier-py` reports `not_run`. No vector
+  changed: the mutation vectors fix only `failed_checks`, and every exact check map belongs to a run that reaches C4. Test:
+  `test/report-semantics.test.ts`. Open report-semantics decisions: `docs/plan/OPEN-DECISIONS.md` §I (D-92..D-96).
