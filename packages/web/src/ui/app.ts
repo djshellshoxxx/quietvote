@@ -19,6 +19,7 @@ import { BallotIndex } from '../flow/supersede.ts';
 import type { ConnStatus } from '../net/sse.ts';
 import { inlineSealer, type Sealer } from '../flow/seal.ts';
 import { createTranslator, offeredLocales, negotiateLocale, SOURCE_ONLY, type LocaleDef, type MessageKey, type Translator, type Args } from '../i18n/index.ts';
+import { writeLanguagePreference } from '../i18n/preference.ts';
 import { formatDeadline } from '../i18n/datetime.ts';
 import { KeyError, serializeContainer } from '../key/keystore.ts';
 import { checkPassphrase, generatePassphrase } from '../key/passphrase.ts';
@@ -41,6 +42,8 @@ export interface AppEnv {
   apiBase?: string;
   /** Locale tables, loaded lazily by main.ts (i18n/runtime.ts). Defaults to English only. */
   locales?: readonly LocaleDef[];
+  /** Saved BCP 47 language from the IndexedDB device settings. */
+  storedLanguage?: string;
 }
 
 interface Loaded {
@@ -60,7 +63,8 @@ interface Loaded {
 
 export function startApp(env: AppEnv): void {
   const defs = env.locales ?? SOURCE_ONLY;
-  const locale = negotiateLocale({ query: new URLSearchParams(location.search).get('lang') ?? undefined, browser: navigator.languages, offered: offeredLocales(defs).map((l) => l.tag) });
+  const availableLocales = offeredLocales(defs);
+  const locale = negotiateLocale({ query: new URLSearchParams(location.search).get('lang') ?? undefined, stored: env.storedLanguage, browser: navigator.languages, offered: availableLocales.map((l) => l.tag) });
   const tr: Translator = createTranslator(locale, { defs });
   const t = (k: MessageKey, a?: Args): string => tr.t(k, a);
   document.documentElement.lang = locale;
@@ -829,7 +833,27 @@ export function startApp(env: AppEnv): void {
 
   // ---------------------------------------------------------------- shell
   const skip = h('a', { href: '#main', class: 'skip', onclick: (e: Event) => { e.preventDefault(); main.focus(); } }, t('qv.shell.skip'));
-  const header = h('header', {}, h('p', { class: 'brand' }, t('qv.app.name')), nav);
+  const changeLanguage = async (select: HTMLSelectElement): Promise<void> => {
+    const nextLanguage = select.value;
+    if (!availableLocales.some((l) => l.tag === nextLanguage)) { select.value = locale; return; }
+    const priorUrl = `${location.pathname}${location.search}${location.hash}`;
+    const nextUrl = new URL(location.href);
+    nextUrl.searchParams.delete('lang');
+    try {
+      history.replaceState(history.state, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+      await writeLanguagePreference(env.storage, nextLanguage);
+      location.reload();
+    } catch {
+      history.replaceState(history.state, '', priorUrl);
+      select.value = locale;
+      say.say(t('qv.locale.saveFailed'), true);
+    }
+  };
+  const languageSelect = h('select', { onchange: (e: Event) => { void changeLanguage(e.currentTarget as HTMLSelectElement); } },
+    ...availableLocales.map((l) => h('option', { value: l.tag }, l.autonym)));
+  (languageSelect as HTMLSelectElement).value = locale;
+  const languagePicker = availableLocales.length > 1 ? h('p', { class: 'language-picker' }, h('label', {}, t('qv.shell.language'), ' ', languageSelect)) : null;
+  const header = h('header', {}, h('p', { class: 'brand' }, t('qv.app.name')), nav, languagePicker);
   const footer = h('footer', {}, h('p', {}, t('qv.shell.footer.build', { version: env.build.version, build: env.build.id })), h('p', {}, h('a', { href: '/verify' }, t('qv.shell.footer.verifyPage')), ' · ', h('a', { href: 'https://github.com/djshellshoxxx/quietvote' }, t('qv.shell.footer.source')), ' · ', h('a', { href: 'https://djshellshoxxx.github.io/circuitdriftlabs/' }, t('qv.shell.footer.cdlCredit'))));
   clear(env.root);
   add(env.root, [skip, h('p', { class: 'banner', role: 'note' }, t('qv.banner.experimental')), h('p', { class: 'banner', role: 'note' }, t('qv.banner.demo')), header, lockNotice, main, footer, polite, urgent,
