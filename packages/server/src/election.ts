@@ -697,7 +697,7 @@ export class ElectionRuntime {
     }
     this.publish(evs);
     this.env.stats.appended++;
-    this.env.logger.event('append', { election_id: this.id, seq, entry_type: h.type, outcome: 'ok', bytes_in: body.length }, h.type === 'ballot' || h.type === 'ballot_audit');
+    this.env.logger.event('append', { seq, entry_type: h.type, outcome: 'ok', tree_size: seq + 1 }, h.type === 'ballot' || h.type === 'ballot_audit');
     const out = this.outcomeFor(seq, false);
     if (h.type === 'election_close') await this.maybeAggregateLocked();
     return out;

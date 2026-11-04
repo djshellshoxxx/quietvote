@@ -14,7 +14,7 @@ export interface Env {
   failures: FailureCounter;
   logger: Logger;
   /** Counters exposed for tests (e.g. QV-29-REQ-001: no proof verification before cheap checks pass). */
-  stats: { proofVerifications: number; requests: number; appended: number };
+  stats: { proofVerifications: number; requests: number; appended: number; importVerifications: number };
   inflight: { n: number };
   nowMs(): number;
   nowSec(): number;

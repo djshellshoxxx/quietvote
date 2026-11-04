@@ -15,6 +15,7 @@ import type { Env } from './env.ts';
 import { electionBundle, qvb } from './export.ts';
 import { registerExtRoutes } from './ext-routes.ts';
 import { GossipService } from './gossip.ts';
+import { RetentionSweeper } from './retention.ts';
 import { JobRunner } from './jobs.ts';
 import { createHttpApp, type Ctx, type HttpApp, type Reply, type Route } from './http.ts';
 import { loadOrCreateKek, seal, open as unsealBytes } from './kek.ts';
@@ -38,6 +39,7 @@ export interface QuietVoteServer {
   webhooks: WebhookService;
   jobs: JobRunner;
   gossip: GossipService;
+  retention: RetentionSweeper;
   start(): Promise<{ port: number; host: string; url: string }>;
   stop(): Promise<void>;
 }
@@ -62,7 +64,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const witnesses = cfg.witnesses.map((w) => ({ name: w.name, alg: 'ed25519' as const, publicKey: hexToBytes(w.publicKey, 32) }));
   const env: Env = {
     cfg, control, kek: loadOrCreateKek(cfg.dataDir), limiter: new RateLimiter(nowMs), failures: new FailureCounter(nowMs),
-    logger: new Logger(cfg.logSink, nowMs), stats: { proofVerifications: 0, requests: 0, appended: 0 }, inflight: { n: 0 },
+    logger: new Logger(cfg.logSink, nowMs), stats: { proofVerifications: 0, requests: 0, appended: 0, importVerifications: 0 }, inflight: { n: 0 },
     nowMs, nowSec: () => Math.floor(nowMs() / 1000),
     witnessPolicy: (quorum): WitnessPolicy => ({ witnesses, quorum, noneAcknowledged: quorum === 0 }),
   };
@@ -73,6 +75,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const webhooks = new WebhookService(env);
   const jobs = new JobRunner(env);
   const gossip = new GossipService(env, pool);
+  const retention = new RetentionSweeper(env);
   env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
   const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
   const releaseKey = cfg.releaseSeedHex ? ed25519Keypair(hexToBytes(cfg.releaseSeedHex, 32)) : undefined;
@@ -99,6 +102,11 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     if (c.auth?.role === 'instance_admin') return rt;
     if (c.auth?.orgId !== rt.orgId) throw notFound('election'); // cross-org probes look like 404
     return rt;
+  };
+  /** QV-28 §11.1 lazy purge: invite P2 data past its retention is removed whenever the invites of an election are touched. */
+  const purgeInvites = (rt: ElectionRuntime): void => {
+    const n = rt.edb.purgeInviteData(nowMs(), cfg.inviteRetentionMs);
+    if (n > 0) control.audit('system', 'invite.purge', rt.id, { rows: n });
   };
   const orgOf = (c: Ctx): string => {
     const o = c.params['org']!;
@@ -488,6 +496,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       const dek = unlockDek(rt);
       const n = b.count ?? b.items!.length;
       return idem(c, c.auth!.keyId, async () => {
+        purgeInvites(rt);
         if (rt.edb.inviteCount() + n > cfg.maxVotersPerElection * 2) throw new ApiError(429, 'RATE_LIMITED', 'too many invites', { retryable: false });
         const out: { invite_id: string; code: string; label?: string }[] = [];
         const rows = [];
@@ -510,6 +519,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     method: 'GET', path: '/api/v1/elections/:id/invites', cls: 'M', auth: 'sig',
     handler: async (c) => {
       const rt = await orgElection(c);
+      purgeInvites(rt);
       const limit = Math.max(1, intQ(c, 'limit', 100, 500));
       const rows = rt.edb.invites(c.query.get('state') ?? undefined, c.query.get('cursor') ?? undefined, limit + 1);
       const more = rows.length > limit;
@@ -527,7 +537,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       const rt = await orgElection(c);
       const inv = rt.edb.inviteById(c.params['invite']!);
       if (!inv) throw notFound('invite');
-      if (inv.state === 'issued' || inv.state === 'sent') rt.edb.setInviteState(inv.invite_id, 'revoked');
+      if (inv.state === 'issued' || inv.state === 'sent') rt.edb.setInviteState(inv.invite_id, 'revoked', Math.floor(nowMs() / 3_600_000) * 3_600_000);
+      purgeInvites(rt);
       return { status: 204 };
     },
   });
@@ -900,8 +911,9 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
 
   const http = createHttpApp(env, R, statics);
   return {
-    http, env, pool, sse, webhooks, jobs, gossip,
+    http, env, pool, sse, webhooks, jobs, gossip, retention,
     async start() {
+      retention.start();
       const a = await http.listen();
       return { ...a, url: `http://${a.host}:${a.port}` };
     },
@@ -909,6 +921,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       sse.closeAll();
       webhooks.stop();
       gossip.stop();
+      retention.stop();
       await jobs.stop();
       await http.close();
       await pool.closeAll();

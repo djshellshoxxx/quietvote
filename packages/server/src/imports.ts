@@ -5,18 +5,19 @@
 import { createHash } from 'node:crypto';
 import { mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { Worker } from 'node:worker_threads';
 import {
   authorKeyId, b64u, bundleFromJson, bundleToJson, decodeHeader, hashLeaf, nonceKey, parseCheckpoint, toHex, unb64u, verifyLog,
   type EntryHeader, type LogBundle, type WitnessPolicy,
 } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, hexToBytes, jcs, parseQvJson, sha256, utf8 } from '@quietvote/crypto';
-import { manifestHash, verifyElection, type ElectionBundle, type Manifest } from '@quietvote/protocol';
+import { manifestHash, type ElectionBundle, type Manifest, type VerificationReport } from '@quietvote/protocol';
 import { ElectionDb } from './electiondb.ts';
 import { SERVER_VERSION } from './election.ts';
 import type { Env } from './env.ts';
 import type { ElectionPool } from './pool.ts';
 import { readTarStrict, TarError } from './tar.ts';
-import { originOf } from './util.ts';
+import { originOf, unbase32 } from './util.ts';
 
 export class ImportError extends Error {
   readonly rule: string;
@@ -31,6 +32,34 @@ export class ImportError extends Error {
   toJSON(): Record<string, unknown> {
     return { code: 'IMPORT_REJECTED', status: this.status, rule: this.rule, detail: this.message, ...(this.seq !== undefined ? { seq: this.seq } : {}) };
   }
+}
+
+/**
+ * Runs `verifyElection` (all protocol records, proofs, tally) in a worker thread so it cannot stall the server's event loop (B2-02).
+ * The wall-clock budget is `timeoutMs`; on expiry the worker is terminated and the import is refused (IMPORT_TIMEOUT, 503).
+ */
+export function verifyElectionOffThread(electionJson: Uint8Array, timeoutMs: number): Promise<VerificationReport> {
+  return new Promise((resolve, reject) => {
+    const copy = new Uint8Array(electionJson.length); // never share/transfer the caller's buffer
+    copy.set(electionJson);
+    const w = new Worker(new URL('./verify-worker.ts', import.meta.url), { workerData: copy });
+    w.unref();
+    let settled = false;
+    const finish = (f: () => void): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      void w.terminate();
+      f();
+    };
+    const timer = setTimeout(() => finish(() => reject(new ImportError('IMPORT_TIMEOUT', `verification exceeded the ${timeoutMs} ms budget`, undefined, 503))), timeoutMs);
+    w.once('message', (m: { ok: boolean; report?: VerificationReport }) => {
+      if (m.ok && m.report) finish(() => resolve(m.report!));
+      else finish(() => reject(new ImportError('BUNDLE_FORMAT', 'election.json is not strict JSON')));
+    });
+    w.once('error', () => finish(() => reject(new ImportError('PROTOCOL_VERIFY', 'the verifier failed on this bundle'))));
+    w.once('exit', () => finish(() => reject(new ImportError('PROTOCOL_VERIFY', 'the verifier stopped before finishing'))));
+  });
 }
 
 export interface Yield {
@@ -82,6 +111,15 @@ export interface VerifiedBundle {
  * `expectedManifestHash` is the out-of-band trust anchor (QV-18 §13 step 1) when the importer has one.
  */
 export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHash: string | undefined, tick: Yield, progress: (p: number) => void): Promise<VerifiedBundle> {
+  // Cheap duplicate refusal BEFORE any proof work (B2-02): the claimed origin names the election id; commitImport re-checks after verification.
+  const claimed = (o: unknown): void => {
+    if (typeof o !== 'string') return;
+    const raw = /^quietvote\/v1\/([a-z2-7]{26})$/.exec(o)?.[1];
+    const idBytes = raw === undefined ? undefined : unbase32(raw, 16);
+    if (idBytes !== undefined && env.control.electionAny(bytesToHex(idBytes)) !== undefined) {
+      throw new ImportError('ELECTION_EXISTS', 'an election with this id already exists on this instance', undefined, 409);
+    }
+  };
   const cfg = env.cfg;
   const warnings: string[] = [];
   // ---- 1. tar framing and checksums
@@ -127,6 +165,7 @@ export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHa
   if (bj['format'] !== 'qv-bundle/v1' || bj['spec'] !== 'QV-18' || typeof origin !== 'string' || !/^quietvote\/v1\/[a-z2-7]{26}$/.test(origin)) {
     throw new ImportError('BUNDLE_FORMAT', 'bundle.json: unsupported format or origin');
   }
+  claimed(origin);
   const entriesRaw = need('log/entries.jsonl');
   if (bj['entries_sha256'] !== toHex(sha256(entriesRaw))) throw new ImportError('BUNDLE_CHECKSUM', 'bundle.json entries_sha256 does not match log/entries.jsonl');
   const key32 = (k: string): Uint8Array => {
@@ -193,7 +232,8 @@ export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHa
 
   // ---- 5. protocol layer: every record, signature and proof (verifyElection never throws on hostile input)
   const electionJ = obj(json(need('election.json'), 'election.json', 1 << 30), 'election.json');
-  const rep = await verifyElection(electionJ);
+  env.stats.importVerifications++;
+  const rep = await verifyElectionOffThread(need('election.json'), cfg.importVerifyTimeoutMs);
   if (rep.verdict === 'FAIL') {
     const f = rep.findings.find((x) => x.cls === 'F') ?? rep.findings[0];
     throw new ImportError(f?.code ?? 'PROTOCOL_VERIFY', f ? f.detail : 'the election record does not verify', f?.seq);

@@ -117,6 +117,12 @@ export interface ServerOptions {
   maxImportUploads?: number;
   /** Import jobs queued or running; further submissions get 503 BUSY. */
   importQueueMax?: number;
+  /** Grace after an invite is registered/revoked/expired, or the election opens, before its label/contact are NULLed (QV-28 §11.1: 7 d). */
+  inviteRetentionMs?: number;
+  /** Period of the retention sweep over all election databases; 0 disables the timer (lazy purge on invite access still applies). */
+  retentionSweepMs?: number;
+  /** Wall-clock budget of one import's proof verification (worker thread, terminated on expiry). Default 120 s. */
+  importVerifyTimeoutMs?: number;
   /** Jobs (imports, backups, audits) are dropped this long after they finished. */
   jobRetentionMs?: number;
   /** HTTPS base URLs of gossip peers (mirrors, witnesses, other boards). Checked with the SSRF policy at start. */
@@ -254,6 +260,9 @@ export function resolveConfig(o: ServerOptions): ServerConfig {
     maxImportEntries: bound('maxImportEntries', o.maxImportEntries ?? 250_000, 2_000_000),
     maxImportUploads: bound('maxImportUploads', o.maxImportUploads ?? 2, 16),
     importQueueMax: bound('importQueueMax', o.importQueueMax ?? 2, 16),
+    inviteRetentionMs: bound('inviteRetentionMs', o.inviteRetentionMs ?? 7 * 86_400_000, 30 * 86_400_000, 0),
+    retentionSweepMs: bound('retentionSweepMs', o.retentionSweepMs ?? 3_600_000, 86_400_000, 0),
+    importVerifyTimeoutMs: bound('importVerifyTimeoutMs', o.importVerifyTimeoutMs ?? 120_000, 3_600_000),
     jobRetentionMs: bound('jobRetentionMs', o.jobRetentionMs ?? 7 * 86_400_000, 90 * 86_400_000, 1000),
     gossipPeers: peers,
     gossipIntervalMs: bound('gossipIntervalMs', o.gossipIntervalMs ?? 0, 86_400_000, 0),
