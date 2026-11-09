@@ -10,7 +10,11 @@ name: ci
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
     paths:
       - '**'
       - '!docs/**'
@@ -21,7 +25,8 @@ on:
       - 'test-vectors/**'
       - '.github/**'
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - '**'
       - '!docs/**'
@@ -59,6 +64,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Test workflow action pin checker
+        run: node --test .github/scripts/check-action-pins.test.mjs
       - name: Check workflow actions are pinned to full commit SHAs
         run: node .github/scripts/check-action-pins.mjs
       # Supply-chain gates (docs/30-engineering-standards.md, R-02).
@@ -79,13 +86,19 @@ jobs:
       fail-fast: false
       matrix:
         os: ${{ fromJSON((github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci:full-matrix')) && '["ubuntu-24.04","macos-15","windows-2025"]' || '["ubuntu-24.04"]') }}
-        node: [22, 24]
+        node:
+          - 22
+          - 24
         # Balanced by measured CI duration (s): trustee 109, protocol 97, cli 80, server 58, board 47, web 32, verifier 26, crypto 4.
         shard:
-          - { name: trustee+crypto, ws: 'trustee crypto' }
-          - { name: protocol+verifier, ws: 'protocol verifier' }
-          - { name: cli+board, ws: 'cli board' }
-          - { name: server+web, ws: 'server web' }
+          - name: trustee+crypto
+            ws: 'trustee crypto'
+          - name: protocol+verifier
+            ws: 'protocol verifier'
+          - name: cli+board
+            ws: 'cli board'
+          - name: server+web
+            ws: 'server web'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:

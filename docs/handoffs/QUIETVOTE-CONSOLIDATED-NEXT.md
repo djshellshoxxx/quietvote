@@ -1,5 +1,8 @@
 # QuietVote consolidated restart handoff — 2026-10-30
 
+> Latest continuation: [2026-11-09 integration checkpoint](QUIETVOTE-MILESTONE-20261109.md).
+> The historical receipt below is preserved; the review milestone remains blocked.
+
 **Milestone: BLOCKED.** Useful implementation histories are consolidated and repairs are tested, but registration remains an explicit owner-held protocol-review block and strict verifier report comparison still fails. This is an unaudited prototype, not for real elections. Stop at this checkpoint; do not merge to main, release or deploy.
 
 ## Exact source and worktree

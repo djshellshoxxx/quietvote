@@ -8,7 +8,8 @@ on:
       - 'packages/web/e2e/pseudo-locale-visual-ci.mjs'
       - '.github/workflows/pseudo-locale-visual.yml'
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'packages/web/src/**'
       - 'packages/web/static/**'
@@ -37,7 +38,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Install temporary pinned Playwright runner
-        run: npm install --prefix "$RUNNER_TEMP/qv-playwright" --no-save --no-package-lock playwright@1.62.0
+        run: npm install --ignore-scripts --prefix "$RUNNER_TEMP/qv-playwright" --no-save --no-package-lock playwright@1.62.0
       - name: Install Chromium for the pinned Playwright runner
         run: |
           "$RUNNER_TEMP/qv-playwright/node_modules/.bin/playwright" install --with-deps chromium

@@ -56,7 +56,7 @@ Start with the [specification index](docs/SPEC-INDEX.md), which tracks each spec
 
 Web translation contributors can use the [translation workflow and review checklist](docs/TRANSLATING.md).
 
-For exact source refs, branch/PR accounting, validation and remaining gates, use the [consolidation handoff](docs/handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md) and [integration ledger](docs/plan/CONSOLIDATION.md). The [restart entry](docs/handoffs/QUIETVOTE-NEXT.md) preserves earlier checkpoint receipts. These status documents are not approved specifications or an independent audit.
+For the latest continuation, see [the 2026-11-09 integration checkpoint](docs/handoffs/QUIETVOTE-MILESTONE-20261109.md). For earlier source refs, branch/PR accounting, validation and remaining gates, use the [consolidation handoff](docs/handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md) and [integration ledger](docs/plan/CONSOLIDATION.md). The [restart entry](docs/handoffs/QUIETVOTE-NEXT.md) preserves earlier checkpoint receipts. These status documents are not approved specifications or an independent audit.
 
 The [wiki](wiki/) provides voter, organizer, trustee, auditor and developer guides. Screenshots are not included here; the production web build and reproducible browser checks are described in the handoff.
 

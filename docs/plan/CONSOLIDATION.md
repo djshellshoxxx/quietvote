@@ -1,5 +1,8 @@
 # QuietVote consolidation — 2026-10-30
 
+> Latest continuation: [2026-11-09 integration checkpoint](../handoffs/QUIETVOTE-MILESTONE-20261109.md).
+> The historical receipt below is preserved; the review milestone remains blocked.
+
 Status: **consolidation checkpoint complete; review milestone BLOCKED**. This is an unaudited prototype, not for real elections.
 
 ## Scope and execution plan

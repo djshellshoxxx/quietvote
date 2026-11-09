@@ -1,5 +1,8 @@
 # Completion status (v1 scope)
 
+> Latest continuation: [2026-11-09 integration checkpoint](../handoffs/QUIETVOTE-MILESTONE-20261109.md).
+> The historical receipt below is preserved; the review milestone remains blocked.
+
 ## Current consolidation — 2026-10-30
 
 **The consolidated review milestone remains blocked.** The integration branch

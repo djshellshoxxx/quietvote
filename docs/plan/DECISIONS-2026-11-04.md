@@ -360,7 +360,7 @@ QuietVote remains unaudited and not for real elections.
 
 - **Question:** May the offline verifier page gain a Worker (and thus relax its closed offline policy 'no network, no workers'), or should progress be done cooperatively on the main thread?
   - *A: cooperative yielding + progress on main thread* — No CSP change; needs verifyElection to accept an async progress/yield hook in packages/protocol (API change, verdict logic untouched); still slower than a pool.
-  - *B: inline/blob Worker allowed by the verifier CSP* — True off-thread; widens the verifier page CSP (worker-src hash/blob) which weakens its audited minimal surface; needs W15-style integrity story for the worker.
+  - *B: inline/blob Worker allowed by the verifier CSP* — True off-thread; widens the verifier page CSP (worker-src hash/blob) and expands its minimal offline surface; needs W15-style integrity story for the worker. This surface has not received independent security approval.
   - *C: document limit, keep CLI/packages/verifier for large bundles* — No change; 10k-ballot ~7 min freeze remains on web.
 - **Recommended:** A
 - **Rationale:** Preserves the closed offline CSP property already tested server-side while fixing responsiveness; Worker pool for the app page (which already has worker-src 'self' and a seal worker, worker/seal-worker.ts) could follow separately.
