@@ -115,7 +115,7 @@ test('SR-3: the self-audit judges the tree it recomputed, not entries/checkpoint
     edb: { store: { getEntry: (i: number) => entries[i], listCheckpoints: () => [...cps] } },
   } as unknown as ElectionRuntime;
   // a live election keeps appending (and signing checkpoints) while the audit job yields
-  const ctl: JobCtl = { jobId: 'j', progress: () => undefined, tick: async () => { add(); add(); checkpoint(); } };
+  const ctl: JobCtl = { signal: new AbortController().signal, jobId: 'j', progress: () => undefined, tick: async () => { add(); add(); checkpoint(); } };
   const r = await auditLog(rt, ctl);
   assert.deepEqual(r.failures, []);
   assert.equal(r.ok, true);

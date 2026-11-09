@@ -66,6 +66,10 @@ jobs:
           cache: npm
       - name: Test workflow action pin checker
         run: node --test .github/scripts/check-action-pins.test.mjs
+      - name: Test workflow input coverage
+        run: node --test .github/scripts/check-workflow-coverage.test.mjs
+      - name: Test required browser journey runner
+        run: node --test .github/scripts/run-browser-journeys.test.mjs
       - name: Check workflow actions are pinned to full commit SHAs
         run: node .github/scripts/check-action-pins.mjs
       # Supply-chain gates (docs/30-engineering-standards.md, R-02).
@@ -175,7 +179,6 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Install the pinned Playwright Chromium revision
         run: npx playwright install --with-deps chromium
-      - run: node packages/web/e2e/run.ts
-      - run: node packages/web/e2e/help.ts
-      - run: node packages/web/e2e/a11y.ts
-      - run: node packages/web/e2e/verifier.ts
+      - name: Run all required browser journeys
+        shell: bash
+        run: bash .github/scripts/run-browser-journeys.sh

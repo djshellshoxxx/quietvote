@@ -4,7 +4,8 @@ import { existsSync, linkSync, mkdirSync, mkdtempSync, realpathSync, readFileSyn
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { Trustee } from '../src/trustee.ts';
-import { writeBundle } from '../src/bundle.ts';
+import { readBundle, writeBundle } from '../src/bundle.ts';
+import { TrusteeError } from '../src/errors.ts';
 import { atomicWrite, shred } from '../src/fsutil.ts';
 import { mkDeps, PASS } from './helpers/harness.ts';
 
@@ -173,5 +174,86 @@ test('custody: a tombstoned DESTROYING bundle can resume cleanup after a final-w
     await resumed.destroy({}, '');
     assert.equal(resumed.state, 'DESTROYED');
     assert.equal(existsSync(path), false);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('custody: failed backup rollback identifies an unregistered copy and requires reopening', async () => {
+  const dir = temp();
+  try {
+    const path = join(dir, 'share.qvtb'), backup = join(dir, 'backup.qvtb');
+    const deps = mkDeps('custody-backup-cleanup');
+    const trustee = await Trustee.keygen(path, PASS, deps);
+    const original = readFileSync(path);
+    writeFileSync(`${path}.lock`, 'other writer');
+    const rng = deps.rng;
+    deps.rng = { bytes(n) {
+      // Sealing uses small salt/nonce requests; overwrite is the first larger request.
+      if (n > 100) throw new Error(`cleanup fault containing ${PASS}`);
+      return rng.bytes(n);
+    } };
+    await assert.rejects(trustee.backup(backup, PASS), (error: unknown) => {
+      assert.ok(error instanceof TrusteeError);
+      assert.equal(error.code, 'BACKUP_NOT_REMOVED');
+      assert.equal(error.exitCode, 60);
+      assert.ok(error.message.includes(backup));
+      assert.match(error.message, /unregistered|not registered/);
+      assert.match(error.message, /manually/);
+      assert.equal(error.message.includes(PASS), false);
+      assert.equal(error.message.includes(trustee.data.sk_sign), false);
+      return true;
+    });
+    assert.deepEqual(readFileSync(path), original, 'failed save leaves the live bundle unchanged');
+    assert.equal((await readBundle(backup, PASS, deps)).sign_pk, trustee.signPk, 'the unregistered sealed copy remains');
+    assert.equal(trustee.data.backup_epoch, 0);
+    assert.equal(trustee.data.backups.length, 0);
+    await assert.rejects(trustee.backup(join(dir, 'again.qvtb'), PASS), { code: 'BUNDLE_REOPEN_REQUIRED' });
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('custody: refused backup rollback preserves a replacement file and reports manual recovery', async () => {
+  const dir = temp();
+  try {
+    const path = join(dir, 'share.qvtb'), backup = join(dir, 'backup.qvtb');
+    const deps = mkDeps('custody-backup-replaced');
+    const trustee = await Trustee.keygen(path, PASS, deps);
+    const original = readFileSync(path);
+    const rng = deps.rng;
+    deps.rng = { bytes(n) {
+      if (existsSync(backup)) {
+        // Fail the live save after publication, with a file we must not overwrite in the backup's place.
+        writeFileSync(backup, 'unrelated replacement');
+        throw new Error('injected live-save fault');
+      }
+      return rng.bytes(n);
+    } };
+    await assert.rejects(trustee.backup(backup, PASS), { code: 'BACKUP_NOT_REMOVED' });
+    assert.equal(readFileSync(backup, 'utf8'), 'unrelated replacement');
+    assert.deepEqual(readFileSync(path), original);
+    assert.equal(existsSync(`${path}.lock`), false);
+    assert.equal(trustee.data.backups.length, 0);
+    await assert.rejects(trustee.backup(join(dir, 'again.qvtb'), PASS), { code: 'BUNDLE_REOPEN_REQUIRED' });
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('custody: a failure before backup publication retains the original error when the destination is absent', async () => {
+  const dir = temp();
+  try {
+    const path = join(dir, 'share.qvtb'), parent = join(dir, 'backups'), backup = join(parent, 'backup.qvtb');
+    mkdirSync(parent);
+    const deps = mkDeps('custody-backup-unpublished');
+    const trustee = await Trustee.keygen(path, PASS, deps);
+    const rng = deps.rng;
+    deps.rng = { bytes(n) {
+      // Simulate a removed destination directory after validation but before atomic publication.
+      rmSync(parent, { recursive: true, force: true });
+      return rng.bytes(n);
+    } };
+    await assert.rejects(trustee.backup(backup, PASS), { code: 'ENOENT' });
+    assert.equal(existsSync(backup), false);
+    assert.equal(trustee.data.backup_epoch, 0);
+    assert.equal(trustee.data.backups.length, 0);
+    deps.rng = rng;
+    mkdirSync(parent);
+    assert.deepEqual(await trustee.backup(backup, PASS), { epoch: 1 });
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

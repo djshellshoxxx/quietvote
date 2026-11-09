@@ -350,3 +350,17 @@ AI-assisted test work, not an independent audit. Tests only; no production code 
   `dlogTable(V - 1)` in `decryptAggregates` both fail it (applied, run and reverted; no `src/` change). The projections are now
   Stats flagged `extrapolated: true` (`encrypt.projectedN`, `verify.projectedN`; `projectedNMs` kept), and the smoke test checks
   that these are the only extrapolated Stats in the result. The 10k evidence JSON is in `docs/reports/perf-2026-11-04/`.
+
+## B3-26 cooperative verification (2026-11-09)
+
+`VerifyElectionOptions.cooperative` optionally accepts an `AbortSignal` and an awaited `checkpoint({stage, completed, total})`
+callback. Existing default `verifyElection`/`verifyElectionText` reports and the synchronous `analyzeBallotLog` API are retained.
+The synchronous and cooperative ballot paths drain one shared generator, preserving envelope, finding and counting order.
+The callback describes work only; no partial report or check status is exposed. Cancellation rejects with `name: AbortError`;
+a failed callback rejects with `name: VerificationSchedulingError`, including at the final boundary. Neither returns a report.
+Callers must keep input/log evidence immutable until settlement and yield a task when browser responsiveness is needed.
+
+Scheduling boundaries cover record/signature loops, every ballot envelope, 32-item spoil/latest bookkeeping batches and major
+stages. JSON parsing, roll validation/root, log-evidence verification, DKG adjudication, aggregate/decryption operations and
+individual proofs remain synchronous: this is not a wall-time bound or resumable verifier. No protocol or D-92–D-94 semantics
+changed. See `docs/reports/next-offline-20261109.md` for evidence and remaining qualification limits.

@@ -1,6 +1,9 @@
 import { bytesToHex, jcs, parseQvJson, pointToBytes, type Point } from '@quietvote/crypto';
-import { aggregate, analyzeBallotLog, collectAlphas, countedRoot, type Finding, type FindingClass } from './ballotlog.ts';
+import { aggregate, analyzeBallotLog, analyzeBallotLogCooperatively, collectAlphas, countedRoot, type Finding, type FindingClass } from './ballotlog.ts';
 import { ballotCode, type ElectionParams } from './ballot.ts';
+import { checkpoint, VerificationSchedulingError, type CooperativeVerification } from './cooperative.ts';
+export type { CooperativeVerification, VerificationProgress } from './cooperative.ts';
+export { VerificationSchedulingError } from './cooperative.ts';
 import { adjudicateDkg, verifyKeyconf, type DkgOutcome, type MarkerSeqs } from './dkg.ts';
 import {
   verifyLogStructure, verifyReceiptClaims, verifyWitnessing, type LogEvidence, type LogStructure, type PhaseSeqs,
@@ -49,6 +52,8 @@ const ALL_CHECKS: CheckId[] = [
 type Entry = { seq: number; entry: unknown };
 
 export interface VerifyElectionOptions {
+  /** Optional main-thread scheduling; cancellation/callback failure rejects, never returns a partial report. */
+  cooperative?: CooperativeVerification;
   /**
    * QV-18 log-layer evidence (C3 step 11): the log export whose entry bodies are the records of `bundle.log`, plus optional
    * witness anchors, externally observed tree heads and voter receipts. Without it `chk.board.*` and `chk.receipts.sample`
@@ -59,6 +64,7 @@ export interface VerifyElectionOptions {
 
 /** Verifies a strictly parsed JSON text (QV-JSON profile) end to end. */
 export async function verifyElectionText(text: string | Uint8Array, opts: VerifyElectionOptions = {}): Promise<VerificationReport> {
+  if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'parse', completed: 0, total: 1 });
   let v: unknown;
   try {
     v = parseQvJson(text);
@@ -67,6 +73,7 @@ export async function verifyElectionText(text: string | Uint8Array, opts: Verify
     r.findings.push({ code: 'E_PARSE', cls: 'F', detail: 'bundle is not valid QV-JSON' });
     r.checks['chk.encoding.canonical'] = 'fail';
     r.verdict = 'FAIL';
+    if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'complete', completed: 1, total: 1 });
     return r;
   }
   return verifyElection(v, opts);
@@ -83,16 +90,21 @@ function blank(): VerificationReport {
 
 
 /**
- * Appendix C verifier. Pure with respect to its input: no I/O, no clock, no randomness. Never throws on hostile input.
+ * Appendix C verifier. No I/O, clock or randomness by default; never throws on hostile input.
+ * Opt-in cooperative control can reject on cancellation/callback failure. Keep caller-owned input and log evidence immutable.
  * C3 (tree heads, entry/record binding, witness cosignatures and gating, witnessed times, receipts) runs when
  * `opts.log` supplies the QV-18 log export (logcheck.ts, NOTES X-21..X-30); otherwise those checks are `not_run`.
  */
 export async function verifyElection(input: unknown, opts: VerifyElectionOptions = {}): Promise<VerificationReport> {
   try {
-    return await run(input, opts);
+    const report = await run(input, opts);
+    if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'complete', completed: 1, total: 1 });
+    return report;
   } catch (e) {
+    if (opts.cooperative && e instanceof VerificationSchedulingError) throw e;
     const r = blank();
     r.findings.push({ code: 'E_SCHEMA', cls: 'F', detail: `verifier internal rejection: ${e instanceof Error ? e.message : 'unknown'}` });
+    if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'complete', completed: 1, total: 1 });
     return r;
   }
 }
@@ -141,6 +153,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   R.caveats.push('log integrity (tree heads, inclusion/consistency, witness cosignatures) not verified by this component');
 
   // ---- C1: bundle shape, manifest
+  if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'manifest', completed: 0, total: 1 });
   const b = input as { manifest?: unknown; manifest_hash?: unknown; roll?: unknown; log?: unknown } | null;
   if (typeof b !== 'object' || b === null || !Array.isArray(b.roll) || !Array.isArray(b.log) || typeof b.manifest_hash !== 'string' || typeof b.manifest !== 'object' || b.manifest === null) {
     F('E_SCHEMA', 'bundle must be {manifest, manifest_hash, roll[], log[]}');
@@ -202,6 +215,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   const log: Entry[] = [];
   let prevSeq = -1;
   for (const e of b.log as unknown[]) {
+    if (opts.cooperative && log.length % 32 === 0) await checkpoint(opts.cooperative, { stage: 'log', completed: log.length, total: b.log.length });
     const x = e as { seq?: unknown; entry?: unknown } | null;
     if (typeof x !== 'object' || x === null || typeof x.seq !== 'number' || !Number.isSafeInteger(x.seq) || x.seq <= prevSeq || x.seq < 0) {
       F('E_LOG_ORDER', 'log sequence numbers must be strictly increasing non-negative integers');
@@ -246,7 +260,9 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     return true;
   };
 
+  let recordsCompleted = 0;
   for (const { seq, entry } of log) {
+    if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'records', completed: recordsCompleted++, total: log.length });
     const o = entry as Record<string, unknown> | null;
     if (typeof o !== 'object' || o === null) {
       noteBad('E_SCHEMA', seq, 'entry is not an object');
@@ -382,6 +398,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     }
     mk[n] = x.seq;
   }
+  if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'dkg', completed: 0, total: 1 });
   const adj = await adjudicateDkg({ mh: mhb, n: m.n, t: m.t, markers: mk, commits, dealings, shares, complaints });
   if (!adj.ok) {
     R.checks['chk.keys.trustees'] = 'fail';
@@ -397,7 +414,9 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   }
   const decrypters = new Set<number>();
   const seenKc = new Set<number>();
+  let keyconfsCompleted = 0;
   for (const k of keyconfs) {
+    if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'keyconfs', completed: keyconfsCompleted++, total: keyconfs.length });
     if (!(k.seq > mk['dkg-r3-close'] && k.seq < mk['dkg-final'])) continue;
     const Yj = dkg.Y.get(k.body.j);
     if (Yj === undefined || seenKc.has(k.body.j)) continue;
@@ -421,7 +440,9 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   ctxBytes = dkg.ctx;
 
   // ---- election markers (scope = ctx)
+  let markersCompleted = 0;
   for (const { seq, rec } of pendingCtxMarkers) {
+    if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'markers', completed: markersCompleted++, total: pendingCtxMarkers.length });
     if (verifyMultiSig(dkg.ctx, rec, m.coordinator.keys, m.coordinator.m)) {
       if (markers.has(rec.body.name)) F('E_MARKERS', `duplicate marker ${rec.body.name}`, seq, 'L');
       else markers.set(rec.body.name, { seq, body: rec.body, rec });
@@ -472,7 +493,9 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
 
   // ---- C4: ballots
   const rollSet = new Set(rollHex);
-  const an = analyzeBallotLog(p, rollSet, voterEntries, open.seq, close.seq);
+  const an = opts.cooperative
+    ? await analyzeBallotLogCooperatively(p, rollSet, voterEntries, open.seq, close.seq, opts.cooperative)
+    : analyzeBallotLog(p, rollSet, voterEntries, open.seq, close.seq);
   R.findings.push(...an.findings);
   R.counts.cast = an.castSeen;
   R.counts.spoiled = an.spoilSeen;
@@ -514,6 +537,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   if (tb.n_counted !== V || tb.counted_root !== H(countedRoot(an.counted))) {
     failCheck('chk.tally.aggregate', 'E_COUNTED_ROOT', 'n_counted/counted_root differ from recomputation');
   }
+  if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'aggregate', completed: 0, total: 1 });
   const aggs = V > 0 ? aggregate(p, an.counted) : new Map<string, Map<string, { A: Point; B: Point }>>();
   const shareSets = new Map<number, ShareSet>();
   let structural = tb.contests.length === m.contests.length;
@@ -548,6 +572,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   }
   if (!structural) failCheck('chk.tally.aggregate', 'E_AGG_MISMATCH', 'tally contest/option structure differs from manifest');
 
+  if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'tally', completed: 0, total: 1 });
   let counts: Map<string, Map<string, number>> | undefined;
   if (R.checks['chk.tally.aggregate'] === 'pass' && V >= floor && V > 0) {
     const dec = decryptAggregates(p, dkg.Y, decrypters, aggs, V, shareSets);
@@ -580,7 +605,9 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   }
 
   // ---- C5: spoiled ballots listed in the tally record
+  let spoiledCompleted = 0;
   for (const sp of tb.spoiled) {
+    if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'spoiled', completed: spoiledCompleted++, total: tb.spoiled.length });
     const rec = an.spoiled.get(sp.code);
     if (rec === undefined) {
       R.checks['chk.benaloh.spoiled'] = 'fail';

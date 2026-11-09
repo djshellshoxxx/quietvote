@@ -178,3 +178,20 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
   bundle already in `DESTROYING` may reopen beside that tombstone, solely to resume cleanup after a crash between tombstone write
   and final overwrite; release-state gates exclude it. Regressions cover both stale-copy refusal and an induced final-wipe crash
   followed by successful destruction resume. Final custody test run: 9/9 pass.
+
+## Backup rollback diagnostics (2026-11-09)
+
+* A failed live save after backup publication already attempted fingerprint-checked cleanup, but discarded both a refused
+  cleanup and a thrown cleanup error. A remaining encrypted copy could therefore be absent from the live backup registry while
+  the caller received only the original save failure. Fault injection reproduced `BUNDLE_LOCKED`/exit 40 with that copy still present.
+* `backup` now returns `BACKUP_NOT_REMOVED` (REFUSED, exit 60) if rollback cannot remove the destination and cannot confirm it is
+  absent. Its diagnostic identifies the canonical destination and instructs manual inspection/removal, resolving lock/write
+  failures and reopening before retrying. The in-memory object is invalidated. Inaccessible paths are treated as unknown, not absent.
+* The new diagnostic never includes the underlying arbitrary exception text or secret material. CLI `--json` retains the existing
+  `{ok:false, code, kind, message}` shape. Successful cleanup preserves the original failure, as does an absent destination.
+* Four regressions cover a cleanup RNG fault, safe refusal of replaced backup bytes, a pre-publication failure with no remaining
+  destination, and CLI JSON/error/recovery behavior. Existing destination-race, CAS, release-ledger, alias and destruction-resume
+  regressions are preserved. No re-serving, high-water, dealer, key format or protocol policy changed.
+* This adds actionable recovery evidence for handled failures. A hard kill between backup publication and live registration can
+  still leave an unregistered copy without running rollback; no transactional crash journal or physical erasure guarantee is added.
+  Local coverage is Linux/POSIX. Windows ACL enforcement remains absent; the hosted OS/Node matrix must qualify this candidate.

@@ -120,6 +120,11 @@ export function spoilSharesPanel(d: SpoilViewDeps): HTMLElement {
   const fileId = nextId('spoil-file');
   const text = h('textarea', { id: textId, rows: 6, spellcheck: false, autocomplete: 'off', dir: 'ltr' }) as HTMLTextAreaElement;
   const file = h('input', { id: fileId, type: 'file', accept: '.json,application/json' }) as HTMLInputElement;
+  let inputRevision = 0;
+  let sending = false;
+  text.addEventListener('input', () => { inputRevision++; });
+  file.addEventListener('change', () => { inputRevision++; });
+  const sendButton = h('button', { type: 'submit', class: 'btn primary' }, t('qv.spoil.add.send'));
   const showResult = (lines: string[], urgent = false): void => {
     if (!d.current()) return;
     clear(result);
@@ -127,28 +132,44 @@ export function spoilSharesPanel(d: SpoilViewDeps): HTMLElement {
     d.say.say(lines[0] ?? '', urgent);
   };
   const send = async (): Promise<void> => {
-    if (targets === undefined || !d.current()) return;
-    let input = text.value.trim();
-    const f = file.files?.[0];
-    if (input === '' && f !== undefined) {
-      if (f.size > MAX_SHARE_BYTES * 4) return showResult([t('qv.spoil.add.unreadable')], true);
-      try {
-        input = (await f.text()).trim();
-      } catch {
-        return showResult([t('qv.spoil.add.unreadable')], true);
-      }
-      if (!d.current()) return;
-    }
-    if (input === '') return showResult([t('qv.spoil.add.unreadable')], true);
-    const records = parseShareInput(input);
-    if (records === undefined) return showResult([t('qv.spoil.add.unreadable')], true);
+    if (sending || targets === undefined || !d.current()) return;
+    sending = true;
+    sendButton.setAttribute('disabled', '');
+    form.setAttribute('aria-busy', 'true');
+    const revision = inputRevision;
+    const current = (): boolean => d.current() && revision === inputRevision;
     try {
+      let input = text.value.trim();
+      const f = file.files?.[0];
+      if (input === '' && f !== undefined) {
+        if (f.size > MAX_SHARE_BYTES * 4) return showResult([t('qv.spoil.add.unreadable')], true);
+        try {
+          input = (await f.text()).trim();
+        } catch {
+          if (current()) showResult([t('qv.spoil.add.unreadable')], true);
+          return;
+        }
+        if (!current()) return;
+      }
+      if (input === '') return showResult([t('qv.spoil.add.unreadable')], true);
+      const records = parseShareInput(input);
+      if (records === undefined) return showResult([t('qv.spoil.add.unreadable')], true);
       const out = await submitShares(d.api, d.apiId, targets, records);
-      if (!d.current()) return;
+      if (!current()) return;
       showResult(out.map(outcomeLine), out.some((o) => o.kind === 'rejected-local' || o.kind === 'rejected-server'));
-      if (out.some((o) => o.kind === 'accepted')) { text.value = ''; file.value = ''; await refresh(); }
+      // Keep the original batch available when any record was rejected or the network
+      // stopped the batch early. Re-sending public signed records uses the server's
+      // existing duplicate response; it never creates a new trustee release.
+      if (out.length === records.length && out.every((o) => o.kind === 'accepted' || o.kind === 'duplicate')) {
+        text.value = ''; file.value = '';
+      }
+      if (out.some((o) => o.kind === 'accepted' || o.kind === 'duplicate')) await refresh();
     } catch {
-      showResult([t('qv.err.E-NET-OFFLINE.title')], true);
+      if (current()) showResult([t('qv.err.E-NET-OFFLINE.title')], true);
+    } finally {
+      sending = false;
+      sendButton.removeAttribute('disabled');
+      form.setAttribute('aria-busy', 'false');
     }
   };
 
@@ -156,7 +177,7 @@ export function spoilSharesPanel(d: SpoilViewDeps): HTMLElement {
     h('h2', {}, t('qv.spoil.add.title')),
     h('div', { class: 'field' }, h('label', { for: textId }, t('qv.spoil.add.title')), text),
     h('div', { class: 'field' }, h('label', { for: fileId }, t('qv.spoil.add.file')), file),
-    h('button', { type: 'submit', class: 'btn primary' }, t('qv.spoil.add.send')));
+    sendButton);
 
   add(root, [h('h1', { tabindex: -1, class: 'step-heading' }, t('qv.spoil.title')), list,
     h('button', { type: 'button', class: 'btn', onclick: () => { void refresh(); } }, t('qv.spoil.refresh')), form, result]);

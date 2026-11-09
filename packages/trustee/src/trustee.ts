@@ -19,7 +19,7 @@ import { computeR1, markerBody, markerSeq, mergeEntries, takeDkg, uniqueBy, type
 import { TrusteeError } from './errors.ts';
 import { exists, atomicWrite, lockPath, readFile, shred, withLock } from './fsutil.ts';
 import { ledgerPath, readLedger, writeLedger } from './ledger.ts';
-import { realpath } from 'node:fs/promises';
+import { lstat, realpath } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fingerprintOf } from './fingerprint.ts';
 import { assertTransition, PRE_STANDBY, type TrusteeState } from './machine.ts';
@@ -866,7 +866,16 @@ export class Trustee {
       this.d.backups.length = prev.backups;
       this.d.events.length = prev.events;
       const collision = (e as { code?: string }).code === 'EEXIST';
-      if (!collision && backup.sha256) await shred(dest, (n) => this.deps.rng.bytes(n), backup.sha256).catch(() => false);
+      if (!collision && backup.sha256) {
+        const removed = await shred(dest, (n) => this.deps.rng.bytes(n), backup.sha256).catch(() => false);
+        // A refused/failed cleanup may leave an unregistered sealed copy. Only absence is safe to treat like successful cleanup;
+        // an inaccessible path is unknown, not absent. Never force deletion past shred's identity/fingerprint checks.
+        const absent = removed || await lstat(dest).then(() => false, (err: unknown) => ['ENOENT', 'ENOTDIR'].includes((err as { code?: string }).code ?? ''));
+        if (!absent) {
+          this.writeFailed = true;
+          throw new TrusteeError('REFUSED', 'BACKUP_NOT_REMOVED', `backup failed and rollback could not safely remove ${dest}; an unregistered encrypted copy may remain. Check the destination and remove that copy manually; resolve any bundle lock or write failure, then reopen the bundle before retrying`);
+        }
+      }
       if (collision) throw new TrusteeError('STATE', 'BUNDLE_EXISTS', 'backup destination already exists; refusing to overwrite');
       throw e;
     }

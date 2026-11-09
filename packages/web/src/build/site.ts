@@ -105,7 +105,7 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
 <p>A checker you didn’t download or compare yourself can lie. Compare this file’s SHA-256 with the signed release manifest.</p>
 <label for="file">Election bundle file (JSON)</label><input id="file" type="file" accept="application/json">
 <label for="anchor">Election ID you were told (from your organizer, not from this page)</label><input id="anchor" type="text" autocomplete="off" spellcheck="false">
-<p><button id="run" type="button">Run checks</button></p><div id="out"></div><div id="live" class="sr" role="status" aria-live="polite"></div></main>
+<p><button id="run" type="button">Run checks</button> <button id="cancel" type="button" disabled>Cancel verification</button></p><progress id="progress" aria-label="Verification work in current stage" max="1" value="0" hidden></progress><p id="progress-detail"></p><div id="out" aria-busy="false"></div><div id="live" class="sr" role="status" aria-live="polite"></div></main>
 <script>${js}</script></body></html>
 `;
   return { html, scriptHash: sh, styleHash: st, policy };

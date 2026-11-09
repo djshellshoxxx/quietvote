@@ -233,3 +233,24 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   socket creation with `Operation not permitted`; no browser or assistive-technology acceptance is claimed.
 * No catalog, guarantee, locale review, registration, protocol, CSP or dependency changes. AI-assisted implementation;
   QuietVote remains unaudited and not for real elections.
+
+## 2026-11-09 next-phase signed-share relay recovery
+
+* Upload submission is single-flight while a file is read, locally checked and sent; the submit control is disabled and the form exposes `aria-busy` until completion or failure.
+* A partly accepted or interrupted batch stays in the input for correction/retry. Only a complete set of accepted/duplicate responses clears it. Retries relay the original signed public records under existing server duplicate handling; they never generate a new trustee release.
+* Editing the text or choosing another file invalidates a pending read/completion. An old result cannot clear replacement input or announce over it. Navigation retains its prior stale-view protection. Already-started POSTs and the remainder of an already-started multi-record batch are not cancelled by navigation.
+* Five new behavioral regressions supplement the five existing route/file/announcer tests; the first four fail against baseline production source. The production-app browser journey uses real signed fixtures, simulated HTTP failure and duplicate responses, keyboard retry, a 375px viewport, real CSP and navigation during a pending response.
+* Local Chromium launch is blocked at `socket() EPERM` before browser assertions. Exact-candidate hosted browser execution is required. No secret custody, protocol, registration, KDF, guarantee language, offered locale, CSP or dependency changes.
+
+## B3-26 cooperative standalone page (2026-11-09 continuation)
+
+The standalone verifier now uses the shared protocol scheduling hook on the main thread, yields browser tasks between safe
+batches, displays labelled stage progress separately from the final verdict, and supports cancel/retry. Cancellation, file
+replacement, anchor edits and `pagehide` invalidate pending reads/reports; old catch/finally paths cannot overwrite a new run.
+The closed offline CSP and no-network/no-Worker design are unchanged. Parsing and individual verification stages remain
+synchronous; progress is work completed, not authenticity. The earlier main-thread-without-progress note is superseded.
+
+Deterministic DOM tests exercise cancellation, stale successful/rejected file reads, anchor/page lifetime and read-error retry.
+Required Chromium journeys add mobile/desktop cancel/retry, progress labels, no verification requests and stale-read checks.
+Local Chromium could not launch (`socket() EPERM`); this does not qualify those browser assertions. Hosted exact-candidate
+browser qualification remains required; see `docs/reports/next-offline-20261109.md`.

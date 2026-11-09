@@ -121,7 +121,7 @@ export interface ServerOptions {
   inviteRetentionMs?: number;
   /** Period of the retention sweep over all election databases; 0 disables the timer (lazy purge on invite access still applies). */
   retentionSweepMs?: number;
-  /** Wall-clock budget of one import's proof verification (worker thread, terminated on expiry). Default 120 s. */
+  /** Wall-clock budget per import verification phase (protocol, then board; sequential workers). Default 120 s each. */
   importVerifyTimeoutMs?: number;
   /** Jobs (imports, backups, audits) are dropped this long after they finished. */
   jobRetentionMs?: number;

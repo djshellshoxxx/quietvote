@@ -1,20 +1,26 @@
 name: web pseudo-locale visual checks
 
+# The app fixture bundles other workspaces and uses root-locked build tooling.
+# Schedule on those inputs too; a web-source-only filter misses their regressions.
 on:
   pull_request:
     paths:
-      - 'packages/web/src/**'
-      - 'packages/web/static/**'
-      - 'packages/web/e2e/pseudo-locale-visual-ci.mjs'
-      - '.github/workflows/pseudo-locale-visual.yml'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - '.github/**'
   push:
     branches:
       - main
     paths:
-      - 'packages/web/src/**'
-      - 'packages/web/static/**'
-      - 'packages/web/e2e/pseudo-locale-visual-ci.mjs'
-      - '.github/workflows/pseudo-locale-visual.yml'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - '.github/**'
+  merge_group:
+  workflow_dispatch:
 
 permissions: {}
 

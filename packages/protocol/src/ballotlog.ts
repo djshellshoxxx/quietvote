@@ -1,6 +1,7 @@
 import { bytesToHex, concatBytes, hexToBytes, pointFromBytes, pointSum, type Point } from '@quietvote/crypto';
 import { verifyEnvelope, verifySpoilReveal, NO_SUPERSEDES, type ElectionParams } from './ballot.ts';
 import { leafHash, mth } from './merkle.ts';
+import { completeSteps, cooperativeSteps, type CooperativeVerification, type VerificationProgress } from './cooperative.ts';
 import type { CastEnvelope, ErrorCode, SpoilEnvelope } from './types.ts';
 
 export type FindingClass = 'F' | 'L' | 'ALARM' | 'I';
@@ -45,6 +46,19 @@ export function analyzeBallotLog(
   open: number,
   close: number,
 ): BallotAnalysis {
+  return completeSteps(analyzeBallotLogSteps(p, roll, entries, open, close));
+}
+
+export function analyzeBallotLogCooperatively(
+  p: ElectionParams, roll: ReadonlySet<string>, entries: readonly { seq: number; raw: unknown }[],
+  open: number, close: number, control: CooperativeVerification,
+): Promise<BallotAnalysis> {
+  return cooperativeSteps(analyzeBallotLogSteps(p, roll, entries, open, close), control);
+}
+
+function* analyzeBallotLogSteps(
+  p: ElectionParams, roll: ReadonlySet<string>, entries: readonly { seq: number; raw: unknown }[], open: number, close: number,
+): Generator<VerificationProgress, BallotAnalysis> {
   const findings: Finding[] = [];
   const cf = { ballotsValid: true, ballotsLatest: true, window: true, benaloh: true, encoding: true };
   const add = (code: ErrorCode, seq: number, detail: string, cls: FindingClass = 'L'): void => {
@@ -61,7 +75,9 @@ export function analyzeBallotLog(
   const castAlphas = new Set<string>();
   const castCodes = new Set<string>();
 
+  let completed = 0;
   for (const { seq, raw } of entries) {
+    yield { stage: 'ballots', completed: completed++, total: entries.length };
     let r = verifyEnvelope(p, roll, raw);
     const intent = (raw as { intent?: string } | null)?.intent;
     if (intent === 'cast') castSeen++;
@@ -118,9 +134,13 @@ export function analyzeBallotLog(
     }
   }
 
+  yield { stage: 'ballots', completed, total: entries.length };
+
   // CP-01/TR-01: a spoil is only ever a test ballot. One that shares ciphertexts with a valid cast (re-wrapped under another
   // `supersedes`, so it has a different code) would let a published/decrypted spoil expose a cast ballot: reject it.
+  completed = 0;
   for (const [code, rec] of signedSpoils) {
+    if (completed++ % 32 === 0) yield { stage: 'spoil-conflicts', completed: completed - 1, total: signedSpoils.size };
     const mine = new Set<string>();
     collectAlphas(rec.env.body, mine);
     // Same code as a cast is the plain 'spoiled code cast' case handled below (the cast is excluded, the spoil stays).
@@ -134,7 +154,9 @@ export function analyzeBallotLog(
   const last = new Map<string, CountedBallot>();
   const admissibleCount = new Map<string, number>();
   const codeOwner = new Map<string, string>();
+  completed = 0;
   for (const { seq, v } of casts) {
+    if (completed++ % 32 === 0) yield { stage: 'latest-ballots', completed: completed - 1, total: casts.length };
     const code = H(v.code);
     const prev = last.get(v.voter);
     const expected = prev?.code ?? NO_SUPERSEDES;

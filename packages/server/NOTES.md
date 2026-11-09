@@ -296,3 +296,24 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
 * `test/sse-lifecycle.test.ts` reproduces the disconnect over real HTTP, checks that stream/runtime references and subscriptions are absent,
   and reconnects successfully with a single available stream slot. It fails on the earlier implementation. This closes the SSE slot-release
   suspicion listed in the 2026-10-21 notes; the other listed suspicions and protocol/authority decisions are unchanged.
+
+## Import availability and publication boundaries (2026-11-09 next phase; AI-assisted, unaudited)
+* The existing verifier worker now also runs `verifyLog` (entry signatures/authorization, tree and checkpoint/witness checks),
+  sequentially after protocol verification under the existing one-job FIFO and unchanged import queue/upload caps. The parent
+  resolves author keys with the existing manifest/roll policy; board verification still checks author-id binding and signatures.
+  Decoded entry header/body buffers transfer to the worker and back for exact log/protocol correspondence and database staging.
+  No extra archive copy or second pool is introduced; the existing protocol JSON copy is transferred instead of cloned again.
+* Each worker phase uses `importVerifyTimeoutMs` (default 120 s each). Success, error, early exit, timeout and shutdown all await
+  termination before the import can release its job slot. Shutdown aborts worker verification, fails queued imports and waits
+  for any active import's staging/replay cleanup before closing the control database, including beyond the old five-second cutoff.
+  A disconnected partial upload returns its upload reservation. Accepted jobs remain detached from their submitting HTTP client;
+  disconnecting after acceptance does not cancel them. There is no new user-facing cancellation endpoint.
+* Database replay now occurs before registry publication, without adding a runtime to the pool. A final cancellation tick precedes
+  one synchronous registry transaction that rechecks duplicate identity and organization quota, inserts the row and writes the audit.
+  Replay failure leaves no registry row/tombstone. Typed failures also remove unpublished database files. Filesystem cleanup failure
+  is `IMPORT_REJECTED / IMPORT_CLEANUP` (503), with no exposed election; an orphan can remain until cleanup succeeds on retry.
+* Remaining synchronous work: upload/authentication hashes, tar/checksums, strict JSON/base64 decoding, key/header preparation,
+  exact protocol/log correspondence, SQLite staging and runtime replay. This does not isolate the entire import path or establish a
+  production p99 bound. Successful staged replay is closed; the first reader performs the normal pool replay again. Graceful import
+  shutdown prioritizes completing cleanup over a fixed five-second deadline; replay itself has no independent wall-clock timeout.
+* Evidence, bounded stage/loop/RSS measurements and design rationale: `docs/reports/next-server-20261109.md`.

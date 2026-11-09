@@ -70,20 +70,111 @@ before(async () => {
   release = signRecord(sim.trusteeKeys[0]!.secretKey, sim.trusteeKeys[0]!.publicKey, sim.params!.ctx, body);
 });
 
-function panel(roll: () => Promise<string[]> = async () => sim.rollHex) {
+function panel(roll: () => Promise<string[]> = async () => sim.rollHex, post?: () => Promise<Response>) {
   const messages: { text: string; urgent: boolean }[] = [];
   const state = { current: true, posts: 0 };
   const api = new ApiClient({ fetch: async (_input, init) => {
     if (init?.method === 'POST') state.posts++;
+    if (init?.method === 'POST' && post) return post();
     return new Response(JSON.stringify(init?.method === 'POST' ? { status: 'accepted' } : { items: [] }), { status: 200 });
   } });
   const say = { say: (text: string, urgent = false) => messages.push({ text, urgent }) } as unknown as Announcer;
   const root = spoilSharesPanel({ tr, say, api, apiId: 'a'.repeat(26), ctx, records: () => records, roll, current: () => state.current }) as unknown as Element;
   const form = root.find((e) => e.tag === 'form')[0]!;
   const file = root.find((e) => e.attrs.get('type') === 'file')[0]!;
+  const text = root.find((e) => e.tag === 'textarea')[0]!;
+  const send = root.find((e) => e.attrs.get('type') === 'submit')[0]!;
   const refresh = root.find((e) => e.tag === 'button' && e.textContent === tr.t('qv.spoil.refresh'))[0]!;
-  return { root, form, file, refresh, state, messages };
+  return { root, form, file, text, send, refresh, state, messages };
 }
+
+test('spoil upload serializes repeated submissions while the file is being read', async () => {
+  const p = panel();
+  await settle();
+  const read = deferred<string>();
+  let reads = 0;
+  p.file.files = [{ size: 2000, text: () => { reads++; return read.promise; } }];
+  p.form.dispatch('submit');
+  p.form.dispatch('submit');
+  assert.equal(reads, 1);
+  assert.equal(p.send.attrs.has('disabled'), true);
+  assert.equal(p.form.attrs.get('aria-busy'), 'true');
+  read.resolve(JSON.stringify(release));
+  await settle();
+  assert.equal(p.state.posts, 1);
+  assert.equal(p.send.attrs.has('disabled'), false);
+  assert.equal(p.form.attrs.get('aria-busy'), 'false');
+});
+
+test('partly accepted spoil upload retains the original input for correction and retry', async () => {
+  const p = panel();
+  await settle();
+  const input = JSON.stringify([release, {}]);
+  p.text.value = input;
+  p.form.dispatch('submit');
+  await settle();
+  assert.equal(p.state.posts, 1);
+  assert.equal(p.text.value, input, 'one accepted record must not erase a rejected record');
+  p.text.value = JSON.stringify(release);
+  p.text.dispatch('input');
+  p.form.dispatch('submit');
+  await settle();
+  assert.equal(p.state.posts, 2);
+  assert.equal(p.text.value, '');
+});
+
+test('spoil upload discards a pending file read when the user replaces its input', async () => {
+  const p = panel();
+  await settle();
+  const read = deferred<string>();
+  p.file.files = [{ size: 2000, text: () => read.promise }];
+  p.form.dispatch('submit');
+  p.file.files = [{ size: 2, text: async () => '{}' }];
+  p.file.dispatch('change');
+  const before = [...p.messages];
+  read.resolve(JSON.stringify(release));
+  await settle();
+  assert.equal(p.state.posts, 0);
+  assert.deepEqual(p.messages, before);
+  assert.equal(p.send.attrs.has('disabled'), false);
+});
+
+test('spoil upload completion cannot erase or announce over replacement input', async () => {
+  const response = deferred<Response>();
+  const p = panel(undefined, () => response.promise);
+  await settle();
+  p.text.value = JSON.stringify(release);
+  p.form.dispatch('submit');
+  assert.equal(p.state.posts, 1);
+  p.text.value = 'replacement input';
+  p.text.dispatch('input');
+  const before = [...p.messages];
+  response.resolve(new Response(JSON.stringify({ status: 'accepted' }), { status: 200 }));
+  await settle();
+  assert.equal(p.text.value, 'replacement input');
+  assert.deepEqual(p.messages, before);
+  assert.equal(p.send.attrs.has('disabled'), false);
+});
+
+test('partly accepted batch survives a network failure and can be retried', async () => {
+  let requests = 0;
+  const p = panel(undefined, async () => {
+    if (++requests === 2) throw new TypeError('connection dropped');
+    return new Response(JSON.stringify({ status: requests === 3 ? 'duplicate' : 'accepted' }), { status: 200 });
+  });
+  await settle();
+  const input = JSON.stringify([release, release]);
+  p.text.value = input;
+  p.form.dispatch('submit');
+  await settle();
+  assert.equal(p.state.posts, 2);
+  assert.equal(p.text.value, input);
+  assert.equal(p.send.attrs.has('disabled'), false);
+  p.form.dispatch('submit');
+  await settle();
+  assert.equal(p.state.posts, 4);
+  assert.equal(p.text.value, '');
+});
 
 test('spoil upload reports a failed file read and remains usable for the next file', async () => {
   const p = panel();

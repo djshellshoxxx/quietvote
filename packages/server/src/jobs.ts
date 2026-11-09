@@ -18,6 +18,7 @@ export class JobError extends Error {
 
 export interface JobCtl {
   readonly jobId: string;
+  readonly signal: AbortSignal;
   progress(p: number): void;
   /** Lets the event loop run; throws JobError(CANCELLED) once the server is stopping. */
   tick(): Promise<void>;
@@ -50,6 +51,7 @@ export class JobRunner {
   private readonly queue: { id: string; group: string; work: Work }[] = [];
   private current: { id: string; group: string; done: Promise<void> } | undefined;
   private stopped = false;
+  private readonly shutdown = new AbortController();
 
   constructor(env: Env) {
     this.env = env;
@@ -86,6 +88,7 @@ export class JobRunner {
     c.startJob(j.id);
     const ctl: JobCtl = {
       jobId: j.id,
+      signal: this.shutdown.signal,
       progress: (p) => {
         try {
           c.setJobProgress(j.id, p);
@@ -111,9 +114,10 @@ export class JobRunner {
     }
   }
 
-  /** Stops accepting work, fails queued jobs and waits (bounded) for the running one to notice. */
+  /** Stops work and aborts verification. Imports must finish cleanup before their database can close. */
   async stop(): Promise<void> {
     this.stopped = true;
+    this.shutdown.abort(new JobError('CANCELLED', 'the server stopped before the job finished'));
     for (const q of this.queue.splice(0)) {
       try {
         this.env.control.finishJob(q.id, { state: 'failed', error: { code: 'CANCELLED', detail: 'the server stopped before the job started' } }, this.env.cfg.jobRetentionMs);
@@ -122,6 +126,7 @@ export class JobRunner {
       }
     }
     const cur = this.current;
-    if (cur) await Promise.race([cur.done, new Promise<void>((r) => setTimeout(r, 5000).unref())]);
+    if (cur?.group === 'import') await cur.done;
+    else if (cur) await Promise.race([cur.done, new Promise<void>((r) => setTimeout(r, 5000).unref())]);
   }
 }

@@ -1,5 +1,8 @@
 # QuietVote consolidated restart handoff — 2026-10-30
 
+> Latest implementation continuation: [2026-11-09 next phase](QUIETVOTE-NEXT-PHASE-20261109.md).
+> Exact-candidate qualification is recorded on PR #30; protocol-qualified milestone remains blocked.
+
 > Latest continuation: [2026-11-09 integration checkpoint](QUIETVOTE-MILESTONE-20261109.md).
 > The historical receipt below is preserved; the review milestone remains blocked.
 

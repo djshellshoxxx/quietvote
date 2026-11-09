@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync, unlinkSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { jcs, bytesToHex } from '@quietvote/crypto';
@@ -46,4 +46,43 @@ test('CLI: keygen/join/import/commit/status through files, exit codes and --json
     rmSync(dir, { recursive: true, force: true });
     c.cleanup();
   }
+});
+
+test('CLI: backup cleanup failure returns a safe JSON diagnostic and can recover after manual cleanup', async () => {
+  const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'qvcli-backup-')));
+  try {
+    const out: string[] = [], err: string[] = [];
+    const io = { out: (s: string) => out.push(s), err: (s: string) => err.push(s), promptSecret: async () => PASS };
+    const deps = mkDeps('cli-backup-cleanup');
+    const bundle = join(dir, 'share.qvtb'), backup = join(dir, 'backup.qvtb');
+    const run = (args: string[]): Promise<number> => trusteeMain([...args, '--json'], io, deps, {});
+    assert.equal(await run(['keygen', '--bundle', bundle]), 0);
+    out.length = 0;
+    writeFileSync(`${bundle}.lock`, 'other writer');
+    const rng = deps.rng;
+    deps.rng = { bytes(n) {
+      if (n > 100) throw new Error(`cleanup fault containing ${PASS}`);
+      return rng.bytes(n);
+    } };
+    assert.equal(await run(['backup', '--bundle', bundle, '--to', backup]), 60);
+    assert.deepEqual(out, []);
+    assert.equal(err.length, 1);
+    const diagnostic = JSON.parse(err[0]!) as { ok: boolean; code: string; kind: string; message: string };
+    assert.equal(diagnostic.ok, false);
+    assert.equal(diagnostic.code, 'BACKUP_NOT_REMOVED');
+    assert.equal(diagnostic.kind, 'REFUSED');
+    assert.ok(diagnostic.message.includes(backup));
+    assert.match(diagnostic.message, /manually/);
+    assert.match(diagnostic.message, /reopen/i);
+    assert.equal(err[0]!.includes(PASS), false);
+    assert.equal(existsSync(backup), true);
+    // The operator confirms the other writer is gone and handles the identified copy.
+    unlinkSync(`${bundle}.lock`);
+    unlinkSync(backup);
+    deps.rng = rng;
+    err.length = 0;
+    assert.equal(await run(['backup', '--bundle', bundle, '--to', backup]), 0);
+    assert.deepEqual(JSON.parse(out.pop()!), { ok: true, epoch: 1 });
+    assert.deepEqual(err, []);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

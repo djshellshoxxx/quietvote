@@ -23,6 +23,12 @@ const body = (tally.entry as any).body; body.contests[0].options[0].T++;
 const coord = sim.coord[0]!; tally.entry = signRecord(coord.secretKey, coord.publicKey, sim.params!.ctx, body);
 const goodFile = join(dir, 'good.json'), badFile = join(dir, 'bad.json');
 writeFileSync(goodFile, JSON.stringify(good)); writeFileSync(badFile, JSON.stringify(forged));
+// Repeated real proofs keep the ballot loop busy without generating a costly large election.
+// The added envelopes are outside the close window and must still be checked before rejection.
+const large = clone(good);
+const envelope = good.log.find((e) => (e.entry as any).intent === 'cast')!;
+for (let i = 0; i < 80; i++) large.log.push({ seq: large.log.at(-1)!.seq + 1, entry: clone(envelope.entry) });
+const largeFile = join(dir, 'large.json'); writeFileSync(largeFile, JSON.stringify(large));
 let board = new FakeBoard(sim);
 let waitForElection: Promise<void> | undefined;
 let electionRequested: (() => void) | undefined;
@@ -80,6 +86,66 @@ try {
   };
   await offline(origin); // all matching generated _headers policies enforced together
   await offline(address.url); // actual server StaticAssets policy, no routing interception
+  // The real standalone page yields during cryptographic work. Cancellation and retry must remain usable.
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${origin}/verifier.html`);
+    const requests: string[] = [];
+    const recordRequest = (r: import('playwright').Request): void => { requests.push(r.url()); };
+    page.on('request', recordRequest);
+    await page.getByLabel('Election bundle file (JSON)').setInputFiles(largeFile);
+    await page.getByRole('button', { name: 'Run checks' }).click();
+    await page.waitForFunction(() => document.getElementById('progress-detail')?.textContent?.startsWith('Checking ballot proofs:'));
+    assert.equal(await page.getByRole('button', { name: 'Run checks' }).isDisabled(), true);
+    assert.equal(await page.getByRole('progressbar').getAttribute('aria-label'), 'Verification work in current stage');
+    await page.getByRole('button', { name: 'Cancel verification' }).click();
+    await page.getByText('Verification cancelled. No report was produced.', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Run checks' }).isEnabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'Run checks' }).evaluate((e) => e === document.activeElement), true);
+    await page.getByLabel('Election bundle file (JSON)').setInputFiles(goodFile);
+    await page.getByRole('button', { name: 'Run checks' }).click();
+    await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
+    await page.getByLabel('Election ID you were told', { exact: false }).fill('changed');
+    assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0, 'anchor edits invalidate a previous result');
+    assert.deepEqual(requests, [], 'standalone verification/cancel/retry makes no network requests');
+    page.off('request', recordRequest); checks++;
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  // Hold an old read until a replacement run has finished, then deliver success and rejection separately.
+  for (const reject of [false, true]) {
+    await page.goto(`${origin}/verifier.html`);
+    await page.evaluate(() => {
+      const original = File.prototype.text;
+      File.prototype.text = function () {
+        if (this.name !== 'delayed.json') return original.call(this);
+        return new Promise<string>((resolve, reject) => {
+          (globalThis as any).__qvReleaseRead = async (fail: boolean) => {
+            if (fail) reject(new Error('delayed read rejected'));
+            else resolve(await original.call(this));
+          };
+        });
+      };
+    });
+    await page.getByLabel('Election bundle file (JSON)').setInputFiles({ name: 'delayed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(good)) });
+    await page.getByRole('button', { name: 'Run checks' }).click();
+    await page.waitForFunction(() => typeof (globalThis as any).__qvReleaseRead === 'function');
+    await page.getByLabel('Election bundle file (JSON)').setInputFiles(badFile);
+    await page.getByRole('button', { name: 'Run checks' }).click();
+    await page.getByRole('heading', { name: 'A check failed', exact: true }).waitFor({ timeout: 30000 });
+    await page.evaluate(async (fail) => { await (globalThis as any).__qvReleaseRead(fail); await new Promise<void>((resolve) => setTimeout(resolve, 0)); }, reject);
+    assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
+    await page.getByRole('heading', { name: 'A check failed', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Run checks' }).isEnabled(), true); checks++;
+  }
+  // A page lifetime ending during work invalidates completion (including pages retained in browser history).
+  await page.goto(`${origin}/verifier.html`);
+  await page.getByLabel('Election bundle file (JSON)').setInputFiles(largeFile);
+  await page.getByRole('button', { name: 'Run checks' }).click();
+  await page.waitForFunction(() => document.getElementById('progress-detail')?.textContent?.startsWith('Checking ballot proofs:'));
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
+  await page.getByText('Verification stopped. Run checks to start again.', { exact: true }).waitFor();
+  assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0); checks++;
   await page.goto(`${origin}/e/${board.apiId}/results`);
   await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
   assert.ok(await page.getByRole('table').count() > 0); checks++;
@@ -152,7 +218,7 @@ try {
   await tamperPage.close(); writeFileSync(join(dist, chunk), bytes); checks++;
   assert.deepEqual(errors, [], 'no CSP, Trusted Types, or uncaught page errors');
   assert.deepEqual(thirdParty, []); checks++;
-  console.log(`verifier browser: ${checks}/${checks} passed (generated policies, real server, proof gate, anchor, skipped checks, static SRI, stale navigation, blocked storage, size bounds, live append during chart import)`);
+  console.log(`verifier browser: ${checks}/${checks} passed (generated policies, real server, proof gate, anchor, skipped checks, static SRI, stale navigation, blocked storage, size bounds, live append during chart import, offline cancellation/retry/stale reads)`);
 } finally {
   await browser.close(); await real.stop(); await new Promise<void>((resolve) => site.close(() => resolve())); rmSync(dir, { recursive: true, force: true });
 }

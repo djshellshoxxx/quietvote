@@ -1,7 +1,7 @@
 // Standalone offline verifier page (QV-19 §7). No network code at all: reads a bundle chosen by the user and runs the
 // shared protocol verifier. Everything is rendered with textContent.
 import { hexToBytes } from '@quietvote/crypto';
-import { verifyElectionText } from '@quietvote/protocol';
+import { verifyElectionText, type VerificationProgress } from '@quietvote/protocol';
 import { createTranslator, type MessageKey } from '../i18n/index.ts';
 import { verificationSummary } from '../flow/verification.ts';
 import { electionIdOf, sameElectionId } from '../util/crockford.ts';
@@ -15,7 +15,7 @@ function el(tag: string, text: string): HTMLElement {
   return e;
 }
 
-/** 64 MiB, the same bound as packages/verifier's loader: a hostile file must not hang the tab. */
+/** 64 MiB, the same bound as packages/verifier's loader. Parsing and individual proof operations remain synchronous. */
 const MAX_BYTES = 64 * 1024 * 1024;
 
 /** Label for a check or status key; an unknown key (newer protocol than catalog) shows the raw key instead of aborting the page. */
@@ -33,27 +33,78 @@ function showFailure(out: HTMLElement, detail: string): void {
   $('live').textContent = t('qv.verify.verdict.FAIL');
 }
 
+let active: AbortController | undefined;
+const stages: Record<VerificationProgress['stage'], string> = {
+  parse: 'Reading JSON', manifest: 'Checking manifest and roll', log: 'Reading log order', records: 'Checking signed records',
+  dkg: 'Checking joint key', keyconfs: 'Checking trustee confirmations', markers: 'Checking election markers',
+  ballots: 'Checking ballot proofs', 'spoil-conflicts': 'Checking spoiled codes', 'latest-ballots': 'Selecting latest ballots',
+  aggregate: 'Recomputing aggregates', tally: 'Checking tally proofs', spoiled: 'Checking spoiled ballots', complete: 'Finishing checks',
+};
+
+function busy(value: boolean): void {
+  ($('run') as HTMLButtonElement).disabled = value;
+  ($('cancel') as HTMLButtonElement).disabled = !value;
+  $('progress').hidden = !value;
+  $('out').setAttribute('aria-busy', String(value));
+}
+
+function stop(message: string): void {
+  active?.abort();
+  active = undefined;
+  busy(false);
+  $('out').replaceChildren(el('p', message));
+  $('progress-detail').textContent = '';
+  $('live').textContent = message;
+}
+
 async function run(): Promise<void> {
+  stop('');
   const out = $('out');
-  out.replaceChildren(el('p', t('qv.verify.running')));
   const f = ($('file') as HTMLInputElement).files?.[0];
-  if (!f) {
-    out.replaceChildren();
-    return;
-  }
+  if (!f) return;
   if (f.size > MAX_BYTES) return showFailure(out, `file exceeds ${MAX_BYTES} bytes`);
+  const scope = new AbortController();
+  active = scope;
+  // Bind the anchor to this run. Editing either input invalidates all pending work and any previous verdict.
+  const anchor = ($('anchor') as HTMLInputElement).value.trim();
+  busy(true);
+  out.replaceChildren(el('p', t('qv.verify.running')));
+  $('live').textContent = t('qv.verify.running');
+  let lastYield = 0;
+  let lastStage: VerificationProgress['stage'] | undefined;
   try {
-    await runChecked(out, await f.text());
+    const text = await f.text();
+    if (active !== scope) return;
+    const rep = await verifyElectionText(text, { cooperative: { signal: scope.signal, checkpoint: async (p) => {
+      if (active !== scope) return;
+      const progress = $('progress') as HTMLProgressElement;
+      progress.max = Math.max(1, p.total);
+      progress.value = p.completed;
+      $('progress-detail').textContent = `${stages[p.stage]}: ${p.completed} of ${p.total}. Progress is work completed, not a verdict.`;
+      const newStage = lastStage !== p.stage;
+      if (newStage) { $('live').textContent = stages[p.stage]; lastStage = p.stage; }
+      if (newStage || performance.now() - lastYield >= 16) {
+        // A task boundary allows input, rendering and cancellation; a resolved Promise alone would not.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        lastYield = performance.now();
+      }
+    } } });
+    if (active !== scope) return;
+    showReport(out, text, anchor, rep);
   } catch (e) {
-    showFailure(out, e instanceof Error ? e.message : 'verification failed');
+    if (active === scope) showFailure(out, e instanceof Error ? e.message : 'verification failed');
+  } finally {
+    if (active === scope) {
+      active = undefined;
+      busy(false);
+      $('progress-detail').textContent = '';
+    }
   }
 }
 
-async function runChecked(out: HTMLElement, text: string): Promise<void> {
-  const rep = await verifyElectionText(text);
+function showReport(out: HTMLElement, text: string, anchor: string, rep: Awaited<ReturnType<typeof verifyElectionText>>): void {
   const kids: HTMLElement[] = [];
   let anchorBad = false;
-  const anchor = ($('anchor') as HTMLInputElement).value.trim();
   if (anchor !== '') {
     try {
       const mh = (JSON.parse(text) as { manifest_hash: string }).manifest_hash;
@@ -78,3 +129,7 @@ async function runChecked(out: HTMLElement, text: string): Promise<void> {
 }
 
 $('run').addEventListener('click', () => void run());
+$('cancel').addEventListener('click', () => { stop('Verification cancelled. No report was produced.'); $('run').focus(); });
+$('file').addEventListener('change', () => stop('File changed. Run checks to verify it.'));
+$('anchor').addEventListener('input', () => stop('Election ID changed. Run checks to verify it.'));
+window.addEventListener('pagehide', () => stop('Verification stopped. Run checks to start again.'));

@@ -1,5 +1,8 @@
 # QV-22 — Roadmap
 
+> Latest implementation continuation: [2026-11-09 next phase](../handoffs/QUIETVOTE-NEXT-PHASE-20261109.md).
+> Exact-candidate qualification is recorded on PR #30; protocol-qualified milestone remains blocked.
+
 **Status:** Draft · **Date:** 2026-10-21 · **Owner:** Program planner (project owner approves)
 **Inputs:** QV-00 (success gates S1–S14), QV-02 §6/§10 (MVP, release criteria R1–R10), QV-11 §9/§11 (reviews R1–R9, gates G1–G14, assurance ladder L-0…L-3), QV-14 §7 (build first, monetise later), QV-27 §7 (release management), ADR-001…013.
 **Companions:** [BACKLOG](BACKLOG.md) (QV-23) · [RISK-REGISTER](RISK-REGISTER.md) · [OPEN-DECISIONS](OPEN-DECISIONS.md) · [NEXT-STEPS](NEXT-STEPS.md)

@@ -7,15 +7,14 @@ import { mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import {
-  authorKeyId, b64u, bundleFromJson, bundleToJson, decodeHeader, hashLeaf, nonceKey, parseCheckpoint, toHex, unb64u, verifyLog,
-  type EntryHeader, type LogBundle, type WitnessPolicy,
+  authorKeyId, b64u, bundleFromJson, bundleToJson, decodeHeader, hashLeaf, nonceKey, parseCheckpoint, toHex, unb64u,
+  type EntryHeader, type LogBundle, type WitnessPolicy, type Verdict,
 } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, hexToBytes, jcs, parseQvJson, sha256, utf8 } from '@quietvote/crypto';
 import { manifestHash, type ElectionBundle, type Manifest, type VerificationReport } from '@quietvote/protocol';
 import { ElectionDb } from './electiondb.ts';
-import { SERVER_VERSION } from './election.ts';
+import { ElectionRuntime, SERVER_VERSION } from './election.ts';
 import type { Env } from './env.ts';
-import type { ElectionPool } from './pool.ts';
 import { readTarStrict, TarError } from './tar.ts';
 import { originOf, unbase32 } from './util.ts';
 
@@ -34,32 +33,58 @@ export class ImportError extends Error {
   }
 }
 
-/**
- * Runs `verifyElection` (all protocol records, proofs, tally) in a worker thread so it cannot stall the server's event loop (B2-02).
- * The wall-clock budget is `timeoutMs`; on expiry the worker is terminated and the import is refused (IMPORT_TIMEOUT, 503).
- */
-export function verifyElectionOffThread(electionJson: Uint8Array, timeoutMs: number): Promise<VerificationReport> {
+/** One verifier at a time per job; settlement waits for thread termination, including abort/crash/timeout. */
+export function runVerificationWorker<T>(w: Worker, timeoutMs: number, signal?: AbortSignal): Promise<T> {
   return new Promise((resolve, reject) => {
-    const copy = new Uint8Array(electionJson.length); // never share/transfer the caller's buffer
-    copy.set(electionJson);
-    const w = new Worker(new URL('./verify-worker.ts', import.meta.url), { workerData: copy });
     w.unref();
     let settled = false;
     const finish = (f: () => void): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      void w.terminate();
-      f();
+      signal?.removeEventListener('abort', abort);
+      // Do not release the job slot while its verifier still consumes CPU or holds transferred buffers.
+      void w.terminate().then(f, () => reject(new ImportError('PROTOCOL_VERIFY', 'the verifier could not be stopped')));
     };
+    const abort = (): void => finish(() => reject(signal!.reason));
     const timer = setTimeout(() => finish(() => reject(new ImportError('IMPORT_TIMEOUT', `verification exceeded the ${timeoutMs} ms budget`, undefined, 503))), timeoutMs);
-    w.once('message', (m: { ok: boolean; report?: VerificationReport }) => {
-      if (m.ok && m.report) finish(() => resolve(m.report!));
+    w.once('message', (m: { ok: boolean; result?: T }) => {
+      if (m.ok && m.result !== undefined) finish(() => resolve(m.result!));
       else finish(() => reject(new ImportError('BUNDLE_FORMAT', 'election.json is not strict JSON')));
     });
     w.once('error', () => finish(() => reject(new ImportError('PROTOCOL_VERIFY', 'the verifier failed on this bundle'))));
     w.once('exit', () => finish(() => reject(new ImportError('PROTOCOL_VERIFY', 'the verifier stopped before finishing'))));
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
   });
+}
+
+/** The caller retains its election JSON; transfer the dedicated copy instead of cloning it again in Worker. */
+export function verifyElectionOffThread(electionJson: Uint8Array, timeoutMs: number, signal?: AbortSignal): Promise<VerificationReport> {
+  signal?.throwIfAborted();
+  const copy = Uint8Array.from(electionJson);
+  return runVerificationWorker(new Worker(new URL('./verify-worker.ts', import.meta.url), {
+    workerData: { kind: 'election', bytes: copy }, transferList: [copy.buffer],
+  }), timeoutMs, signal);
+}
+
+export interface LogVerificationTask {
+  kind: 'log';
+  bundle: LogBundle;
+  authorKeys: (Uint8Array | undefined)[];
+  logPublicKey: Uint8Array;
+  witnessPolicy: WitnessPolicy;
+}
+
+/** Consumes the decoded entry buffers and replaces them on success; failed imports discard the detached entries. */
+export async function verifyLogOffThread(task: LogVerificationTask, timeoutMs: number, signal?: AbortSignal): Promise<Verdict> {
+  signal?.throwIfAborted();
+  const transferList = task.bundle.entries.flatMap((e) => [e.headerBytes.buffer as ArrayBuffer, ...(e.body ? [e.body.buffer as ArrayBuffer] : [])]);
+  const result = await runVerificationWorker<{ verdict: Verdict; entries: LogBundle['entries'] }>(new Worker(new URL('./verify-worker.ts', import.meta.url), {
+    workerData: task, transferList,
+  }), timeoutMs, signal);
+  task.bundle.entries = result.entries;
+  return result.verdict;
 }
 
 export interface Yield {
@@ -110,7 +135,7 @@ export interface VerifiedBundle {
  * Parses and verifies a `.qvb`. Pure with respect to the server (reads only configuration); throws ImportError.
  * `expectedManifestHash` is the out-of-band trust anchor (QV-18 §13 step 1) when the importer has one.
  */
-export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHash: string | undefined, tick: Yield, progress: (p: number) => void): Promise<VerifiedBundle> {
+export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHash: string | undefined, tick: Yield, progress: (p: number) => void, signal?: AbortSignal): Promise<VerifiedBundle> {
   // Cheap duplicate refusal BEFORE any proof work (B2-02): the claimed origin names the election id; commitImport re-checks after verification.
   const claimed = (o: unknown): void => {
     if (typeof o !== 'string') return;
@@ -233,7 +258,7 @@ export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHa
   // ---- 5. protocol layer: every record, signature and proof (verifyElection never throws on hostile input)
   const electionJ = obj(json(need('election.json'), 'election.json', 1 << 30), 'election.json');
   env.stats.importVerifications++;
-  const rep = await verifyElectionOffThread(need('election.json'), cfg.importVerifyTimeoutMs);
+  const rep = await verifyElectionOffThread(need('election.json'), cfg.importVerifyTimeoutMs, signal);
   if (rep.verdict === 'FAIL') {
     const f = rep.findings.find((x) => x.cls === 'F') ?? rep.findings[0];
     throw new ImportError(f?.code ?? 'PROTOCOL_VERIFY', f ? f.detail : 'the election record does not verify', f?.seq);
@@ -295,7 +320,9 @@ export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHa
     quorum, noneAcknowledged: quorum === 0,
     witnesses: anchors.map((w) => ({ name: w.name, alg: 'ed25519' as const, publicKey: hexToBytes(w.pk, 32) })),
   };
-  const v = verifyLog(lb, { logPublicKey: logPk, witnessPolicy: policy, resolveAuthorKey: (h, seq) => resolve(h, seq) });
+  const v = await verifyLogOffThread({ kind: 'log', bundle: lb, logPublicKey: logPk, witnessPolicy: policy,
+    authorKeys: parsedHeaders.map((h, seq) => resolve(h, seq)),
+  }, cfg.importVerifyTimeoutMs, signal);
   if (v.integrity === 'FAILED' || v.failures.length > 0) {
     const f = v.failures[0]!;
     throw new ImportError(f.rule, f.detail, f.seq);
@@ -355,10 +382,10 @@ export interface CommitResult {
 
 /**
  * Creates the read-only election from a VERIFIED bundle. Everything is written to the election database first (inside one
- * transaction); the registry row is inserted last, then the runtime is opened once as a replay self-test. Any failure removes
- * the new files and leaves no trace.
+ * transaction), then replayed without a registry row. Publication rechecks quota and identity without yielding.
+ * Failed staging is never visible; cleanup failures are reported explicitly and retried on the next import.
  */
-export async function commitImport(env: Env, pool: ElectionPool, vb: VerifiedBundle, orgId: string, access: 'public' | 'link', readKeyHash: Uint8Array | null, tick: Yield): Promise<CommitResult> {
+export async function commitImport(env: Env, vb: VerifiedBundle, orgId: string, access: 'public' | 'link', readKeyHash: Uint8Array | null, tick: Yield): Promise<CommitResult> {
   const { control, cfg } = env;
   if (control.electionAny(vb.electionId) !== undefined) throw new ImportError('ELECTION_EXISTS', 'an election with this id already exists on this instance', undefined, 409);
   if (control.countElections(orgId) >= cfg.maxElectionsPerOrg) throw new ImportError('QUOTA', 'election quota reached for this organization', undefined, 429);
@@ -366,7 +393,11 @@ export async function commitImport(env: Env, pool: ElectionPool, vb: VerifiedBun
   const abs = join(cfg.dataDir, rel);
   mkdirSync(dirname(abs), { recursive: true, mode: 0o700 });
   const cleanup = (): void => {
-    for (const sfx of ['', '-wal', '-shm']) rmSync(abs + sfx, { force: true });
+    let failed = false;
+    for (const sfx of ['', '-wal', '-shm']) {
+      try { rmSync(abs + sfx, { force: true }); } catch { failed = true; }
+    }
+    if (failed) throw new ImportError('IMPORT_CLEANUP', 'unpublished import files could not be removed', undefined, 503);
   };
   cleanup(); // an orphan from an earlier crash (no registry row exists for this id)
   let edb: ElectionDb | undefined;
@@ -403,28 +434,35 @@ export async function commitImport(env: Env, pool: ElectionPool, vb: VerifiedBun
     const size = statSync(abs).size;
     edb.close();
     edb = undefined;
-    control.tx(() => control.insertImported({ election_id: vb.electionId, org_id: orgId, db_path: rel, access, title: vb.manifest.title, bytes_used: size }));
-    // replay self-test: the runtime must be able to rebuild its projection from what was stored
-    let rt;
+    // Replay the staged database without a visible registry row or a pool entry.
+    let rt: ElectionRuntime | undefined;
+    let treeSize: number;
     try {
-      rt = await pool.get(vb.electionId);
-    } catch (e) {
-      await pool.evict(vb.electionId).catch(() => undefined);
-      control.markDeleted(vb.electionId);
-      cleanup();
-      throw new ImportError('REPLAY_FAILED', `the imported log could not be replayed: ${e instanceof Error ? e.message.slice(0, 160) : 'error'}`);
+      rt = await ElectionRuntime.open(env, {
+        election_id: vb.electionId, org_id: orgId, db_path: rel, state: 'IMPORTED', access, title: vb.manifest.title,
+        dek_wrapped: null, created_at: nowMs, opened_at: null, closed_at: null, audit_close_at: null, archived_at: null,
+        bytes_used: size, imported: 1,
+      });
+      if (rt.quarantineReason() !== undefined) throw new Error('inconsistent replay');
+      treeSize = rt.log.size;
+    } catch {
+      throw new ImportError('REPLAY_FAILED', 'the imported log could not be replayed');
+    } finally {
+      rt?.close();
     }
-    if (!rt || rt.quarantineReason() !== undefined) {
-      await pool.evict(vb.electionId).catch(() => undefined);
-      control.markDeleted(vb.electionId);
-      cleanup();
-      throw new ImportError('REPLAY_FAILED', 'the imported log is inconsistent after replay');
-    }
-    control.audit('system', 'election.import', vb.electionId);
-    return { election_id: vb.electionId, origin: vb.origin, tree_size: rt.log.size, manifest_hash: vb.manifestHashHex, verdict: vb.verdict, warnings: vb.warnings };
+    await tick();
+    control.tx(() => {
+      if (control.electionAny(vb.electionId) !== undefined) throw new ImportError('ELECTION_EXISTS', 'an election with this id already exists on this instance', undefined, 409);
+      if (control.countElections(orgId) >= cfg.maxElectionsPerOrg) throw new ImportError('QUOTA', 'election quota reached for this organization', undefined, 429);
+      control.insertImported({ election_id: vb.electionId, org_id: orgId, db_path: rel, access, title: vb.manifest.title, bytes_used: size });
+      control.audit('system', 'election.import', vb.electionId);
+    });
+    return { election_id: vb.electionId, origin: vb.origin, tree_size: treeSize, manifest_hash: vb.manifestHashHex, verdict: vb.verdict, warnings: vb.warnings };
   } catch (e) {
     edb?.close();
-    if (!(e instanceof ImportError) && existsSync(abs) && control.electionAny(vb.electionId) === undefined) cleanup();
+    if (existsSync(abs) && control.electionAny(vb.electionId) === undefined) {
+      cleanup();
+    }
     throw e;
   }
 }

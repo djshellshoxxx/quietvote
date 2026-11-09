@@ -106,8 +106,8 @@ export function registerExtRoutes(d: ExtDeps): void {
         const readKey = access === 'link' ? randomBytes(16).toString('base64url') : undefined;
         const readKeyHash = readKey === undefined ? null : sha256(utf8(`QV-READKEY-v1\0${readKey}`));
         const job = jobs.submit('import', cfg.importQueueMax, { kind: 'import', election_id: null, params: { org_id: orgId, access, bytes: body.length }, created_by: a.keyId }, async (ctl) => {
-          const vb = await verifyBundle(env, body, mh, () => ctl.tick(), (p) => ctl.progress(p));
-          const r = await commitImport(env, pool, vb, orgId, access, readKeyHash, () => ctl.tick());
+          const vb = await verifyBundle(env, body, mh, () => ctl.tick(), (p) => ctl.progress(p), ctl.signal);
+          const r = await commitImport(env, vb, orgId, access, readKeyHash, () => ctl.tick());
           return { result: r, result_ref: r.election_id };
         });
         control.audit(a.keyId, 'import.submit', job.job_id, { bytes: body.length });
