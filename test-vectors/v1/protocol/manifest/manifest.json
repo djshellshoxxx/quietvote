@@ -1,0 +1,2164 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "protocol/manifest",
+  "operation": "manifest.validate_hash",
+  "description": "Manifest validation and hash",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "manifest-valid",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "manifest_hash": "6c4e98ff7473117a78d3e489a041d008abebfde4fad9c39d1c0f6888a22f577e",
+          "jcs_hex": "7b2262616c6c6f7473223a7b226d61785f7065725f766f746572223a382c226d61785f73706f696c735f7065725f766f746572223a31367d2c226262223a7b226c6f675f6964223a2238333666663138346537623431623165313363623566643839666131646539386462626162393965396432393138393133666634336238366135633763323133222c226c6f675f706b223a2266363032323838646138326635323535316630333138316663646439633962366637373436623038313037353034396661303032363834653161666362393066222c227769746e6573735f71756f72756d223a307d2c22636c6f636b5f736b65775f73223a3330302c22636f6e7465737473223a5b7b226964223a22627564676574222c226d6574686f64223a227965732d6e6f222c226d696e5f73656c656374696f6e73223a302c226f7074696f6e73223a5b7b226964223a22796573222c226c6162656c223a22594553227d2c7b226964223a226e6f222c226c6162656c223a224e4f227d5d2c2272756c65223a7b226261736973223a227965732b6e6f222c2264656e223a322c226e756d223a312c22737472696374223a747275652c2274797065223a227468726573686f6c64227d2c2273656c656374696f6e5f6c696d6974223a312c227469655f627265616b223a7b226f7074696f6e223a226e6f222c2274797065223a227374617475732d71756f227d2c227469746c65223a2241646f707420746865206275646765743f227d2c7b226964223a226368616972222c226d6574686f64223a2273696e676c652d63686f696365222c226d696e5f73656c656374696f6e73223a302c226f7074696f6e73223a5b7b226964223a22616e6e222c226c6162656c223a22414e4e227d2c7b226964223a22626f62222c226c6162656c223a22424f42227d2c7b226964223a226379222c226c6162656c223a224359227d5d2c2273656c656374696f6e5f6c696d6974223a312c227469655f627265616b223a7b2274797065223a226c657869636f67726170686963227d2c227469746c65223a224368616972227d2c7b226964223a22746f70696373222c226d6574686f64223a22617070726f76616c222c226d696e5f73656c656374696f6e73223a302c226f7074696f6e73223a5b7b226964223a2261222c226c6162656c223a2241227d2c7b226964223a2262222c226c6162656c223a2242227d2c7b226964223a2263222c226c6162656c223a2243227d2c7b226964223a2264222c226c6162656c223a2244227d5d2c227469655f627265616b223a7b2274797065223a226465636c6172652d746965227d2c227469746c65223a22546f70696373222c2277696e6e657273223a327d2c7b226964223a22626f617264222c226d6574686f64223a226b2d6f662d6e222c226d696e5f73656c656374696f6e73223a302c226f7074696f6e73223a5b7b226964223a2270222c226c6162656c223a2250227d2c7b226964223a2271222c226c6162656c223a2251227d2c7b226964223a2272222c226c6162656c223a2252227d2c7b226964223a2273222c226c6162656c223a2253227d2c7b226964223a2274222c226c6162656c223a2254227d5d2c2273656c656374696f6e5f6c696d6974223a322c227469655f627265616b223a7b2274797065223a226c657869636f67726170686963227d2c227469746c65223a22426f617264227d5d2c22636f6f7264696e61746f72223a7b226b657973223a5b2232326633653638383939373437313761306238353835316230366535666465326661306335636239626638363235393261646134363765396339343734306639225d2c226d223a317d2c2263726561746564223a22323032362d31302d32315431323a30303a30305a222c22656c656374696f6e5f6964223a226339366664623836376635316461363532646232623931316430313539653538222c226e223a332c22707269766163795f61636b223a747275652c2270726f746f223a227176312d723235352d73686132222c22726f6c6c223a7b22726f6f74223a2230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030222c22736368656d65223a22656432353531392d726f6c6c2d7631222c2273697a65223a31302c2277656967687473223a22756e69666f726d227d2c2274223a322c227469746c65223a225465737420656c656374696f6e207665632d6d616e6966657374222c227472757374656573223a5b7b22696e646578223a312c226e616d65223a225431222c227369676e5f706b223a2232306565313862303661336236383032616432643966663338323431666564313633383066333735393935373738616431663166316234303639396361346132227d2c7b22696e646578223a322c226e616d65223a225432222c227369676e5f706b223a2235636430373139343131616139383462663039386364613638386566656334373437343334636162333264333838653434616363353361376465303161656637227d2c7b22696e646578223a332c226e616d65223a225433222c227369676e5f706b223a2262616464326131613430663239376365346263636335633363353234313138343238626230376462393666303433343637356132643761643837393666653338227d5d2c2274797065223a226d616e6966657374222c22766f74696e675f636c6f7365223a22323032362d31312d30385432313a30303a30305a222c22766f74696e675f6f70656e223a22323032362d31312d30315430393a30303a30305a227d"
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "manifest-unknown-proto",
+      "input": {
+        "manifest": {
+          "proto": "qv2-x",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_VERSION"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-unknown-field",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true,
+          "evil": 1
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_SCHEMA"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-t-greater-than-n",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 4,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_MANIFEST"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-duplicate-trustee-key",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_MANIFEST"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-time-order",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-01T09:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_MANIFEST"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-duplicate-contest",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "budget",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_MANIFEST"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-beacon-tie-break",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "beacon"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_MANIFEST"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-k-equals-n",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 5,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_MANIFEST"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-bidi-label",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "Y‮es"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_MANIFEST"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-uppercase-hex",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "C96FDB867F51DA652DB2B911D0159E58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": true
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_SCHEMA"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "manifest-floor-without-ack",
+      "input": {
+        "manifest": {
+          "proto": "qv1-r255-sha2",
+          "type": "manifest",
+          "election_id": "c96fdb867f51da652db2b911d0159e58",
+          "title": "Test election vec-manifest",
+          "created": "2026-10-21T12:00:00Z",
+          "voting_open": "2026-11-01T09:00:00Z",
+          "voting_close": "2026-11-08T21:00:00Z",
+          "clock_skew_s": 300,
+          "contests": [
+            {
+              "id": "budget",
+              "title": "Adopt the budget?",
+              "method": "yes-no",
+              "options": [
+                {
+                  "id": "yes",
+                  "label": "YES"
+                },
+                {
+                  "id": "no",
+                  "label": "NO"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "rule": {
+                "type": "threshold",
+                "num": 1,
+                "den": 2,
+                "basis": "yes+no",
+                "strict": true
+              },
+              "tie_break": {
+                "type": "status-quo",
+                "option": "no"
+              }
+            },
+            {
+              "id": "chair",
+              "title": "Chair",
+              "method": "single-choice",
+              "options": [
+                {
+                  "id": "ann",
+                  "label": "ANN"
+                },
+                {
+                  "id": "bob",
+                  "label": "BOB"
+                },
+                {
+                  "id": "cy",
+                  "label": "CY"
+                }
+              ],
+              "selection_limit": 1,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            },
+            {
+              "id": "topics",
+              "title": "Topics",
+              "method": "approval",
+              "options": [
+                {
+                  "id": "a",
+                  "label": "A"
+                },
+                {
+                  "id": "b",
+                  "label": "B"
+                },
+                {
+                  "id": "c",
+                  "label": "C"
+                },
+                {
+                  "id": "d",
+                  "label": "D"
+                }
+              ],
+              "min_selections": 0,
+              "winners": 2,
+              "tie_break": {
+                "type": "declare-tie"
+              }
+            },
+            {
+              "id": "board",
+              "title": "Board",
+              "method": "k-of-n",
+              "options": [
+                {
+                  "id": "p",
+                  "label": "P"
+                },
+                {
+                  "id": "q",
+                  "label": "Q"
+                },
+                {
+                  "id": "r",
+                  "label": "R"
+                },
+                {
+                  "id": "s",
+                  "label": "S"
+                },
+                {
+                  "id": "t",
+                  "label": "T"
+                }
+              ],
+              "selection_limit": 2,
+              "min_selections": 0,
+              "tie_break": {
+                "type": "lexicographic"
+              }
+            }
+          ],
+          "roll": {
+            "scheme": "ed25519-roll-v1",
+            "weights": "uniform",
+            "root": "0000000000000000000000000000000000000000000000000000000000000000",
+            "size": 10
+          },
+          "trustees": [
+            {
+              "index": 1,
+              "name": "T1",
+              "sign_pk": "20ee18b06a3b6802ad2d9ff38241fed16380f375995778ad1f1f1b40699ca4a2"
+            },
+            {
+              "index": 2,
+              "name": "T2",
+              "sign_pk": "5cd0719411aa984bf098cda688efec4747434cab32d388e44acc53a7de01aef7"
+            },
+            {
+              "index": 3,
+              "name": "T3",
+              "sign_pk": "badd2a1a40f297ce4bccc5c3c524118428bb07db96f0434675a2d7ad8796fe38"
+            }
+          ],
+          "n": 3,
+          "t": 2,
+          "coordinator": {
+            "keys": [
+              "22f3e6889974717a0b85851b06e5fde2fa0c5cb9bf862592ada467e9c94740f9"
+            ],
+            "m": 1
+          },
+          "ballots": {
+            "max_per_voter": 8,
+            "max_spoils_per_voter": 16
+          },
+          "bb": {
+            "log_id": "836ff184e7b41b1e13cb5fd89fa1de98dbbab99e9d2918913ff43b86a5c7c213",
+            "log_pk": "f602288da82f52551f03181fcdd9c9b6f7746b081075049fa002684e1afcb90f",
+            "witness_quorum": 0
+          },
+          "privacy_ack": false
+        },
+        "roll_size": 10
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_MANIFEST"
+      },
+      "tags": [
+        "negative"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+## crypto (8)
+   M04 cp-dec-spoil challenge omits ballotCode
+   M06 cp-dec challenge omits pt(B)
+   M08 pok challenge omits u16(k)
+   M12 strict point: small-order allowed
+   M15 scalarFromBytes reduces instead of rejecting
+   M17 dlogSolve skips bound check
+   M18 pokVerify allows identity A
+   M20 frame drops field count u32(m)
+## protocol-only (13)
+   M01 cp-dh challenge omits pt(Ej)
+   M02 cp-dh challenge omits pt(S)
+   M03 pok-share challenge omits pt(Yj)
+   M05 cp-limit challenge omits u32(L)
+   M07 cds01 challenge omits pt(K)
+   M10 hs_nz counter first
+   M21 binder omits ctx
+   M23 analyzeBallotLog: spoiled-set check removed
+   M25 decryptAggregates uses all valid shares (no t-subset)
+   M27 DKG: duplicate A_0 rule removed
+   M29 verify: published T not compared
+   M31 rules: strict comparison becomes non-strict
+   M32 sum bound L*V check removed
+## none (11)
+   M09 cdsVerify drops identity checks
+   M11 ed25519Verify zip215 true
+   M13 strict point: no canonical re-encode check
+   M14 ed25519Verify skips strict R check
+   M16 dlogSolve skips re-verification
+   M19 shareKeyVerify allows identity Yj
+   M22 verifyEnvelope skips voter strict-point check
+   M24 window check off-by-one (seq >= open)
+   M26 DKG: complaints ignore late bound
+   M28 verify: E_AGG_IDENTITY check removed
+   M30 verify: keyconf timeliness ignored
+total 32

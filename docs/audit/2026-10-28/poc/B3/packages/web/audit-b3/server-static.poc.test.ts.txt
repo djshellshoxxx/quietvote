@@ -1,0 +1,35 @@
+// B3 audit PoC: serve the web build through the REFERENCE SERVER's static handler (same-origin topology) and look at what it sends.
+// Run: node --test --test-reporter=spec packages/web/audit-b3/server-static.poc.test.ts
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { buildSite } from '../src/build/site.ts';
+import { buildServer } from '../../server/src/index.ts';
+
+test('same-origin deployment through @quietvote/server: headers on index.html and verifier.html', async () => {
+  const dist = mkdtempSync(join(tmpdir(), 'qv-b3-static-'));
+  const data = mkdtempSync(join(tmpdir(), 'qv-b3-data-'));
+  await buildSite(dist);
+  const server = buildServer({ dataDir: data, staticDir: dist, minFreeBytes: 0 });
+  const { url } = await server.start();
+  try {
+    for (const path of ['/', '/verifier.html', '/assets/seal-worker.592cb514e650.js']) {
+      const r = await fetch(url + path);
+      const h = (n: string): string => r.headers.get(n) ?? '(absent)';
+      console.log(`GET ${path} -> ${r.status} ${h('content-type')}`);
+      console.log('   CSP :', h('content-security-policy'));
+      console.log('   other:', ['x-content-type-options', 'referrer-policy', 'cross-origin-opener-policy', 'cross-origin-embedder-policy', 'cross-origin-resource-policy', 'strict-transport-security', 'cache-control'].map((n) => `${n}=${h(n)}`).join('; '));
+    }
+    const v = await fetch(url + '/verifier.html');
+    const csp = v.headers.get('content-security-policy') ?? '';
+    assert.ok(csp.includes("script-src 'self'") && !/sha256-/.test(csp), 'header CSP has no hash: the verifier page\'s inline script is blocked');
+    const i = await fetch(url + '/');
+    assert.ok(!/require-trusted-types-for/.test(i.headers.get('content-security-policy') ?? ''), 'Trusted Types are only in the meta CSP');
+  } finally {
+    await server.stop();
+    rmSync(dist, { recursive: true, force: true });
+    rmSync(data, { recursive: true, force: true });
+  }
+});

@@ -1,0 +1,37 @@
+// B3 audit PoC: the web organizer publish flow (publishElection) against the REAL server.
+// Run: node --test --test-reporter=spec packages/web/audit-b3/publish-server.poc.test.ts
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { bytesToHex } from '@quietvote/crypto';
+import { ApiClient } from '../src/api/client.ts';
+import { ApiError } from '../src/api/errors.ts';
+import { createSigner } from '../src/key/signer.ts';
+import { publishElection, type PublishForm } from '../src/flow/publish.ts';
+import { World } from '../../server/test/helpers/world.ts';
+
+test('web publishElection() against the real server: election, manifest, dkg-open, invites', async () => {
+  const w = new World({ seed: 'b3-publish', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    // organization (owner key = organizer key on the browser device)
+    const body = { name: 'Riverside Co-op', owner_key: { pk: (await import('@quietvote/board')).b64u(w.owner.publicKey), alg: 'ed25519' } };
+    const org = await w.req('POST', '/api/v1/orgs', body, { key: w.owner, headers: w.idemKey() });
+    assert.equal(org.status, 201, org.text);
+    const signer = await createSigner(w.owner.secretKey.slice());
+    const api = new ApiClient({ baseUrl: w.base, sleep: async () => undefined, signing: { signer, audience: w.audience, now: () => w.nowSec } });
+    const form: PublishForm = {
+      title: 'Annual meeting', contests: [{ template: 'yes-no', question: 'Adopt the budget?', options: [], k: 1 }],
+      opensIso: '2026-11-01T09:00:00Z', closesIso: '2026-11-08T21:00:00Z', maxBallots: 4, quorumCount: 0,
+      trustees: w.trustees.map((k, i) => ({ name: `T${i + 1}`, signPkHex: bytesToHex(k.publicKey) })), t: 2,
+    };
+    const roll = w.voters.map((v) => bytesToHex(v.publicKey)).sort();
+    const res = await publishElection({ client: api, orgId: org.json.org_id, form, signer, rollHex: roll, now: () => w.nowSec });
+    if (!res.ok) {
+      const e = res.error;
+      console.log('publish stopped at step:', res.step, '|', e instanceof ApiError ? `${e.status} ${e.code} ${e.detail ?? ''} reason=${e.reason ?? ''}` : String(e));
+    } else console.log('publish completed:', res.state.done.join(' > '));
+    assert.ok(res.ok, res.ok ? '' : `step ${res.step}`);
+  } finally {
+    await w.stop();
+  }
+});

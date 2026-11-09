@@ -1,0 +1,81 @@
+# Banned phrases for public claims (read by scripts/lint-claims.mjs)
+#
+# Sources: docs/07-threat-model-security.md section 12.3 (forbidden or restricted language),
+# docs/30-engineering-standards.md QV-30-REQ-034, docs/plan/RISK-REGISTER.md R01.
+#
+# Format
+#   - One rule per line. Blank lines and lines starting with '#' are ignored.
+#   - Plain rules are literal and case-insensitive. They match whole words only, so
+#     "audited" does not match "unaudited".
+#   - 're:' prefix: the rest of the line is a JavaScript regular expression (case-insensitive).
+#   - Optional allow-pattern after ' || ': a JavaScript regular expression (case-insensitive).
+#     If it matches within 80 characters either side of the hit, the hit is suppressed.
+#   - Negation is always checked: if a negation word (not, no, never, nor, without, cannot,
+#     can't, isn't, doesn't, don't, un-, non-) appears in the same sentence, shortly before
+#     the phrase (within 60 characters), the hit is suppressed. Example: "No system is unhackable".
+#   - A line that itself labels wording as a non-claim, unsupported, forbidden or banned
+#     (for example 'Non-claim', 'Unsupported', 'Forbidden', 'banned', 'does not promise') is
+#     not treated as a public claim, and every rule is suppressed on that line.
+#   - Other exemptions (not in this file):
+#       * Inline marker <!-- claims-lint-ignore --> on the hit's line or on the line before it.
+#         Block form: <!-- claims-lint-ignore-start --> ... <!-- claims-lint-ignore-end -->.
+#       * Quoted text, only inside docs/claims/**: text in "double quotes", curly quotes or
+#         `backticks` is exempt, because the claims register quotes banned wording in order to
+#         classify it.
+#
+# Changing this list needs security-reviewer approval (docs/07 section 12.1 rule 3).
+
+# --- Absolute or marketing security claims (docs/07 section 12.3) ---
+unhackable
+unbreakable
+bulletproof
+100% secure
+guaranteed secure
+fully secure
+perfectly secure
+hack-proof
+hacker-proof
+impossible to hack
+cannot be hacked
+unbeatable
+military-grade
+bank-grade
+government-grade
+tamper-proof
+immutable ledger
+quantum-safe
+re:post-quantum (secure|safe)
+
+# --- Anonymity and privacy absolutes (docs/07 section 12.3, N-4) ---
+guaranteed anonymity
+100% anonymous
+completely anonymous
+100% private
+anonymous voting || \b(from|phases?|versions?|only|unless|until|planned|later|research|designed|not yet)\b
+no data collected
+re:the operator cannot see your (vote|ballot|choice) || \b(if|unless|only|when|trustees?|threshold)\b
+your vote is secret even if we are hacked
+
+# --- Coercion and receipt properties (N-1) ---
+coercion-proof
+coercion-resistant
+coercion-resistance
+receipt-free
+receipt-freeness
+vote-buying proof
+
+# --- Assurance and certification claims (C-12, C-14, N-9, N-12) ---
+audited || \bnot (been )?(yet )?audited\b|\bunaudited\b|audited\)? (ballots?|challenges?)\b|\bspoil\w*|\bbenaloh\b|\bcast[- ]or[- ]audit\b
+independently reviewed || \bnot\b|\buntil\b|\bnot yet\b|\bunreviewed\b|https?://
+certified || \bout of scope|non-?goal|\bexcluded?\b|\bnot (meant|targeted|targeting|for)\b|\bdo(es)? not\b
+re:compliant with .{0,60}(council of europe|bsi|eac|vvsg|iso 27001|soc ?2)
+re:safe (for|to use for) (government|governmental|legally binding|public (government )?elections)
+re:(suitable|approved) for (government|governmental|legally binding|public) (elections?|votes?)
+bug-free
+re:no known bugs (means|is|proves|equals) || \bnot\b
+
+# --- Architecture wording that overstates the design (docs/07 section 12.3) ---
+trustless
+blockchain-secured
+re:decentrali[sz]ed (security|secure|secured|trust)
+end-to-end verifiable

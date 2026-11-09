@@ -1,0 +1,23 @@
+{
+  "$comment": "Map from QV-16 §5.20 codes (used in vectors) to QV-34 §9.2 registry codes where one exists. Codes without a registry entry are used verbatim.",
+  "map": {
+    "E_POINT_DECODE": "ERR_POINT_ENCODING",
+    "E_IDENTITY": "ERR_POINT_ENCODING",
+    "E_SCALAR_RANGE": "ERR_SCALAR_RANGE",
+    "E_LENGTH": "ERR_LENGTH",
+    "E_DOMAIN_UNKNOWN": "ERR_DOMAIN_UNKNOWN",
+    "E_SIG": "ERR_SIG_INVALID",
+    "E_CDS": "ERR_PROOF_INVALID",
+    "E_LIMIT_PROOF": "ERR_PROOF_INVALID",
+    "E_VOTER_NOT_ELIGIBLE": "ERR_NOT_IN_ROLL",
+    "E_CTX": "ERR_ELECTION_BINDING",
+    "E_VERSION": "ERR_UNSUPPORTED_VERSION",
+    "E_PARSE": "ERR_CANON",
+    "E_SCHEMA": "ERR_MANIFEST_FIELD",
+    "E_MANIFEST": "ERR_MANIFEST_FIELD",
+    "E_SPOILED_CODE_CAST": "ERR_SPOILED_AND_CAST",
+    "E_TALLY_INSUFFICIENT": "ERR_THRESHOLD",
+    "E_DLOG_RANGE": "ERR_TALLY_OVERFLOW",
+    "E_DKG_QUORUM": "ERR_THRESHOLD"
+  }
+}

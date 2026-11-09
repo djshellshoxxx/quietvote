@@ -1,0 +1,277 @@
+{
+  "source_sha": "247df393ea1ace300fe5ed1f569a12090e1364dc",
+  "started_utc": "2026-10-31T05:24:21.905353+00:00",
+  "checks": [
+    {
+      "name": "bootstrap",
+      "command": [
+        "npm",
+        "ci",
+        "--ignore-scripts",
+        "--no-fund",
+        "--cache",
+        "/workspace/work/npm-cache"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.64,
+      "log": "final-bootstrap.log"
+    },
+    {
+      "name": "npm-check",
+      "command": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 348.2,
+      "log": "final-npm-check.log"
+    },
+    {
+      "name": "web-build",
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "-w",
+        "@quietvote/web"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.53,
+      "log": "final-web-build.log"
+    },
+    {
+      "name": "i18n",
+      "command": [
+        "npm",
+        "run",
+        "i18n:check",
+        "-w",
+        "@quietvote/web"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 2.01,
+      "log": "final-i18n.log"
+    },
+    {
+      "name": "python-unit",
+      "command": [
+        "python3",
+        "-I",
+        "-m",
+        "unittest"
+      ],
+      "cwd": "verifier-py",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 9.29,
+      "log": "final-python-unit.log"
+    },
+    {
+      "name": "ts-vectors",
+      "command": [
+        "node",
+        "packages/cli/bin/qv.ts",
+        "vectors",
+        "check",
+        "--json"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 8.24,
+      "log": "final-ts-vectors.log"
+    },
+    {
+      "name": "python-vectors",
+      "command": [
+        "python3",
+        "-I",
+        "verifier-py/qv_verifier",
+        "vectors",
+        "test-vectors/v1",
+        "--report",
+        "/workspace/work/validation/python-vectors-final.json"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 12.37,
+      "log": "final-python-vectors.log"
+    },
+    {
+      "name": "cross-verifiers",
+      "command": [
+        "node",
+        "scripts/compare-verifiers.ts",
+        "--json"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 1,
+      "seconds": 17.59,
+      "log": "final-cross-verifiers.log"
+    },
+    {
+      "name": "browser-app",
+      "command": [
+        "node",
+        "packages/web/e2e/run.ts"
+      ],
+      "cwd": ".",
+      "environment": {
+        "QV_REQUIRE_BROWSER": "1",
+        "QV_CHROMIUM": "/usr/bin/chromium"
+      },
+      "exit_code": 0,
+      "seconds": 6.74,
+      "log": "final-browser-app.log"
+    },
+    {
+      "name": "browser-help",
+      "command": [
+        "node",
+        "packages/web/e2e/help.ts"
+      ],
+      "cwd": ".",
+      "environment": {
+        "QV_REQUIRE_BROWSER": "1",
+        "QV_CHROMIUM": "/usr/bin/chromium"
+      },
+      "exit_code": 0,
+      "seconds": 1.72,
+      "log": "final-browser-help.log"
+    },
+    {
+      "name": "browser-a11y",
+      "command": [
+        "node",
+        "packages/web/e2e/a11y.ts"
+      ],
+      "cwd": ".",
+      "environment": {
+        "QV_REQUIRE_BROWSER": "1",
+        "QV_CHROMIUM": "/usr/bin/chromium"
+      },
+      "exit_code": 0,
+      "seconds": 9.47,
+      "log": "final-browser-a11y.log"
+    },
+    {
+      "name": "browser-verifier",
+      "command": [
+        "node",
+        "packages/web/e2e/verifier.ts"
+      ],
+      "cwd": ".",
+      "environment": {
+        "QV_REQUIRE_BROWSER": "1",
+        "QV_CHROMIUM": "/usr/bin/chromium"
+      },
+      "exit_code": 0,
+      "seconds": 9.61,
+      "log": "final-browser-verifier.log"
+    },
+    {
+      "name": "claims",
+      "command": [
+        "node",
+        "scripts/lint-claims.mjs"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 1,
+      "seconds": 0.53,
+      "log": "final-claims.log"
+    },
+    {
+      "name": "lockfile",
+      "command": [
+        "npm",
+        "run",
+        "lockfile:lint"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.21,
+      "log": "final-lockfile.log"
+    },
+    {
+      "name": "dependency-audit",
+      "command": [
+        "npm",
+        "audit",
+        "--audit-level=high",
+        "--cache",
+        "/workspace/work/npm-cache"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.39,
+      "log": "final-dependency-audit.log"
+    },
+    {
+      "name": "action-pins",
+      "command": [
+        "node",
+        ".github/scripts/check-action-pins.mjs"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.03,
+      "log": "final-action-pins.log"
+    },
+    {
+      "name": "licences",
+      "command": [
+        "node",
+        "scripts/licence-snapshot.mjs",
+        "--stdout"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.04,
+      "log": "final-licences.log"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": "final-diff-check.log"
+    },
+    {
+      "name": "repair-diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "25ac8be..HEAD"
+      ],
+      "cwd": ".",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.02,
+      "log": "final-repair-diff-check.log"
+    }
+  ],
+  "finished_utc": "2026-10-31T05:31:29.545543+00:00"
+}

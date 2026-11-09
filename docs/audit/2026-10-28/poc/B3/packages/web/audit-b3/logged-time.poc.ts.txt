@@ -1,0 +1,36 @@
+// B3 audit PoC (Playwright): the receipt screen's "Logged <time>" is the browser clock at render time, not the log's sequenced_at.
+// The page clock is set to 2030; the FakeBoard signs the receipt with its own (2026) clock.
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { PASS, exe, pw, startStack } from './harness.ts';
+
+const sim = await sharedSim();
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const base = `${stack.origin}/e/${board.apiId}`;
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+await p.clock.install({ time: new Date('2030-01-01T12:00:00Z') });
+await p.goto(`${base}/key`);
+await p.getByLabel('Use a key file I saved before').check();
+await p.getByLabel('Key file', { exact: true }).setInputFiles(stack.keyFile);
+await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+await p.getByRole('button', { name: 'Create key' }).click();
+await p.clock.runFor(100);
+await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+await p.getByRole('link', { name: 'Vote' }).first().click();
+await p.getByLabel('YES', { exact: true }).check();
+await p.getByRole('button', { name: 'Review my choices' }).click();
+await p.getByRole('button', { name: 'Seal my ballot' }).click();
+await p.clock.runFor(100);
+const send = p.getByRole('button', { name: 'Send my vote' });
+await send.waitFor({ timeout: 30000 });
+await send.click();
+await p.clock.runFor(100);
+await p.getByText(/Logged|Included|recorded/).first().waitFor({ timeout: 30000 });
+const text = (await p.locator('main').innerText()).replace(/\n+/g, ' | ');
+const m = /Logged[^|]*/.exec(text);
+console.log('receipt line:', m ? m[0].trim() : '(no "Logged" line found) ' + text.slice(0, 300));
+const last = board.requests.filter((r) => r.method === 'POST').length;
+console.log('POSTs seen by the board:', last, '| real clock now:', new Date().toISOString());
+await browser.close();
+stack.close();

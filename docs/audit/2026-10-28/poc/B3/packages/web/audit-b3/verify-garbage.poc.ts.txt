@@ -1,0 +1,21 @@
+// B3 audit PoC: can verifyElectionText() (used by the SPA /verify view WITHOUT a try/catch) throw or hang on hostile input?
+import { verifyElectionText } from '@quietvote/protocol';
+const cases: [string, string][] = [
+  ['empty', ''], ['not json', 'not json'], ['null', 'null'], ['array', '[]'], ['number', '42'], ['string', '"x"'],
+  ['manifest null', '{"manifest":null,"manifest_hash":"00","roll":[],"log":[]}'],
+  ['log not array', '{"manifest":{"body":{},"sigs":[]},"manifest_hash":"' + '00'.repeat(32) + '","roll":[],"log":5}'],
+  ['deep nesting 5000', '['.repeat(5000) + ']'.repeat(5000)],
+  ['deep nesting 200000', '['.repeat(200000) + ']'.repeat(200000)],
+  ['bom + json', '﻿{}'],
+  ['proto key', '{"__proto__":{"x":1},"manifest":1}'],
+  ['lone surrogate', '{"a":"\\ud800"}'],
+];
+for (const [name, text] of cases) {
+  const t0 = performance.now();
+  try {
+    const r = await verifyElectionText(text);
+    console.log(name.padEnd(22), '->', r.verdict, `(${Math.round(performance.now() - t0)} ms)`);
+  } catch (e) {
+    console.log(name.padEnd(22), '-> THROWS', (e as Error).constructor.name, (e as Error).message.slice(0, 80));
+  }
+}
