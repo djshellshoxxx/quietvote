@@ -131,6 +131,8 @@ try {
   await page.waitForFunction(() => document.querySelector<HTMLButtonElement>('.spoil-add button')?.disabled === false);
   assert.equal(await input.inputValue(), 'replacement input', 'late response must preserve edited input');
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, '375px layout has no horizontal overflow');
+  await page.waitForFunction((expected) => document.querySelector('#live-polite')?.textContent === expected,
+    tr.t('qv.spoil.decoded', { have: 2, need: 2 }));
   console.log('PASS pending controls, replacement input, mobile layout');
 
   gate = new Promise<void>((resolve) => { releaseGate = resolve; });
@@ -138,15 +140,24 @@ try {
   await input.fill(JSON.stringify(releases[0]));
   await send.click();
   await startedAgain;
+  const pendingForm = await page.locator('.spoil-add').elementHandle();
+  assert.ok(pendingForm);
   await page.getByRole('link', { name: tr.t('qv.shell.helpLink'), exact: true }).first().click();
   await page.getByRole('heading', { name: tr.t('qv.help.title'), exact: true }).waitFor();
+  // Navigation retains prior announcements. The pending operation must not change
+  // either region after its response arrives on the new route.
+  const liveBefore = await page.locator('#live-polite, #live-urgent').allTextContents();
+  assert.equal(liveBefore.length, 2);
   const response = page.waitForResponse((r) => r.url().endsWith('/spoil-shares') && r.request().method() === 'POST');
   releaseGate!(); gate = undefined;
-  await response;
-  await page.waitForLoadState('networkidle');
+  await (await response).finished();
+  await page.waitForFunction((form) => form.getAttribute('aria-busy') === 'false', pendingForm);
+  // Announcer.say schedules its assignment after 30 ms. Observe beyond that
+  // window after the actual send finally has completed, including on a detached form.
+  await page.waitForTimeout(50);
   assert.equal(await page.locator('.spoil-add').count(), 0);
-  assert.equal(await page.locator('#live-polite').textContent(), '');
-  assert.equal(await page.locator('#live-urgent').textContent(), '');
+  assert.deepEqual(await page.locator('#live-polite, #live-urgent').allTextContents(), liveBefore,
+    'late share completion must not change announcements on the new route');
   assert.deepEqual(errors, []);
   assert.deepEqual(external, []);
   console.log('PASS navigation suppresses stale completion; CSP/no-external-request checks');

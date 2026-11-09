@@ -99,7 +99,8 @@ try {
     assert.equal(await page.getByRole('button', { name: 'Run checks' }).isDisabled(), true);
     assert.equal(await page.getByRole('progressbar').getAttribute('aria-label'), 'Verification work in current stage');
     await page.getByRole('button', { name: 'Cancel verification' }).click();
-    await page.getByText('Verification cancelled. No report was produced.', { exact: true }).waitFor();
+    await page.locator('#out').getByText('Verification cancelled. No report was produced.', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('status').textContent(), 'Verification cancelled. No report was produced.');
     assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Run checks' }).isEnabled(), true);
     assert.equal(await page.getByRole('button', { name: 'Run checks' }).evaluate((e) => e === document.activeElement), true);
@@ -144,7 +145,8 @@ try {
   await page.getByRole('button', { name: 'Run checks' }).click();
   await page.waitForFunction(() => document.getElementById('progress-detail')?.textContent?.startsWith('Checking ballot proofs:'));
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
-  await page.getByText('Verification stopped. Run checks to start again.', { exact: true }).waitFor();
+  await page.locator('#out').getByText('Verification stopped. Run checks to start again.', { exact: true }).waitFor();
+  assert.equal(await page.getByRole('status').textContent(), 'Verification stopped. Run checks to start again.');
   assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0); checks++;
   await page.goto(`${origin}/e/${board.apiId}/results`);
   await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
