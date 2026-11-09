@@ -162,7 +162,7 @@ test('shutdown waits beyond the old cutoff for staged replay cleanup without pub
   assert.deepEqual(files(), []);
 });
 
-test('disconnect during upload releases the reservation without enqueueing an import', async () => {
+test('disconnect during upload releases the reservation without enqueueing an import', { timeout: 60_000 }, async () => {
   const path = `/api/v1/imports?org_id=${target.orgId}`;
   const u = new URL(target.base);
   const reading = new Promise<IncomingMessage>((resolve) => {
@@ -176,10 +176,30 @@ test('disconnect during upload releases the reservation without enqueueing an im
   partial.write(Buffer.from(tar.subarray(0, 10)));
   const incoming = await reading;
   try {
-    assert.equal((await upload(target, tar)).status, 503, 'the single upload reservation is held');
+    // Probe admission with headers only: an early rejection closes the connection without consuming a body.
+    // Eagerly uploading the full archive here can race that close (ECONNRESET on Windows) before we see the 503.
+    const busy = await new Promise<{ status: number; body: string; retryAfter: string | undefined }>((resolve, reject) => {
+      const probe = request({ host: u.hostname, port: u.port, method: 'POST', path, agent: false, headers: {
+        'content-type': 'application/x-tar', 'content-length': String(tar.length), 'idempotency-key': 'occupied-import',
+        authorization: signRequest(target.owner.secretKey, target.owner.publicKey, 'POST', path, target.audience, tar, target.nowSec, target.rng.bytes(16)),
+      } }, (res) => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk: string) => { body += chunk; });
+        res.once('error', reject);
+        res.once('end', () => resolve({ status: res.statusCode ?? 0, body, retryAfter: res.headers['retry-after'] }));
+      });
+      probe.once('error', reject);
+      const deadline = setTimeout(() => probe.destroy(new Error('occupied upload was not rejected from headers')), 10_000);
+      probe.once('close', () => clearTimeout(deadline));
+      probe.end(); // Declared body is deliberately withheld; occupied-slot rejection must precede body reads.
+    });
+    assert.equal(busy.status, 503, 'the single upload reservation is held');
+    assert.equal(JSON.parse(busy.body).code, 'BUSY');
+    assert.equal(busy.retryAfter, '5');
     assert.equal(target.server.jobs.active('import'), 0);
   } finally {
-    const closed = new Promise<void>((resolve) => incoming.once('close', resolve));
+    const closed = incoming.destroyed ? Promise.resolve() : new Promise<void>((resolve) => incoming.once('close', resolve));
     partial.destroy(); await closed;
   }
   await new Promise<void>((r) => setImmediate(r));

@@ -94,3 +94,25 @@ Threat impact: lower attacker-controlled event-loop occupancy, explicit joined w
 replay succeeds. Validation strength, trust anchors, author authority and protocol verdicts are unchanged. Availability still depends
 on synchronous parsing/staging/replay, configured caps, filesystem health and ordinary process supervision. Persistent unlink failure
 cannot promise zero orphan files; it now produces an explicit failed job without publication.
+
+## Hosted Windows fixture correction
+
+The subsequent integration run [42613009909](https://github.com/djshellshoxxx/quietvote/actions/runs/42613009909), candidate
+`dce805b8`, failed the new disconnect test on Windows Node 22 and 24 (jobs `129145895970`, `129145896071`): server suites had
+164 passes, one failure and zero skips. The failure was `fetch failed / read ECONNRESET` at the **first competing full-body upload**
+that should observe the occupied slot, before disconnect or recovery. No response/socket capture establishes a keepalive race.
+
+Source inspection shows the occupied-slot check precedes body consumption and the early-refusal handler closes its connection.
+An eager 160,768-byte request racing that close is consistent with the observed reset. The fixture now sends valid signed competing
+headers and the same declared content length while withholding the body, then awaits the complete response and explicitly requires
+503, `BUSY` and `Retry-After: 5`. It retains the original consumed-partial-body barrier, zero queued-import assertion, disconnect,
+server-side close synchronization and subsequent ordinary full-body upload that must reach 202 and a completed job. The probe has
+a ten-second deadline, the test a sixty-second deadline, and cleanup handles an already destroyed incoming stream. No retries,
+skips, production transport changes or relaxed acceptance assertions were added.
+
+Local Node 24.22.1 validation: the corrected availability file passed 10/10, zero failures/skips; typecheck and diff checks passed.
+A temporary mutation suppressing `uploads--` failed the recovery assertion with **503 instead of 202**, proving reservation cleanup
+remains tested; the source was restored byte-for-byte afterward. Receipts: `server-windows-probe-green-final.log`,
+`server-windows-probe-typecheck-final.log`, `server-windows-probe-mutant.log`. Hosted Windows validation of this correction remains
+an integration qualification step. This fixture correction does not claim to fix production delivery of early errors to clients
+that eagerly upload an entire body while the server refuses admission.

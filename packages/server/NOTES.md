@@ -317,3 +317,7 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   production p99 bound. Successful staged replay is closed; the first reader performs the normal pool replay again. Graceful import
   shutdown prioritizes completing cleanup over a fixed five-second deadline; replay itself has no independent wall-clock timeout.
 * Evidence, bounded stage/loop/RSS measurements and design rationale: `docs/reports/next-server-20261109.md`.
+* Hosted Windows follow-up: the disconnect-capacity fixture now awaits a signed header-only 503/BUSY response before disconnecting
+  the held partial upload, then still requires a full upload to complete. The competing archive body is withheld during early refusal;
+  production HTTP behavior is unchanged. A missing-release mutation still fails recovery (503 rather than 202). See the report's
+  Windows follow-up for the observed reset and qualification boundary.
