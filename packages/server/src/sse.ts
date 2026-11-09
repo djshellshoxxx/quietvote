@@ -96,6 +96,11 @@ export class SseHub {
   }
 
   private attach(res: ServerResponse, headers: Record<string, string>, rt: ElectionRuntime, startAt: number, _bucket: string, release: () => void): (reason: string) => void {
+    // Election loading can outlive the peer: its close event has already fired, so no listener below can release this slot.
+    if (res.destroyed || res.writableEnded) {
+      release();
+      return () => undefined;
+    }
     const cfg = this.env.cfg;
     const batch = cfg.sseBatch;
     let cursor = startAt;

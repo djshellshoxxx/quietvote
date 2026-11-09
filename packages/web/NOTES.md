@@ -217,3 +217,19 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   yielding with progress on the main thread, closed offline verifier CSP kept, no Worker). Option A needs a progress/yield hook in
   `@quietvote/protocol` `verifyElection` (owned by the #26 integration line); the page wiring follows once that hook lands.
   B3-26 is therefore open again; the verifier CSP is unchanged (no worker-src).
+
+## Spoil-share panel error recovery and route lifetime (2026-11-09)
+
+* A rejected uploaded-file read now shows the existing unreadable-share message and permits a subsequent valid upload.
+  Completing a file read after leaving the panel no longer starts a POST or announces a stale error on the new page.
+  This does not cancel share submissions already in flight or alter verification/admission rules.
+* The upload form starts hidden until spoil targets are derived. Every refresh updates its availability, so a successful
+  retry after an initial voter-list read failure restores the form without requiring a page reload.
+* The panel uses the shell's existing announcement regions exclusively; result/error text remains visible without adding
+  another status or alert region (the B3-18 rule already applied to the other views).
+* Five regressions in `test/spoil-shares-ui.test.ts` failed against the unchanged source and pass after these repairs.
+  They use a minimal DOM, a real signed trustees-mode spoil fixture and a fake HTTP client. Full-package and typecheck
+  validation are recorded in the integration receipt. Chromium launch was attempted but failed at process-singleton
+  socket creation with `Operation not permitted`; no browser or assistive-technology acceptance is claimed.
+* No catalog, guarantee, locale review, registration, protocol, CSP or dependency changes. AI-assisted implementation;
+  QuietVote remains unaudited and not for real elections.

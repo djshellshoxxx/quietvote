@@ -33,7 +33,7 @@ export function spoilSharesPanel(d: SpoilViewDeps): HTMLElement {
   const t = (k: MessageKey, a?: Args): string => d.tr.t(k, a);
   const root = h('section', { class: 'spoil-shares' });
   const list = h('div', { 'aria-busy': 'true' });
-  const result = h('div', { role: 'status', class: 'hint' });
+  const result = h('div', { class: 'hint' });
   const decodedSeen = new Set<string>();
   let targets: SpoilTargets | undefined;
   let first = true;
@@ -97,10 +97,14 @@ export function spoilSharesPanel(d: SpoilViewDeps): HTMLElement {
     } catch {
       if (!d.current()) return;
       clear(list);
-      list.append(h('p', { role: 'alert', class: 'error' }, t('qv.err.E-API-UNAVAILABLE.body')));
+      list.append(h('p', { class: 'error' }, t('qv.err.E-API-UNAVAILABLE.body')));
       d.say.say(t('qv.err.E-API-UNAVAILABLE.body'), true);
     } finally {
       list.setAttribute('aria-busy', 'false');
+      if (d.current()) {
+        if (targets === undefined) form.setAttribute('hidden', '');
+        else form.removeAttribute('hidden');
+      }
     }
   };
 
@@ -117,17 +121,23 @@ export function spoilSharesPanel(d: SpoilViewDeps): HTMLElement {
   const text = h('textarea', { id: textId, rows: 6, spellcheck: false, autocomplete: 'off', dir: 'ltr' }) as HTMLTextAreaElement;
   const file = h('input', { id: fileId, type: 'file', accept: '.json,application/json' }) as HTMLInputElement;
   const showResult = (lines: string[], urgent = false): void => {
+    if (!d.current()) return;
     clear(result);
     result.append(h('ul', { class: 'plain' }, ...lines.map((l) => h('li', {}, l))));
     d.say.say(lines[0] ?? '', urgent);
   };
   const send = async (): Promise<void> => {
-    if (targets === undefined) return;
+    if (targets === undefined || !d.current()) return;
     let input = text.value.trim();
     const f = file.files?.[0];
     if (input === '' && f !== undefined) {
       if (f.size > MAX_SHARE_BYTES * 4) return showResult([t('qv.spoil.add.unreadable')], true);
-      input = (await f.text()).trim();
+      try {
+        input = (await f.text()).trim();
+      } catch {
+        return showResult([t('qv.spoil.add.unreadable')], true);
+      }
+      if (!d.current()) return;
     }
     if (input === '') return showResult([t('qv.spoil.add.unreadable')], true);
     const records = parseShareInput(input);
@@ -142,7 +152,7 @@ export function spoilSharesPanel(d: SpoilViewDeps): HTMLElement {
     }
   };
 
-  const form = h('form', { class: 'spoil-add', onsubmit: (e: Event) => { e.preventDefault(); void send(); } },
+  const form = h('form', { class: 'spoil-add', hidden: true, onsubmit: (e: Event) => { e.preventDefault(); void send(); } },
     h('h2', {}, t('qv.spoil.add.title')),
     h('div', { class: 'field' }, h('label', { for: textId }, t('qv.spoil.add.title')), text),
     h('div', { class: 'field' }, h('label', { for: fileId }, t('qv.spoil.add.file')), file),
@@ -150,6 +160,6 @@ export function spoilSharesPanel(d: SpoilViewDeps): HTMLElement {
 
   add(root, [h('h1', { tabindex: -1, class: 'step-heading' }, t('qv.spoil.title')), list,
     h('button', { type: 'button', class: 'btn', onclick: () => { void refresh(); } }, t('qv.spoil.refresh')), form, result]);
-  void refresh().then(() => { if (targets === undefined) form.setAttribute('hidden', ''); });
+  void refresh();
   return root;
 }

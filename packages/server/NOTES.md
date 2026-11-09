@@ -288,3 +288,11 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   an implementation choice; contacts are still accepted although server-side delivery is unsupported (QV-28/QV-09 allow the optional field; refusing it
   until delivery exists is the audit's stricter suggestion and would be an API change); `trustee_invite` (not implemented) is untouched; backups made before a
   purge keep the data until the backup policy (QV-28 §11.1: 12 months) removes them, which is not implemented. Tests: `test/b2-fixes.test.ts`.
+
+## SSE disconnect cleanup (2026-11-09; AI-assisted, unaudited)
+* A client can disconnect while the events route awaits election loading. The response's `close` event then precedes stream attachment;
+  waiting for another `close` left its SSE capacity and runtime reference reserved until the slow-client/idle timeout or shutdown.
+  Attachment now releases an already destroyed/ended response immediately, before installing a timer or election subscription.
+* `test/sse-lifecycle.test.ts` reproduces the disconnect over real HTTP, checks that stream/runtime references and subscriptions are absent,
+  and reconnects successfully with a single available stream slot. It fails on the earlier implementation. This closes the SSE slot-release
+  suspicion listed in the 2026-10-21 notes; the other listed suspicions and protocol/authority decisions are unchanged.
