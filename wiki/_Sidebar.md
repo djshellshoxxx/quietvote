@@ -1,5 +1,8 @@
 **QuietVote Wiki**
 
+**User Guide**
+- [[User Guide]]
+
 **For members and organizers**
 - [[Home]]
 - [[How It Works In 5 Minutes]]
@@ -12,6 +15,9 @@
 - [[FAQ]]
 - [[Accessibility and Help]]
 - [[Glossary]]
+
+**Developer Guide**
+- [[Developer Guide]]
 
 **For developers**
 - [[Developer Home]]
