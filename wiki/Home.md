@@ -4,6 +4,13 @@
 
 **QuietVote lets a group vote in secret and still check the result.** It is for clubs, co-ops, unions, open-source groups and online communities. Members vote in secret. Anyone can check that the final count is right. You do not have to trust the people who run it.
 
+## Choose a guide
+
+- **[[User Guide]]** — members, voters, organizers, trustees, auditors, accessibility, troubleshooting, and privacy limitations.
+- **[[Developer Guide]]** — source setup, CLI/tests, architecture, APIs, contribution rules, CI, debugging, and release gates.
+
+These are top-level navigation hubs for a **draft and unaudited prototype**, not a supported production service.
+
 ## New here?
 
 Read [[How It Works In 5 Minutes]] first. It explains the whole idea with a simple picture.
@@ -17,7 +24,7 @@ Read [[How It Works In 5 Minutes]] first. It explains the whole idea with a simp
 | A trustee holding a piece of the key | [[Trustee Guide]] |
 | An auditor or observer checking results | [[Auditor and Verifier Guide]] |
 | Curious about what is and is not protected | [[What is QuietVote]] and [[Privacy and Guarantees]] |
-| A developer or reviewer | [[Developer Home]] |
+| A developer or reviewer | [[Developer Guide]] and [[Developer Home]] |
 
 Quick answers are in [[FAQ]]. Accessibility guidance and display settings are in [[Accessibility and Help]]. Hard words are explained in [[Glossary]].
 
