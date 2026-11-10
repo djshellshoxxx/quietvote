@@ -188,7 +188,8 @@ function bound(name: string, v: number, hi: number, lo = 1): number {
 export function resolveConfig(o: ServerOptions): ServerConfig {
   const rate: RateConfig = { ...DEFAULT_RATE, ...(o.rate ?? {}) };
   for (const [k, r] of Object.entries(rate) as [string, RateSpec][]) {
-    if (!(r.limit >= 1) || !(r.windowSec >= 1) || (r.burst !== undefined && !(r.burst >= 1))) throw new Error(`config rate.${k} invalid`);
+    if (!Number.isFinite(r.limit) || r.limit < 1 || !Number.isFinite(r.windowSec) || r.windowSec < 1 ||
+        (r.burst !== undefined && (!Number.isFinite(r.burst) || r.burst < 1))) throw new Error(`config rate.${k} invalid`);
   }
   const peers = (o.gossipPeers ?? []).slice();
   if (peers.length > 16) throw new Error('config gossipPeers: at most 16 peers');
