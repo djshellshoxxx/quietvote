@@ -23,7 +23,25 @@ node scripts/compare-verifiers.ts --json
 npm run build -w @quietvote/web
 ```
 
-The strict comparator can exit **1** on known D-92–D-94 differences. Record the failure; never disable or normalize it to manufacture green CI. On **separate draft [PR #32](https://github.com/djshellshoxxx/quietvote/pull/32) only** (not main or PR #30), an optional read-only diagnostic CLI can classify the same JSON discrepancies:\n\n```sh\nnode scripts/compare-verifiers.ts --json > comparator.json\nstrict_status=$?\nnode scripts/triage-verifier-report.mjs --input comparator.json\ntriage_status=$?\nprintf 'strict=%s triage=%s\\n' "$strict_status" "$triage_status"\n```\n\nThe triage CLI exits 0 for a consistent report with zero mismatches, **1** for differences and **2** for bad/inconsistent input; Python exclusions never count as agreement. Its [source-pinned test file](https://github.com/djshellshoxxx/quietvote/blob/f9960ffc49d4b4fe4b72b39abcea45332ae93489/scripts/triage-verifier-report.test.mjs) passed **7/7** in hosted [CI 42823551666](https://github.com/djshellshoxxx/quietvote/actions/runs/42823551666), while the unchanged strict comparator failed on three differing reports out of 27. This is diagnostic evidence, not protocol approval, a green CI result, or an independently audited verifier.\n\nConsult `packages/cli/README.md` and `packages/cli/src/main.ts` on the chosen branch for current `qv` command usage rather than assuming all commands are implemented.
+The strict comparator can exit **1** on known D-92–D-94 differences. Record the failure; never disable or normalize it to manufacture green CI.
+
+On **separate draft [PR #32](https://github.com/djshellshoxxx/quietvote/pull/32) only** (not main or PR #30), an optional read-only diagnostic CLI can classify the same JSON discrepancies:
+
+```sh
+node scripts/compare-verifiers.ts --json > comparator.json
+strict_status=$?
+node scripts/triage-verifier-report.mjs --input comparator.json
+triage_status=$?
+printf 'strict=%s triage=%s\n' "$strict_status" "$triage_status"
+```
+
+The triage CLI exits 0 for a consistent report with zero mismatches, **1** for differences and **2** for bad/inconsistent input; Python exclusions never count as agreement. Its [source-pinned test file](https://github.com/djshellshoxxx/quietvote/blob/f9960ffc49d4b4fe4b72b39abcea45332ae93489/scripts/triage-verifier-report.test.mjs) passed **7/7** in hosted [CI 42823551666](https://github.com/djshellshoxxx/quietvote/actions/runs/42823551666), while the unchanged strict comparator failed on three differing reports out of 27. This is diagnostic evidence, not protocol approval, a green CI result, or an independently audited verifier.
+
+### Import cancellation qualification (separate draft)
+
+Draft [PR #35](https://github.com/djshellshoxxx/quietvote/pull/35) adds an early cancellation guard to `packages/server/src/imports.ts`. On its exact head `67683185aa9d3d218c054f75f291ad24b5a770a4`, the hosted [CI run 42831513209](https://github.com/djshellshoxxx/quietvote/actions/runs/42831513209) passed the new pre-aborted import test in the Node 22 server suite (**166/166 passed**) and all other application jobs. The strict TS/Python comparator still fails (3/27 complete reports differ), so this is **not** fully green CI or an integrated release. The test's red baseline was not independently executed; synchronous mid-archive parsing and full bounded replay/tally scheduling remain outstanding. For a branch containing the draft code, run `npm test -w @quietvote/server` to repeat the server suite.
+
+Consult `packages/cli/README.md` and `packages/cli/src/main.ts` on the chosen branch for current `qv` command usage rather than assuming all commands are implemented.
 
 ## APIs, tests, debugging and security
 
