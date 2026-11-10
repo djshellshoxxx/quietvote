@@ -41,6 +41,10 @@ The triage CLI exits 0 for a consistent report with zero mismatches, **1** for d
 
 Draft [PR #35](https://github.com/djshellshoxxx/quietvote/pull/35) adds an early cancellation guard to `packages/server/src/imports.ts`. On its exact head `67683185aa9d3d218c054f75f291ad24b5a770a4`, the hosted [CI run 42831513209](https://github.com/djshellshoxxx/quietvote/actions/runs/42831513209) passed the new pre-aborted import test in the Node 22 server suite (**166/166 passed**) and all other application jobs. The strict TS/Python comparator still fails (3/27 complete reports differ), so this is **not** fully green CI or an integrated release. The test's red baseline was not independently executed; synchronous mid-archive parsing and full bounded replay/tally scheduling remain outstanding. For a branch containing the draft code, run `npm test -w @quietvote/server` to repeat the server suite.
 
+### Job-start recovery regression (separate draft)
+
+Draft [PR #36](https://github.com/djshellshoxxx/quietvote/pull/36) modifies only `packages/server/src/jobs.ts` and adds `packages/server/test/jobs-start-transition.test.ts` on an isolated branch. When the durable queued-to-running transition fails, the test requires a recorded failed state and continued FIFO processing without running the failed job. At exact commit `c4a89598058324fab970f99fc9abaabe8f647aa1`, [hosted CI 42853594931](https://github.com/djshellshoxxx/quietvote/actions/runs/42853594931) reported **10 passed jobs and 1 failed**; the new test passed in the Node 22 server suite (**166 server tests passed, 0 failed**). The failing job was the unchanged strict TypeScript/Python verifier report comparator. A red pre-fix run was **not** executed, and this draft is neither merged nor generally released. This narrow fix does not establish end-to-end job scheduling or election correctness.
+
 Consult `packages/cli/README.md` and `packages/cli/src/main.ts` on the chosen branch for current `qv` command usage rather than assuming all commands are implemented.
 
 ## APIs, tests, debugging and security
