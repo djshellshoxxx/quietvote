@@ -27,9 +27,16 @@ export function workerSealer(workerUrl: string): Sealer | undefined {
     seal(req: SealRequest): Promise<SealResponse> {
       return new Promise((resolve) => {
         const w = new Worker(url as string, { type: 'module' });
+        const fail = (): void => { w.terminate(); resolve({ ok: false, error: 'worker failed' }); };
         w.onmessage = (e: MessageEvent<SealResponse>): void => { w.terminate(); resolve(e.data); };
-        w.onerror = (): void => { w.terminate(); resolve({ ok: false, error: 'worker failed' }); };
-        w.postMessage(req);
+        w.onerror = fail;
+        w.onmessageerror = fail;
+        try {
+          w.postMessage(req);
+        } catch {
+          // Structured-clone failures reject synchronously; still release the dedicated Worker.
+          fail();
+        }
       });
     },
   };
