@@ -24,7 +24,7 @@ These guides are explanations of experimental behavior and design goals; they ar
 - Start with [[FAQ]] and [[Glossary]] for terminology and common questions.
 - For a failed or unconfirmed ballot submission, do **not** infer success from a button state. Preserve the locally available receipt/evidence and verify the published log according to [[Auditor and Verifier Guide]]. See the [current prototype checkpoint](https://github.com/djshellshoxxx/quietvote/pull/30) for tested recovery cases, not a production guarantee.
 - For missing or inconsistent verification results, do **not** silently override the strict comparator: the TS/Python verifier report discrepancies D-92–D-94 still require owner decisions.
-- For sensitive reports, use the [private security-reporting process](https://github.com/djshellshoxxx/quietvote/blob/main/SECURITY.md), not a public issue.
+- For sensitive reports, use the [private security-reporting process](https://github.com/djshellshoxxx/quietvote/blob/ab84f16136184cb1fa0fa67b41e113424e134ba8/SECURITY.md), not a public issue.
 - Read [[Privacy and Guarantees]] and [[Security Model and Threats]] before considering the design. It does not protect against device compromise, coercion, network observation, colluding trustees or malicious client delivery, and it is **not security audited**.
 
 ## State of completion
