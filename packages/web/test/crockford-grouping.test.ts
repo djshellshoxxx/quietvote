@@ -8,9 +8,9 @@ test('display grouping keeps existing canonical four-symbol and explicit groupin
   assert.equal(groupSymbols('', 4), '');
 });
 
-test('display grouping refuses non-integer and unbounded group sizes', () => {
-  // Do not invoke nonpositive widths on the unfixed code: they may never advance the loop.
-  for (const size of [Infinity, NaN, 1.5]) {
+test('display grouping refuses nonpositive, non-integer and unbounded group sizes', () => {
+  for (const size of [0, -1, -1.5, -Infinity, Infinity, NaN, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
     assert.throws(() => groupSymbols('ABCDEFG', size), RangeError, `size=${String(size)}`);
+    assert.throws(() => groupSymbols('', size), RangeError, `empty code, size=${String(size)}`);
   }
 });
