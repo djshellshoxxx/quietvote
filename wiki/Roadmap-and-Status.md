@@ -17,11 +17,11 @@
 | Release | None |
 | Licence | AGPL-3.0-or-later (`LICENSE`; decision QV-ADR-011). The documentation licence still needs counsel review (D-74) |
 
-Read the [README](https://github.com/djshellshoxxx/quietvote/blob/main/README.md) for the project's own status statement. The consolidated open-work list is [docs/plan/TODO.md](https://github.com/djshellshoxxx/quietvote/blob/main/docs/plan/TODO.md).
+Read the [README](https://github.com/djshellshoxxx/quietvote/blob/main/README.md) for the project's own status statement. The consolidated open-work list is [docs/plan/TODO.md](https://github.com/djshellshoxxx/quietvote/blob/ab84f16136184cb1fa0fa67b41e113424e134ba8/docs/plan/TODO.md).
 
 ## Indicative phases (from the roadmap)
 
-The project roadmap ([docs/plan/ROADMAP.md](https://github.com/djshellshoxxx/quietvote/blob/main/docs/plan/ROADMAP.md)) is a draft with indicative dates and effort estimates. Summary:
+The project roadmap ([docs/plan/ROADMAP.md](https://github.com/djshellshoxxx/quietvote/blob/ab84f16136184cb1fa0fa67b41e113424e134ba8/docs/plan/ROADMAP.md)) is a draft with indicative dates and effort estimates. Summary:
 
 | Phase | Goal |
 |---|---|
