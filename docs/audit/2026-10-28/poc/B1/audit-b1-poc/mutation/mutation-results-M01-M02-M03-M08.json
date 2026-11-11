@@ -1,0 +1,34 @@
+[
+  {
+    "m": "M01 cp-dh challenge omits pt(Ej)",
+    "crypto": "survived",
+    "crypto_fail": "# fail 0",
+    "protocol": "KILLED",
+    "protocol_fail": "# fail 3",
+    "secs": 90
+  },
+  {
+    "m": "M02 cp-dh challenge omits pt(S)",
+    "crypto": "survived",
+    "crypto_fail": "# fail 0",
+    "protocol": "KILLED",
+    "protocol_fail": "# fail 3",
+    "secs": 114
+  },
+  {
+    "m": "M03 pok-share challenge omits pt(Yj)",
+    "crypto": "survived",
+    "crypto_fail": "# fail 0",
+    "protocol": "KILLED",
+    "protocol_fail": "# fail 3",
+    "secs": 100
+  },
+  {
+    "m": "M08 pok challenge omits u16(k)",
+    "crypto": "KILLED",
+    "crypto_fail": "# fail 1",
+    "protocol": "KILLED",
+    "protocol_fail": "# fail 5",
+    "secs": 85
+  }
+]

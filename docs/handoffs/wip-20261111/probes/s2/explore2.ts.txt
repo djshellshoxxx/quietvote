@@ -1,0 +1,26 @@
+// Exploration only: tally record sizes vs board MAX_BODY.tally_result (16 KiB).
+import { jcs } from '/home/user/qv-wt/s2-tally/packages/crypto/src/index.ts';
+import { type ManifestContest } from '/home/user/qv-wt/s2-tally/packages/protocol/src/index.ts';
+import { MAX_BODY } from '/home/user/qv-wt/s2-tally/packages/board/src/index.ts';
+import { setup, castBallot, spoilBallot, closeElection, publishTally, defaultContests } from '/home/user/qv-wt/s2-tally/packages/protocol/test/helpers/sim.ts';
+
+const o = (...ids: string[]) => ids.map((id) => ({ id, label: id.toUpperCase() }));
+const world: ManifestContest[] = [
+  { id: 'budget', title: 'Adopt the budget?', method: 'yes-no', options: o('yes', 'no'), selection_limit: 1, min_selections: 0,
+    rule: { type: 'threshold', num: 1, den: 2, basis: 'yes+no', strict: true }, tie_break: { type: 'status-quo', option: 'no' } },
+  { id: 'chair', title: 'Chair', method: 'single-choice', options: o('ann', 'bob', 'cy'), selection_limit: 1, min_selections: 0, tie_break: { type: 'lexicographic' } },
+];
+console.log('MAX_BODY', MAX_BODY.tally_result, MAX_BODY.decryption_share, MAX_BODY.tally_aggregate);
+for (const [name, contests, n, t, subset, spoils] of [
+  ['world-2c-5opt t2', world, 3, 2, [1, 2], 0], ['world-2c-5opt t2 +10 spoils', world, 3, 2, [1, 2], 10],
+  ['default-4c-14opt t2', defaultContests(), 3, 2, [1, 2], 0], ['default-4c-14opt t3/5', defaultContests(), 5, 3, [1, 2, 3], 0],
+  ['default-4c-14opt all5', defaultContests(), 5, 3, [1, 2, 3, 4, 5], 0],
+] as const) {
+  const sim = await setup({ seed: `s2-size-${name}`, n, t, voters: 5, contests: contests as ManifestContest[] });
+  for (let i = 0; i < 5; i++) castBallot(sim, i, {});
+  for (let k = 0; k < spoils; k++) spoilBallot(sim, 0, { budget: ['yes'], chair: ['ann'] }, 'publish');
+  closeElection(sim);
+  publishTally(sim, [...subset]);
+  const tally = sim.log.at(-1)!.entry;
+  console.log(name, 'tally bytes', jcs(tally as never).length);
+}

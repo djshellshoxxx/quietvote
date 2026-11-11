@@ -1,0 +1,30 @@
+{
+  "name": "quietvote",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lockfile:lint": "node scripts/lockfile-lint.mjs",
+    "deps:check": "node scripts/check-deps.mjs",
+    "links:check": "node scripts/check-links.mjs",
+    "trace": "node scripts/trace.mjs",
+    "trace:check": "node scripts/trace.mjs --check",
+    "tools:test": "node --test \"scripts/*.test.mjs\"",
+    "test": "npm test --workspaces --if-present",
+    "check": "npm run typecheck && npm test",
+    "vectors:check": "node packages/cli/bin/qv.ts vectors check",
+    "verifiers:compare": "node scripts/compare-verifiers.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "playwright": "1.57.0",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,18 @@
+// B3 audit PoC (Playwright): the assertive live region truncates the anti-phishing warning (qv.phish.mismatch, 213 chars) to 140 characters.
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { exe, pw, startStack } from './harness.ts';
+
+const sim = await sharedSim();
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+await p.goto(`${stack.origin}/e/${board.apiId}`);
+await p.getByRole('button', { name: "It doesn't match" }).click();
+await p.waitForFunction(() => (document.getElementById('live-urgent')?.textContent ?? '').length > 0);
+const announced = await p.locator('#live-urgent').textContent();
+const visible = await p.locator('main .error').first().textContent();
+console.log(`announced (assertive region, ${announced!.length} chars): ${JSON.stringify(announced)}`);
+console.log(`visible text (${visible!.length} chars): ${JSON.stringify(visible)}`);
+await browser.close();
+stack.close();

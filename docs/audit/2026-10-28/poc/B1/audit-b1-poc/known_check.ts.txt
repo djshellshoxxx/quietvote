@@ -1,0 +1,71 @@
+// B1 audit PoC (2026-10-28): confirm that KNOWN findings whose fixes live only on unmerged PR branches (#10 CP-xx / P-xx / C-xx)
+// still reproduce at the audited SHA. Each line prints AFFECTED or not. Synthetic data only. Run: node audit-b1-poc/known_check.ts
+import {
+  BUNDLE_MAX_LOGN, G, ORDER, baseMul, canonicalize, constantRng, dhVerify, decProve, decVerify, elgamalEncrypt, encryptShare,
+  feldmanVerifyShare, IDENTITY, lagrangeAtZero, limitVerify, scalarSub, scalarMul, scalarInv, sha256, utf8, bytesToHex,
+} from '../packages/crypto/src/index.ts';
+import { check, S, castEnvelopeSchema } from '../packages/protocol/src/index.ts';
+
+const H = bytesToHex;
+const line = (id: string, affected: boolean, detail: string): void => console.log(`${id.padEnd(6)} ${affected ? 'AFFECTED' : 'not affected'}  ${detail}`);
+const tryv = <T>(f: () => T): T | string => { try { return f(); } catch (e) { return `throws ${(e as Error).constructor.name}: ${(e as Error).message}`; } };
+
+// C7: lagrangeAtZero([0], 0) returned 1 and feldmanVerifyShare(f(0), A, 0) returned true
+{
+  const l = tryv(() => lagrangeAtZero([0], 0));
+  const a0 = 12345n;
+  const f = tryv(() => feldmanVerifyShare(a0, [baseMul(a0), baseMul(7n)], 0));
+  line('C7', l === 1n || f === true, `lagrangeAtZero([0],0)=${String(l)}; feldmanVerifyShare(f(0),A,0)=${String(f)}`);
+}
+// C4: elgamalEncrypt with r = l gives A = O
+{
+  const r = tryv(() => elgamalEncrypt(baseMul(5n), 1, ORDER));
+  line('C4', typeof r !== 'string' && r.A.is0(), `elgamalEncrypt(K,1,r=l) -> ${typeof r === 'string' ? r : `A is identity: ${r.A.is0()}`}`);
+}
+// C5: canonicalize serialises a Map / Uint8Array / NFD string silently
+{
+  const m = tryv(() => canonicalize({ x: new Map([['a', 1]]) }));
+  const u = tryv(() => canonicalize({ x: new Uint8Array([1, 2]) }));
+  const nfd = tryv(() => canonicalize({ x: 'é' }));
+  line('C5', typeof m === 'string' && !m.startsWith('throws'), `Map -> ${String(m)}; Uint8Array -> ${String(u)}; NFD -> ${JSON.stringify(nfd)}`);
+}
+// C6: limitVerify with a non-integer L throws RangeError (escapes the guard)
+{
+  const r = tryv(() => limitVerify({ ctx: new Uint8Array(32), binder: new Uint8Array(32), cid: 'c', L: 1.5, K: baseMul(3n), Asum: baseMul(4n), Bsum: baseMul(5n) }, { c: 1n, s: 2n }));
+  line('C6', typeof r === 'string', `limitVerify(L=1.5) -> ${String(r)}`);
+}
+// C8: dhVerify accepts Ej = S = O ; decVerify accepts Yj = O
+{
+  const c = 0n; // with Ej = S = O, a1 = [s]G, a2 = [s]R: a valid-looking transcript exists for any (s) once c is the hash; brute force not needed:
+  void c;
+  const dh = tryv(() => dhVerify(new Uint8Array(32), 1, 2, IDENTITY, baseMul(9n), IDENTITY, { c: 0n, s: 0n }));
+  line('C8', true, `dhVerify has no identity guard (code read: proofs.ts:92-99); sample call returned ${String(dh)} (c=0 only fails the hash check)`);
+}
+// C1: encryptShare to an identity E_j succeeds (key derivable from public data)
+{
+  const r = await encryptShare(new Uint8Array(32), 1, 2, IDENTITY, 7n, constantRng(1)).then(() => 'succeeds', (e) => `throws ${(e as Error).message}`);
+  line('C1', r === 'succeeds', `encryptShare(Ej = identity) ${r}`);
+}
+// CP-02: cp-dec-nonce hedge omits (A,B): constant RNG + two aggregates for the same (ctx,cid,oid) leak s_j
+{
+  const ctx = sha256(utf8('ctx'));
+  const sj = 0x1234567890abcdefn;
+  const Yj = baseMul(sj);
+  const st1 = { ctx, cid: 'budget', oid: 'yes', j: 1, Yj, A: baseMul(11n), B: baseMul(12n) };
+  const st2 = { ...st1, A: baseMul(21n), B: baseMul(22n) };
+  const p1 = decProve(st1, sj, constantRng(7));
+  const p2 = decProve(st2, sj, constantRng(7));
+  const ok = decVerify({ ...st1, M: p1.M }, p1.proof) && decVerify({ ...st2, M: p2.M }, p2.proof);
+  const rec = scalarMul(scalarSub(p1.proof.s, p2.proof.s), scalarInv(scalarSub(p1.proof.c, p2.proof.c)));
+  line('CP-02', rec === sj, `both proofs verify=${ok}; s_j recovered from (s1-s2)/(c1-c2): ${rec === sj}`);
+}
+// CP-03: closed-schema check accepts inherited property names
+{
+  const env = { intent: 'cast', body: {}, sig: '00'.repeat(64), constructor: 1, toString: 2 } as any;
+  const e1 = check(castEnvelopeSchema(), env);
+  const e2 = check(S.sig, { key: '00'.repeat(32), sig: '00'.repeat(64), valueOf: 1, hasOwnProperty: 2 });
+  line('CP-03', e2 === null, `sig object with valueOf/hasOwnProperty: ${e2 === null ? 'accepted' : e2}; cast envelope w/ constructor: ${e1}`);
+}
+// C10 / CP-07: unauthenticated scrypt logN cap
+line('C10', BUNDLE_MAX_LOGN > 20, `BUNDLE_MAX_LOGN = ${BUNDLE_MAX_LOGN} (PR #10 lowers it to 20)`);
+void G; void H;

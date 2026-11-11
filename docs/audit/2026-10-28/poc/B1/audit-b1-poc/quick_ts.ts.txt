@@ -1,0 +1,9 @@
+// B1 audit PoC helper: run the TS reference verifier (protocol.verifyElection, no log evidence) on bundle files given as argv.
+import { readFileSync } from 'node:fs';
+import { verifyElectionText } from '../packages/protocol/src/index.ts';
+for (const f of process.argv.slice(2)) {
+  const r = await verifyElectionText(readFileSync(f));
+  const failed = Object.entries(r.checks).filter(([, s]) => s === 'fail').map(([k]) => k);
+  const codes = [...new Set(r.findings.map((x) => `${x.code}/${x.cls}`))];
+  console.log(JSON.stringify({ file: f.split('/').slice(-2).join('/'), verdict: r.verdict, failed, codes }));
+}

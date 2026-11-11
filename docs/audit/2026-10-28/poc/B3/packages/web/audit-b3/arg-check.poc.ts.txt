@@ -1,0 +1,35 @@
+// B3 audit PoC: static call sites t('key', {args}) whose argument names differ from the ICU placeholders of the English message.
+import ts from 'typescript';
+import { readFileSync } from 'node:fs';
+import { EN } from '../src/i18n/en.ts';
+import { argNames, parse } from '../src/i18n/icu.ts';
+const files = ['src/ui/app.ts', 'src/ui/charts.ts', 'src/main.ts', 'src/flow/publish-ui.ts'];
+let n = 0, bad = 0;
+for (const f of files) {
+  const src = ts.createSourceFile(f, readFileSync(new URL(`../${f}`, import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true);
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const e = node.expression;
+      const isT = (ts.isIdentifier(e) && (e.text === 't' || e.text === 't_')) || (ts.isPropertyAccessExpression(e) && e.name.text === 't');
+      const a0 = node.arguments[0];
+      if (isT && a0 && ts.isStringLiteral(a0) && a0.text in EN) {
+        const need = argNames(parse(EN[a0.text as keyof typeof EN].message));
+        const a1 = node.arguments[1];
+        const have = new Set<string>();
+        let known = true;
+        if (a1 && ts.isObjectLiteralExpression(a1)) {
+          for (const p of a1.properties) { if (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) have.add((p.name as ts.Identifier).text); else known = false; }
+        } else if (a1) known = false;
+        n++;
+        if (known) {
+          const missing = [...need].filter((x) => !have.has(x));
+          const extra = [...have].filter((x) => !need.has(x));
+          if (missing.length || extra.length) { bad++; console.log(`${f}:${src.getLineAndCharacterOfPosition(node.getStart(src)).line + 1} ${a0.text} missing=[${missing}] extra=[${extra}]`); }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(src);
+}
+console.log(`static calls checked: ${n}; with argument mismatch: ${bad}`);

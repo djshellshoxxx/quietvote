@@ -1,0 +1,28 @@
+// B1 audit PoC (2026-10-28): side effect of the in-SHA TR-01 check (KNOWN CP-01 area). castAlphas collects alphas from ANY cast
+// envelope, valid or not, so another voter can plant a copy of a trustee-mode spoil's alpha in an invalid cast and make the honest
+// voter's audit raise E_SPOILED_CODE_CAST. Synthetic data only. Run: node audit-b1-poc/known_tr01_plant.ts
+import { bytesToHex } from '../packages/crypto/src/index.ts';
+import { verifyElection, type ManifestContest } from '../packages/protocol/src/index.ts';
+import { bundleOf, castBallot, closeElection, publishTally, push, setup, spoilBallot } from '../packages/protocol/test/helpers/sim.ts';
+void bytesToHex;
+const yesNo: ManifestContest = {
+  id: 'budget', title: 'Budget?', method: 'yes-no', options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }], selection_limit: 1,
+  min_selections: 0, rule: { type: 'threshold', num: 1, den: 2, basis: 'yes+no', strict: true }, tie_break: { type: 'status-quo', option: 'no' },
+};
+async function run(plant: boolean): Promise<void> {
+  const s = await setup({ seed: `b1-tr01-${plant}`, n: 3, t: 2, voters: 4, contests: [yesNo], spoilTrustees: true });
+  const sp = spoilBallot(s, 0, { budget: ['yes'] }, 'trustees'); // honest trustee-mode audit by voter 0
+  castBallot(s, 0, { budget: ['no'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  if (plant) {
+    // voter 1 (or anyone who can append) posts a junk "cast" that copies voter 0's spoil alpha; it fails E_CDS and is never counted
+    const junk = JSON.parse(JSON.stringify(s.log.find((e) => e.entry === s.log.find((x) => (x.entry as any).intent === 'cast')!.entry)!.entry));
+    junk.body.contests[0].sel[0].a = (sp.env.body.contests[0]!.sel[0]!).a;
+    push(s, junk);
+  }
+  closeElection(s); publishTally(s, [1, 2], { spoilTrustees: true });
+  const r = await verifyElection(JSON.parse(JSON.stringify(bundleOf(s))));
+  const f = r.findings.filter((x) => x.cls !== 'I').map((x) => `${x.code}/${x.cls}`);
+  console.log(`plant=${plant}: verdict ${r.verdict}, chk.benaloh.spoiled=${r.checks['chk.benaloh.spoiled']}, findings ${JSON.stringify(f)}`);
+}
+await run(false);
+await run(true);

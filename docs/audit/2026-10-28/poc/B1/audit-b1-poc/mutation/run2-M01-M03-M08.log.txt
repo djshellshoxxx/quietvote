@@ -1,0 +1,4 @@
+M01 cp-dh challenge omits pt(Ej)                        crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 3)  90s
+M02 cp-dh challenge omits pt(S)                         crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 3)  114s
+M03 pok-share challenge omits pt(Yj)                    crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 3)  100s
+M08 pok challenge omits u16(k)                          crypto=KILLED   (# fail 1)  protocol-subset=KILLED   (# fail 5)  85s

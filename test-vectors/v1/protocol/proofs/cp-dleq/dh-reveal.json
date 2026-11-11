@@ -1,0 +1,93 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "protocol/proofs/cp-dleq",
+  "operation": "cp.verify_dh",
+  "description": "Complaint DH-reveal DLEQ (QV-16 §5.7.5)",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "dleq-valid",
+      "input": {
+        "manifest_hash_hex": "4463f2a9e4daf5edc0f53ebc001401cb61ef639777c08ac59d464af407a15429",
+        "i": 1,
+        "j": 2,
+        "E_hex": "baf4d358a9818cdcd56aa03e4af58f2a788e38d021e65e47b10afc3dbfc11475",
+        "R_hex": "cc409007ab778dadf280f7982927f0d970fb5eba1e71449e99e46fcad9166f79",
+        "S_hex": "24e81a0bd03884d6ac70f6ba77540c9715945cd4f57f0364bc15deba9495d659",
+        "proof": {
+          "c": "f0ce7fa07e6d7395be0f85a5459b2c599149954ab628ccd85b776dae05ba4d07",
+          "s": "dcc566020b82e3b8dc8fc586269bcb83464686ebe634ee5a22b6b69792e6b506"
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "valid": true
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "dleq-wrong-S",
+      "input": {
+        "manifest_hash_hex": "4463f2a9e4daf5edc0f53ebc001401cb61ef639777c08ac59d464af407a15429",
+        "i": 1,
+        "j": 2,
+        "E_hex": "baf4d358a9818cdcd56aa03e4af58f2a788e38d021e65e47b10afc3dbfc11475",
+        "R_hex": "cc409007ab778dadf280f7982927f0d970fb5eba1e71449e99e46fcad9166f79",
+        "S_hex": "863c1280e7149166088a47ecd7dec572af55ed821ae3186f21b2570b71779701",
+        "proof": {
+          "c": "f0ce7fa07e6d7395be0f85a5459b2c599149954ab628ccd85b776dae05ba4d07",
+          "s": "dcc566020b82e3b8dc8fc586269bcb83464686ebe634ee5a22b6b69792e6b506"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DKG_COMPLAINT"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "dleq-swapped-parties",
+      "input": {
+        "manifest_hash_hex": "4463f2a9e4daf5edc0f53ebc001401cb61ef639777c08ac59d464af407a15429",
+        "i": 2,
+        "j": 1,
+        "E_hex": "baf4d358a9818cdcd56aa03e4af58f2a788e38d021e65e47b10afc3dbfc11475",
+        "R_hex": "cc409007ab778dadf280f7982927f0d970fb5eba1e71449e99e46fcad9166f79",
+        "S_hex": "24e81a0bd03884d6ac70f6ba77540c9715945cd4f57f0364bc15deba9495d659",
+        "proof": {
+          "c": "f0ce7fa07e6d7395be0f85a5459b2c599149954ab628ccd85b776dae05ba4d07",
+          "s": "dcc566020b82e3b8dc8fc586269bcb83464686ebe634ee5a22b6b69792e6b506"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DKG_COMPLAINT"
+      },
+      "tags": [
+        "negative",
+        "attack:frozen-heart"
+      ]
+    }
+  ]
+}
