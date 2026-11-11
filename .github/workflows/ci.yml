@@ -70,8 +70,11 @@ jobs:
         run: node --test .github/scripts/check-workflow-coverage.test.mjs
       - name: Test required browser journey runner
         run: node --test .github/scripts/run-browser-journeys.test.mjs
-      - name: Test diagnostic verifier comparator triage (strict)
-        run: node --test scripts/triage-verifier-report.test.mjs
+      - name: Test repository tooling scripts (comparator triage, deps, links, traceability)
+        run: npm run tools:test
+      # QV-08 section 5.1 D1..D7 and the QV-ADR-024 allowlist. Known deviations are listed in the script, never hidden.
+      - name: Check package layering and dependency allowlist (deps-boundaries)
+        run: npm run deps:check
       - name: Check workflow actions are pinned to full commit SHAs
         run: node .github/scripts/check-action-pins.mjs
       # Supply-chain gates (docs/30-engineering-standards.md, R-02).

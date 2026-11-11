@@ -1,0 +1,19 @@
+{
+  "_comment": "Ratchet for scripts/check-deps.mjs. Listed violations are printed on every run and do not fail it; anything else fails, and so does an entry that no longer matches. Add nothing here to silence a new finding. Each entry needs an owner decision recorded in docs/plan/OPEN-DECISIONS.md.",
+  "deviations": [
+    {
+      "rule": "D1-EDGE",
+      "file": "packages/protocol/src/logcheck.ts",
+      "specifier": "@quietvote/board",
+      "ref": "D-97",
+      "reason": "protocol's log-layer check imports board Merkle/checkpoint primitives; docs/08 section 5.1 D1 orders crypto < protocol < board. Amend the layer order or move logcheck: owner decision."
+    },
+    {
+      "rule": "D1-DECLARED",
+      "file": "packages/protocol/package.json",
+      "specifier": "@quietvote/board",
+      "ref": "D-97",
+      "reason": "Declaration of the same protocol -> board edge."
+    }
+  ]
+}
