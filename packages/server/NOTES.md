@@ -39,7 +39,7 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
   signed by a coordinator and posted; the server derives it from the admitted aggregate and received shares and rejects any difference.
 * **Time**: ballots need `voting_open - clock_skew <= now < voting_close` (server clock, QV-18 §5.3 step 8) in addition to
   OPEN; `election_open` needs `now >= voting_open - skew`; `election_close` needs `now >= voting_close` (no early close).
-  Advisory scheduler (auto open/close) NOT implemented (no closer key in manifest).
+  Advisory scheduler (auto open/close) NOT implemented (no closer key in manifest); out of MVP scope by decision (QV-ADR-027 N-21).
 * **TALLIED** is folded into AUDIT immediately (checkpoint exists at once). STALLED is derived (TALLYING > `stalledMaxSec`).
   CHALLENGED exists in the enum but no entry produces it. `max_total_hours` pause cap and RESUME-with-new-close-time not implemented; `maxHalts` is.
 * **Roll**: voters auto-approved on registration (no approval policy in the manifest); roll_commit must equal the server's
@@ -48,8 +48,8 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
   (codes are never stored). Registration PoP message: `"QV-REG-v1\0" election_id "\0" pk`.
 * Spoil `trustees` mode (QV-ADR-020) is accepted only if the manifest enables it; its share relay, storage and tally inclusion are implemented below.
 * `reveal` verification (`verifySpoilReveal`) is done at admission (costly); rejected with E_SPOIL_MISMATCH.
-* Bucket for IPv6 is /64 (finer than the spec's /56; address expansion prevents compressed text leaking host bits into the bucket);
-  archive deletes erase the DEK and files but do not require an acknowledged export.
+* Bucket for IPv6 is /56 as specified (QV-ADR-027 N-32(a); earlier /64). Address expansion prevents compressed text leaking host bits into the bucket.
+  Archive deletes erase the DEK and files and, since QV-ADR-027 N-32(b), require an acknowledged public export (see the 2026-11-04 section).
 * `max_per_voter`/`max_spoils` overruns answer 429 `REVOTE_LIMIT` with `retryable:false` (QV-09 table).
 
 ## Event stream and webhooks (QV-09 §9, §6.3; QV-09-REQ-010/014)
@@ -123,10 +123,9 @@ Files: `gossip.ts`, `imports.ts`, `jobs.ts`, `admin.ts`, `ext-routes.ts`, `range
 election DB migration 3 (`gossip_seen`, append-only `equivocation_evidence`); `tar.ts` gained `readTarStrict`. Tests: `gossip.test.ts`, `imports.test.ts`,
 `admin.test.ts`, `range.test.ts` (helpers in `test/helpers/full.ts`: a full small election, hostile-tar builder, bundle rewriter).
 
-**D-84 (OWNER DECISION PENDING).** `/admin/*` follows QV-08 (signed `QV-Sig` requests; key registered as `instance_admin`, seeded from `adminKeys`), the
-recommended default, not QV-09 §3.2's session bearer (there is still no `/auth/*`). The whole admin authorization decision is ONE function:
-`authorizeAdmin(c)` in `admin.ts` (the request signature is verified earlier by the HTTP layer for every `auth: 'sig'` route). If the owner picks the
-bearer model, only that function and the token check in `http.ts` change. Admin responses are `no-store` and never CORS-readable; every admin POST/DELETE
+**D-84 (decided 2026-11-04, QV-ADR-027 N-20).** `/admin/*` follows QV-08 (signed `QV-Sig` requests; key registered as `instance_admin`, seeded from `adminKeys`);
+QV-09 §3.2's session bearer is retired (there is no `/auth/*`). The whole admin authorization decision is ONE function:
+`authorizeAdmin(c)` in `admin.ts` (the request signature is verified earlier by the HTTP layer for every `auth: 'sig'` route). Admin responses are `no-store` and never CORS-readable; every admin POST/DELETE
 requires `Idempotency-Key`.
 
 **Gossip (`POST /gossip/checkpoints`, class G).** Body `{note}` only (`16 KiB` request, note <= 8192 chars, printable ASCII + em dash + LF, <= 24 lines,
@@ -192,7 +191,7 @@ The class-X rate limit still counts every request, including range requests; res
 state mapping, `quarantineReason` used by the admission phase gate. `problem.ts`: `extra.headers`/`extra.body`. `http.ts`: `body: 'tar'` routes, `Reply.ranges`.
 `/instance`: `limits.max_import_bytes`, features `gossip imports range-export admin`. State view `integrity` can now be `compromised`.
 
-**Open questions for the owner.** D-84 (above). Should `link` elections accept anonymous gossip (QV-09 says anon; implemented stricter)? Should the bundle format carry the
+**Open questions for the owner.** (D-84 decided, above.) Should `link` elections accept anonymous gossip (QV-09 says anon; implemented stricter)? Should the bundle format carry the
 organizer/server keys officially (QV-18 §12 file list)? Should the verifier's `bind()` accept the organizer key for the manifest entry (per `logcheck.ts` `bind()` it allows only coordinator
 keys for the manifest entry, while this server has an org organizer key sign it; not run end to end, which is why the importer verifies the board layer itself instead of passing `{log}` to `verifyElection`)? Retention/encryption of backups?
 
@@ -288,3 +287,32 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   an implementation choice; contacts are still accepted although server-side delivery is unsupported (QV-28/QV-09 allow the optional field; refusing it
   until delivery exists is the audit's stricter suggestion and would be an API change); `trustee_invite` (not implemented) is untouched; backups made before a
   purge keep the data until the backup policy (QV-28 §11.1: 12 months) removes them, which is not implemented. Tests: `test/b2-fixes.test.ts`.
+
+## QV-ADR-027 items B2-10, N-16, N-20, N-21, N-32(a)(b) (2026-11-04; AI-assisted, unaudited, not for real elections)
+
+Owner approval of the recommended defaults is QV-ADR-027 (docs/plan/DECISIONS-2026-11-04.md). Approval is not an independent review.
+
+* **B2-10 (option A), invite-creation side only.** `POST .../invites` without `expires_at` now stores `expires_at = now + 14 d` (`INVITE_DEFAULT_TTL_MS`,
+  QV-02-REQ-010, QV-04 §5.1 336 h); an explicit `expires_at` is kept unchanged (no new upper bound was added). The default also starts the B2-11 retention
+  clock (label/contact purged 7 d after expiry). **Not done here (registration handler excluded from this change, owned with B3-01 / QV-ADR-028):** option A
+  also needs `POST .../registrations` to answer an *unknown* invite code exactly like a *used* one (today unknown/revoked -> `422 INVITE_EXPIRED`, used -> `409
+  INVITE_USED`; A wants unknown -> `409 INVITE_USED`, same code and comparable timing, while `422 INVITE_EXPIRED` stays for a known expired invite) and to keep the
+  same-pk replay -> original result rule (docs/09 §4.4). Cross-invite existing-key 201 is left as is (needs an invite-to-voter linkage privacy review).
+* **N-16 (option A).** Rate-limit headers keep the early-draft names; no code change. Errata E-002 resolved; QV-09 §4.7 note amended. Pinned by a test.
+* **N-20 (QV-08 signed requests).** The server already had no `/auth/*` routes; `SESSION_EXPIRED`/`CHALLENGE_EXPIRED` were removed from the problem-title table
+  (never emitted), the `authorizeAdmin` comment records the decision, and QV-09 §2/§3.1/§3.2/§3.6/§4.3/§4.7/§6.2/§6.3/REQ-005/006/007, the schemas and the
+  example were rewritten to the QV-Sig form (marked "QV-ADR-027 N-20"). The web client's dead bearer code was removed (packages/web NOTES).
+* **N-21 (option A).** No scheduler (documentation only); a test pins that an OPEN election stays OPEN past `voting_close` until `election_close` is posted.
+* **N-32(a).** `BucketKeyer` keys IPv6 by the /56 (`v6Prefix56`: three groups plus the high byte of the fourth, after `::` expansion). Coarser than before, so
+  a client with a /56 delegation shares one bucket across its /64s (QV-29 §6.1).
+* **N-32(b).** Election DB migration 6 adds QV-28 `export_record` (schema verbatim). New org-signed routes: `POST /elections/{id}/exports` (`{kind:"public"}`,
+  Idempotency-Key required, class X, `202 Job`; `operator`/`include_contacts`/`encrypt_to` -> `422 VALIDATION_FAILED`), `GET /elections/{id}/exports/{export_id}`
+  (`ExportRecord` + `download_url`, `download_expires_at` = created + 7 d) and `GET .../exports/{export_id}/download` (org-signed `.qvb`; the first successful
+  download sets `acknowledged_at`, audit `export.acknowledge`). Bundle bytes are not stored: the bundle is rebuilt with the recorded `created_at` and must hash
+  to the recorded `sha256`, otherwise `409 STATE_CONFLICT` (e.g. a late cosignature changed the checkpoints; request a new export). Deleting an ARCHIVED
+  election (`DELETE /elections/{id}` and `DELETE /admin/elections/{id}`, both via `pool.remove`) now needs a public export of the final log (same size and
+  root) that is acknowledged or older than 30 days (`archiveExportUnmet`, `EXPORT_ACK_GRACE_MS`); otherwise `409 STATE_CONFLICT` naming the unmet condition.
+  **Scope limits:** the gate applies to ARCHIVED only (DRAFT/CANCELLED/ABORTED/IMPORTED unchanged); the `.qvx` operator export, the retention-horizon
+  (`delete_after`) deletion job and backup purge are not implemented. c/d/e of N-32 (`max_total_hours`, RESUME with a new close time, `CHALLENGED`) stay open
+  pending the B2-05 control-record design.
+* Tests: `test/adr027-c2.test.ts` (B2-10, N-16, N-20, N-21, N-32(b)), `test/audit.test.ts` SRV-002 (N-32(a), assertions updated from /64 to /56).

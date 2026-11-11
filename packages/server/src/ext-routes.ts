@@ -10,7 +10,7 @@ import { checkNoteText, gossipAnswer, judge, MAX_NOTE_CHARS, ownSignedNote } fro
 import type { Ctx, Reply, Route } from './http.ts';
 import { commitImport, verifyBundle } from './imports.ts';
 import { JobError, jobView, type JobRunner } from './jobs.ts';
-import type { ElectionPool } from './pool.ts';
+import { archiveExportUnmet, type ElectionPool } from './pool.ts';
 import { ApiError, conflict, notFound } from './problem.ts';
 import { ELECTION_ID_RE, ORG_ID_RE, fArr, fEnum, fObj, fStr, opt, req, toIso, unbase32 } from './util.ts';
 
@@ -199,6 +199,12 @@ export function registerExtRoutes(d: ExtDeps): void {
         if (!reg) throw notFound('election');
         if (b.confirm !== reg.title) throw new ApiError(422, 'VALIDATION_FAILED', 'confirm must equal the election title');
         if (!DELETABLE_STATES.includes(reg.state)) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
+        if (reg.state === 'ARCHIVED') {
+          // QV-ADR-027 N-32(b): refuse synchronously; pool.remove re-checks inside the job.
+          const rt = await pool.get(id);
+          const unmet = rt ? archiveExportUnmet(rt, env.nowMs()) : 'the election database could not be opened';
+          if (unmet !== undefined) throw conflict(`election in state ARCHIVED cannot be deleted yet; unmet condition: ${unmet} (QV-28 §11.2)`);
+        }
         const job = jobs.submit('admin', 4, { kind: 'delete', election_id: id, params: {}, created_by: a.keyId }, async () => {
           try {
             await pool.remove(id);

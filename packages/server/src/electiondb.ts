@@ -127,7 +127,32 @@ ALTER TABLE voter_invite ADD COLUMN closed_at INTEGER;
 UPDATE voter_invite SET closed_at = COALESCE(registered_at, created_at) WHERE state IN ('registered','revoked','expired');
 `,
   },
+  {
+    version: 6,
+    name: 'export_record',
+    // QV-28 §8.2 `export_record` (schema verbatim) for the QV-28 §11.2 deletion precondition (QV-ADR-027 N-32(b)): an ARCHIVED election
+    // is deleted only after a public export of its final log was generated and the organizer downloaded it (`acknowledged_at`), or
+    // 30 days passed since it was generated. Public (P0) metadata only; the bundle bytes are not stored.
+    sql: `
+CREATE TABLE export_record (
+  export_id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('public','operator')),
+  tree_size INTEGER NOT NULL, root_hash BLOB NOT NULL, sha256 BLOB NOT NULL,
+  created_at INTEGER NOT NULL, acknowledged_at INTEGER
+) STRICT;
+`,
+  },
 ];
+
+/** One row of `export_record` (QV-28 §8.2). Times are epoch milliseconds. */
+export interface ExportRow {
+  export_id: string;
+  kind: 'public' | 'operator';
+  tree_size: number;
+  root_hash: Uint8Array;
+  sha256: Uint8Array;
+  created_at: number;
+  acknowledged_at: number | null;
+}
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
 export interface EventRow {
@@ -392,6 +417,23 @@ export class ElectionDb {
   }
   redactions(): { seq: number; redactedAt: number; reason: string }[] {
     return all<{ seq: number; redacted_at: number; reason: string }>(this.db, 'SELECT seq,redacted_at,reason FROM redaction ORDER BY seq').map((r) => ({ seq: r.seq, redactedAt: r.redacted_at, reason: r.reason }));
+  }
+
+  // ---- export records (QV-28 §8.2, §11.2; QV-ADR-027 N-32(b))
+  addExport(r: Omit<ExportRow, 'acknowledged_at'>): void {
+    run(this.db, 'INSERT INTO export_record(export_id,kind,tree_size,root_hash,sha256,created_at,acknowledged_at) VALUES (?,?,?,?,?,?,NULL)',
+      r.export_id, r.kind, r.tree_size, r.root_hash, r.sha256, r.created_at);
+  }
+  exportById(id: string): ExportRow | undefined {
+    return get<ExportRow>(this.db, 'SELECT * FROM export_record WHERE export_id=?', id);
+  }
+  /** Sets `acknowledged_at` once (the first organizer download); later downloads keep the first time. */
+  acknowledgeExport(id: string, atMs: number): void {
+    run(this.db, 'UPDATE export_record SET acknowledged_at=? WHERE export_id=? AND acknowledged_at IS NULL', atMs, id);
+  }
+  /** Public export records of exactly this tree (size and root), newest first. */
+  publicExportsOf(treeSize: number, root: Uint8Array): ExportRow[] {
+    return all<ExportRow>(this.db, "SELECT * FROM export_record WHERE kind='public' AND tree_size=? AND root_hash=? ORDER BY created_at DESC", treeSize, root);
   }
 
   // ---- invites

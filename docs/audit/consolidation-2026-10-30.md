@@ -45,7 +45,7 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B2-07 | Medium | confirmed | Medium | blocked_integrity_design | No semantic repair commit; open/owner gate. |
 | B2-08 | Medium | confirmed | Low | fixed | [8cf2669](https://github.com/djshellshoxxx/quietvote/commit/8cf26691f87af3a10c55c896f15bf4169aa862fa) |
 | B2-09 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B2-10 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
+| B2-10 | Low | confirmed | Low | partial (2026-11-04, pending commit) | QV-ADR-027 B2-10 option A, invite-creation side: 14-day default `expires_at` (`packages/server/test/adr027-c2.test.ts`). Still open: unknown code must answer like used (`409 INVITE_USED`) in the registration handler, owned with B3-01/QV-ADR-028; not independently audited. |
 | B2-11 | Low | confirmed | Low | fixed (2026-11-04) | [50b8639](https://github.com/djshellshoxxx/quietvote/commit/50b8639bfdbbd5d9eb8f0f5f69fea4de08d7042b); 7-day default retention pending owner confirmation; backup retention not implemented. |
 | B2-12 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
 | B2-13 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
@@ -615,7 +615,7 @@ node --test packages/server/test/consolidation.test.ts
 
 ### B2-10
 
-**Severity and historical review:** Low → Low; interim verdict confirmed. Consolidation disposition: `blocked_contract_review`.
+**Severity and historical review:** Low → Low; interim verdict confirmed. Consolidation disposition: `blocked_contract_review`; **2026-11-04 update: partial (pending commit)** — owner approved option A (QV-ADR-027 B2-10). Invites now default to a 14-day expiry; the unknown-vs-used registration oracle remains until the registration handler (B3-01 / QV-ADR-028 scope) answers an unknown code as `409 INVITE_USED`.
 
 **Original summary:** Invites without expires_at never expire, unknown vs used codes answer differently, and a used code with another registered key answers 201.
 

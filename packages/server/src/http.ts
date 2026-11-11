@@ -69,7 +69,7 @@ export interface Route {
 
 const PARAM_RE: Record<string, RegExp> = {
   id: ELECTION_ID_RE, org: ORG_ID_RE, invite: ORG_ID_RE, seq: /^\d{1,12}$/, wh: ORG_ID_RE, job: ORG_ID_RE, kid: /^[A-Za-z0-9_-]{16,64}$/, leaf: /^[A-Za-z0-9_-]{43}$/,
-  j: /^\d{1,2}$/, keyid: /^[A-Za-z0-9_-]{16,64}$/,
+  j: /^\d{1,2}$/, keyid: /^[A-Za-z0-9_-]{16,64}$/, export: ORG_ID_RE,
 };
 
 interface Compiled {
