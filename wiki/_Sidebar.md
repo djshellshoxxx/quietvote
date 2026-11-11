@@ -1,5 +1,8 @@
 **QuietVote Wiki**
 
+**User Guide**
+- [[User Guide]]
+
 **For members and organizers**
 - [[Home]]
 - [[How It Works In 5 Minutes]]
@@ -13,6 +16,9 @@
 - [[Accessibility and Help]]
 - [[Glossary]]
 
+**Developer Guide**
+- [[Developer Guide]]
+
 **For developers**
 - [[Developer Home]]
 - [[Getting Started Dev]]
@@ -25,5 +31,5 @@
 - [[Contributing]]
 - [[Roadmap and Status]]
 - [[Specification Index]]
-- [Claims register](https://github.com/djshellshoxxx/quietvote/blob/main/docs/claims/claims-register-v0.md)
-- [Dependency licence snapshot](https://github.com/djshellshoxxx/quietvote/blob/main/docs/reports/dependency-licence-snapshot.md)
+- [Claims register](https://github.com/djshellshoxxx/quietvote/blob/ab84f16136184cb1fa0fa67b41e113424e134ba8/docs/claims/claims-register-v0.md)
+- [Dependency licence snapshot](https://github.com/djshellshoxxx/quietvote/blob/ab84f16136184cb1fa0fa67b41e113424e134ba8/docs/reports/dependency-licence-snapshot.md)
