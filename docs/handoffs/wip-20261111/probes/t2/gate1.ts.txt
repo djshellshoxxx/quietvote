@@ -1,0 +1,61 @@
+import { DatabaseSync } from 'node:sqlite';
+import { join } from 'node:path';
+import { World } from '/home/user/qv-wt/t2-concurrency/packages/server/test/helpers/world.ts';
+import { makeCast, PROTO_ID, rollRoot } from '/home/user/qv-wt/t2-concurrency/packages/protocol/src/index.ts';
+import { b64u, authorKeyId } from '/home/user/qv-wt/t2-concurrency/packages/board/src/index.ts';
+import { bytesToHex, ed25519Sign, utf8, ed25519Keypair, sha256 } from '/home/user/qv-wt/t2-concurrency/packages/crypto/src/index.ts';
+
+class Held extends World {
+  hold = true;
+  override async ok(type: any, who: any, rec: any) {
+    if (type === 'roll_commit' && this.hold) return { status: 0, headers: new Headers(), json: undefined, text: 'held' } as any;
+    return super.ok(type, who, rec);
+  }
+}
+function gateValidate(rt: any) {
+  const orig = rt.validate;
+  const origAppend = rt.append;
+  let release!: () => void;
+  const released = new Promise<void>((r) => (release = r));
+  let arrivals = 0; const waiters: { n: number; r: () => void }[] = [];
+  let parked = 0; let parkedR!: () => void; const parkedP = new Promise<void>((r) => (parkedR = r));
+  rt.append = function (h: Uint8Array, b: Uint8Array) { const p = origAppend.call(rt, h, b); arrivals++; for (const w of waiters) if (arrivals >= w.n) w.r(); return p; };
+  rt.validate = async function (h: any, body: Uint8Array) { const v = await orig.call(rt, h, body); parked++; parkedR(); await released; return v; };
+  return { release, parked: parkedP, arrived: (n: number) => new Promise<void>((r) => { if (arrivals >= n) r(); else waiters.push({ n, r }); }), restore() { delete rt.validate; delete rt.append; } };
+}
+const w = new Held({ seed: 'gate1', n: 3, t: 2, voters: 3 });
+await w.start();
+await w.setupOrgAndElection(); await w.registerVoters(); await w.publishManifest(); await w.ceremony();
+console.log('state', (await w.get(`/api/v1/elections/${w.electionId}/state`)).json.phase);
+// spare invite
+const inv = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { count: 2 }, w.owner, w.idemKey());
+console.log('invites', inv.status);
+const late = ed25519Keypair(sha256(utf8('late')));
+const reg = (code: string, k: any) => {
+  const pop = ed25519Sign(k.secretKey, new Uint8Array([...utf8(`QV-REG-v1\0${w.electionId}\0`), ...k.publicKey]));
+  return w.req('POST', `/api/v1/elections/${w.electionId}/registrations`, { invite_code: code, pk: b64u(k.publicKey), alg: 'ed25519', pop: b64u(pop) });
+};
+const rt = (await w.server.pool.get(w.electionId))! as any;
+const g = gateValidate(rt);
+const rr = rollRoot(w.rollHex); if (!rr.ok) throw new Error('roll');
+const commit = w.post('roll_commit', w.coord[0]!, w.multi(w.mh, { proto: PROTO_ID, type: 'roll-commit', root: bytesToHex(rr.value), size: w.rollHex.length } as any));
+await g.parked;
+console.log('commit parked after validation; registering late voter');
+const r = await reg(inv.json.invites[0].code, late);
+console.log('registration:', r.status, r.text);
+g.release();
+const c = await commit;
+console.log('commit:', c.status, c.text.slice(0, 120));
+g.restore();
+const kid = b64u(authorKeyId('ed25519', late.publicKey));
+console.log('voter view:', (await w.get(`/api/v1/elections/${w.electionId}/voters/${kid}`)).json);
+const roll = (await w.get(`/api/v1/elections/${w.electionId}/roll`)).json;
+console.log('roll size', roll.roll_size, 'items', roll.items.length, 'root', roll.roll_root?.slice(0, 16));
+console.log('state', (await w.get(`/api/v1/elections/${w.electionId}/state`)).json.phase);
+const db = new DatabaseSync(join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`), { readOnly: true });
+console.log(db.prepare('SELECT voter_kid, status, roll_index FROM voter').all());
+console.log(db.prepare('SELECT invite_id, state FROM voter_invite').all().length, 'invites', db.prepare("SELECT state, COUNT(*) n FROM voter_invite GROUP BY state").all());
+db.close();
+const again = await reg(inv.json.invites[0].code, late);
+console.log('registration replay:', again.status, again.text);
+await w.stop();

@@ -1,0 +1,34 @@
+import test, { before } from 'node:test';
+import assert from 'node:assert/strict';
+
+const captured: { out: string[]; err: string[] } = { out: [], err: [] };
+function tee(stream: NodeJS.WriteStream, sink: string[], swallow: (s: string) => boolean): () => void {
+  const orig = stream.write;
+  stream.write = function (this: unknown, chunk: unknown, ...rest: unknown[]): boolean {
+    const s = typeof chunk === 'string' ? chunk : Buffer.from(chunk as Uint8Array).toString('latin1');
+    sink.push(s);
+    if (swallow(s)) {
+      const cb = rest.find((x) => typeof x === 'function') as (() => void) | undefined;
+      cb?.();
+      return true;
+    }
+    return (orig as (...a: unknown[]) => boolean).call(stream, chunk, ...rest);
+  } as typeof stream.write;
+  return () => { stream.write = orig; };
+}
+
+before(() => {
+  const r1 = tee(process.stderr, captured.err, (s) => s.startsWith('{"ts"'));
+  const r2 = tee(process.stdout, captured.out, () => false);
+  process.stderr.write('{"ts":"x","event":"request"}\n');
+  process.stderr.write('real stderr line\n');
+  console.log('console.log line');
+  console.error('console.error line');
+  r1(); r2();
+});
+
+test('captured', () => {
+  assert.ok(captured.err.some((s) => s.includes('"event":"request"')));
+  assert.ok(captured.err.some((s) => s.includes('console.error line')));
+  assert.ok(captured.out.some((s) => s.includes('console.log line')), JSON.stringify(captured.out.map((s) => s.slice(0, 40))));
+});

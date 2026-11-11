@@ -1,0 +1,85 @@
+import { DatabaseSync } from 'node:sqlite';
+import { join } from 'node:path';
+import { World } from '/home/user/qv-wt/t2-concurrency/packages/server/test/helpers/world.ts';
+import { makeCast } from '/home/user/qv-wt/t2-concurrency/packages/protocol/src/index.ts';
+import { bytesToHex } from '/home/user/qv-wt/t2-concurrency/packages/crypto/src/index.ts';
+
+class Stepped extends World {
+  stepMs = 0;
+  nowCalls = 0;
+  override async start() { this.o.server = { ...this.o.server, now: () => { this.nowCalls++; const t = this.clock; this.clock += this.stepMs; return t; } }; await super.start(); }
+}
+function gateValidate(rt: any) {
+  const orig = rt.validate; const origAppend = rt.append;
+  let release!: () => void; const released = new Promise<void>((r) => (release = r));
+  let arrivals = 0; const waiters: { n: number; r: () => void }[] = [];
+  let parkedR!: () => void; const parkedP = new Promise<void>((r) => (parkedR = r));
+  rt.append = function (h: Uint8Array, b: Uint8Array) { const p = origAppend.call(rt, h, b); arrivals++; for (const w of waiters) if (arrivals >= w.n) w.r(); return p; };
+  rt.validate = async function (h: any, body: Uint8Array) { const v = await orig.call(rt, h, body); parkedR(); await released; return v; };
+  return { release, parked: parkedP, arrived: (n: number) => new Promise<void>((r) => { if (arrivals >= n) r(); else waiters.push({ n, r }); }), restore() { delete rt.validate; delete rt.append; } };
+}
+const sel = { budget: ['yes'], chair: ['ann'] };
+const w = new Stepped({ seed: 'gate2', n: 3, t: 2, voters: 5 });
+await w.start();
+await w.setupOrgAndElection(); await w.registerVoters(); await w.publishManifest(); await w.ceremony(); await w.open();
+const st = async () => (await w.get(`/api/v1/elections/${w.electionId}/state`)).json;
+const short = (r: any) => `${r.status}:${r.json.code ?? 'seq' + r.json.receipt?.seq}${r.json.reason ? '/' + r.json.reason : ''}`;
+
+// ---- 1: identical ballot x4 overlapped, frozen clock
+{
+  const rt = (await w.server.pool.get(w.electionId))! as any;
+  const v = w.voters[0]!; const e = w.entry('ballot', v, makeCast(w.params, v.secretKey, w.build(0, sel)));
+  const g = gateValidate(rt);
+  const ps = [w.submit(e.headerBytes, e.body)]; await g.parked;
+  for (let i = 0; i < 3; i++) ps.push(w.submit(e.headerBytes, e.body));
+  await g.arrived(4);
+  console.log('1 mutex.pending', rt.mutex.pending, 'inflight', w.server.env.inflight.n);
+  g.release(); const rs = await Promise.all(ps); g.restore();
+  console.log('1 identical overlapped frozen:', rs.map(short).join(' '));
+}
+// ---- 2: identical ballot x4 overlapped, stepping clock
+{
+  w.tick(5);
+  const rt = (await w.server.pool.get(w.electionId))! as any;
+  const v = w.voters[1]!; const e = w.entry('ballot', v, makeCast(w.params, v.secretKey, w.build(1, sel)));
+  const g = gateValidate(rt);
+  const pv0 = w.server.env.stats.proofVerifications; const c0 = w.nowCalls; const t0 = w.clock;
+  w.stepMs = 2500;
+  const ps = [w.submit(e.headerBytes, e.body)]; await g.parked;
+  for (let i = 0; i < 3; i++) ps.push(w.submit(e.headerBytes, e.body));
+  await g.arrived(4);
+  console.log('2 mutex.pending', rt.mutex.pending);
+  g.release(); const rs = await Promise.all(ps); g.restore(); w.stepMs = 0;
+  console.log('2 identical overlapped stepped:', rs.map(short).join(' '), 'proofs+', w.server.env.stats.proofVerifications - pv0, 'now calls', w.nowCalls - c0, 'clock advanced s', (w.clock - t0) / 1000);
+}
+// ---- 3: COMMIT failure injection with queue behind
+{
+  w.tick(5);
+  const rt = (await w.server.pool.get(w.electionId))! as any;
+  const before = await st();
+  const es = [2, 3, 4].map((i) => { const v = w.voters[i]!; return w.entry('ballot', v, makeCast(w.params, v.secretKey, w.build(i, sel))); });
+  const db = rt.edb.db; const origExec = db.exec; let armed = true;
+  db.exec = function (sql: string) { if (armed && sql === 'COMMIT') { armed = false; throw new Error('injected commit failure'); } return origExec.call(db, sql); };
+  const g = gateValidate(rt);
+  const ps = [w.submit(es[0]!.headerBytes, es[0]!.body)]; await g.parked;
+  ps.push(w.submit(es[1]!.headerBytes, es[1]!.body)); ps.push(w.submit(es[2]!.headerBytes, es[2]!.body));
+  await g.arrived(3);
+  g.release(); const rs = await Promise.all(ps); g.restore(); delete db.exec;
+  console.log('3 commit failure + queued:', rs.map(short).join(' '), 'poisoned', rt.poisoned, 'retry-after', rs.map((r) => r.headers.get('retry-after')));
+  const after = await st();
+  console.log('3 tree before/after', before.tree_size, after.tree_size);
+  const ro = new DatabaseSync(join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`), { readOnly: true });
+  console.log('3 db max seq', ro.prepare('SELECT MAX(seq) m, COUNT(*) n FROM log_entry').get(), ro.prepare('SELECT COUNT(*) n FROM ballot_ref').get(), ro.prepare('SELECT COUNT(*) n FROM event').get(), ro.prepare('SELECT MAX(tree_size) m FROM checkpoint').get());
+  ro.close();
+  const retry = []; for (const e of es) { retry.push(await w.submit(e.headerBytes, e.body)); }
+  console.log('3 retry same bytes:', retry.map(short).join(' '));
+  const rt2 = (await w.server.pool.get(w.electionId))! as any;
+  console.log('3 runtime reloaded', rt2 !== rt, 'tree', (await st()).tree_size);
+}
+// ---- 4: P-mode failure injection: storm of 3 ballots where first processed fails at COMMIT
+{
+  w.tick(5);
+  const rt = (await w.server.pool.get(w.electionId))! as any;
+  w.last.set(bytesToHex(w.voters[2]!.publicKey), '');
+}
+await w.stop();

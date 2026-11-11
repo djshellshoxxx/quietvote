@@ -1,0 +1,22 @@
+import { readFileSync } from 'node:fs';
+import { verifyBundle, formatReport } from '/home/user/qv-wt/t5-fuzz/packages/verifier/src/index.ts';
+const ROOT = '/home/user/qv-wt/t5-fuzz/test-vectors/v1/';
+const rd = (p: string): any => JSON.parse(readFileSync(ROOT + p, 'utf8'));
+for (const d of ['tiny-yesno-3v', 'small-approval-20v', 'log-layer-4v']) {
+  const text = readFileSync(ROOT + `elections/${d}/bundle.json`, 'utf8');
+  const t0 = performance.now();
+  const r = await verifyBundle(text);
+  const t1 = performance.now();
+  console.log(d, r.verdict, (t1 - t0).toFixed(0) + 'ms', JSON.stringify(r.counts), 'findings', r.findings.length, 'warnings', r.warnings.length, r.caveats);
+}
+const v = rd('elections/log-layer-4v/vectors.json');
+const honest = v.vectors.find((x: any) => x.id === 'log-honest-witnessed');
+const bundle = rd(honest.input.bundle.path);
+const board = rd(honest.input.board.path);
+console.log('receipts', JSON.stringify(honest.input.receipts).slice(0, 700));
+console.log('observed', honest.input.observed.length);
+const t0 = performance.now();
+const r = await verifyBundle({ ...bundle, board }, { receipts: honest.input.receipts, observedCheckpoints: honest.input.observed });
+console.log('with board', r.verdict, (performance.now() - t0).toFixed(0) + 'ms');
+console.log(formatReport(r));
+console.log(JSON.stringify(r.findings), JSON.stringify(r.board), JSON.stringify(r.log));
