@@ -27,7 +27,7 @@ npm install
 
 Run `npm run check` before opening a pull request.
 
-**Current state:** as of commit `c8348f4`, `npm run typecheck` passes and `npm test` has one failing test in `packages/cli` (see [[Testing and Conformance]]). Run `npm ci` first. Check the latest state before relying on `npm run check`.
+**Current state:** the 2026-10-21 results are historical. [Draft PR #30](https://github.com/djshellshoxxx/quietvote/pull/30) reports passing typecheck and workspace tests on its exact head, but strict TS/Python verifier comparison still fails pending owner decisions. Run these checks on your selected branch; no result on a draft PR qualifies `main` or a release.
 
 ## Next
 
