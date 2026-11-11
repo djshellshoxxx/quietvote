@@ -70,6 +70,8 @@ jobs:
         run: node --test .github/scripts/check-workflow-coverage.test.mjs
       - name: Test required browser journey runner
         run: node --test .github/scripts/run-browser-journeys.test.mjs
+      - name: Test diagnostic verifier comparator triage (strict)
+        run: node --test scripts/triage-verifier-report.test.mjs
       - name: Check workflow actions are pinned to full commit SHAs
         run: node .github/scripts/check-action-pins.mjs
       # Supply-chain gates (docs/30-engineering-standards.md, R-02).
