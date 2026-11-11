@@ -1097,6 +1097,7 @@ export class ElectionRuntime {
   /** Posts the tally-aggregate entry once the close checkpoint is witnessed (QV-18 §9.4). Caller holds the mutex. */
   async maybeAggregateLocked(): Promise<void> {
     const st = this.st;
+    if (st.aggregateSeq !== undefined) return; // at most one aggregate per election: never double-count
     if (this.state !== 'CLOSED' || st.closeSeq === undefined || this.srvKeys === undefined || st.params === undefined || st.manifest === undefined) return;
     if (!this.witnessedWithin(st.closeSeq, this.log.size)) return;
     const an = this.ensureAnalysis();
@@ -1119,6 +1120,11 @@ export class ElectionRuntime {
       nonce: new Uint8Array(randomBytes(16)), createdAt: this.env.nowSec(), body: bytes, refs: [st.closeSeq],
     });
     await this.processLocked(e.headerBytes, bytes);
+  }
+
+  /** Startup recovery: a crash after a durable election_close and before its aggregate leaves no aggregate. Retried on load. */
+  async recoverTally(): Promise<void> {
+    await this.queued(() => this.maybeAggregateLocked());
   }
 
   async attachCosignatures(size: number, lines: string[]): Promise<{ accepted: string[]; rejected: string[]; witnessed: boolean }> {

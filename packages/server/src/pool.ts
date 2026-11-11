@@ -44,6 +44,8 @@ export class ElectionPool {
     if (!reg) return undefined;
     const rt = await ElectionRuntime.open(this.env, reg);
     this.open.set(id, rt);
+    // finish a tally aggregate interrupted by a crash (idempotent; a failure is retried on the next cosignature)
+    await rt.recoverTally().catch(() => this.env.logger.event('tally_recover', { outcome: 'error' }));
     await this.trim();
     return rt;
   }
