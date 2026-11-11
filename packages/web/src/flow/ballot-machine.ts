@@ -54,6 +54,11 @@ export function canAudit(s: BallotState): boolean {
   return s.kind === 'sealed' && s.codeRendered;
 }
 
+/** NEW_SEAL is accepted only here. A failed CAST whose ballot may already be recorded (the board alarm case) must not offer it. */
+export function canNewSeal(s: BallotState): s is Extract<BallotState, { kind: 'audited' | 'failed' }> {
+  return s.kind === 'audited' || (s.kind === 'failed' && !s.retryCast && (s.sealed === undefined || s.spoiled.includes(s.sealed.code)));
+}
+
 /** Illegal transitions return the same state (they are bugs or races, never silently accepted). */
 export function reduce(s: BallotState, e: BallotEvent): BallotState {
   switch (e.type) {
@@ -103,7 +108,7 @@ export function reduce(s: BallotState, e: BallotEvent): BallotState {
     case 'NEW_SEAL':
       // Back to review with the same selections; the attempt counter moves so the new randomness (and code) differ.
       // A failed CAST (sealed ballot not spoiled) may have been recorded despite the error (e.g. a board alarm): no new seal then.
-      return s.kind === 'audited' || (s.kind === 'failed' && !s.retryCast && (s.sealed === undefined || s.spoiled.includes(s.sealed.code)))
+      return canNewSeal(s)
         ? { kind: 'reviewing', selections: s.selections, attempt: (s.kind === 'audited' ? s.sealed.attempt : (s.sealed?.attempt ?? 0)) + 1, spoiled: s.spoiled }
         : s;
   }

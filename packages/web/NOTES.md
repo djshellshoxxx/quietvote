@@ -24,6 +24,10 @@ remain evidence of the audited revision, not claims that the current tree has pa
   Signed promise-only receipts remain downloadable and optionally stored for inclusion checks; unknown delivery retries the
   same signed bytes with pending copy. A local save failure preserves the verified recorded receipt. “Logged” uses the signed
   promise timestamp. Rejected links no longer claim a newer ballot was recorded; refused ballots do not show receipt proof.
+* L4 (cast delivery honesty): a board alarm (E-BOARD-INCL-FAIL, or a transport failure) raised after the board accepted the
+  ballot POST keeps and stores that receipt, and the failed view offers Save receipt. Fork/rollback heads stay withheld (W2).
+  "Seal a new ballot" renders only where NEW_SEAL is accepted (`canNewSeal`). Unknown-delivery retry is still memory-only:
+  persisting it would mean storing the signed cast entry (ciphertext), so it is not persisted. No new strings; no catalog changed.
 * No-invite key completion checks the committed voter list rather than claiming registration. A 409 is not registration
   success. **Registration remains blocked pending protocol-owner review:** QV-19/QV-04 and QV-09 disagree on invitation/PoP
   bytes; this change does not reconcile them. The existing server-contract negative evidence remains relevant.
