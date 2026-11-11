@@ -1,13 +1,36 @@
 // Instance KEK and per-election DEK envelope (QV-28 §9). AES-256-GCM via node:crypto.
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
+
+/**
+ * True when control.sqlite already holds data wrapped under the KEK: election DEK envelopes or webhook URL/secret blobs.
+ * A missing control.sqlite (or one with no such rows) means a fresh data directory.
+ */
+function hasKekWrappedData(dataDir: string): boolean {
+  const path = join(dataDir, 'control.sqlite');
+  if (!existsSync(path)) return false;
+  const db = new DatabaseSync(path, { readOnly: true });
+  try {
+    const row = db
+      .prepare('SELECT (EXISTS (SELECT 1 FROM election_registry WHERE dek_wrapped IS NOT NULL) OR EXISTS (SELECT 1 FROM webhook)) AS has')
+      .get() as { has: number } | undefined;
+    return row?.has === 1;
+  } finally {
+    db.close();
+  }
+}
 
 export function loadOrCreateKek(dataDir: string): Buffer {
   const dir = join(dataDir, 'kek');
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const f = join(dir, 'kek.bin');
   if (!existsSync(f)) {
+    // Refuse to replace a missing KEK: wrapped data could never be unwrapped again. Never print key material here.
+    if (hasKekWrappedData(dataDir)) {
+      throw new Error(`KEK file missing at ${f} but wrapped data exists in ${dataDir}; refusing to generate a new KEK. Restore the original kek.bin.`);
+    }
     writeFileSync(f, randomBytes(32), { mode: 0o600, flag: 'wx' });
   }
   chmodSync(f, 0o600);
