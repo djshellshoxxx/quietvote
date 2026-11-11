@@ -284,3 +284,11 @@ AI-assisted work, not an independent audit. QuietVote stays unaudited and not fo
   record bodies.
 * The spec text that describes in-browser trustee screens (docs/10 §6.3) now carries a QV-ADR-027 N-37c note. docs/17 §12.1
   (web client deliverable) already says this (QV-ADR-024) and gets the same marker.
+## Traceability tags and REQ-063 scope (2026-11-04, pending commit)
+
+* QV-ADR-027 N-23c: `test/locale-preference.test.ts` (QV-13-REQ-063) and the three REQ-064 tests in `test/i18n-catalogs.test.ts`
+  (QV-13-REQ-064) now carry `// @verifies` comment tags, read by the report-only `scripts/trace.mjs`
+  (`docs/reports/traceability-matrix.md`). Comments only: no assertion, test name or test count changed.
+* QV-ADR-027 RECON-REQ063-SERVER: REQ-063 is scoped to the browser client. The server-rendered no-JavaScript `Accept-Language`
+  path is deferred (docs/13 REQ-063 and §10 are marked). No server or web code changed. The REQ-063 tags cover only the client path.
+* A tag records that the test author linked the test to the requirement; it is not a review of sufficiency. Unaudited, not for real elections.

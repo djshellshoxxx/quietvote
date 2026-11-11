@@ -104,6 +104,8 @@ A waiver is a signed entry in `trace/waivers.yaml`: `{id, requirement, reason, r
 
 A small Node 22 CLI (`tools/rtm/rtm.mjs`, zero runtime deps, `node:test` for its own tests, per QV-ADR-003) — **specified here, implemented later**. It reads specs, link files, test annotations, and evidence manifests, then writes the generated regions in this document and JSON/CSV reports.
 
+**Interim report (QV-ADR-027 N-23c, 2026-11-04).** Until `rtm` exists, `node scripts/trace.mjs` writes a **report-only** matrix to [`docs/reports/traceability-matrix.md`](reports/traceability-matrix.md): requirement rows parsed per §6.1(a) (fenced examples skipped) mapped to test tags `@verifies` (QV-30 §12) or `@covers` (§6.1(c)), plus warnings for unknown tagged IDs, duplicate IDs and rows without a priority. It never fails on coverage gaps and does not satisfy QV-24-REQ-002…005; the §9 regions stay ungenerated. Rows whose text marks a part as `Deferred (QV-ADR-…)` are listed separately (e.g. QV-13-REQ-063: server-rendered path deferred, QV-ADR-027 RECON-REQ063-SERVER).
+
 ### 6.1 Inputs
 
 **(a) Spec requirement tables (parsed from `docs/*.md`).** The parser scans Markdown tables whose header row, case-insensitive, contains the columns `ID`, `Requirement`, and `Priority` (extra columns such as `Acceptance criteria`, `Verification`, `800-53` are accepted in any order and captured by header name). A data row is a requirement if its first cell matches `^QV-(\d{2})-REQ-(\d{3})$`. Extracted fields:

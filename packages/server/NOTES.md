@@ -356,3 +356,10 @@ Owner approval of the recommended defaults is QV-ADR-027 (docs/plan/DECISIONS-20
   (`delete_after`) deletion job and backup purge are not implemented. c/d/e of N-32 (`max_total_hours`, RESUME with a new close time, `CHALLENGED`) stay open
   pending the B2-05 control-record design.
 * Tests: `test/adr027-c2.test.ts` (B2-10, N-16, N-20, N-21, N-32(b)), `test/audit.test.ts` SRV-002 (N-32(a), assertions updated from /64 to /56).
+## Traceability tags (2026-11-04, pending commit)
+
+* QV-ADR-027 N-23c: three SSE tests in `test/events.test.ts` carry `// @verifies` comment tags (QV-09-REQ-010 for Last-Event-ID
+  resume and disconnect/resume; QV-09-REQ-010 and QV-09-REQ-014 for the event-body/secret-exclusion test), read by the report-only
+  `scripts/trace.mjs`. Comments only: no assertion, test name or test count changed. The registration handler was not touched.
+* QV-ADR-027 RECON-REQ063-SERVER: no server-rendered no-JavaScript locale path is built (deferred in docs/13 REQ-063), so the
+  server neither reads nor logs `Accept-Language` for locale selection. Unaudited, not for real elections.

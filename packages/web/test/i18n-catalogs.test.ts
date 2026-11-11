@@ -96,6 +96,7 @@ test('catalogs: guarantee strings are translated, never left to fall back to Eng
   assert.match(AR['qv.org.trustee.warning'], /\{t\}.*\{n_minus_t\}/);
 });
 
+// @verifies QV-13-REQ-064
 test('REQ-064 as shipped: no translated locale is offered, because no native review records exist yet', () => {
   assert.deepEqual(offeredLocales().map((l) => l.tag), ['en']);
   for (const def of translated()) {
@@ -105,6 +106,7 @@ test('REQ-064 as shipped: no translated locale is offered, because no native rev
   }
 });
 
+// @verifies QV-13-REQ-064
 test('REQ-064: with a matching review record for every guarantee key, es/fr/de/pt-BR/ar are offered', () => {
   const reviewed = withMatchingReviews();
   assert.deepEqual(offeredLocales(reviewed).map((l) => l.tag), ['en', 'es', 'fr', 'de', 'pt-BR', 'ar']);
@@ -113,6 +115,7 @@ test('REQ-064: with a matching review record for every guarantee key, es/fr/de/p
   assert.equal(negotiateLocale({ browser: ['ar-EG'], offered: offeredLocales(reviewed).map((l) => l.tag) }), 'ar');
 });
 
+// @verifies QV-13-REQ-064
 test('REQ-064: one stale review hash withdraws that locale again', () => {
   const reviewed = withMatchingReviews();
   const de = reviewed.find((l) => l.tag === 'de')!;

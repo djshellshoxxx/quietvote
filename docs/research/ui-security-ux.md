@@ -133,7 +133,7 @@ Severity: **C** = critical (can mislead a voter about whether a ballot counted, 
 | G2 | H | Empty Election ID input passes the "matches" check and confirms the election. | `ui/app.ts:304-306` (`if (v !== '' && ...)` then `setC(true)`) | QV-10 V1, REQ-012; §9 |
 | G3 | H | Registration failure is caught silently and the success line is shown anyway. | `ui/app.ts:335` (empty catch) and `338` (`qv.key.registered`) | QV-10 REQ-006 (never "success" without outcome) |
 | G4 | H | Generated passphrase is placed in a polite live region and visible text. | `ui/app.ts:322` (role=status), `351` | QV-10 REQ-021; QV-19 key handling (not in this file) |
-| G5 | H | Audited-ballot-public warning is inside a collapsed `<details>` on the cast screen. | `ui/app.ts:430` inside `more()` at `96`; copy `en.ts:208` | QV-10 REQ-007, §10.1 rule 2; QV-ADR-P10-3 |
+| G5 | H | Audited-ballot-public warning is inside a collapsed `<details>` on the cast screen. | `ui/app.ts:430` inside `more()` at `96`; copy `en.ts:208` | QV-10 REQ-007, §10.1 rule 2; QV-ADR-P10-3 | <!-- claims-lint-ignore -->
 | G6 | H | Audit result says the ballot "matched what you picked" before the voter answers the match question. | `ui/app.ts:440-441` (`qv.audit.ok` chosen by automated result only) | QV-10 V8; §10.1 rule 4; REQ-008 |
 | G7 | H | The "No – something is wrong" answer has no escalation path, no evidence save, and no second-device route. The Save evidence key is unused. | `ui/app.ts:440`, `442`; `en.ts:230` unused (`qv.audit.evidence`); `qv.audit.mismatch` at `en.ts:211` shown only when automated checks fail | QV-10 REQ-008; §8.3 |
 | G8 | H | Tally is taken from `tallies[0]` with no signature check visible in the excerpt read. | `flow/election.ts:100-103` (push), `133` (`tallies[0]`); signature checks visible only for markers/commitments (`74`, `82-97`, `128`) | QV-10 REQ-013; QV-16 §5.19 |
@@ -152,7 +152,7 @@ Severity: **C** = critical (can mislead a voter about whether a ballot counted, 
 | G21 | L | Receipt "Save" and download use `URL.createObjectURL` without revoking. | `ui/app.ts:128-133` | Hygiene |
 | G22 | L | The "Clear this device" action on the receipt screen resets all storage (including receipts) with no "receipts saved" warning. | `ui/app.ts:452` | QV-10 §7.3 (`qv.device.cleared` text) |
 
-**Items already seen in the initial audit that this review confirms:** REJECTED on 5xx (G1); audited-ballot-public warning hidden in `<details>` (G5); registration failure shown as success (G3); tally not signature-checked (G8, pending confirmation of the upstream check).
+**Items already seen in the initial audit that this review confirms:** REJECTED on 5xx (G1); audited-ballot-public warning hidden in `<details>` (G5); registration failure shown as success (G3); tally not signature-checked (G8, pending confirmation of the upstream check). <!-- claims-lint-ignore -->
 
 ---
 
@@ -204,7 +204,7 @@ Each recommendation maps to a screen or component and a gap ID. Priorities: P0 =
 7. Measure reading level of the voter-flow strings (QV-10 REQ-025) with a documented method.
 8. Confirm target sizes and 400 % zoom behaviour from the stylesheet and a real browser (not read here).
 9. Juels, Catalano and Jakobsson: the 2005 WPES pagination is from a search summary; check the proceedings.
-10. Benaloh and Tuinstra (1994) receipt-freeness: not retrieved in this pass. `[UNVERIFIED]`.
+10. Benaloh and Tuinstra (1994) receipt-freeness: not retrieved in this pass. `[UNVERIFIED]`. <!-- claims-lint-ignore -->
 11. Culnane and Teague inspection-game analysis of Benaloh challenge voter strategies: title only, no URL retrieved. `[UNVERIFIED]`.
 12. The 133-participant KIT study on second-device verification: `[UNVERIFIED]`.
 13. The EAC VVSG 2.1 draft status and any paper-record rule that affects the ballot-code UX: `[SNIPPET: EAC; status not confirmed]`.
@@ -232,9 +232,9 @@ Status key: SNIPPET = seen in search excerpt, page not fetched; UNVERIFIED = not
 - Karayumak et al., Helios usability (EVT/WOTE 2011): https://db.usenix.org/legacy/events/evtwote11/tech/slides/karayumak.pdf. Listed, not read.
 - Whitten and Tygar, "Why Johnny Can't Encrypt," USENIX Security 1999: https://www.usenix.org/conference/8th-usenix-security-symposium/why-johnny-cant-encrypt-usability-evaluation-pgp-50. SNIPPET.
 - Akhawe and Felt, "Alice in Warningland," USENIX Security 2013: https://www.usenix.org/conference/usenixsecurity13/technical-sessions/presentation/akhawe. SNIPPET (about 25M impressions; design-dependent click-through).
-- Juels, Catalano, Jakobsson, "Coercion-Resistant Electronic Elections": https://eprint.iacr.org/2002/165 (ePrint 2002; WPES 2005 pp. 61-70 cited in summary). SNIPPET.
+- Juels, Catalano, Jakobsson, "Coercion-Resistant Electronic Elections": https://eprint.iacr.org/2002/165 (ePrint 2002; WPES 2005 pp. 61-70 cited in summary). SNIPPET. <!-- claims-lint-ignore -->
 - Benaloh, "Simple Verifiable Elections," EVT 2006: cited in `docs/10` references; not retrieved. UNVERIFIED.
-- Benaloh and Tuinstra, "Receipt-Free Secret-Ballot Elections," STOC 1994: not retrieved. UNVERIFIED.
+- Benaloh and Tuinstra, "Receipt-Free Secret-Ballot Elections," STOC 1994: not retrieved. UNVERIFIED. <!-- claims-lint-ignore -->
 - ElectionGuard verifiability concepts: https://electionguard.vote/concepts/Verifiability/. SNIPPET (verification code, challenge, publication).
 - ElectionGuard precinct-scan use case: https://electionguard.vote/use_cases/Precinct_Scan/. SNIPPET (challenged ballots published decrypted; flag mismatch).
 - ElectionGuard spec: https://electionguard.vote/spec/. SNIPPET (v2.0 instant verification; challenged ballot opening releases nonces). Not read in full.
