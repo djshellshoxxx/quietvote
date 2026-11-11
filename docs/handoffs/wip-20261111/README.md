@@ -2,7 +2,7 @@
 
 **Nothing in this directory was reviewed, completed or run to a result. It is kept only so the work is not lost when the session's machine is reclaimed. QuietVote is unaudited and not for real elections.**
 
-Three test-writing agents were still working when the session's machine restarted, after the owner had already paused the project. They were not resumed. What they had written so far is here, unchanged apart from replacing machine-specific scratch paths.
+Three test-writing agents were still working when the session's machine restarted, after the owner had already paused the project. They were not resumed. What they had written so far is here, unchanged apart from replacing machine-specific scratch paths. Paths under `/home/user/qv-wt/` inside these files point at the agents' worktrees on the session machine and do not exist anywhere else.
 
 | File | What it is | State |
 |---|---|---|
