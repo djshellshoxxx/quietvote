@@ -72,7 +72,7 @@ test('status: shape, counts, backup time, disk, migrations; no secrets', async (
   assert.deepEqual(s.quarantined, []);
   assert.equal(s.backups.last_at, null);
   assert.ok(s.disk.free_bytes === null || s.disk.free_bytes > 0);
-  assert.equal(s.migrations.control, 4);
+  assert.equal(s.migrations.control, 5); // migration 5: rollback anchor (QV-ADR-027 B2-07)
   const txt = JSON.stringify(s);
   assert.ok(!/dek|secret|kek|read_key|log_sk/i.test(txt), `status leaked a secret-looking token: ${txt.match(/dek|secret|kek|read_key|log_sk/i)?.[0]} in ${txt}`);
 });

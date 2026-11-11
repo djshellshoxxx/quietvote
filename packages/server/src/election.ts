@@ -128,8 +128,13 @@ export class ElectionRuntime {
   private readonly trusteeByKid = new Map<string, { pk: Uint8Array; index: number }>();
   private readonly reg: RegistryRow;
   private readonly tallyDrafts = new Map<string, TallyBody>();
+  /** QV-ADR-027 B2-07: the runtime opened over an already-signed log, so peers are polled once before it signs again. */
+  private bootGossipPending: boolean;
 
-  private constructor(env: Env, reg: RegistryRow, edb: ElectionDb, logSk: Uint8Array | undefined, srvSk: Uint8Array | undefined) {
+  private constructor(
+    env: Env, reg: RegistryRow, edb: ElectionDb, logSk: Uint8Array | undefined, srvSk: Uint8Array | undefined,
+    floor: { size: number; root: Uint8Array } | undefined,
+  ) {
     const row = edb.row();
     this.env = env;
     this.reg = reg;
@@ -142,10 +147,14 @@ export class ElectionRuntime {
     this.logPk = new Uint8Array(row.log_pk);
     this.srvPk = new Uint8Array(row.srv_pk);
     this.srvKeys = srvSk ? { secretKey: srvSk, publicKey: this.srvPk } : undefined;
+    // QV-ADR-027 B2-12: no placeholder key. Without the log key (IMPORTED mirror, ARCHIVED after key erasure) the board never signs.
+    // QV-ADR-027 B2-07: `floor` is the control.sqlite rollback anchor; a DB behind it opens quarantined (read-only), never continues.
     this.log = new BoardLog({
-      origin: row.origin, store: edb.store, secretKey: logSk ?? new Uint8Array(32), publicKey: this.logPk,
+      origin: row.origin, store: edb.store, ...(logSk !== undefined ? { secretKey: logSk } : {}), publicKey: this.logPk,
       clock: () => env.nowSec(), resolveAuthorKey: (h) => this.resolveAuthor(h), maxClockSkew: 86400,
+      ...(floor !== undefined ? { floor } : {}),
     });
+    this.bootGossipPending = !this.imported && edb.store.latestCheckpoint() !== undefined;
   }
 
   static async open(env: Env, reg: RegistryRow): Promise<ElectionRuntime> {
@@ -160,8 +169,11 @@ export class ElectionRuntime {
         logSk = unseal(dek, row.log_sk_enc, 'log_sk');
         if (row.srv_sk_enc) srvSk = unseal(dek, row.srv_sk_enc, 'srv_sk');
       }
-      const rt = new ElectionRuntime(env, reg, edb, logSk, srvSk);
+      // QV-ADR-027 B2-07: the anchor lives in control.sqlite, not in the (restorable) election DB. Mirrors carry no own-key history.
+      const floor = row.imported === 1 ? undefined : env.control.logAnchor(reg.election_id);
+      const rt = new ElectionRuntime(env, reg, edb, logSk, srvSk, floor);
       await rt.replay();
+      rt.reanchorFromStore();
       return rt;
     } catch (e) {
       edb.close();
@@ -353,6 +365,17 @@ export class ElectionRuntime {
     this.edb.setState(shown, this.st.phaseSeq, this.log.size);
     const reg = this.env.control.election(this.id);
     if (reg && reg.state !== shown) this.env.control.setState(this.id, shown, this.st.manifest?.title);
+  }
+
+  /**
+   * QV-ADR-027 B2-07: after a healthy load, raise the control.sqlite anchor to the newest checkpoint the store holds. This covers elections that
+   * predate the anchor (first use) and a crash between the election-DB commit of a checkpoint and its anchor write (that checkpoint was never
+   * released). It never lowers the anchor, and it never runs on a quarantined log.
+   */
+  private reanchorFromStore(): void {
+    if (this.imported || this.quarantineReason() !== undefined) return;
+    const cp = this.edb.store.latestCheckpoint();
+    if (cp !== undefined) this.env.control.raiseLogAnchor(this.id, cp.size, cp.root);
   }
 
   /** Mirrors the board's own quarantine and the forced one into election.quarantine and the registry flag (admin status). */
@@ -598,7 +621,12 @@ export class ElectionRuntime {
     const prior = this.edb.store.findByNonce(nonceKey(toHex(h.author), h.type, toHex(h.authorNonce)));
     if (prior !== undefined) {
       const e = this.edb.store.getEntry(prior);
-      if (e && Buffer.compare(Buffer.from(e.headerBytes), Buffer.from(headerBytes)) === 0) return { dup: this.outcomeFor(prior, true) };
+      if (e && Buffer.compare(Buffer.from(e.headerBytes), Buffer.from(headerBytes)) === 0) {
+        // QV-ADR-027 B2-12 option A: a keyless runtime (IMPORTED mirror, ARCHIVED after key erasure and reload) re-signs nothing, not even a
+        // duplicate's promise. Stored-receipt replay (option B) needs a schema change and is deferred.
+        if (!this.log.canSign) throw new ApiError(503, 'LOG_UNAVAILABLE', 'this log holds no signing key (read-only); receipts are not re-issued');
+        return { dup: this.outcomeFor(prior, true) };
+      }
       throw conflict('author nonce reused with a different entry', 'NONCE_REUSE');
     }
     const c = checkEntry(headerBytes, body, this.origin, (x) => this.resolveAuthor(x), this.log.size);
@@ -631,6 +659,7 @@ export class ElectionRuntime {
   }
 
   outcomeFor(seq: number, duplicate: boolean): AppendOutcome {
+    if (!this.log.canSign) throw new ApiError(503, 'LOG_UNAVAILABLE', 'this log holds no signing key (read-only); receipts are not re-issued'); // QV-ADR-027 B2-12
     const r = this.log.getReceipt(seq);
     if (!r.ok) throw new ApiError(500, 'INTERNAL', 'receipt unavailable');
     return { status: r.value.inclusion ? 'included' : 'sequenced', receipt: r.value, duplicate, seq };
@@ -656,6 +685,16 @@ export class ElectionRuntime {
 
   private async processLocked(headerBytes: Uint8Array, body: Uint8Array): Promise<AppendOutcome> {
     if (this.poisoned) throw new ApiError(503, 'LOG_UNAVAILABLE', 'election runtime is being reloaded');
+    if (this.bootGossipPending) {
+      // QV-ADR-027 B2-07 option B: before the first signature after (re)opening an already-signed log, poll the configured gossip peers once;
+      // a log-signed head ahead of our tree quarantines the log and raises the anchor (judge), so the precheck below refuses.
+      this.bootGossipPending = false;
+      try {
+        await this.env.bootGossip?.(this);
+      } catch {
+        /* unreachable peers are counted in gossip stats; the control.sqlite anchor remains the local floor */
+      }
+    }
     const pre = this.precheck(headerBytes, body, true); // re-check under the lock (state may have moved)
     if ('dup' in pre) return pre.dup;
     const h = pre.header;
@@ -682,6 +721,14 @@ export class ElectionRuntime {
     } catch (e) {
       if (this.log.size !== this.edb.store.size()) this.poisoned = true; // in-memory tree ran ahead of the rolled-back DB
       throw e;
+    }
+    // QV-ADR-027 B2-07: persist the anchor after the election-DB commit and BEFORE the checkpoint or receipt is released (response, events).
+    // A crash in between leaves the DB ahead of the anchor (re-anchored on open); a restored older DB is behind it (quarantined on open).
+    try {
+      this.env.control.raiseLogAnchor(this.id, this.log.size, this.log.root());
+    } catch {
+      this.poisoned = true;
+      throw new ApiError(503, 'LOG_UNAVAILABLE', 'the rollback anchor could not be persisted; the new checkpoint is not released');
     }
     void receipt;
     await this.apply(seq, h.type, v.rec, at);

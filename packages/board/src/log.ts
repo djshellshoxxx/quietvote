@@ -17,7 +17,12 @@ import { nonceKey, type BoardStore, type StoredEntry } from './store.ts';
 export interface BoardLogOptions {
   origin: string;
   store: BoardStore;
-  secretKey: Uint8Array;
+  /**
+   * Log signing key. Optional (QV-ADR-027 B2-12): a keyless log (read-only mirror, archived election whose key was erased) never
+   * signs anything. `append` and `checkpoint` refuse with QV_BOARD_READ_ONLY, and promise signing (`getReceipt`) throws. There is no
+   * placeholder key.
+   */
+  secretKey?: Uint8Array;
   publicKey: Uint8Array;
   /** Unix seconds. */
   clock: () => number;
@@ -27,6 +32,12 @@ export interface BoardLogOptions {
   allowUnverifiedSignatures?: boolean;
   /** Seconds of tolerated created_at skew (default 86400). */
   maxClockSkew?: number;
+  /**
+   * Trusted rollback anchor (QV-ADR-027 B2-07, QV-18 REQ-012/REQ-053): the last (size, root) this log's key is known to have signed,
+   * kept OUTSIDE the store (server: control.sqlite, raised by witness/gossip heads). A tree that is smaller than `floor.size` or whose
+   * root at that size differs puts the log in QUARANTINE on load. The log never continues past such a mismatch.
+   */
+  floor?: { size: number; root: Uint8Array };
 }
 
 export type LogState = 'ok' | 'quarantine';
@@ -80,6 +91,18 @@ export class BoardLog {
         break;
       }
     }
+    // QV-ADR-027 B2-07: the external anchor catches a coherent older snapshot, whose own checkpoints match its own tree.
+    const f = o.floor;
+    if (f !== undefined) {
+      if (!Number.isSafeInteger(f.size) || f.size < 0 || f.root.length !== 32) this.quarantine('rollback anchor is malformed');
+      else if (f.size > this.tree.size) this.quarantine(`ROLLBACK: tree size ${this.tree.size} is behind the trusted anchor size ${f.size}`);
+      else if (!bytesEqual(this.tree.root(f.size), f.root)) this.quarantine(`ROLLBACK: tree root at size ${f.size} differs from the trusted anchor`);
+    }
+  }
+
+  /** False for a keyless log (QV-ADR-027 B2-12): it can serve proofs and stored notes but never signs. */
+  get canSign(): boolean {
+    return this.o.secretKey !== undefined;
   }
 
   get status(): { state: LogState; reason: string } {
@@ -101,6 +124,8 @@ export class BoardLog {
   append(headerBytes: Uint8Array, body: Uint8Array): Result<{ receipt: Receipt; duplicate: boolean }> {
     if (this.state !== 'ok') return err('QV_BOARD_QUARANTINE', 'log is quarantined');
     if (this.store.isReadOnly()) return err('QV_BOARD_READ_ONLY', 'log is read-only');
+    // QV-ADR-027 B2-12 option A: no key, no append; this includes byte-identical duplicates (no receipt is re-signed).
+    if (this.o.secretKey === undefined) return err('QV_BOARD_READ_ONLY', 'log has no signing key');
     const seq = this.tree.size;
     const resolve = this.o.resolveAuthorKey;
     if (!resolve && this.o.allowUnverifiedSignatures !== true) {
@@ -138,12 +163,15 @@ export class BoardLog {
 
   /** Promise receipt (deterministic: Ed25519 signatures are deterministic); inclusion attached when covered by a checkpoint. */
   private receiptFor(e: StoredEntry): Receipt {
+    // QV-ADR-027 B2-12: never sign with a placeholder key. A keyless log has no promise to give.
+    if (this.o.secretKey === undefined) throw new Error('QV_BOARD_READ_ONLY: log has no signing key; no promise receipt can be issued');
     const r = signPromise(this.o.secretKey, this.origin, e.seq, e.leafHash, e.sequencedAt);
     const cp = this.store.latestCheckpoint();
     if (cp && cp.size > e.seq) r.inclusion = { treeSize: cp.size, path: this.tree.inclusionProof(e.seq, cp.size), checkpointNote: cp.note };
     return r;
   }
 
+  /** Throws on a keyless log (QV-ADR-027 B2-12); check `canSign` first. */
   getReceipt(seq: number): Result<Receipt> {
     const e = this.store.getEntry(seq);
     return e ? ok(this.receiptFor(e)) : err('QV_BOARD_NOT_FOUND', 'no such entry');
@@ -153,6 +181,8 @@ export class BoardLog {
   checkpoint(): Result<string> {
     if (this.state !== 'ok') return err('QV_BOARD_QUARANTINE', 'log is quarantined');
     if (this.store.isReadOnly()) return err('QV_BOARD_READ_ONLY', 'log is read-only');
+    const sk = this.o.secretKey;
+    if (sk === undefined) return err('QV_BOARD_READ_ONLY', 'log has no signing key'); // QV-ADR-027 B2-12
     const size = this.tree.size;
     const root = this.tree.root();
     const last = this.store.latestCheckpoint();
@@ -163,7 +193,7 @@ export class BoardLog {
       }
       if (last.size === size) return bytesEqual(last.root, root) ? ok(last.note) : err('QV_BOARD_FORK', 'root differs from signed checkpoint');
     }
-    const note = signCheckpoint(this.origin, size, root, this.o.secretKey, this.o.publicKey);
+    const note = signCheckpoint(this.origin, size, root, sk, this.o.publicKey);
     this.store.putCheckpoint({ size, root, note });
     return ok(note);
   }
