@@ -251,6 +251,10 @@ export class ElectionRuntime {
     if (this.imported) return 'IMPORTED';
     return effectiveState(this.st.state, this.st.tallyingSince, this.env.nowSec(), this.env.cfg.stalledMaxSec);
   }
+  /** Lifecycle state as the election's own log replays it; the registry is a projection that can lag it after a crash. */
+  get logState(): ElectionStateName {
+    return this.imported ? 'IMPORTED' : this.st.state;
+  }
   get terminal(): boolean {
     return this.imported || TERMINAL.has(this.st.state);
   }
