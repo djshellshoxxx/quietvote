@@ -106,7 +106,7 @@ export class ElectionPool {
     const reg = this.env.control.election(id);
     if (!reg) return;
     const ok = ['DRAFT', 'ARCHIVED', 'CANCELLED', 'ABORTED', 'IMPORTED'].includes(reg.state);
-    if (!ok) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED or ABORTED`);
+    if (!ok) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
     this.env.control.markDeleted(id); // wraps DEK away first
     await this.evict(id);
     const base = join(this.env.cfg.dataDir, reg.db_path);
