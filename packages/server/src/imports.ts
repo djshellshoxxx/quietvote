@@ -136,6 +136,8 @@ export interface VerifiedBundle {
  * `expectedManifestHash` is the out-of-band trust anchor (QV-18 §13 step 1) when the importer has one.
  */
 export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHash: string | undefined, tick: Yield, progress: (p: number) => void, signal?: AbortSignal): Promise<VerifiedBundle> {
+  // Cancel before scanning untrusted archive bytes or starting any proof work.
+  signal?.throwIfAborted();
   // Cheap duplicate refusal BEFORE any proof work (B2-02): the claimed origin names the election id; commitImport re-checks after verification.
   const claimed = (o: unknown): void => {
     if (typeof o !== 'string') return;
