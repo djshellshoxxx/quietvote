@@ -5,7 +5,7 @@ import { ed25519Verify } from '@quietvote/crypto';
 import { ApiClient } from '../api/client.ts';
 import { ApiError, uxPresentation, type PhaseTimes } from '../api/errors.ts';
 import { BallotController, lastOwnBallotCode } from '../flow/ballot-controller.ts';
-import { canAudit, canCast } from '../flow/ballot-machine.ts';
+import { canAudit, canCast, canNewSeal } from '../flow/ballot-machine.ts';
 import { bindServerLog, checkRoll, deriveElectionContext, type ElectionContext } from '../flow/election.ts';
 import { entryRecord } from '../flow/entries.ts';
 import { parseFragment } from '../flow/invite.ts';
@@ -628,7 +628,13 @@ export function startApp(env: AppEnv): void {
           rep?.storageFailed ? errorBox('E-KEY-STORAGE') : null,
           rep?.receipt ? btn(t('qv.receipt.save'), () => download(`qv-receipt-${L.apiId.slice(0, 6)}.json`, JSON.stringify(rep.receipt, null, 2))) : null,
           btn(t('qv.receipt.clearDevice'), () => { void clearDevice(); }), link(electionPath(L.apiId, 'receipt'), t('qv.receipt.checkNow'))]);
-      } else add(area, [s.retryCast ? h('p', {}, t('qv.receipt.pendingBody')) : null, errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, s.error.startsWith('E-') ? s.error : 'E-GEN-UNKNOWN'), s.retryCast ? btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true }) : btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); })]);
+      } else {
+        // A failed CAST keeps the receipt when the board accepted the ballot. "Seal a new ballot" appears only where NEW_SEAL is accepted.
+        const rep = ctl.lastCast?.codeHex === s.sealed?.code ? ctl.lastCast : undefined;
+        add(area, [s.retryCast ? h('p', {}, t('qv.receipt.pendingBody')) : null, errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, s.error.startsWith('E-') ? s.error : 'E-GEN-UNKNOWN'),
+          rep?.receipt ? btn(t('qv.receipt.save'), () => download(`qv-receipt-${L.apiId.slice(0, 6)}.json`, JSON.stringify(rep.receipt, null, 2))) : null,
+          s.retryCast ? btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true }) : canNewSeal(s) ? btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); }) : null]);
+      }
       render(t('qv.nav.vote'), ...head, stepper(s.kind === 'selecting' || s.kind === 'reviewing' || s.kind === 'sealing' ? 3 : 4), heading(t('qv.ballot.title')), h('p', {}, t('qv.vote.privacyNote')), area, more(h('p', {}, t(ctx.manifest.ballots.max_per_voter === 1 ? 'qv.ballot.oneBallot' : 'qv.ballot.revoteNote')), guaranteePanel(L)));
       const nh = area.querySelector('.step-heading') as HTMLElement | null;
       nh?.focus();
