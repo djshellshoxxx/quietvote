@@ -3,7 +3,7 @@ import { bytesToHex, hexToBytes, systemRng } from '@quietvote/crypto';
 import { NO_SUPERSEDES, ballotCode, castDigest, verifyElectionText } from '@quietvote/protocol';
 import { ed25519Verify } from '@quietvote/crypto';
 import { ApiClient } from '../api/client.ts';
-import { ApiError, uxCodeFor } from '../api/errors.ts';
+import { ApiError, uxPresentation, type PhaseTimes } from '../api/errors.ts';
 import { BallotController, lastOwnBallotCode } from '../flow/ballot-controller.ts';
 import { canAudit, canCast } from '../flow/ballot-machine.ts';
 import { bindServerLog, checkRoll, deriveElectionContext, type ElectionContext } from '../flow/election.ts';
@@ -21,7 +21,7 @@ import { inlineSealer, type Sealer } from '../flow/seal.ts';
 import { createTranslator, offeredLocales, negotiateLocale, SOURCE_ONLY, type LocaleDef, type MessageKey, type Translator, type Args } from '../i18n/index.ts';
 import { writeLanguagePreference } from '../i18n/preference.ts';
 import { formatDeadline } from '../i18n/datetime.ts';
-import { KeyError, serializeContainer } from '../key/keystore.ts';
+import { KeyError, defaultDeps, serializeContainer, type KdfParams, type KeystoreDeps } from '../key/keystore.ts';
 import { checkPassphrase, generatePassphrase } from '../key/passphrase.ts';
 import type { Signer } from '../key/signer.ts';
 import type { DeviceStorage } from '../key/storage.ts';
@@ -111,6 +111,24 @@ export function startApp(env: AppEnv): void {
     timer.touch(now);
   }, { passive: true });
 
+  /** B3-28: asks before a key file whose KDF cost exceeds the defaults is derived. Cancel means no derivation at all. */
+  const costConfirmed = new Set<string>();
+  const confirmKdfCost = async (p: KdfParams): Promise<boolean> => {
+    const id = `${p.m}/${p.t}/${p.p}`;
+    if (costConfirmed.has(id)) return true;
+    const ok = await new Promise<boolean>((resolve) => {
+      const dialog = h('dialog', { 'aria-label': t('qv.key.unlock') });
+      const finish = (v: boolean): void => { (dialog as HTMLDialogElement).close(); dialog.remove(); resolve(v); };
+      add(dialog, [h('p', {}, t('qv.key.costWarn', { mem: String(Math.round(p.m / 1024)), passes: String(p.t), lanes: String(p.p) })),
+        h('button', { type: 'button', onclick: () => finish(false) }, t('qv.key.cancel')), h('button', { type: 'button', onclick: () => finish(true) }, t('qv.key.costConfirm'))]);
+      dialog.addEventListener('cancel', (e) => { e.preventDefault(); finish(false); });
+      document.body.append(dialog); (dialog as HTMLDialogElement).showModal();
+    });
+    if (ok) costConfirmed.add(id);
+    return ok;
+  };
+  const keyDeps = (): KeystoreDeps => ({ ...defaultDeps(), confirmCost: confirmKdfCost });
+
   /** Clears this device's keys and receipts; a failure is announced (E-KEY-STORAGE), never reported as cleared (W9). */
   const clearDevice = async (): Promise<boolean> => {
     const confirmed = await new Promise<boolean>((resolve) => {
@@ -185,6 +203,11 @@ export function startApp(env: AppEnv): void {
     if (ref) box.append(h('p', { class: 'hint' }, t('qv.err.reference', { code: ux, request: ref })));
     return box;
   };
+  /** B3-06: an error box for a failure or ux code, with the arguments its text needs (see `uxPresentation`). */
+  const errorFor = (e: unknown, times: PhaseTimes = {}, ux?: string, ref?: string): HTMLElement => {
+    const p = uxPresentation(ux, e, times);
+    return errorBox(p.ux, p.args, ref ?? (e instanceof ApiError ? e.requestId : undefined));
+  };
   const download = (name: string, text: string, type = 'application/json'): void => {
     const url = URL.createObjectURL(new Blob([text], { type }));
     const a = h('a', { href: url, download: name });
@@ -207,6 +230,7 @@ export function startApp(env: AppEnv): void {
     }
   };
   let liveState: ConnStatus['state'] = 'closed';
+  let liveStatus: ConnStatus = { state: 'closed' };
   let liveId: string | undefined;
   const stopLive = (): void => {
     for (const L of loaded.values()) {
@@ -215,6 +239,7 @@ export function startApp(env: AppEnv): void {
     }
     liveId = undefined;
     liveState = 'closed';
+    liveStatus = { state: 'closed' };
     liveLine.textContent = '';
   };
   /** Starts (once per election) the SSE connection; events only trigger a re-read of the signed log. */
@@ -226,6 +251,7 @@ export function startApp(env: AppEnv): void {
       onStatus: (st) => {
         const prev = liveState;
         liveState = st.state;
+        liveStatus = st;
         if (loaded.get(L.apiId)?.live !== live) return;
         liveLine.textContent = liveText(st);
         if (st.state === 'failed' || (st.state === 'live' && prev === 'reconnecting')) say.say(liveText(st));
@@ -236,6 +262,7 @@ export function startApp(env: AppEnv): void {
           say.say(t('qv.live.updated'));
         }
       },
+      onRecovered: () => { if (loaded.get(L.apiId)?.live === live) liveLine.textContent = liveText(liveStatus); },
       onAlert: () => say.say(t('qv.live.alert'), true),
       onError: () => { if (loaded.get(L.apiId)?.live === live) { liveLine.textContent = t('qv.live.failed'); say.say(t('qv.live.failed')); } },
     });
@@ -307,8 +334,8 @@ export function startApp(env: AppEnv): void {
       render(t('qv.shell.notFoundTitle'), heading(t('qv.election.notFound')));
     } catch (e) {
       if (!currentRoute(epoch)) return;
-      const ux = e instanceof ApiError && e.code === 'NOT_FOUND' ? null : uxCodeFor(e);
-      render(t('qv.shell.errorTitle'), ux === null ? heading(t('qv.election.notFound')) : errorBox(ux, {}, e instanceof ApiError ? e.requestId : undefined));
+      const notFound = e instanceof ApiError && e.code === 'NOT_FOUND';
+      render(t('qv.shell.errorTitle'), notFound ? heading(t('qv.election.notFound')) : errorFor(e));
     }
   }
 
@@ -447,6 +474,7 @@ export function startApp(env: AppEnv): void {
     const mode = { v: 'create' };
     keyLock = () => { pass.value = ''; recovery.value = ''; clear(backups); clear(status); status.append(h('p', {}, t('qv.key.locked'))); };
     const showErr = (e: unknown): void => {
+      if (e instanceof KeyError && e.code === 'E_KEY_CANCELLED') { clear(status); status.append(h('p', {}, t('qv.key.costCancelled'))); return; }
       if (e instanceof KeyError && e.code !== 'E_KEY_LOCKED') { clear(status); status.append(h('p', {}, t(mode.v === 'recovery' ? 'qv.key.recoveryBad' : 'qv.key.importBad'))); return; }
       const ux = e instanceof KeyError && e.code === 'E_KEY_LOCKED' ? 'E-KEY-LOCKED' : 'E-KEY-STORAGE';
       clear(status); status.append(errorBox(ux));
@@ -456,7 +484,7 @@ export function startApp(env: AppEnv): void {
       const container = created?.container ?? await env.storage.getKey(slot);
       clear(backups);
       if (container) add(backups, [btn(t('qv.key.download'), () => download(`voting-key-${L.apiId.slice(0, 6)}.qvkey`, serializeContainer(container))),
-        btn(t('qv.key.showRecovery'), async () => { try { const c = await recoveryCodeFor(container, pass.value); clear(backups); add(backups, [h('h2', {}, t('qv.key.recoveryHead')), h('p', {}, t('qv.key.recoveryHelp')), codeEl(c), btn(t('qv.key.recoveryHide'), () => { clear(backups); })]); } catch (e) { showErr(e); } })]);
+        btn(t('qv.key.showRecovery'), async () => { try { const c = await recoveryCodeFor(container, pass.value, keyDeps()); clear(backups); add(backups, [h('h2', {}, t('qv.key.recoveryHead')), h('p', {}, t('qv.key.recoveryHelp')), codeEl(c), btn(t('qv.key.recoveryHide'), () => { clear(backups); })]); } catch (e) { showErr(e); } })]);
       let registered = false;
       if (token) {
         try {
@@ -465,7 +493,7 @@ export function startApp(env: AppEnv): void {
           if (!registered) throw new Error('invalid registration response');
         } catch (e) {
           clear(out);
-          add(out, [errorBox(uxCodeFor(e), {}, e instanceof ApiError ? e.requestId : undefined)]);
+          add(out, [errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close })]);
           return;
         }
       }
@@ -481,7 +509,7 @@ export function startApp(env: AppEnv): void {
       if (have) {
         pass.autocomplete = 'current-password';
         add(act, [field(t('qv.key.passphrase'), pass), h('label', {}, show, ' ', t('qv.key.show')),
-          btn(t('qv.key.unlock'), async () => { try { clear(status); status.textContent = t('qv.key.working'); const u = await unlockKey({ storage: env.storage, slot, passphrase: pass.value }); status.textContent = ''; await finish(u.signer); } catch (e) { showErr(e); } }, { primary: true })]);
+          btn(t('qv.key.unlock'), async () => { try { clear(status); status.textContent = t('qv.key.working'); const u = await unlockKey({ storage: env.storage, slot, passphrase: pass.value, deps: keyDeps() }); status.textContent = ''; await finish(u.signer); } catch (e) { showErr(e); } }, { primary: true })]);
         return;
       }
       const gen = btn(t('qv.key.generate'), () => { pass.value = generatePassphrase(systemRng); (show as HTMLInputElement).checked = true; pass.type = 'text'; status.textContent = t('qv.key.generated', { words: pass.value }); });
@@ -496,15 +524,15 @@ export function startApp(env: AppEnv): void {
             if (mode.v === 'cli') return;
             if (mode.v === 'recovery') {
               const k = await restoreFromRecovery({ storage: env.storage, slot, code: recovery.value, passphrase: pass.value });
-              const u = await unlockKey({ storage: env.storage, slot, passphrase: pass.value });
+              const u = await unlockKey({ storage: env.storage, slot, passphrase: pass.value, deps: keyDeps() });
               recovery.value = '';
               return await finish(u.signer, { keyFile: k.keyFileText, container: k.container });
             }
             if (mode.v === 'import') {
               const f = file.files?.[0];
               if (!f) { status.textContent = t('qv.key.importMissing'); return; }
-              await importKeyFile({ storage: env.storage, slot, text: await f.text(), passphrase: pass.value });
-              const u = await unlockKey({ storage: env.storage, slot, passphrase: pass.value });
+              await importKeyFile({ storage: env.storage, slot, text: await f.text(), passphrase: pass.value, deps: keyDeps() });
+              const u = await unlockKey({ storage: env.storage, slot, passphrase: pass.value, deps: keyDeps() });
               return await finish(u.signer);
             }
             const chk = checkPassphrase(pass.value);
@@ -512,7 +540,7 @@ export function startApp(env: AppEnv): void {
             status.textContent = t('qv.key.working');
             const k = await createKey({ storage: env.storage, slot, passphrase: pass.value });
             const persisted = await env.storage.requestPersistence();
-            const u = await unlockKey({ storage: env.storage, slot, passphrase: pass.value });
+            const u = await unlockKey({ storage: env.storage, slot, passphrase: pass.value, deps: keyDeps() });
             status.textContent = `${t('qv.key.fingerprint', { words: k.fingerprint.join(' ') })} ${k.atFloor ? t('qv.key.floorWarn') : ''} ${persisted ? '' : t('qv.key.persistDenied')}`;
             await finish(u.signer, { keyFile: k.keyFileText, container: k.container });
           } catch (e) { showErr(e); }
@@ -529,7 +557,7 @@ export function startApp(env: AppEnv): void {
     const epoch = routeEpoch;
     const signer = signers.get(L.apiId);
     if (!signer) return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), h('p', {}, t('qv.key.locked')), link(electionPath(L.apiId, 'key') + location.hash, t('qv.key.unlock'), 'btn primary'));
-    if (ctx.phase !== 'open') return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), errorBox(ctx.phase === 'ready' ? 'E-VOT-NOTOPEN' : 'E-VOT-CLOSED', { time: ctx.phase === 'ready' ? ctx.manifest.voting_open : ctx.manifest.voting_close }));
+    if (ctx.phase !== 'open') return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, ctx.phase === 'ready' ? 'E-VOT-NOTOPEN' : 'E-VOT-CLOSED'));
     const pkHex = bytesToHex(signer.publicKey);
     const supersedes = lastOwnBallotCode(L.records, pkHex, bytesToHex(ctx.params.ctx), (env) => ed25519Verify(signer.publicKey, hexToBytes(env.sig, 64), castDigest(ctx.params.ctx, ballotCode(ctx.params.ctx, env.body))));
     const ctl = new BallotController({ ctx, apiElectionId: L.apiId, origin: L.origin, signer, api: L.api, sealer, storage: env.storage, rng: systemRng, logPk: L.logPk, supersedes: supersedes || NO_SUPERSEDES, clientBuild: env.build.id });
@@ -596,11 +624,11 @@ export function startApp(env: AppEnv): void {
         add(area, [h('h2', { tabindex: -1, class: 'step-heading' }, t(titleKey)), rep?.codeDisplay ? h('p', {}, t('qv.ballot.code'), ': ', codeEl(rep.codeDisplay)) : null,
           rep?.seq !== undefined && s.outcome === 'ACCEPTED_RECORDED' ? h('p', {}, t('qv.receipt.logged', { time: new Date((rep.sequencedAt ?? 0) * 1000).toLocaleString(locale), seq: rep.seq })) : null,
           s.outcome === 'ACCEPTED_RECORDED' ? h('p', {}, t('qv.receipt.proves')) : s.outcome === 'PENDING_UNCONFIRMED' ? h('p', {}, t('qv.receipt.pendingBody')) : null, h('p', {}, t('qv.receipt.doesnt')), h('p', {}, t('qv.receipt.shared')),
-          rep?.error ? errorBox(rep.error.ux, { time: rep.error.ux === 'E-VOT-NOTOPEN' ? ctx.manifest.voting_open : ctx.manifest.voting_close }, rep.error.requestId) : null,
+          rep?.error ? errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, rep.error.ux, rep.error.requestId) : null,
           rep?.storageFailed ? errorBox('E-KEY-STORAGE') : null,
           rep?.receipt ? btn(t('qv.receipt.save'), () => download(`qv-receipt-${L.apiId.slice(0, 6)}.json`, JSON.stringify(rep.receipt, null, 2))) : null,
           btn(t('qv.receipt.clearDevice'), () => { void clearDevice(); }), link(electionPath(L.apiId, 'receipt'), t('qv.receipt.checkNow'))]);
-      } else add(area, [s.retryCast ? h('p', {}, t('qv.receipt.pendingBody')) : null, errorBox(s.error.startsWith('E-') ? s.error : 'E-GEN-UNKNOWN', { time: s.error === 'E-VOT-NOTOPEN' ? ctx.manifest.voting_open : ctx.manifest.voting_close }), s.retryCast ? btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true }) : btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); })]);
+      } else add(area, [s.retryCast ? h('p', {}, t('qv.receipt.pendingBody')) : null, errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, s.error.startsWith('E-') ? s.error : 'E-GEN-UNKNOWN'), s.retryCast ? btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true }) : btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); })]);
       render(t('qv.nav.vote'), ...head, stepper(s.kind === 'selecting' || s.kind === 'reviewing' || s.kind === 'sealing' ? 3 : 4), heading(t('qv.ballot.title')), h('p', {}, t('qv.vote.privacyNote')), area, more(h('p', {}, t(ctx.manifest.ballots.max_per_voter === 1 ? 'qv.ballot.oneBallot' : 'qv.ballot.revoteNote')), guaranteePanel(L)));
       const nh = area.querySelector('.step-heading') as HTMLElement | null;
       nh?.focus();
@@ -621,7 +649,7 @@ export function startApp(env: AppEnv): void {
         if (r.state === 'included') { await env.storage.putHead({ ...r.head, electionId: L.apiId }); out.append(h('p', {}, t('qv.receipt.included', { seq: r.seq, size: r.treeSize })), h('p', {}, t('qv.receipt.consistent'))); } else out.append(h('p', {}, t('qv.receipt.notFound')));
       } catch (e) {
         clear(out);
-        out.append(errorBox(e instanceof BoardIntegrityError ? e.code : uxCodeFor(e)));
+        out.append(e instanceof BoardIntegrityError ? errorBox(e.code) : errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }));
         say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
       }
     };
@@ -797,7 +825,7 @@ export function startApp(env: AppEnv): void {
         add(pubOut, [h('p', {}, t('qv.org.publishing'))]);
         let o: PublishOutcome;
         try {
-          o = await runPublish({ orgId: orgIn.value, passphrase: pw.value, form: prep.form, rollHex: prep.rollHex, prior: pubState, storage: env.storage, apiBase: env.apiBase ?? '', origin: location.origin });
+          o = await runPublish({ orgId: orgIn.value, passphrase: pw.value, form: prep.form, rollHex: prep.rollHex, prior: pubState, storage: env.storage, apiBase: env.apiBase ?? '', origin: location.origin, deps: keyDeps() });
         } finally {
           pw.value = '';
         }

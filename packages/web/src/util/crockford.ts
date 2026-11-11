@@ -54,6 +54,7 @@ export function crockfordDecode(symbols: string, byteLen: number): Uint8Array | 
 }
 
 export function groupSymbols(s: string, size = 4): string {
+  if (!Number.isSafeInteger(size) || size <= 0) throw new RangeError('group size must be a positive safe integer');
   const parts: string[] = [];
   for (let i = 0; i < s.length; i += size) parts.push(s.slice(i, i + size));
   return parts.join('-');

@@ -1,0 +1,65 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { World, kp } from '/home/user/qv-wt/t3-privacy-canary/packages/server/test/helpers/world.ts';
+import { b64u } from '/home/user/qv-wt/t3-privacy-canary/packages/board/src/index.ts';
+import { ed25519Sign, utf8, sha256 } from '/home/user/qv-wt/t3-privacy-canary/packages/crypto/src/index.ts';
+
+const w = new World({ seed: 'explore-link', n: 3, t: 2, voters: 0, server: { retentionSweepMs: 0 } as never });
+await w.start();
+await w.setupOrgAndElection();
+w.clock += 17 * 60_000 + 23_456;
+const N = 6;
+const items = Array.from({ length: N }, (_, i) => ({ label: `Member ${i}` }));
+const inv = (await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { items }, w.owner, w.idemKey())).json.invites as { invite_id: string; code: string }[];
+const order = [3, 0, 4, 1, 5];
+const voters = order.map((i) => kp('explore-link', `v${i}`));
+for (let k = 0; k < order.length; k++) {
+  const v = voters[k]!;
+  const pop = ed25519Sign(v.secretKey, new Uint8Array([...utf8(`QV-REG-v1\0${w.electionId}\0`), ...v.publicKey]));
+  const r = await w.req('POST', `/api/v1/elections/${w.electionId}/registrations`, { invite_code: inv[order[k]!]!.code, pk: b64u(v.publicKey), alg: 'ed25519', pop: b64u(pop) });
+  if (r.status !== 201) throw new Error(r.text);
+  w.tick(7);
+}
+const rt = (await w.server.pool.get(w.electionId))!;
+const reg = w.server.env.control.election(w.electionId)!;
+const walPath = join(w.dir, reg.db_path + '-wal');
+const wal = readFileSync(walPath);
+const pageSize = wal.readUInt32BE(8);
+console.log('wal bytes', wal.length, 'page size', pageSize);
+const hashes = inv.map((x) => Buffer.from(sha256(utf8(`QV-INVITE-v1\0${x.code}`))));
+const pks = voters.map((v) => Buffer.from(v.publicKey));
+let group: Buffer[] = [];
+let commitNo = 0;
+const regSeen = new Set<number>();
+const pkSeen = new Set<number>();
+const links: [number, number][] = [];
+for (let off = 32; off + 24 + pageSize <= wal.length; off += 24 + pageSize) {
+  const dbSize = wal.readUInt32BE(off + 4);
+  group.push(wal.subarray(off + 24, off + 24 + pageSize));
+  if (dbSize === 0) continue;
+  commitNo++;
+  const newReg: number[] = [];
+  const newPk: number[] = [];
+  for (const page of group) {
+    hashes.forEach((h, i) => {
+      const at = page.indexOf(h);
+      if (at < 0) return;
+      const tail = page.subarray(at + 32, at + 32 + 120).toString('latin1');
+      const ri = tail.indexOf('registered'), ii = tail.indexOf('issued');
+      const state = ri >= 0 && (ii < 0 || ri < ii) ? 'registered' : 'issued';
+      if (state === 'registered' && !regSeen.has(i)) { regSeen.add(i); newReg.push(i); }
+    });
+    pks.forEach((p, k) => { if (page.includes(p) && !pkSeen.has(k)) { pkSeen.add(k); newPk.push(k); } });
+  }
+  if (newReg.length || newPk.length) console.log(`commit ${commitNo}: invites newly registered ${JSON.stringify(newReg)}; voter keys first seen ${JSON.stringify(newPk)}`);
+  if (newReg.length === 1 && newPk.length === 1) links.push([newReg[0]!, newPk[0]!]);
+  group = [];
+}
+console.log('recovered links invite->voter(k):', JSON.stringify(links), 'truth:', JSON.stringify(order.map((i, k) => [i, k])));
+// main DB tables only (what SQL exposes)
+console.log(rt.edb.db.prepare('SELECT rowid, substr(invite_id,1,6) AS id, state, registered_at FROM voter_invite ORDER BY rowid').all().map((r: any) => `${r.rowid}:${r.state}:${r.registered_at}`).join(' | '));
+console.log(rt.edb.db.prepare('SELECT rowid, registered_at FROM voter ORDER BY rowid').all().map((r: any) => `${r.rowid}:${r.registered_at}`).join(' | '));
+await w.server.stop();
+const { rmSync, existsSync } = await import('node:fs');
+console.log('wal exists after clean stop:', existsSync(walPath));
+rmSync(w.dir, { recursive: true, force: true });

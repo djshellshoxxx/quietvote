@@ -439,7 +439,7 @@ All external sources below were **not** fetched in this session (DNS failure in 
 - RFC 8785, JSON Canonicalization Scheme. https://www.rfc-editor.org/rfc/rfc8785 [UNVERIFIED]
 - NIST FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA). https://csrc.nist.gov/pubs/fips/203/final ; https://csrc.nist.gov/pubs/fips/204/final [UNVERIFIED]
 - Ristenpart and Yilek, "When Good Randomness Goes Bad: Virtual Machine Reset Vulnerabilities and Hedging Deployed Cryptography", NDSS 2010. https://www.ndss-symposium.org/ndss2010/when-good-randomness-goes-bad-virtual-machine-reset-vulnerabilities-and-hedging-deployed-cryptography/ [UNVERIFIED]
-- Juels, Catalano, Jakobsson, "Coercion-Resistant Electronic Elections", IACR ePrint 2002/165. https://eprint.iacr.org/2002/165 [UNVERIFIED; cited in docs/07]
+- Juels, Catalano, Jakobsson, "Coercion-Resistant Electronic Elections", IACR ePrint 2002/165. https://eprint.iacr.org/2002/165 [UNVERIFIED; cited in docs/07] <!-- claims-lint-ignore -->
 - Gennaro, Jarecki, Krawczyk, Rabin, "Secure Distributed Key Generation for Discrete-Log Based Cryptosystems", EUROCRYPT 1999. No URL confirmed. [UNVERIFIED]
 - Benaloh, "Simple Verifiable Elections", USENIX EVT 2006. [UNVERIFIED; cited in docs/07]
 - Adida, "Helios: Web-based Open-Audit Voting", USENIX Security 2008. [UNVERIFIED]

@@ -515,4 +515,8 @@ export const PT_BR = {
   'qv.spoil.out.accepted': 'Custodiante {j}: parte aceita.',
   'qv.spoil.out.local': 'Não enviada: {reason}',
   'qv.spoil.out.server': 'O mural recusou esta parte (status {status}).',
+  // Machine-drafted, unreviewed (key-file KDF cost confirm, B3-28).
+  'qv.key.costWarn': 'Este arquivo de chave exige mais memória e tempo do que o normal para ser desbloqueado: {mem} MiB de memória, {passes} passagens, {lanes} faixas. Em um dispositivo lento ou com pouca memória, isso pode demorar muito ou falhar. Continue apenas se você confiar na origem deste arquivo.',
+  'qv.key.costConfirm': 'Desbloquear mesmo assim',
+  'qv.key.costCancelled': 'Desbloqueio cancelado. Nada foi desbloqueado.',
 } as const satisfies Record<MessageKey, string>;

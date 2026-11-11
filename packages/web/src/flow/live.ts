@@ -30,6 +30,8 @@ export interface LiveOptions {
   onStatus?(s: ConnStatus): void;
   onAlert?(e: Extract<LiveEvent, { type: 'alert' }>): void;
   onError?(e: unknown): void;
+  /** W7: the first refresh that succeeds after one that failed (lets the UI clear its "reload" status). */
+  onRecovered?(): void;
   /** Test hooks, passed through to the connection. */
   connect?: typeof connectEvents;
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
@@ -47,6 +49,7 @@ export class LiveElection {
   private running = false;
   private dirty = false;
   private closed = false;
+  private failing = false;
 
   constructor(target: LiveTarget, o: LiveOptions = {}) {
     this.t = target;
@@ -123,7 +126,16 @@ export class LiveElection {
         this.dirty = false;
         await this.readOnce();
       } while (this.dirty && !this.closed);
+      if (this.failing && !this.closed) {
+        this.failing = false;
+        try {
+          this.o.onRecovered?.();
+        } catch {
+          /* ignore */
+        }
+      }
     } catch (e) {
+      this.failing = true;
       try {
         this.o.onError?.(e);
       } catch {

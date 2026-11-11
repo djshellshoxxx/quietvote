@@ -10,18 +10,18 @@
 | Specifications | All QV-00 to QV-35 are Draft. No spec is in Review or Approved. Owner review is not recorded |
 | Code | Eight packages with implementation code and a `test/` folder each. Known gaps are in each `packages/*/NOTES.md` |
 | Tests | Test folders exist in every package. Results are not restated here; re-run `npm test` |
-| Typecheck | Failed on the 2026-10-21 re-run of the working tree (errors in `packages/server` and `packages/board` tests). Tracked as TODO N-01; a note on commit `c8348f4` records a pass, so confirm the current state |
+| Typecheck | The older 2026-10-21 working-tree failure is historical. Draft PR #30 reports a passing candidate typecheck and 24 passing matrix jobs on its pinned head; this is not a main-branch or release result. Inspect the [latest PR evidence](https://github.com/djshellshoxxx/quietvote/pull/30). |
 | Test vectors | `test-vectors/v1` exists with status `candidate`; the manifest is unsigned |
-| CI | One workflow: typecheck and test matrix. Claims lint runs but does not block. No lint, SAST, SBOM or reproducible-build step yet |
+| CI | Draft PR #30 carries multiple CI workflows, including matrix suites, claims lint and browser visual checks. Its last recorded CI workflow had **one failed strict TS/Python verifier gate** while other jobs passed. Do not call the candidate green overall. |
 | Audit | None. Planned in spec 11 section 9 |
 | Release | None |
 | Licence | AGPL-3.0-or-later (`LICENSE`; decision QV-ADR-011). The documentation licence still needs counsel review (D-74) |
 
-Read the [README](https://github.com/djshellshoxxx/quietvote/blob/main/README.md) for the project's own status statement. The consolidated open-work list is [docs/plan/TODO.md](https://github.com/djshellshoxxx/quietvote/blob/main/docs/plan/TODO.md).
+Read the [README](https://github.com/djshellshoxxx/quietvote/blob/main/README.md) for the project's own status statement. The consolidated open-work list is [docs/plan/TODO.md](https://github.com/djshellshoxxx/quietvote/blob/ab84f16136184cb1fa0fa67b41e113424e134ba8/docs/plan/TODO.md).
 
 ## Indicative phases (from the roadmap)
 
-The project roadmap ([docs/plan/ROADMAP.md](https://github.com/djshellshoxxx/quietvote/blob/main/docs/plan/ROADMAP.md)) is a draft with indicative dates and effort estimates. Summary:
+The project roadmap ([docs/plan/ROADMAP.md](https://github.com/djshellshoxxx/quietvote/blob/ab84f16136184cb1fa0fa67b41e113424e134ba8/docs/plan/ROADMAP.md)) is a draft with indicative dates and effort estimates. Summary:
 
 | Phase | Goal |
 |---|---|
@@ -51,9 +51,9 @@ Dates are not commitments.
 
 ## Known gaps in the repo
 
-- The typecheck is failing on the last re-run (see above).
+- Main and draft PR #30 have different source trees. Draft PR #30's reported typecheck passed; its strict TS/Python comparison still fails on held semantic differences.
 - No ESLint configuration yet.
 - No release signing, reproducible-build check or SBOM.
-- The claims lint is non-blocking in CI.
+- Claims lint runs separately; non-blocking behavior must not be interpreted as claims approval.
 
 Full list: [[Specification Index]].

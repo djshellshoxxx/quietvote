@@ -16,7 +16,8 @@ export async function cmdElectionInspect(argv: string[], io: Io): Promise<number
   }
   const m = mv.value.manifest;
   const hash = bytesToHex(manifestHash(m));
-  const types: Record<string, number> = {};
+  // Unverified bundles can name log types like __proto__ or constructor; never read inherited counters.
+  const types: Record<string, number> = Object.create(null) as Record<string, number>;
   for (const l of e.log) {
     const o = l.entry as { intent?: unknown; body?: { type?: unknown } } | null;
     const t = typeof o?.intent === 'string' ? `ballot:${o.intent}` : typeof o?.body?.type === 'string' ? o.body.type : 'unrecognised';

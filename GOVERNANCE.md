@@ -6,9 +6,9 @@ This is a short summary. The full draft model, including roles, decision process
 
 ## Summary
 
-- **Maintainers** merge changes and make release decisions. The current placeholder owner is listed in [.github/CODEOWNERS](.github/CODEOWNERS).
+- **Maintainers** merge changes and make release decisions. The current placeholder owner is listed in [.github/CODEOWNERS](.github/CODEOWNERS). No maintainers group exists yet; see [MAINTAINERS.md](MAINTAINERS.md), [docs/RELEASE-KEYS.md](docs/RELEASE-KEYS.md) (no release keys exist), [docs/LICENSE-NOTE.md](docs/LICENSE-NOTE.md) (not reviewed by counsel) and [CHANGES.md](CHANGES.md) (no release has been made).
 - **Security-sensitive changes** (cryptography, protocol, dependency policy, CI, governance) need more than one approving review, as set out in [docs/30-engineering-standards.md](docs/30-engineering-standards.md) §9.2 and §10.
 - **Decisions** are recorded in [docs/decision-log.md](docs/decision-log.md). Specification changes go through the spec-change issue template.
 - **Contributions** are accepted under AGPL-3.0-or-later with a Developer Certificate of Origin sign-off, not a CLA. See [CONTRIBUTING.md](CONTRIBUTING.md) and [DCO](DCO).
-- **Vulnerabilities** are handled privately, as described in [SECURITY.md](SECURITY.md).
+- **Vulnerabilities** are meant to be handled privately, as described in [SECURITY.md](SECURITY.md); that policy is a draft and no private reporting channel is confirmed yet.
 - **Conduct** is governed by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

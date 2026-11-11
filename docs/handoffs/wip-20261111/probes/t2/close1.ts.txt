@@ -1,0 +1,43 @@
+import { World } from '/home/user/qv-wt/t2-concurrency/packages/server/test/helpers/world.ts';
+import { cosignLine } from '/home/user/qv-wt/t2-concurrency/packages/board/src/index.ts';
+const sel = { budget: ['yes'], chair: ['ann'] };
+const w = new World({ seed: 'close1', n: 3, t: 2, voters: 3 });
+await w.start();
+await w.setupOrgAndElection(); await w.registerVoters(); await w.publishManifest(); await w.ceremony(); await w.open();
+for (let i = 0; i < 3; i++) { const r = await w.cast(i, sel); if (r.status !== 201) throw new Error(r.text); }
+const st = async () => (await w.get(`/api/v1/elections/${w.electionId}/state`)).json;
+const show = (label: string, r: any) => console.log(label, r.status, JSON.stringify({ code: r.json.code, reason: r.json.reason, retryable: r.json.retryable, detail: r.json.detail, status: r.json.status, seq: r.json.receipt?.seq }));
+const rt = (await w.server.pool.get(w.electionId))! as any;
+const db = rt.edb.db; const o = db.exec; let commits = 0; const seen: string[] = [];
+// fail the COMMIT of the transaction that appends the tally_aggregate entry (the 3rd COMMIT of the close request)
+db.exec = function (sql: string) { if (sql === 'COMMIT') { commits++; if (commits === 3) throw new Error('SQLITE_IOERR: disk I/O error'); } return o.call(db, sql); };
+w.clock = Math.max(w.clock + 1000, Date.parse(w.manifest.voting_close));
+const e = w.entry('election_close', w.coord[0]!, w.marker('election-close', w.params.ctx));
+const r1 = await w.submit(e.headerBytes, e.body);
+delete db.exec;
+show('close with failing aggregate append:', r1);
+console.log('commits seen', commits, 'poisoned', rt.poisoned);
+let s = await st(); console.log('state', s.phase, 'tree', s.tree_size, s.phase_seq);
+const log = await w.fetchLog(); console.log('log tail', log.slice(-3).map((x) => `${x.seq}:${x.type}`));
+const r2 = await w.submit(e.headerBytes, e.body);
+show('retry same close bytes:', r2);
+s = await st(); console.log('state', s.phase, 'tree', s.tree_size);
+console.log('tally view', (await w.get(`/api/v1/elections/${w.electionId}/tally`)).json);
+// restart
+await w.server.pool.closeAll();
+s = await st(); console.log('after restart state', s.phase, 'tree', s.tree_size);
+w.tick(5);
+try { const ts = await w.trusteeShares(1); show('trustee shares:', ts); } catch (err) { console.log('trustee shares threw', (err as Error).message); }
+// a fresh close by another coordinator
+w.tick(5);
+const r3 = await w.post('election_close', w.coord[1]!, w.multi(w.params.ctx, { proto: 'qv1-r255-sha2', type: 'marker', name: 'election-close' } as any, [1, 2]));
+show('second close attempt:', r3);
+// recovery via witness cosignature on the latest checkpoint
+const cp = (await w.get(`/api/v1/elections/${w.electionId}/log/checkpoint`)).text;
+const size = Number(cp.split('\n')[1]);
+const text = cp.slice(0, cp.indexOf('\n\n') + 1);
+const wk = w.witnesses[0]!;
+const cs = await w.req('POST', `/api/v1/elections/${w.electionId}/log/cosignatures`, { checkpoint_size: size, lines: [cosignLine('w1', wk.secretKey, wk.publicKey, text, w.nowSec)] });
+console.log('cosign', cs.status, cs.text.slice(0, 200));
+s = await st(); console.log('after cosign state', s.phase, 'tree', s.tree_size);
+await w.stop();

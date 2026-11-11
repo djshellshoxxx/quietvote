@@ -139,7 +139,7 @@ export class Reader {
     this.b = b;
   }
   private need(n: number): void {
-    if (this.o + n > this.b.length) throw new RangeError('underrun');
+    if (!Number.isSafeInteger(n) || n < 0 || this.o + n > this.b.length) throw new RangeError('underrun');
   }
   u16(): number {
     this.need(2);

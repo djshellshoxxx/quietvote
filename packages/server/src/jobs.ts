@@ -85,7 +85,6 @@ export class JobRunner {
 
   private async run(j: { id: string; work: Work }): Promise<void> {
     const c = this.env.control;
-    c.startJob(j.id);
     const ctl: JobCtl = {
       jobId: j.id,
       signal: this.shutdown.signal,
@@ -102,6 +101,8 @@ export class JobRunner {
       },
     };
     try {
+      // A failed durable start transition is a job failure, not an unhandled runner rejection.
+      c.startJob(j.id);
       const out = await j.work(ctl);
       c.finishJob(j.id, { state: 'done', ...(out.result !== undefined ? { result: out.result } : {}), result_ref: out.result_ref ?? null }, this.env.cfg.jobRetentionMs);
     } catch (e) {

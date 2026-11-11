@@ -1,0 +1,6732 @@
+{
+ "schema": "qv-trace-links/1",
+ "method": "AI-assisted sweep of specs, code and tests on 2026-11-11 at ab84f16; paths machine-checked; not an independent audit",
+ "requirements": {
+  "QV-01-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "package.json",
+    "packages/crypto/package.json",
+    "packages/verifier/package.json"
+   ],
+   "tests": [],
+   "note": "Package layout exists; no dependency-cruiser or edge check in CI. Edge cli->verifier awaits D-85."
+  },
+  "QV-01-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/package.json"
+   ],
+   "tests": [],
+   "note": "src is clean but packages/protocol/bench/tally-bench.ts imports @noble; no lint or CI rule enforces it."
+  },
+  "QV-01-REQ-003": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/verifier/package.json",
+    "packages/verifier/src/bundle.ts"
+   ],
+   "tests": [
+    "packages/verifier/test/verifier.test.ts"
+   ],
+   "note": "No import is of server code, but no network-disabled or package-absent test exists."
+  },
+  "QV-01-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/server/NOTES.md",
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "No DB-dump scan test with marker plaintext, share bytes and IPs found; rate-limit buckets use IP in memory."
+  },
+  "QV-01-REQ-005": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Server boundary tested; no evidence of E_PROTO rejection at every cross-module boundary."
+  },
+  "QV-01-REQ-006": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/server/src/http.ts"
+   ],
+   "tests": [],
+   "note": "No fault-injection test showing a failing append yields a failed request and no state change."
+  },
+  "QV-01-REQ-007": {
+   "status": "process",
+   "impl": [
+    "docs/01-capability-map.md"
+   ],
+   "tests": [],
+   "note": "Spec review checklist; cannot be evidenced by a repository file."
+  },
+  "QV-02-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "packages/cli/src/cmd-keygen.ts",
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "No group object; orgs register an organizer public key with proof of possession. No marker test asserting DB/logs hold no secret key bytes."
+  },
+  "QV-02-REQ-002": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No GroupRules schema or E_RULES_INVALID in any package; only ElectionManifest validation exists (MAN validateManifest)."
+  },
+  "QV-02-REQ-003": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/organizer.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Only four voting-method templates; QV-03 section 10 policy templates T1-T3 and plain-language summaries are absent."
+  },
+  "QV-02-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [],
+   "note": "Manifest coordinator m-of-k keys (max 8) exist; no single-steward warning in manifest warnings[] or any UI."
+  },
+  "QV-02-REQ-005": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No rules versioning exists. Manifest is hash-pinned per election, but there are no group rules to change."
+  },
+  "QV-02-REQ-010": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "16-byte codes stored hashed, single-use. No 14-day default (expires_at null unless given); used vs unknown give different codes (B2-10 pending)."
+  },
+  "QV-02-REQ-011": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/onboarding.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/key.test.ts"
+   ],
+   "note": "Keypair client-side, only pk+PoP sent. Backup offered but not enforced (qv.key.mustBackup string unused); no label sent. Web/server wire mismatch HELD B3-01."
+  },
+  "QV-02-REQ-012": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Auto-approve only (no approval policy in manifest); registrations are not log entries; only roll_commit root/size is logged."
+  },
+  "QV-02-REQ-013": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/logcheck.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Authority derives from manifest keys (coordinator m-of-k, trustees, roll keys). No Proposer role, no rules-defined roles."
+  },
+  "QV-02-REQ-014": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "Voters auto-approved and frozen at roll_commit; only unused invites can be revoked. No member suspend/revoke or roll amendment path."
+  },
+  "QV-02-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "Roll holds keys only. Invite label is optional, up to 120 chars, sealed, purged after 7 days; uniqueness not enforced. No name or email required."
+  },
+  "QV-02-REQ-016": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No rotation certificate, E_KEY_ROTATED or alias logic anywhere; keys are per-election (see QV-04-REQ-002)."
+  },
+  "QV-02-REQ-020": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No proposal object, body hash, or markup policy in any package. Backlog T-066/T-195 open."
+  },
+  "QV-02-REQ-021": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No proposal versioning exists."
+  },
+  "QV-02-REQ-022": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No proposal state machine or review period."
+  },
+  "QV-02-REQ-023": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [],
+   "note": "Manifest has no proposal_hash. The manifest itself is hash-pinned and immutable once signed."
+  },
+  "QV-02-REQ-024": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No proposals, so no WITHDRAWN state."
+  },
+  "QV-02-REQ-030": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/protocol/src/types.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "Has contests, method params, times, roll root, trustees n/t, m-of-k signatures. Lacks rules hash and proposal hashes; joint key is a separate log entry."
+  },
+  "QV-02-REQ-031": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/dkg.ts",
+    "packages/trustee/src/machine.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/ceremony.test.ts"
+   ],
+   "note": "Delivered by trustee CLI and server ceremony view; web trustee flows not built (N-37c)."
+  },
+  "QV-02-REQ-032": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Schema allows n<=32 and t=1; low t only yields W-* warnings, never rejects. No overlap declaration. Warnings are never rendered in the web UI."
+  },
+  "QV-02-REQ-033": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Election page shows title, open/close, contest count, roll size; rules page shows privacy text only. No quorum, threshold, method, trustees, revoting, UTC listing."
+  },
+  "QV-02-REQ-034": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Ballots are gated by manifest times, but election_open/close entries are posted manually; automatic scheduler is owner decision D-91 (not in MVP)."
+  },
+  "QV-02-REQ-035": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts",
+    "packages/protocol/test/verify.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-02-REQ-040": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "No server memory-dump capture test; plaintext absence is structural."
+  },
+  "QV-02-REQ-041": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts",
+    "packages/protocol/test/property.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Codes are QV-16 E_* names rather than QV-05 section 9 names."
+  },
+  "QV-02-REQ-042": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/board/src/receipt.ts",
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "A checkpoint is signed after every append, so proofs are immediate."
+  },
+  "QV-02-REQ-043": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/verify.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Chain by supersedes hash; single mode answers 429 REVOTE_LIMIT/E_REVOTE_LIMIT, not E_ALREADY_VOTED. Cap max_per_voter hard-bounded 20 by server."
+  },
+  "QV-02-REQ-044": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-02-REQ-045": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Keyed on identical header bytes and author nonce rather than a ballot_id field."
+  },
+  "QV-02-REQ-046": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/i18n/en.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/i18n-catalogs.test.ts",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Non-claim nc4 and public-facts string shown on vote screen; UX test S6 not located."
+  },
+  "QV-02-REQ-047": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "Invite-to-voter link is not stored (server NOTES); voter_kid is a public key id. No schema review or red-team test asserting absence of a join."
+  },
+  "QV-02-REQ-050": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts",
+    "packages/protocol/src/tally.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/b1-regressions.test.ts",
+    "packages/protocol/test/property.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-02-REQ-051": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/tally.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/tally.test.ts",
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-02-REQ-052": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/rules.ts",
+    "verifier-py/qv_verifier/rules.py"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts",
+    "verifier-py/tests/test_protocol.py"
+   ],
+   "note": ""
+  },
+  "QV-02-REQ-053": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/cli/src/cmd-verify.ts",
+    "packages/protocol/src/verify.ts",
+    "packages/verifier/src/report.ts",
+    "packages/verifier/src/verify.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts",
+    "packages/protocol/test/verify.test.ts",
+    "packages/verifier/test/verifier.test.ts"
+   ],
+   "note": "V13 (control entries) always not_run; TS vs Python report differences HELD (D-92..D-96)."
+  },
+  "QV-02-REQ-054": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/export.ts"
+   ],
+   "tests": [
+    "packages/server/test/e2e.test.ts",
+    "packages/server/test/imports.test.ts"
+   ],
+   "note": "Roll labels are never published (keys only)."
+  },
+  "QV-02-REQ-055": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/server/test/spoil-shares.test.ts",
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": "Trustee refusal code is WRONG_STATE-style, not E_NOT_CLOSED."
+  },
+  "QV-02-REQ-056": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/rules.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-02-REQ-060": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No challenge object, window, endpoint or log entry type; CHALLENGED exists only as an enum value with no producer (server NOTES)."
+  },
+  "QV-02-REQ-061": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/logcheck.ts",
+    "packages/web/src/flow/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts"
+   ],
+   "note": "Receipt chain verification and broken-promise evidence exist; no packaged missing-ballot report artifact or UI."
+  },
+  "QV-02-REQ-062": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts",
+    "packages/server/src/lifecycle.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts",
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "Coordinator m-of-k pause with maxHalts cap only; no trustee-initiated halt, no close-time extension (max_total_hours, RESUME-with-new-close not implemented; N-32)."
+  },
+  "QV-02-REQ-063": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No arbiters, disputes or FINAL gate; TALLIED folds into AUDIT."
+  },
+  "QV-02-REQ-070": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/imports.ts"
+   ],
+   "tests": [
+    "packages/server/test/imports.test.ts"
+   ],
+   "note": "Election-level .qvb/export.json import as read-only mirror; no group-level export. Operator restore (.qvx) not implemented."
+  },
+  "QV-02-REQ-071": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit3.test.ts"
+   ],
+   "note": "Receipts downloadable in web; no schema-validated member record export covering enrollment/settings."
+  },
+  "QV-02-REQ-072": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/electiondb.ts",
+    "packages/server/src/retention.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Hourly sweep purges invite label/contact only; no content-free deletion log entry, other QV-06 section 5 classes not covered."
+  },
+  "QV-02-REQ-073": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/logger.ts",
+    "packages/server/src/ratelimit.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Single canary request, not 1,000; rate-limit buckets are HMAC-keyed in memory."
+  },
+  "QV-02-REQ-074": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "/healthz and /readyz exist; no /metrics endpoint; 10-command deploy and sysadmin trial unverified."
+  },
+  "QV-02-REQ-075": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/sse.ts",
+    "packages/server/src/webhooks.ts"
+   ],
+   "tests": [
+    "packages/server/test/events.test.ts"
+   ],
+   "note": "Signed webhooks and SSE for public events exist; server-side invite delivery refused (deliver => 422), no SMTP relay, no reminder events."
+  },
+  "QV-02-REQ-076": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/http.ts",
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/build.test.ts",
+    "packages/web/test/security.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-02-REQ-080": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/bench/tally-bench.ts",
+    "packages/server/src/config.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/bench-smoke.test.ts"
+   ],
+   "note": "Server cap 10,000 voters; e2e tests use 22-50 voters; no 2,000-voter benchmark report."
+  },
+  "QV-02-REQ-081": {
+   "status": "partial",
+   "impl": [
+    "packages/web/e2e/a11y.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit3-ui.test.ts"
+   ],
+   "note": "Web NOTES state automated checks are not WCAG conformance; no manual AT audit."
+  },
+  "QV-02-REQ-082": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/en.ts",
+    "scripts/lint-claims.mjs"
+   ],
+   "tests": [
+    "packages/web/test/copy.test.ts"
+   ],
+   "note": "Non-claims shipped. Claims lint scans README/docs only, non-blocking in CI, not UI catalogs."
+  },
+  "QV-02-REQ-083": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "Web bundle build checked for reproducibility only; no signed multi-artifact release manifest or two-builder CI job."
+  },
+  "QV-03-REQ-001": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No GroupRules type or E_RULES_BOUND; only manifest schema bounds in protocol/src/schema.ts."
+  },
+  "QV-03-REQ-002": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No rules documents or version chain."
+  },
+  "QV-03-REQ-003": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts",
+    "packages/server/test/e2e.test.ts"
+   ],
+   "note": "Manifest is m-of-k coordinator-signed and hash-pinned; not built from rules. Draft is mutable via PUT /elections/:id/draft until posted."
+  },
+  "QV-03-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/entry.ts",
+    "packages/server/src/lifecycle.ts"
+   ],
+   "tests": [
+    "packages/board/test/audit.test.ts",
+    "packages/board/test/log.test.ts",
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "State machine differs from QV-03 section 5 (no CHALLENGED producer, TALLIED folded into AUDIT); no random-sequence model test."
+  },
+  "QV-03-REQ-005": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [],
+   "note": "Only created<=open<close is checked; no minimum notice or voting duration (needs rules/class values)."
+  },
+  "QV-03-REQ-006": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/verify.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-03-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/rules.ts",
+    "verifier-py/qv_verifier/rules.py"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts",
+    "verifier-py/tests/test_protocol.py"
+   ],
+   "note": ""
+  },
+  "QV-03-REQ-008": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/protocol/src/logcheck.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts"
+   ],
+   "note": "Suite v1 defines no extension record; verifier surfaces extension notices as caveat only. Record shape/scope is owner decision D-87."
+  },
+  "QV-03-REQ-009": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts"
+   ],
+   "note": "maxHalts cap enforced; no halt-duration cap, close not extended, verifier does not apply pause (V13 not_run, N-13/D-87)."
+  },
+  "QV-03-REQ-010": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No dispute, arbiter or sortition code; D-33 sortition fallback undecided in docs."
+  },
+  "QV-03-REQ-011": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No amendment classes or E_ENTRENCHED."
+  },
+  "QV-03-REQ-012": {
+   "status": "partial",
+   "impl": [
+    "packages/cli/src/cmd-election.ts",
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [
+    "packages/cli/test/cli.test.ts",
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Warnings computed and shown by CLI election inspect only. Web stores them (flow/election.ts:157) but never renders them; verifier report does not carry manifest warnings."
+  },
+  "QV-03-REQ-013": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/logcheck.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts",
+    "packages/server/test/audit.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-03-REQ-014": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/organizer.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Four method templates validate; no QV-03 policy templates or summaries."
+  },
+  "QV-03-REQ-015": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Quorum/threshold are shown only on results view (qv.results.quorum); no pre-vote worked example."
+  },
+  "QV-04-REQ-001": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/rng.ts",
+    "packages/web/src/flow/onboarding.ts",
+    "packages/web/src/key/keystore.ts"
+   ],
+   "tests": [
+    "packages/web/test/key.test.ts",
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "No 100-run network-capture test; registration body structurally carries only pk and PoP."
+  },
+  "QV-04-REQ-002": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/web/src/key/keystore.ts"
+   ],
+   "tests": [],
+   "note": "Keys are per-election, one seed per slot, no HKDF master derivation (D-22 per-election default, QV-ADR-P19-5 vs QV-ADR-P04-2 unresolved)."
+  },
+  "QV-04-REQ-003": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/protocol/src/merkle.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts",
+    "verifier-py/tests/test_primitives.py"
+   ],
+   "note": "Leaf is pk||u32(weight=1) without the QV-leaf/1 prefix (frozen vectors); order is by key bytes so enrollment order is irrelevant."
+  },
+  "QV-04-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Hashed and single-use. No timing test; INVITE_USED vs INVITE_EXPIRED distinguishable and no default expiry (B2-10 pending)."
+  },
+  "QV-04-REQ-005": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/web/src/flow/onboarding.ts"
+   ],
+   "tests": [
+    "packages/server/test/consolidation.test.ts"
+   ],
+   "note": "HELD B3-01: server verifies PoP over (election_id, pk); web signs (election_id, SHA-256(token), pk) and sends hashed invite. Not to be resolved here."
+  },
+  "QV-04-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Download and recovery code offered after key creation; qv.key.mustBackup (EN:138) defined but referenced nowhere, nothing blocks voting or enrollment."
+  },
+  "QV-04-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/protocol/src/ballotlog.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/verify.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "No 10^4 randomized ballot test; revoked/rotated keys do not exist."
+  },
+  "QV-04-REQ-008": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/property.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "No aliases (no rotation). Single mode is max_per_voter=1; fork/limit tested by examples, not a random-sequence property test."
+  },
+  "QV-04-REQ-009": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/verify.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-04-REQ-010": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No rotation certificate type or E_KEY_ROTATED."
+  },
+  "QV-04-REQ-011": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No roll.amend; roll frozen at roll_commit. Recovery is a manual re-invite before commit only."
+  },
+  "QV-04-REQ-012": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/board/src/log.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "Log is append-only, but no recovery/rotation exists to exercise the requirement."
+  },
+  "QV-04-REQ-013": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/verify.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "Only roll_commit (root, size) and ballots are logged; enrollment and invite events are not log entries. Roll key list available at /roll and in export."
+  },
+  "QV-04-REQ-014": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/en.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/i18n-catalogs.test.ts"
+   ],
+   "note": "Participation-visible strings exist (privacy.public, nc4). Steward-trust fact (one key per person) not stated; not shown on enrollment screen."
+  },
+  "QV-04-REQ-015": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No post-snapshot revocation or exclusion list."
+  },
+  "QV-04-REQ-016": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No vouching in manifest or registration."
+  },
+  "QV-04-REQ-017": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "No identity_mode field; roll.scheme is the literal ed25519-roll-v1 so unknown values fail closed with E_SCHEMA, not E_PROTO."
+  },
+  "QV-04-REQ-018": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "Spec marks Phase 2; manifest schema allows only uniform-weight ed25519-roll-v1."
+  },
+  "QV-04-REQ-019": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "Spec marks Phase 2; no registrar code."
+  },
+  "QV-05-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/verify.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/e2e.test.ts"
+   ],
+   "note": "Protocol e2e covers artifacts; API visibility lint not found; tally_aggregate record deliberately not emitted (NOTES X-40)."
+  },
+  "QV-05-REQ-002": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts",
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Server and verifier call verifyEnvelope; no explicit server-vs-verifier same-corpus equivalence test located."
+  },
+  "QV-05-REQ-003": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Server package; one rollback fault-injection test; breadth of fault injection not assessed."
+  },
+  "QV-05-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Receipts and inclusion proofs verified; no latency test against mmd 30 s found."
+  },
+  "QV-05-REQ-005": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Web package tests; audit path yields new seal and new code."
+  },
+  "QV-05-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/verifier/src"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts",
+    "packages/protocol/test/vectors.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Independent verifier-py spoil parity unconfirmed; held decisions D-92..D-96 touch spoil semantics (D-95). Tampered-client test not located."
+  },
+  "QV-05-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/attacks.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "Example-based, not property-based as spec table asks."
+  },
+  "QV-05-REQ-008": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/property.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "TS plus Python verifier only (two implementations); spec wants three independent recomputations."
+  },
+  "QV-05-REQ-009": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/tally.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/tally.test.ts",
+    "packages/trustee/test/spoil.test.ts",
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": "t-1 refusal and ELECTION_NOT_CLOSED both tested; access-path code review is external."
+  },
+  "QV-05-REQ-010": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/verify.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "V13 (steward/pause/invalidate control entries) not applied (NOTES Known gaps); mutants derive from 3-voter election only."
+  },
+  "QV-05-REQ-011": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src"
+   ],
+   "tests": [
+    "packages/web/test/verification.test.ts"
+   ],
+   "note": "Implementation verdict is FAIL (not INVALID); UI hides results on FAIL."
+  },
+  "QV-05-REQ-012": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/types.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Section 9 names (E_PROTO, E_PROOF_INVALID, E_ALREADY_VOTED...) not emitted; QV-16 codes used; no contract test vs section 9."
+  },
+  "QV-05-REQ-013": {
+   "status": "process",
+   "impl": [
+    "scripts/lint-claims.mjs"
+   ],
+   "tests": [],
+   "note": "Documentation/UI claims requirement; claims lint script exists; checklist review not code."
+  },
+  "QV-05-REQ-014": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Cross-spec review; NOTES X-18 lists remaining QV-20 vs QV-16 naming differences."
+  },
+  "QV-05-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/ballot.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/bench-smoke.test.ts"
+   ],
+   "note": "No ballot-size or p95 assertion found; NOTES cite about 35 ms per ciphertext build+2 verifies, so 100 selections likely exceed budget (unmeasured)."
+  },
+  "QV-05-REQ-016": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Only qv1-r255-sha2 exists; unknown proto rejected with E_VERSION; no multi-version verifier path."
+  },
+  "QV-06-REQ-001": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/server/src/controldb.ts",
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [],
+   "note": "No data-inventory.json or schema-column CI check in repo."
+  },
+  "QV-06-REQ-002": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/logger.ts",
+    "packages/server/src/ratelimit.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Canary test uses one request and scans data dir and logs; no 1,000-request run or backup scan; no /metrics exists."
+  },
+  "QV-06-REQ-003": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Invite codes stored as SHA-256 only; ballots are ciphertext. No marker scan of DB, logs and core dumps for invite codes or shares."
+  },
+  "QV-06-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/config.ts",
+    "packages/server/src/retention.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Hourly sweep covers invite label/contact only; no content-free log summary entry; other schedule items (archive, backups, receipts) not covered."
+  },
+  "QV-06-REQ-005": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No restore hook; older-DB restore is not detected (B2-07). Backups are online SQLite copies only."
+  },
+  "QV-06-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Attestation is a local signed file; tool does not post a key_destruction entry and no verifier or manifest check flags missing attestations."
+  },
+  "QV-06-REQ-007": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/server/src/records.ts"
+   ],
+   "tests": [],
+   "note": "Control record reason is free text up to 256 chars (B2-16 owner decision); manifest titles are free text; no enumerated reason codes."
+  },
+  "QV-06-REQ-008": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Labels are never on the roll or log, so no label hashes or salt exist."
+  },
+  "QV-06-REQ-009": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/web/src/flow/entries.ts"
+   ],
+   "tests": [],
+   "note": "Ballot header created_at is the client clock to the second and sequenced_at is exact; only request logs are minute-rounded."
+  },
+  "QV-06-REQ-010": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/server/src/election.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/attacks.test.ts",
+    "packages/protocol/test/manifest-rules.test.ts",
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": "No FAILED(PRIVACY_MIN) state (tally.blocked instead); W-SMALL-ROLL never shown in web UI."
+  },
+  "QV-06-REQ-011": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Only public or read-key link access exists; no roll-key signed read gating of the log during OPEN."
+  },
+  "QV-06-REQ-012": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No member self-service flows or mapping rows to delete (roll holds keys only)."
+  },
+  "QV-06-REQ-013": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/en.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Guarantee panel shown; notice version is not recorded in client store and text is not generated from rules (retention, contact)."
+  },
+  "QV-06-REQ-014": {
+   "status": "process",
+   "impl": [
+    "docs/claims/claims-register-v0.md",
+    "scripts/lint-claims.mjs"
+   ],
+   "tests": [],
+   "note": "Lint exists (non-blocking in CI); signed per-release claims checklist is a process step not evidenced."
+  },
+  "QV-06-REQ-015": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/gossip.ts",
+    "packages/server/src/webhooks.ts"
+   ],
+   "tests": [],
+   "note": "Outbound only to configured webhooks and gossip peers by design; no egress-sandbox test."
+  },
+  "QV-06-REQ-016": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/server/src/ext-routes.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "Server NOTES: backups are 0600 SQLite copies, not encrypted beyond sealed fields; no retention of backups."
+  },
+  "QV-06-REQ-017": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/export.ts"
+   ],
+   "tests": [
+    "packages/server/test/imports.test.ts"
+   ],
+   "note": "Export composes log, roll keys and tally only; invites/labels never included. No bundle scan test for classes."
+  },
+  "QV-07-REQ-001": {
+   "status": "process",
+   "impl": [
+    ".github/PULL_REQUEST_TEMPLATE.md"
+   ],
+   "tests": [],
+   "note": "Checkbox exists; no CI check requiring a link or none."
+  },
+  "QV-07-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "docs/claims/banned-phrases.txt",
+    "scripts/lint-claims.mjs"
+   ],
+   "tests": [],
+   "note": "Lint covers README/docs only, runs non-blocking in CI, does not scan UI catalogs or release notes; no fixture tests."
+  },
+  "QV-07-REQ-003": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/web/src/i18n/en.ts"
+   ],
+   "tests": [],
+   "note": "Hard-coded Experimental banner; /instance/release exists but no label derived from evidence; privacy.review line expects release manifest data."
+  },
+  "QV-07-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/en.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Guarantee panel shows t of n trustee names; operator/steward overlap, witness count and tier, revoting and eligibility phase not declared."
+  },
+  "QV-07-REQ-005": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/verify.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/verify.test.ts",
+    "packages/verifier/test/security.test.ts",
+    "packages/web/test/verification.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-07-REQ-006": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "No release script found; gates are documentation only."
+  },
+  "QV-07-REQ-007": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs independent reviewers; AI-assisted reviews exist but are not independent audits."
+  },
+  "QV-07-REQ-008": {
+   "status": "partial",
+   "impl": [],
+   "tests": [
+    "packages/board/test/audit-bc.test.ts",
+    "packages/server/test/audit.test.ts"
+   ],
+   "note": "Tests cite audit finding IDs (SRV-, BC-, TR-, CP-), not QV-SA advisory IDs; coverage of all High+ not tracked."
+  },
+  "QV-07-REQ-010": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/package.json",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [],
+   "note": "Server depends only on board/crypto/protocol and builds the tally draft from submitted shares; no static import check or test."
+  },
+  "QV-07-REQ-011": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "t=1 accepted with W-NO-THRESHOLD warning only; no single-trustee-degraded mode or steward acknowledgement."
+  },
+  "QV-07-REQ-012": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/dkg.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/dkg.test.ts",
+    "packages/protocol/test/property.test.ts",
+    "packages/trustee/test/ceremony.test.ts"
+   ],
+   "note": "Feldman plus commit-reveal with PoK (D-10 default); nonce hedge for PoK open (D-19/C3 decision)."
+  },
+  "QV-07-REQ-013": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/bundle-cipher.ts",
+    "packages/trustee/src/fsutil.ts",
+    "packages/trustee/src/passphrase.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Uses scrypt N=2^18 (allowed fallback), not Argon2id."
+  },
+  "QV-07-REQ-014": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": "Human display/confirmation of head hash not verified by a test."
+  },
+  "QV-07-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/custody.test.ts",
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Attestation written to a local file, not posted as key_destruction entry; no default audit-window retention enforcement."
+  },
+  "QV-07-REQ-016": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/lifecycle.ts"
+   ],
+   "tests": [
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "STALLED derived after stalledMaxSec; unit test checks transitions only; no HTTP-level stall scenario; trustee-continuity docs not checked."
+  },
+  "QV-07-REQ-017": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/attacks.test.ts"
+   ],
+   "note": "min_counted_ballots floor and manifest privacy_ack implemented. No result-page warning for roll<10 or unanimous options (grep finds no such string)."
+  },
+  "QV-07-REQ-018": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/rng.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/ristretto.test.ts"
+   ],
+   "note": "Math.random used for temp file names (trustee/src/fsutil.ts:9) and SSE jitter (web/src/net/sse.ts:241); no lint rule bans it."
+  },
+  "QV-07-REQ-019": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/hash.ts",
+    "packages/crypto/src/transcript.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/cp08-fiat-shamir.test.ts",
+    "packages/protocol/test/attacks.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-07-REQ-020": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/cli/src/cmd-ballot.ts",
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/cli/test/audit.test.ts",
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "No full-election canary run capturing server logs, URLs and memory."
+  },
+  "QV-07-REQ-021": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "No browser memory/storage inspection test."
+  },
+  "QV-07-REQ-022": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/b1-regressions.test.ts",
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Manifest also carries a separate election_id field; hash is the anchor. Witness list optional."
+  },
+  "QV-07-REQ-023": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-07-REQ-024": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts"
+   ],
+   "note": "Uses a supersedes hash chain bound to ctx instead of numeric sequence numbers; replay, tamper and non-chaining rejection tested."
+  },
+  "QV-07-REQ-025": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts",
+    "packages/server/src/election.ts",
+    "verifier-py/qv_verifier/election.py"
+   ],
+   "tests": [
+    "packages/protocol/test/property.test.ts",
+    "packages/protocol/test/verify.test.ts",
+    "packages/trustee/test/hardening.test.ts"
+   ],
+   "note": "Chain-based rule, not numeric sequence; TS vs Python report differences HELD (D-92..D-96)."
+  },
+  "QV-07-REQ-026": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/receipt.ts",
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit3.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-07-REQ-027": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/cli/src/cmd-ballot.ts",
+    "packages/cli/src/cmd-spoil.ts",
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/cli/test/cli.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "max_spoils_per_voter caps spoils (web default 16)."
+  },
+  "QV-07-REQ-028": {
+   "status": "partial",
+   "impl": [
+    "packages/verifier/src/verify.ts",
+    "packages/web/src/verifier"
+   ],
+   "tests": [
+    "packages/verifier/test/verifier.test.ts",
+    "packages/web/test/offline-verifier.test.ts"
+   ],
+   "note": "No release-hash check; V13 control entries always not_run; roll inclusion proofs per ballot via roll set rather than Merkle proofs."
+  },
+  "QV-07-REQ-029": {
+   "status": "partial",
+   "impl": [
+    "scripts/compare-verifiers.ts",
+    "verifier-py/qv_verifier/runner.py"
+   ],
+   "tests": [
+    "verifier-py/tests/test_protocol.py",
+    "verifier-py/tests/test_report_semantics.py"
+   ],
+   "note": "Python verifier exists; strict comparator exits 1 on 3 held differences (D-92..D-96); no generated-election differential run; log layer is TS only."
+  },
+  "QV-07-REQ-030": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/verify.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Late ballots excluded; close is a manually posted election_close needing now>=voting_close; auto close is D-91."
+  },
+  "QV-07-REQ-031": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/entry.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/board/test/audit.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "No roll amendment path exists (equivalent to max 0)."
+  },
+  "QV-07-REQ-032": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/web/src/flow/election.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "checkRoll and /roll exist; no test references checkRoll; steward roll-count publication not implemented."
+  },
+  "QV-07-REQ-033": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/verify.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "Report counts cast/spoiled/counted/ignored-by-reason and per-contest participation; roll size and superseded not reported; no explicit counted>roll flag."
+  },
+  "QV-07-REQ-034": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/auth.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts",
+    "packages/server/test/audit.test.ts"
+   ],
+   "note": "Organizer API uses QV-08 signed requests (D-84 vs QV-09 bearer unresolved)."
+  },
+  "QV-07-REQ-035": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/tally.ts",
+    "packages/protocol/src/types.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/tally.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-07-REQ-040": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/checkpoint.ts",
+    "packages/board/src/merkle.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/board/test/merkle.test.ts"
+   ],
+   "note": "Checkpoints use signed-note format."
+  },
+  "QV-07-REQ-041": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "Checkpoint signed after every append (covers MMD for ballots); no periodic heads when idle, no 5-minute tally cadence, no time simulation test."
+  },
+  "QV-07-REQ-042": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/equivocation.ts",
+    "packages/protocol/src/logcheck.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/web/test/audit2.test.ts"
+   ],
+   "note": "Evidence package download is server /log/evidence; no verifier-page download UI confirmed."
+  },
+  "QV-07-REQ-043": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/logcheck.ts",
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/protocol/test/loglayer.test.ts"
+   ],
+   "note": "Witness keys and quorum supported; Tier 0/1/2 labelling and independence assessment not implemented; witness HTTP flow and monitoring not done."
+  },
+  "QV-07-REQ-044": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/equivocation.ts",
+    "packages/server/src/gossip.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts",
+    "packages/server/test/gossip.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-07-REQ-045": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/server/src/gossip.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/server/test/gossip.test.ts"
+   ],
+   "note": "Needs a witness, mirror or gossip peer; no WAL markers; lone older-DB restore undetected and a second root may be signed (B2-07 pending)."
+  },
+  "QV-07-REQ-046": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/imports.ts",
+    "packages/server/src/range.ts"
+   ],
+   "tests": [
+    "packages/server/test/imports.test.ts",
+    "packages/server/test/range.test.ts"
+   ],
+   "note": "Link-access elections require a read key by design."
+  },
+  "QV-07-REQ-047": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/entry.ts",
+    "packages/server/src/ratelimit.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Board hard caps ballot 256 KiB, notice 4 KiB; server default max ballot 128 KiB; not exactly the spec table."
+  },
+  "QV-07-REQ-050": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "Web bundle only; no server/CLI/verifier artifacts, no second-builder CI job, no published hashes."
+  },
+  "QV-07-REQ-051": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "Only a single configured release key signs /instance/release; maintainer quorum is open decision D-56."
+  },
+  "QV-07-REQ-052": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/http.ts",
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts",
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "Server static CSP (STATIC_CSP) is default-src self without require-trusted-types; trusted-types appears only in the page meta and _headers file."
+  },
+  "QV-07-REQ-053": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "Static scan plus Playwright e2e (packages/web/e2e) outside the test glob; a /csp-report report-uri is declared but no such route exists."
+  },
+  "QV-07-REQ-054": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Footer shows version and build id; no check-served-client function in verifier page or CLI."
+  },
+  "QV-07-REQ-055": {
+   "status": "process",
+   "impl": [
+    ".github/workflows/ci.yml",
+    "scripts/lockfile-lint.mjs"
+   ],
+   "tests": [],
+   "note": "CI runs lockfile lint, npm ci --ignore-scripts, npm audit; production dependency count rule not enforced by a check."
+  },
+  "QV-07-REQ-056": {
+   "status": "process",
+   "impl": [
+    ".github/CODEOWNERS",
+    ".github/scripts/check-action-pins.mjs"
+   ],
+   "tests": [
+    ".github/scripts/check-action-pins.test.mjs"
+   ],
+   "note": "Action pins checked; CODEOWNERS is a single placeholder owner; branch protection and 2-approval rules not verifiable here."
+  },
+  "QV-07-REQ-057": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No SBOM or provenance generation found in scripts or workflows."
+  },
+  "QV-07-REQ-058": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Requires maintainers and hardware tokens (D-56); not code."
+  },
+  "QV-07-REQ-059": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No update path or rollback protection code."
+  },
+  "QV-07-REQ-060": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No secret-scanning job in .github/workflows."
+  },
+  "QV-07-REQ-061": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/auth.ts"
+   ],
+   "tests": [],
+   "note": "Only QV-Sig signed requests and one-time read keys exist; no route-inventory test asserting absence of credential endpoints."
+  },
+  "QV-07-REQ-062": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/json.ts",
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [
+    "packages/board/test/audit-bc.test.ts",
+    "packages/protocol/test/property.test.ts"
+   ],
+   "note": "Fuzz runs inside normal suite; no separate nightly long run."
+  },
+  "QV-07-REQ-063": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/logger.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Control reason free text (B2-16) is an open decision."
+  },
+  "QV-07-REQ-064": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/http.ts"
+   ],
+   "tests": [],
+   "note": "Server NOTES: TLS termination not implemented (reverse proxy); HSTS only when behind https; no Tor deployment test."
+  },
+  "QV-07-REQ-065": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No Dockerfile or systemd unit in repository."
+  },
+  "QV-07-REQ-066": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No fixed-size response padding or client delay option found."
+  },
+  "QV-07-REQ-067": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/http.ts",
+    "packages/server/src/ratelimit.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Server NOTES: proof-of-work, L0-L3 load levels not implemented; shedding via maxVerifyQueue only."
+  },
+  "QV-07-REQ-070": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/organizer.ts",
+    "packages/web/src/i18n/en.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit3.test.ts"
+   ],
+   "note": "Web default max ballots 8; revote note lacks pressured-vote wording; no disable-trade-off warning; one-ballot vs guarantee string is owner decision B3-14."
+  },
+  "QV-07-REQ-071": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/i18n/en.ts"
+   ],
+   "tests": [
+    "packages/web/test/i18n-catalogs.test.ts",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Key theft/seizure not separately stated."
+  },
+  "QV-07-REQ-072": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/receipt.ts",
+    "packages/protocol/src/ballot.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/attacks.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Opt-in publish of a spoiled ballot reveal is allowed by design."
+  },
+  "QV-07-REQ-080": {
+   "status": "process",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "Organizational; no exercise evidence in repo."
+  },
+  "QV-07-REQ-081": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/logcheck.ts",
+    "packages/server/src/lifecycle.ts",
+    "packages/server/src/records.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts",
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "Server enforces transitions; verifier authenticates and reports but never applies (V13 not_run, D-87/N-13); web rendering not confirmed."
+  },
+  "QV-07-REQ-082": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/loglayer.test.ts"
+   ],
+   "note": "Only coordinator m-of-k signs pause; trustee-initiated PAUSE and operator server-side hold not implemented."
+  },
+  "QV-07-REQ-083": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts",
+    "packages/server/src/lifecycle.ts"
+   ],
+   "tests": [
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "Coordinator-signed invalidate to INVALIDATED exists; reason is free text, no evidence link, no trustee delegation; verifier does not render it as FAIL."
+  },
+  "QV-07-REQ-084": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Runbook/drill step; /admin backups exist but no incident procedure in code."
+  },
+  "QV-07-REQ-085": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Organizational commitment; nothing to implement or test in code."
+  },
+  "QV-07-REQ-086": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Organizational; no incident has been recorded to evidence it."
+  },
+  "QV-07-REQ-087": {
+   "status": "process",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "SECURITY.md exists; SLA and CVE handling are process commitments."
+  },
+  "QV-07-REQ-090": {
+   "status": "external",
+   "impl": [
+    "docs/audit"
+   ],
+   "tests": [],
+   "note": "Only AI-assisted internal reviews exist; independent reviews not yet commissioned (D-71)."
+  },
+  "QV-07-REQ-091": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No ProVerif/Tamarin model in repo."
+  },
+  "QV-07-REQ-092": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Requires external testers."
+  },
+  "QV-07-REQ-093": {
+   "status": "partial",
+   "impl": [],
+   "tests": [
+    "packages/board/test/audit-bc.test.ts",
+    "packages/cli/test/audit.test.ts",
+    "packages/protocol/test/property.test.ts"
+   ],
+   "note": "Fuzz/property tests run in normal CI; no nightly long job, no coverage or mutation-score measurement."
+  },
+  "QV-07-REQ-094": {
+   "status": "partial",
+   "impl": [],
+   "tests": [
+    "packages/cli/test/audit.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Canary checks scattered across suites; no unified per-release suite covering exports and board entries."
+  },
+  "QV-08-REQ-001": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/"
+   ],
+   "tests": [],
+   "note": "Eight packages exist; scripts/check-deps.mjs and layout test absent."
+  },
+  "QV-08-REQ-002": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No scripts/check-deps.mjs and no deps-boundaries CI job (ci.yml has none)."
+  },
+  "QV-08-REQ-003": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/crypto/package.json"
+   ],
+   "tests": [],
+   "note": "Dependencies match; no npm-ls CI check or headless-browser crypto run verified."
+  },
+  "QV-08-REQ-004": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/board/src/store.ts"
+   ],
+   "tests": [],
+   "note": "Clock and store injected; no lint forbidding Date.now/Math.random/node imports, no property test."
+  },
+  "QV-08-REQ-005": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Test only scans IP/UA canaries; no schema classification test or fuzzed secrecy run."
+  },
+  "QV-08-REQ-006": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "DB triggers abort UPDATE/DELETE; API has no mutating entry verbs."
+  },
+  "QV-08-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/merkle.ts",
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/board/test/merkle.test.ts",
+    "packages/server/test/e2e.test.ts"
+   ],
+   "note": "Reference roots and proofs tested in board; verified by verifyElection in e2e."
+  },
+  "QV-08-REQ-008": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/db.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts"
+   ],
+   "note": "synchronous=FULL and receipt after tx; no kill -9 / 10,000-trial fault-injection test."
+  },
+  "QV-08-REQ-009": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Same bytes return original receipt (200); different bytes with reused nonce 409. Keyless runtime defect B2-12."
+  },
+  "QV-08-REQ-010": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/export.ts",
+    "packages/verifier/package.json"
+   ],
+   "tests": [
+    "packages/server/test/e2e.test.ts"
+   ],
+   "note": "Verifier deps exclude server; no network-namespace or dependency-closure test."
+  },
+  "QV-08-REQ-011": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/export.ts",
+    "packages/server/src/ext-routes.ts",
+    "packages/server/src/imports.ts"
+   ],
+   "tests": [
+    "packages/server/test/e2e.test.ts",
+    "packages/server/test/imports.test.ts"
+   ],
+   "note": "Export on A, import as read-only mirror on B verified; operator .qvx restore not implemented."
+  },
+  "QV-08-REQ-012": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No build, release job, Dockerfile or binary packaging in repo."
+  },
+  "QV-08-REQ-013": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No container files exist."
+  },
+  "QV-08-REQ-014": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No systemd unit in repo."
+  },
+  "QV-08-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/config.ts",
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Default bind 127.0.0.1, no IP logging; no Unix socket, no packet-capture test; all onion clients share one bucket."
+  },
+  "QV-08-REQ-016": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/gossip.ts",
+    "packages/server/src/http.ts",
+    "packages/server/src/ssrf.ts",
+    "packages/server/src/webhooks.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts",
+    "packages/server/test/ssrf.test.ts"
+   ],
+   "note": "Outbound only webhooks/gossip with SSRF policy; no egress-deny integration test."
+  },
+  "QV-08-REQ-017": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Window checks use server clock and manifest skew; no clock-skew self-check or refusal when clock is wrong."
+  },
+  "QV-08-REQ-018": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/controldb.ts",
+    "packages/server/src/pool.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Per-election DB files but all orgs share control.sqlite; no path-traversal/ID-guess test beyond cross-org 404."
+  },
+  "QV-08-REQ-019": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/auth.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts",
+    "packages/server/test/negative.test.ts",
+    "packages/server/test/security-review.test.ts"
+   ],
+   "note": "Codes are UNAUTHENTICATED/BAD_SIGNATURE with reason REPLAY, not AUTH_*; no fuzz suite."
+  },
+  "QV-08-REQ-020": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/server/bench/import-verification.ts"
+   ],
+   "tests": [],
+   "note": "Only an import-verification bench exists; no bench/reference-10k, no CI gate."
+  },
+  "QV-08-REQ-021": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/config.ts",
+    "packages/server/src/election.ts",
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "413 enforced, but default ballot cap 128 KiB not 64 KiB and verification runs on event loop under per-election mutex."
+  },
+  "QV-08-REQ-022": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Counted via stats.proofVerifications; CPU-ratio perf test absent."
+  },
+  "QV-08-REQ-023": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "Open recomputes tree and quarantines (reads continue, appends 503); no refuse-to-serve and no E_BOARD_INTEGRITY code."
+  },
+  "QV-08-REQ-024": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/import-availability.test.ts"
+   ],
+   "note": "stop() drains subsystems; no signal handler or entry point; checkpoint is signed per append so STH is current."
+  },
+  "QV-08-REQ-025": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/ext-routes.ts",
+    "packages/server/src/gossip.ts"
+   ],
+   "tests": [
+    "packages/server/test/gossip.test.ts"
+   ],
+   "note": "Server-side gossip and fork detection exist; no qv mirror command and no witness polling."
+  },
+  "QV-08-REQ-026": {
+   "status": "partial",
+   "impl": [
+    "packages/cli/src/cmd-board.ts"
+   ],
+   "tests": [],
+   "note": "Client area; CLI takes a pinnedCheckpoint option, per-election persisted STH and fork alert in web/CLI not verified."
+  },
+  "QV-08-REQ-027": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/consolidation.test.ts",
+    "packages/server/test/events.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Witnesses push cosignatures; no witness_urls polling config."
+  },
+  "QV-08-REQ-028": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/logger.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Allowlist logger with drop counter."
+  },
+  "QV-08-REQ-029": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/config.ts"
+   ],
+   "tests": [
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "Safe defaults exist (loopback, quotas); no WARN_UNSAFE_* warnings and no config reference document."
+  },
+  "QV-08-REQ-030": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/admin.ts",
+    "packages/server/src/ext-routes.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "POST /admin/backups works; no restore command, expected-STH check or --accept-rollback (B2-07 open)."
+  },
+  "QV-08-REQ-031": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/db.ts"
+   ],
+   "tests": [],
+   "note": "Transactional, checksummed, recorded in schema_migration; no automatic pre-migration backup and no migration test from prior schemas."
+  },
+  "QV-08-REQ-032": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "healthz/readyz exist (readyz only checks control DB, untested); no /metrics endpoint."
+  },
+  "QV-08-REQ-033": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No entry point or --max-old-space-size defaults; no soak test."
+  },
+  "QV-08-REQ-034": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "allowedOrigins CORS implemented; no test of allowlist path, web board-URL handling unverified."
+  },
+  "QV-08-REQ-035": {
+   "status": "process",
+   "impl": [
+    ".github/workflows/ci.yml"
+   ],
+   "tests": [],
+   "note": "CI matrix covers node 22 and 24 (full matrix on main/nightly); engines is >=22.18 (D-86)."
+  },
+  "QV-09-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/ext-routes.ts",
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Handwritten validators not generated schemas; no contract tests; extra routes exist (gossip, imports, admin); unknown route 404 tested."
+  },
+  "QV-09-REQ-002": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "NOTES: OpenAPI/JSON-Schema generation not implemented."
+  },
+  "QV-09-REQ-003": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/problem.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Shape and no-internals tested on sampled paths; no every-error-path fuzz."
+  },
+  "QV-09-REQ-004": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/http.ts",
+    "packages/server/src/logger.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-09-REQ-005": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Entry signature and roll authorization verified; ignoring bearer not asserted by a dedicated test."
+  },
+  "QV-09-REQ-006": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/server/src/auth.ts"
+   ],
+   "tests": [],
+   "note": "D-84/N-20: QV-Sig implemented instead, no /auth/*; owner default QV-08; spec text unamended, web still calls /auth."
+  },
+  "QV-09-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/pool.ts",
+    "packages/server/src/util.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "16 random bytes; read key compared via ctEq, invite via stored hash lookup."
+  },
+  "QV-09-REQ-008": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "No chaos/crash-retry test."
+  },
+  "QV-09-REQ-009": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/events.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "No browser foreign-origin fetch test."
+  },
+  "QV-09-REQ-010": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/sse.ts"
+   ],
+   "tests": [
+    "packages/server/test/events.test.ts",
+    "packages/server/test/sse-lifecycle.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-09-REQ-011": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts"
+   ],
+   "note": "No property test under concurrent appends."
+  },
+  "QV-09-REQ-012": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/http.ts",
+    "packages/server/src/ratelimit.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts",
+    "packages/server/test/negative.test.ts",
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "IPv6 buckets /64 vs spec /56."
+  },
+  "QV-09-REQ-013": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "logging.ip/user_agent are hard-coded false; limits not compared to config in a test."
+  },
+  "QV-09-REQ-014": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/sse.ts",
+    "packages/server/src/webhooks.ts"
+   ],
+   "tests": [
+    "packages/server/test/events.test.ts"
+   ],
+   "note": "control.webhook_outbox stores the P0 body (flagged deviation from QV-28-REQ-019)."
+  },
+  "QV-09-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/pool.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "State preconditions enforced; export-acknowledged and 30-day grace rule not enforced (N-32b approved, not built)."
+  },
+  "QV-09-REQ-016": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/export.ts"
+   ],
+   "tests": [
+    "packages/server/test/e2e.test.ts",
+    "packages/server/test/range.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-09-REQ-017": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [],
+   "note": "Server uses its own clock; board accepts created_at within 86400 s skew; no skewed-client test."
+  },
+  "QV-09-REQ-018": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/config.ts"
+   ],
+   "tests": [],
+   "note": "Org registration modes implemented; no test per mode."
+  },
+  "QV-09-REQ-019": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/http.ts",
+    "packages/server/src/sse.ts"
+   ],
+   "tests": [],
+   "note": "node:http HTTP/1.1 and SSE only; no onion e2e."
+  },
+  "QV-09-REQ-020": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No @quietvote/client package; web has handwritten packages/web/src/api/client.ts."
+  },
+  "QV-10-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts"
+   ],
+   "note": "Info is spread over overview/rules/review; election-zone time not shown (viewer zone passed twice, app.ts:395); no unit test."
+  },
+  "QV-10-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Panel only on Rules tab; not shown on first entry; no qv.nav.privacy link on each voter screen; no snapshot test."
+  },
+  "QV-10-REQ-003": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Only one generic public-visibility sentence (qv.privacy.public); no four-class legend or per-item labelling."
+  },
+  "QV-10-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Admin view is a stub with no edit controls; no corrected-copy action; no e2e asserting controls absent."
+  },
+  "QV-10-REQ-005": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts"
+   ],
+   "note": "Cast/receipt views omit selections by construction; no DOM or screenshot assertion that option labels are absent after seal."
+  },
+  "QV-10-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts",
+    "packages/web/src/flow/ballot-machine.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts",
+    "packages/web/test/flow.test.ts",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Six outcomes defined; tests found for accepted/pending/after-close/rejected; SUPERSEDED reachability by fault injection not confirmed."
+  },
+  "QV-10-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/flow/ballot-machine.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts",
+    "packages/web/test/flow.test.ts",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Exact equal-size dimension assertion in browser still absent (NOTES); network-silence-before-cast covered by flow test only."
+  },
+  "QV-10-REQ-008": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/audit.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Plaintext record and downloadable file exist; no QR, no link, in-page checker labelling only partly; no browser test of audit screen."
+  },
+  "QV-10-REQ-009": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/receipt.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts",
+    "packages/web/test/live.test.ts"
+   ],
+   "note": "Receipt file has proof data; displayed code shortened unless full requested; supersede status is derived live not a receipt field."
+  },
+  "QV-10-REQ-010": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/receipt.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Works for stored receipts and uploaded receipt file; lookup by typed code alone absent; NotFound state not shown separately; fake-board e2e only."
+  },
+  "QV-10-REQ-011": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts"
+   ],
+   "note": "Clear this device works (dialog-confirmed); no persistent shared-device toggle; drafts not persisted; confirmation screen offers it."
+  },
+  "QV-10-REQ-012": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Header and compare prompt exist; organizer-side second-channel prompt after publish not seen (invite links only)."
+  },
+  "QV-10-REQ-013": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/ui/app.ts",
+    "packages/web/src/verifier/page.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/verifier.ts",
+    "packages/web/test/offline-verifier.test.ts",
+    "packages/web/test/verification.test.ts"
+   ],
+   "note": "Manifest-hash line and named checks shown; CLI part is another package."
+  },
+  "QV-10-REQ-014": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No canary or self-test in web verifier (NOTES: not done)."
+  },
+  "QV-10-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts",
+    "packages/web/e2e/verifier.ts",
+    "packages/web/test/build.test.ts",
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "Zero third-party requests asserted; no Copy diagnostic info feature found."
+  },
+  "QV-10-REQ-016": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/organizer.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Roll summary preview only; no voter-identical preview, no dry-run election."
+  },
+  "QV-10-REQ-017": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Admin stub shows no mapping or participation; no e2e or privacy test on organizer screens."
+  },
+  "QV-10-REQ-018": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts"
+   ],
+   "note": "Results show not-yet until signed tally; no trustee UI in web (CLI-only, ADR-024); stated-no-partial copy not verified."
+  },
+  "QV-10-REQ-019": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/datetime.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "datetime helpers tested but app passes viewer zone as election zone; no closing-race announcement; no countdown."
+  },
+  "QV-10-REQ-020": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts",
+    "packages/web/test/audit3.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Fake-board fault injection only; optional session-storage draft opt-in absent."
+  },
+  "QV-10-REQ-021": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts"
+   ],
+   "note": "Download key file and recovery code offered; copy/passphrase-warning per section 7.3 partly; full backup browser journey missing (NOTES)."
+  },
+  "QV-10-REQ-022": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Only static Help text (qv.help.report); no report flow."
+  },
+  "QV-10-REQ-023": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "Trustee flows are CLI-only per ADR-024; not a web feature."
+  },
+  "QV-10-REQ-024": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Design review item; audit-post checkbox is pre-checked by default (app.ts:565) which may conflict; no checklist artifact."
+  },
+  "QV-10-REQ-025": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/copy-rules.ts"
+   ],
+   "tests": [
+    "packages/web/test/copy.test.ts"
+   ],
+   "note": "Sentence-length and banned-jargon lint only; no readability grade measure; no glossary tooltips."
+  },
+  "QV-10-REQ-026": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No display-name policy in create view or voter flow."
+  },
+  "QV-10-REQ-027": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs human usability sessions; no evidence artifacts in repo."
+  },
+  "QV-11-REQ-001": {
+   "status": "partial",
+   "impl": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/claims-lint.yml",
+    ".github/workflows/pseudo-locale-visual.yml"
+   ],
+   "tests": [
+    ".github/scripts/check-workflow-coverage.test.mjs"
+   ],
+   "note": "CI has typecheck, tests, vectors, browser jobs; no lint, SAST, fuzz or mutation layer; branch protection not evidenced."
+  },
+  "QV-11-REQ-002": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No traceability script; tests do not reference IDs of these specs. N-23c report-only generator unbuilt."
+  },
+  "QV-11-REQ-003": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No coverage tooling or mutation tool in repo; no evidence report."
+  },
+  "QV-11-REQ-004": {
+   "status": "partial",
+   "impl": [],
+   "tests": [
+    "packages/protocol/test/attacks.test.ts",
+    "packages/protocol/test/security-review.test.ts"
+   ],
+   "note": "Attack tests exist; no attack-matrix tracking of implemented/exempted rows or exemption records."
+  },
+  "QV-11-REQ-005": {
+   "status": "partial",
+   "impl": [
+    "scripts/compare-verifiers.ts",
+    "test-vectors/v1",
+    "verifier-py/qv_verifier"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts",
+    "verifier-py/tests"
+   ],
+   "note": "Vectors and Python sweep run in CI; strict comparator intentionally fails (held D-92..D-96); manifest unsigned."
+  },
+  "QV-11-REQ-006": {
+   "status": "partial",
+   "impl": [],
+   "tests": [
+    "packages/protocol/test/property.test.ts"
+   ],
+   "note": "Some property tests exist; no case-count tiers, nightly 100k run or logged replayable seeds verified."
+  },
+  "QV-11-REQ-007": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No fuzz harnesses, corpus or fuzz CI job; only a canary corpus in packages/verifier/canary."
+  },
+  "QV-11-REQ-008": {
+   "status": "partial",
+   "impl": [
+    ".github/scripts/run-browser-journeys.sh",
+    "packages/web/e2e/browser.ts"
+   ],
+   "tests": [
+    ".github/scripts/run-browser-journeys.test.mjs"
+   ],
+   "note": "CI installs Chromium only; Firefox and WebKit absent."
+  },
+  "QV-11-REQ-009": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No CH-01..CH-31 suite or recorded results."
+  },
+  "QV-11-REQ-010": {
+   "status": "partial",
+   "impl": [
+    "docs/reports/performance-baseline-2026-11-04.md",
+    "packages/protocol/bench/tally-bench.ts",
+    "packages/server/bench/import-verification.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/bench-smoke.test.ts"
+   ],
+   "note": "Benchmarks and a baseline report exist; no load test, targets gate or reference-hardware run."
+  },
+  "QV-11-REQ-011": {
+   "status": "partial",
+   "impl": [],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Partial canary coverage in server tests; no systematic log/metrics/backup scan with canary strings."
+  },
+  "QV-11-REQ-012": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No repro-check job and no signing; signing key ceremony is external."
+  },
+  "QV-11-REQ-013": {
+   "status": "partial",
+   "impl": [
+    ".github/workflows/claims-lint.yml",
+    "docs/claims/banned-phrases.txt",
+    "scripts/lint-claims.mjs"
+   ],
+   "tests": [],
+   "note": "Claims lint is non-blocking and not wired to release notes; no banner-required check; no release exists."
+  },
+  "QV-11-REQ-014": {
+   "status": "external",
+   "impl": [
+    "docs/reports/security-review-2026-10-21.md"
+   ],
+   "tests": [],
+   "note": "Needs independent third-party reviewer and funding (D-71); AI-assisted review is not independent."
+  },
+  "QV-11-REQ-015": {
+   "status": "process",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "Policy text exists with placeholders; no exercise record possible in repo yet."
+  },
+  "QV-11-REQ-016": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No release-build hook-absence test."
+  },
+  "QV-11-REQ-017": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "No flake dashboard or quarantine list in repository."
+  },
+  "QV-12-REQ-001": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No doctor command or opening gate."
+  },
+  "QV-12-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/ext-routes.ts"
+   ],
+   "tests": [
+    "packages/server/test/imports.test.ts"
+   ],
+   "note": "Per-election export/import and delete exist; no org-level export/purge command."
+  },
+  "QV-12-REQ-003": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/admin.ts",
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts"
+   ],
+   "note": "Manifest only via signed log entry, but instance_admin keys pass org checks and can mint invites/edit drafts (no test)."
+  },
+  "QV-12-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts",
+    "packages/server/src/gossip.ts"
+   ],
+   "tests": [
+    "packages/server/test/gossip.test.ts"
+   ],
+   "note": "Gossip rollback quarantine exists; no clock-skew check and no restore detection without peers (B2-07)."
+  },
+  "QV-12-REQ-005": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No encryption, restore script or drill."
+  },
+  "QV-12-REQ-006": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No protocol-version check at start (PROTO_ID only advertised in /instance)."
+  },
+  "QV-12-REQ-010": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No metrics endpoint or scrape lint."
+  },
+  "QV-12-REQ-011": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No alert rules or unit tests with synthetic data."
+  },
+  "QV-12-REQ-012": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Extension not implemented (see QV-29-REQ-021)."
+  },
+  "QV-12-REQ-013": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "No runbook documents found in docs/; no game-day records."
+  },
+  "QV-12-REQ-014": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/admin.ts",
+    "packages/server/src/ext-routes.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "Only admin status/list exist; no support bundle tooling yet."
+  },
+  "QV-12-REQ-015": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No /status page."
+  },
+  "QV-13-REQ-001": {
+   "status": "external",
+   "impl": [
+    "packages/web/e2e/a11y.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts",
+    "packages/web/e2e/help.ts"
+   ],
+   "note": "Only custom heuristics on Home/Help/not-found (no axe-core, no election/key/vote pages); manual WCAG audit and ACR needed."
+  },
+  "QV-13-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/build/site.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts"
+   ],
+   "note": "Landmarks/heading checks on 3 pages only; SPA needs JS for every page; only a noscript notice exists."
+  },
+  "QV-13-REQ-003": {
+   "status": "external",
+   "impl": [],
+   "tests": [
+    "packages/web/e2e/a11y.ts",
+    "packages/web/e2e/run.ts"
+   ],
+   "note": "Needs per-release task scripts with real AT; e2e checks mouse-style journeys and Tab traversal on ordinary pages only."
+  },
+  "QV-13-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/chart.ts",
+    "packages/web/static/styles.css"
+   ],
+   "tests": [
+    "packages/web/test/charts.test.ts"
+   ],
+   "note": "Chart verified; status/pass-fail/error icons+text not audited across election views; no browser check."
+  },
+  "QV-13-REQ-005": {
+   "status": "external",
+   "impl": [
+    "packages/web/src/i18n/locales-core.ts"
+   ],
+   "tests": [
+    "packages/web/test/i18n-catalogs.test.ts"
+   ],
+   "note": "Missing-key CI check passes; no native review record exists, so only en is offered."
+  },
+  "QV-13-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts",
+    "packages/web/static/styles.css"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts",
+    "packages/web/e2e/help.ts"
+   ],
+   "note": "Dark/forced-colors/high-contrast checked on ordinary pages; reduced-motion and prefers-contrast not asserted; no visual regression."
+  },
+  "QV-13-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/key/lock.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts",
+    "packages/web/test/key.test.ts"
+   ],
+   "note": "Auto-lock 10 min with warning; actual suspended-tab behavior unverified (NOTES)."
+  },
+  "QV-13-REQ-008": {
+   "status": "implemented_untested",
+   "impl": [],
+   "tests": [],
+   "note": "Nothing of the kind present; no static scan in CI."
+  },
+  "QV-13-REQ-009": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts"
+   ],
+   "note": "html lang set; election-authored text not marked with own lang (manifest has no language maps)."
+  },
+  "QV-13-REQ-010": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/organizer.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Options are text-only; explicit per-option required-text validation message not verified."
+  },
+  "QV-13-REQ-020": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs human assistive-technology testing; none recorded."
+  },
+  "QV-13-REQ-021": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/ui/dom.ts",
+    "packages/web/src/ui/shell.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit3-ui.test.ts"
+   ],
+   "note": "Verified by fake-DOM and source tests; no browser AT run."
+  },
+  "QV-13-REQ-022": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts"
+   ],
+   "note": "Progress and sealedAnnounce exist; focus goes to Cast button not code heading; progress indeterminate."
+  },
+  "QV-13-REQ-023": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Code groups and Copy announcement coded; no test asserting SR output or announcement."
+  },
+  "QV-13-REQ-024": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts",
+    "packages/web/e2e/help.ts"
+   ],
+   "note": "Help page exists; content not AT-reviewed."
+  },
+  "QV-13-REQ-030": {
+   "status": "partial",
+   "impl": [
+    "packages/web/static/styles.css"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts"
+   ],
+   "note": "Covered for Home/Help only; election views and dialogs not checked; focus-not-obscured and 2px size not asserted."
+  },
+  "QV-13-REQ-031": {
+   "status": "implemented_untested",
+   "impl": [],
+   "tests": [],
+   "note": "None implemented; no test."
+  },
+  "QV-13-REQ-032": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Native controls only; no label-in-name assertion."
+  },
+  "QV-13-REQ-033": {
+   "status": "partial",
+   "impl": [
+    "packages/web/static/styles.css"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts",
+    "packages/web/e2e/run.ts",
+    "packages/web/e2e/spoil-shares.ts"
+   ],
+   "note": "Ordinary pages checked; 320px only on spoil-shares journey; text-spacing override (1.4.12) not tested."
+  },
+  "QV-13-REQ-034": {
+   "status": "partial",
+   "impl": [
+    "packages/web/static/styles.css"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts"
+   ],
+   "note": "Computed contrast checked on ordinary pages; non-text contrast of borders not covered; election pages excluded."
+  },
+  "QV-13-REQ-035": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "autocomplete tokens set on key form (new/current-password); no test."
+  },
+  "QV-13-REQ-036": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts"
+   ],
+   "note": "Step indicator and Back exist; consistent glossary and per-step undo not audited."
+  },
+  "QV-13-REQ-037": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Only generic \"more details\" disclosures; no per-screen explain."
+  },
+  "QV-13-REQ-038": {
+   "status": "implemented_untested",
+   "impl": [],
+   "tests": [],
+   "note": "No video shipped; nothing to test."
+  },
+  "QV-13-REQ-040": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Only a noscript notice; read-only pages (results, receipts) need JS; no no-JS e2e."
+  },
+  "QV-13-REQ-041": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/app-precompile.test.ts",
+    "packages/web/test/lazy.test.ts"
+   ],
+   "note": "JS gzip budgets tested (190.9 KiB); total transfer and per-catalog 20 kB not asserted from network trace."
+  },
+  "QV-13-REQ-042": {
+   "status": "external",
+   "impl": [
+    "packages/web/src/worker/worker-sealer.ts"
+   ],
+   "tests": [],
+   "note": "Sealing in Worker exists; needs device-lab measurements; no throttled timing script."
+  },
+  "QV-13-REQ-043": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Retry/pending proven against fake board; 64 kB body budget not asserted; pending lost on reload unless receipt stored."
+  },
+  "QV-13-REQ-044": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/main.ts"
+   ],
+   "tests": [],
+   "note": "Only missing-root fallback text; no real feature detection; no matrix or Tor test."
+  },
+  "QV-13-REQ-045": {
+   "status": "partial",
+   "impl": [],
+   "tests": [],
+   "note": "Framework-free but fully client-rendered SPA; architecture review pending."
+  },
+  "QV-13-REQ-046": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No reduced-data handling; no icon sprite budget check."
+  },
+  "QV-13-REQ-047": {
+   "status": "partial",
+   "impl": [
+    "packages/cli/src/args.ts"
+   ],
+   "tests": [],
+   "note": "CLI package: --json present; no --no-color or LANG localization found (grep). Not web; verify with CLI owner."
+  },
+  "QV-13-REQ-048": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/build/site.ts",
+    "packages/web/src/verifier/page.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/verifier.ts",
+    "packages/web/test/build.test.ts",
+    "packages/web/test/offline-verifier.test.ts"
+   ],
+   "note": "Verifies bundles only (no audit package/canary); hosted browser qualification pending."
+  },
+  "QV-13-REQ-049": {
+   "status": "partial",
+   "impl": [
+    "packages/web/static/styles.css"
+   ],
+   "tests": [],
+   "note": "@media print rules exist (charts); no announcement/QR page or receipt print test."
+  },
+  "QV-13-REQ-060": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/scripts/i18n-check.ts",
+    "packages/web/src/i18n/catalog-lint.ts"
+   ],
+   "tests": [
+    "packages/web/test/i18n-lint.test.ts",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Lint scope bounded (verifyView excluded) per NOTES."
+  },
+  "QV-13-REQ-061": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/i18n/en.ts"
+   ],
+   "tests": [
+    "packages/web/test/i18n-catalogs.test.ts",
+    "packages/web/test/i18n-lint.test.ts"
+   ],
+   "note": "Complete."
+  },
+  "QV-13-REQ-062": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/build/precompile.ts"
+   ],
+   "tests": [
+    "packages/web/test/app-precompile.test.ts",
+    "packages/web/test/precompile.test.ts"
+   ],
+   "note": "Complete for app path."
+  },
+  "QV-13-REQ-063": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/preference.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/locale-preference.test.ts"
+   ],
+   "note": "Client side tested; server-rendered Accept-Language path not implemented. Only en offered."
+  },
+  "QV-13-REQ-064": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/i18n/locales-core.ts"
+   ],
+   "tests": [
+    "packages/web/test/i18n-catalogs.test.ts"
+   ],
+   "note": "Gate tested; real native review records absent (external)."
+  },
+  "QV-13-REQ-065": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/i18n/pseudo.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts",
+    "packages/web/e2e/pseudo-locale-visual-ci.mjs",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Home/Help only; not run on GitHub yet per NOTES; no screenshot baselines."
+  },
+  "QV-13-REQ-066": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Manifest titles/options are plain strings (grep protocol src: no languages fields); protocol change needs owner."
+  },
+  "QV-13-REQ-067": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/i18n/catalog-lint.ts"
+   ],
+   "tests": [
+    "packages/web/test/i18n-lint.test.ts"
+   ],
+   "note": "Argument-only usage by construction; no lint for translator-visible examples."
+  },
+  "QV-13-REQ-068": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/i18n/icu.ts"
+   ],
+   "tests": [
+    "packages/web/test/charts.test.ts",
+    "packages/web/test/icu-number.test.ts"
+   ],
+   "note": "Number latn override tested; date/list/relative-time coverage partial."
+  },
+  "QV-13-REQ-069": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/flow/receipt.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "JSON.stringify outputs; no schema test in web."
+  },
+  "QV-13-REQ-070": {
+   "status": "external",
+   "impl": [
+    "packages/web/COPY.md"
+   ],
+   "tests": [],
+   "note": "Needs language reviewers; English glossary only partially present."
+  },
+  "QV-13-REQ-071": {
+   "status": "partial",
+   "impl": [
+    "packages/web/static/styles.css"
+   ],
+   "tests": [
+    "packages/web/e2e/a11y.ts",
+    "packages/web/e2e/pseudo-locale-visual-ci.mjs"
+   ],
+   "note": "Home/Help only; election/vote layouts untested under expansion."
+  },
+  "QV-13-REQ-072": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No Collator use in web src."
+  },
+  "QV-13-REQ-073": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Roll import is hex keys only; no name handling or normalization."
+  },
+  "QV-13-REQ-080": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/ui/app.ts",
+    "packages/web/static/styles.css"
+   ],
+   "tests": [
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "RTL layout never visually reviewed (NOTES)."
+  },
+  "QV-13-REQ-081": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/chart.ts"
+   ],
+   "tests": [
+    "packages/web/test/charts.test.ts"
+   ],
+   "note": "Chart mirrored; no directional icons elsewhere verified; no visual test."
+  },
+  "QV-13-REQ-082": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Codes/IDs wrapped in bdi dir=ltr; election-authored strings lack dir=auto/bdi."
+  },
+  "QV-13-REQ-083": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/i18n/icu.ts"
+   ],
+   "tests": [
+    "packages/web/test/precompile.test.ts",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Complete."
+  },
+  "QV-13-REQ-084": {
+   "status": "external",
+   "impl": [
+    "packages/web/static/styles.css"
+   ],
+   "tests": [],
+   "note": "Manual RTL review needed."
+  },
+  "QV-13-REQ-090": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/datetime.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Instants exist; no display_time_zone field in protocol manifest (grep); protocol change needs owner."
+  },
+  "QV-13-REQ-091": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/datetime.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Helper correct and tested; overview passes viewer zone as election zone so zones are never distinct."
+  },
+  "QV-13-REQ-092": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/datetime.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "zonedLocalToUtc exists but create view uses datetime-local plus isoUtc in browser zone; gap/fold not surfaced."
+  },
+  "QV-13-REQ-093": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No clock-delta display found."
+  },
+  "QV-13-REQ-094": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "AFTER_CLOSE handled and tested; no final-minute polite announcement."
+  },
+  "QV-13-REQ-095": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Not implemented."
+  },
+  "QV-13-REQ-096": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Not implemented; depends on manifest field (protocol)."
+  },
+  "QV-13-REQ-097": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/datetime.ts"
+   ],
+   "tests": [],
+   "note": "Intl used; ISO secondary date not always shown; no test."
+  },
+  "QV-14-REQ-001": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No hosted offering exists; hosting is post-1.0."
+  },
+  "QV-14-REQ-002": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Architecture review checklist per release; no release or checklist file yet."
+  },
+  "QV-14-REQ-003": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs fiscal host and real funding (D-70); no ledger exists."
+  },
+  "QV-14-REQ-004": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "Hosted launch is out of v1; gate checklist belongs in decision log when relevant."
+  },
+  "QV-14-REQ-005": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Requires real income and fiscal host."
+  },
+  "QV-14-REQ-006": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No pricing exists; hosted offering out of v1."
+  },
+  "QV-14-REQ-007": {
+   "status": "partial",
+   "impl": [
+    ".github/PULL_REQUEST_TEMPLATE.md"
+   ],
+   "tests": [],
+   "note": "PR template has no telemetry/data-collection item; no CI check."
+  },
+  "QV-14-REQ-008": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs release key ceremony and three maintainers (D-56 recommends 2-of-3)."
+  },
+  "QV-14-REQ-009": {
+   "status": "implemented_untested",
+   "impl": [
+    "docs/decision-log.md"
+   ],
+   "tests": [],
+   "note": "QV-ADR-012 records it; repo has no token/chain code, but nothing automated checks it."
+  },
+  "QV-16-REQ-001": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/ristretto.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/ristretto.test.ts",
+    "test-vectors/v1/primitives/ristretto/decode.json"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-002": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/ristretto.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/ristretto.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-003": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/ristretto.ts",
+    "packages/crypto/src/transcript.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/ristretto.test.ts",
+    "packages/crypto/test/transcript.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-004": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/transcript.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/cp08-fiat-shamir.test.ts",
+    "packages/crypto/test/proofs.test.ts",
+    "packages/crypto/test/transcript.test.ts"
+   ],
+   "note": "Unregistered labels throw at runtime; no static call-site lint beyond that."
+  },
+  "QV-16-REQ-005": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/json.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/misc.test.ts",
+    "test-vectors/v1/primitives/encoding/canonical-json.json"
+   ],
+   "note": "23 canonicalization vectors present; independent serializer parity rests on verifier-py (vectors status candidate)."
+  },
+  "QV-16-REQ-006": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts",
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Manifest additions beyond 5.6.1 recorded as X-14."
+  },
+  "QV-16-REQ-008": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/feldman.ts",
+    "packages/protocol/src/dkg.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/dkg.test.ts",
+    "packages/protocol/test/property.test.ts"
+   ],
+   "note": "Statistical test of share distribution with t-1 corrupt not found; selective-abort bias CP-06 is accepted property."
+  },
+  "QV-16-REQ-009": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/proofs.ts",
+    "packages/protocol/src/dkg.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/proofs.test.ts",
+    "packages/protocol/test/dkg.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-010": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/dkg.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/dkg.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-011": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/proofs.ts",
+    "packages/protocol/src/ballot.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/proofs.test.ts",
+    "packages/protocol/test/ballot.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-012": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/proofs.test.ts",
+    "packages/protocol/test/ballot.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-013": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts"
+   ],
+   "note": "PoK/DLEQ nonces are plain CSPRNG (X-20, OQ-7); cp-dec nonce hedge omits (A,B) (audit CP-02 open, spec-owner decision)."
+  },
+  "QV-16-REQ-014": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/attacks.test.ts",
+    "packages/protocol/test/ballot.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Ballot-object immutability after code display not explicitly asserted."
+  },
+  "QV-16-REQ-015": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/b1-regressions.test.ts",
+    "packages/protocol/test/second-wave.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-016": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/ed25519.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/cp08-ed25519-zip215.test.ts",
+    "test-vectors/v1/primitives/ed25519/verify.json"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-017": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/attacks.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-018": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/dlog.ts",
+    "packages/crypto/src/feldman.ts",
+    "packages/protocol/src/tally.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/misc.test.ts",
+    "packages/protocol/test/tally.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-019": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/tally.ts",
+    "packages/protocol/src/verify.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/e2e.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "No separate tally_aggregate record (ambiguity in docs/18, NOTES X-40)."
+  },
+  "QV-16-REQ-020": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/verify.ts",
+    "packages/verifier/src"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "22 mutants from 3-voter election; not one failing artifact per every C1 step; Python parity open (D-92..D-96); V13 absent."
+  },
+  "QV-16-REQ-021": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/hash.ts",
+    "packages/crypto/src/ristretto.ts"
+   ],
+   "tests": [],
+   "note": "noble in crypto package; no lint forbidding other crypto imports; server uses node:crypto hashes/HMAC; noble not vendored (X-ADR-024)."
+  },
+  "QV-16-REQ-022": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/share-cipher.ts",
+    "packages/trustee/src/bundle.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/custody.test.ts",
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Trustee destroy/tombstone and encrypted bundles exist; no dedicated log-scrub test located; ceremony checklist is process; scalars are plain bigint."
+  },
+  "QV-16-REQ-023": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No AuthScheme interface in any src; voter identity handled directly via roll key and binder-roll."
+  },
+  "QV-16-REQ-024": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/rules.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts",
+    "test-vectors/v1/protocol/rules/rules.json"
+   ],
+   "note": ""
+  },
+  "QV-16-REQ-025": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/spoilshare.ts",
+    "packages/protocol/src/tally.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts",
+    "packages/protocol/test/tally.test.ts"
+   ],
+   "note": "D-95 (held): neither verifier enforces manifest enablement at ballot level for zero-digest spoils."
+  },
+  "QV-17-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Manifest has n, t, trustee keys only; no ceremony_mode or audit_window_days field; no ceremony_start field-presence gate (D-35, D-36 proposals only)."
+  },
+  "QV-17-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Violations only produce warnings (W-NO-THRESHOLD, W-SECRECY); nothing is rejected; no risk-acknowledgement flag; t=n not flagged."
+  },
+  "QV-17-REQ-003": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [],
+   "note": "Manifest schema accepts n up to 32; no n<=15 validation anywhere."
+  },
+  "QV-17-REQ-010": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/dkg.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/dkg.test.ts",
+    "packages/trustee/test/ceremony.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-17-REQ-011": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "Deferred by N-29d option A (DECISIONS-2026-11-04); only the CeremonyMode type name exists (transcript.ts:13); no behaviour."
+  },
+  "QV-17-REQ-012": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/rng.ts",
+    "packages/trustee/src/cli.ts"
+   ],
+   "tests": [],
+   "note": "CSPRNG used; dice-entropy HKDF mixing not built (N-28 says no decision needed); no test that dice input only adds."
+  },
+  "QV-17-REQ-013": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/dkg.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/ceremony.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-17-REQ-014": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/dkg.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/dkg.test.ts",
+    "packages/trustee/test/ceremony.test.ts"
+   ],
+   "note": "Quorum check is |Q|>=t only; max(t, floor(n/2)+1) majority floor not enforced; no 0..n disqualification matrix test."
+  },
+  "QV-17-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts",
+    "packages/trustee/src/fingerprint.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/ceremony.test.ts"
+   ],
+   "note": "Server needs only >=t key confirmations before dkg-final, not all qualified; --words is optional so SAS match is self-attested."
+  },
+  "QV-17-REQ-016": {
+   "status": "partial",
+   "impl": [
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": "Trustee drill works; keycheck is trustee-local, not a log entry; no server or verifier enforcement of >=t valid keychecks."
+  },
+  "QV-17-REQ-020": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/trustee/src/bundle.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "JS memory wipe is best effort only (documented in NOTES)."
+  },
+  "QV-17-REQ-021": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/bundle-cipher.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/audit.test.ts",
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Age-STYLE format only (scrypt+AES-GCM); no age CLI interop, X25519 or hardware recipients; N-28 option C approved: amend spec now, vendor age later."
+  },
+  "QV-17-REQ-022": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/trustee/src/passphrase.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/hardening.test.ts",
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Generated passphrase is 20 Crockford symbols, not 8 words (wordlist undecided)."
+  },
+  "QV-17-REQ-023": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/trustee/src/transcript.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "No network capture test; absence of upload is by construction (offline tool)."
+  },
+  "QV-17-REQ-024": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "SLIP-0039 deferred by N-28 recommendation (approved 2026-11-04); not implemented."
+  },
+  "QV-17-REQ-030": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/dkg.ts",
+    "packages/trustee/src/bundle.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Server-side data-flow review (QV-08) is manual; no automated API leak test cited."
+  },
+  "QV-17-REQ-031": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [],
+   "note": "keygen makes a fresh key per bundle; no test asserts keys differ across bundles; reuse option absent."
+  },
+  "QV-17-REQ-040": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/cli.test.ts",
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": "Trustee tally-share record type differs from server dec-shares entry (see defects)."
+  },
+  "QV-17-REQ-041": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/hardening.test.ts",
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": "Witnessed open/close times not re-checked in trustee (full verifier does)."
+  },
+  "QV-17-REQ-050": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/tally.test.ts"
+   ],
+   "note": "Coordinator escalation procedure (section 9.1) is a process document, not code."
+  },
+  "QV-17-REQ-051": {
+   "status": "partial",
+   "impl": [
+    "packages/trustee/src/cli.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/hardening.test.ts",
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Signed record produced; server rejects trustee_compromise_report entries; verifier ignores; no election-page display or organizer countersign."
+  },
+  "QV-17-REQ-052": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/lifecycle.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/ceremony.test.ts",
+    "packages/trustee/test/hardening.test.ts"
+   ],
+   "note": "Client restart gives fresh key; server lifecycle makes ceremony_abort terminal (ABORTED); no second ceremony_start with new id."
+  },
+  "QV-17-REQ-060": {
+   "status": "partial",
+   "impl": [
+    "packages/trustee/src/transcript.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Machine-verifiable only; no human-readable summary; CLI is qv-trustee verify-transcript, not qv ceremony verify; scribe/witness signing has no CLI."
+  },
+  "QV-17-REQ-070": {
+   "status": "partial",
+   "impl": [
+    "packages/trustee/src/machine.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/custody.test.ts",
+    "packages/trustee/test/hardening.test.ts",
+    "packages/trustee/test/lifecycle.test.ts"
+   ],
+   "note": "Destroy and attestation work; key_destruction not published (server rejects type); reminders only printed; expects own audit-close format, not log entry."
+  },
+  "QV-17-REQ-080": {
+   "status": "partial",
+   "impl": [
+    "packages/trustee/src/cli.ts",
+    "packages/trustee/src/machine.ts",
+    "packages/trustee/src/trustee.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/ceremony.test.ts",
+    "packages/trustee/test/machine.test.ts"
+   ],
+   "note": "No localhost UI; no kill-at-every-transition chaos test (T-134); hard kill leaves .lock needing manual removal."
+  },
+  "QV-17-REQ-081": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Localhost UI not built (trustee NOTES \"Not done\", N-29); no usability study; browser trustee UI deferred (T-135)."
+  },
+  "QV-17-REQ-082": {
+   "status": "partial",
+   "impl": [
+    "packages/trustee/src/fingerprint.ts"
+   ],
+   "tests": [
+    "packages/trustee/test/ceremony.test.ts"
+   ],
+   "note": "Check words exist for non-visual comparison; no UI to audit; QV-13 audit not performed; word list is placeholder."
+  },
+  "QV-18-REQ-001": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/entry.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "Origin hex-vs-base32 wording (F13) is an open spec question; behaviour unchanged."
+  },
+  "QV-18-REQ-002": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/merkle.ts"
+   ],
+   "tests": [
+    "packages/board/test/merkle.test.ts"
+   ],
+   "note": "Tests compare against independent naive implementation for n<=200, not the spec's n=1..1025."
+  },
+  "QV-18-REQ-003": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/entry.ts",
+    "packages/board/src/log.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts",
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "Header encoding is board-local, not QV-16 enc (NOTES 1); leaf hashes change when swapped."
+  },
+  "QV-18-REQ-004": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/board/src/store.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "No 1000-writer concurrent stress test; DB constraint not verified here."
+  },
+  "QV-18-REQ-005": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/board/test/audit.test.ts"
+   ],
+   "note": "Failure path tested at board level only; no kill -9 crash-injection test."
+  },
+  "QV-18-REQ-006": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/bundle.ts",
+    "packages/board/src/log.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts"
+   ],
+   "note": "Size rules at admission and per-trustee cardinality belong to protocol layer; not checked in board."
+  },
+  "QV-18-REQ-010": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/checkpoint.ts"
+   ],
+   "tests": [
+    "packages/board/test/audit-bc.test.ts",
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "No interop test against a third-party signed-note library."
+  },
+  "QV-18-REQ-011": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [],
+   "note": "Server signs a checkpoint inside every append transaction; no load or p99 timing test."
+  },
+  "QV-18-REQ-012": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/log.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "None for board layer."
+  },
+  "QV-18-REQ-013": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/equivocation.ts",
+    "packages/board/src/receipt.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "broken_promise second branch left as spec question (NOTES F11)."
+  },
+  "QV-18-REQ-014": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/merkle.ts",
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/board/test/merkle.test.ts"
+   ],
+   "note": "Independent implementation is a test-local naive one, not a third-party library."
+  },
+  "QV-18-REQ-020": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/checkpoint.ts",
+    "packages/verifier/src/verify.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts",
+    "packages/protocol/test/loglayer.test.ts"
+   ],
+   "note": "Manifest carries only quorum; witness list field undefined in QV-16 (PY-014); verifier takes witness keys from bundle (self-attested)."
+  },
+  "QV-18-REQ-021": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/consolidation.test.ts"
+   ],
+   "note": "Only inbound cosignature POST exists; no outbound add-checkpoint client, no 409 resync, no interop test (board NOTES 12)."
+  },
+  "QV-18-REQ-022": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/checkpoint.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts"
+   ],
+   "note": "Ed25519 only; ML-DSA-44 never counts toward quorum (no vetted library)."
+  },
+  "QV-18-REQ-023": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/bundle.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Manifest has no none_acknowledged flag; server sets it from quorum===0. Server enforces open gate only."
+  },
+  "QV-18-REQ-024": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No witness server command in packages/cli or elsewhere."
+  },
+  "QV-18-REQ-025": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/bundle.ts",
+    "packages/server/src/imports.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts"
+   ],
+   "note": "Import to read-only mirror exists; no mirror command that follows and re-serves a live log."
+  },
+  "QV-18-REQ-026": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts",
+    "packages/web/src/flow/receipt.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Browser pins and checks; CLI only takes a user-supplied --pin-file. Error names differ from EQUIVOCATION_SUSPECTED."
+  },
+  "QV-18-REQ-027": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/equivocation.ts",
+    "packages/server/src/gossip.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts",
+    "packages/server/test/gossip.test.ts"
+   ],
+   "note": "Gossip is server-side only; clients and CLI do not cross-check a witness or mirror; offline evidence verifier for qv-equivocation/v1 unconfirmed."
+  },
+  "QV-18-REQ-030": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/http.ts",
+    "packages/server/src/ratelimit.ts"
+   ],
+   "tests": [
+    "packages/server/test/events.test.ts",
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "Rate limiting tested; no-IP logging asserted only by config flag; no load test or DB/log IP scan."
+  },
+  "QV-18-REQ-031": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/admin.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "Deletion limited to terminal states; no check of export acknowledgement or 30-day grace."
+  },
+  "QV-18-REQ-032": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/export.ts",
+    "packages/verifier/src/bundle.ts"
+   ],
+   "tests": [
+    "packages/server/test/e2e.test.ts",
+    "packages/verifier/test/verifier.test.ts"
+   ],
+   "note": "Server writes .qvb tar; qv-verify reads JSON only, not the tar (cli NOTES). No air-gapped container test."
+  },
+  "QV-18-REQ-033": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/bundle.ts",
+    "packages/server/src/imports.ts"
+   ],
+   "tests": [
+    "packages/board/test/audit.test.ts",
+    "packages/board/test/bundle.test.ts"
+   ],
+   "note": "None for board layer."
+  },
+  "QV-18-REQ-034": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/bundle.ts",
+    "packages/board/src/log.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts"
+   ],
+   "note": "Verdict PARTIAL and V4 not_run; no count or list of guarantees no longer re-checkable."
+  },
+  "QV-18-REQ-035": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Not present in server or board source."
+  },
+  "QV-18-REQ-050": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [],
+   "note": "Append inside transaction rolls back on throw; no explicit signing-failure mapping or fault-injection test."
+  },
+  "QV-18-REQ-051": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Open gate and unwitnessed status exist; close/tally gating not enforced by server at append; no outage test."
+  },
+  "QV-18-REQ-052": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/board/src/bundle.ts",
+    "packages/protocol/src/logcheck.ts"
+   ],
+   "tests": [
+    "packages/board/test/bundle.test.ts",
+    "packages/protocol/test/loglayer.test.ts"
+   ],
+   "note": "D-87 control-entry shape open; board treats waiver as unblocking, protocol (X-32) never does."
+  },
+  "QV-18-REQ-053": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/server/src/gossip.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/server/test/gossip.test.ts"
+   ],
+   "note": "Gossip interval default 0 (off), no start-up query, no 60 s default."
+  },
+  "QV-18-REQ-054": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/log.ts",
+    "packages/server/src/admin.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "Audit runs on load and via manual admin job; no 6-hour scheduler."
+  },
+  "QV-19-REQ-001": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts",
+    "packages/web/e2e/verifier.ts",
+    "packages/web/test/build.test.ts",
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "CSP connect-src generated from declared origin; e2e asserts no third-party requests on fake origin only."
+  },
+  "QV-19-REQ-002": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/package.json"
+   ],
+   "tests": [],
+   "note": "Web depends only on workspace packages (crypto owns noble); no CI npm ls --omit=dev allowlist check found."
+  },
+  "QV-19-REQ-003": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/key/keystore.ts",
+    "packages/web/src/key/storage.ts"
+   ],
+   "tests": [
+    "packages/web/test/key.test.ts"
+   ],
+   "note": "Browser storage inspection after onboarding not automated (IndexedDB real)."
+  },
+  "QV-19-REQ-004": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/key/keystore.ts"
+   ],
+   "tests": [
+    "packages/web/test/key.test.ts"
+   ],
+   "note": "Unlock-time benchmark report absent."
+  },
+  "QV-19-REQ-005": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/key/keystore.ts"
+   ],
+   "tests": [
+    "packages/web/test/key.test.ts"
+   ],
+   "note": "Adaptation logic tested; device-lab timing report needed (external)."
+  },
+  "QV-19-REQ-006": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/key/signer.ts"
+   ],
+   "tests": [
+    "packages/web/test/key.test.ts"
+   ],
+   "note": "Fallback when WebCrypto Ed25519 absent keeps JS-held key."
+  },
+  "QV-19-REQ-007": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/key/passphrase.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/key.test.ts",
+    "packages/web/test/ui-logic.test.ts"
+   ],
+   "note": "Policy differs from QV-10 optional and CLI normalization (B3-25, owner review); no browser UI rejection test."
+  },
+  "QV-19-REQ-008": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/key/recovery.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/key.test.ts"
+   ],
+   "note": "Export/recovery offered but not gated before voting; no restore-check; full backup browser journey missing (NOTES)."
+  },
+  "QV-19-REQ-009": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/invite.ts",
+    "packages/web/src/key/keystore.ts"
+   ],
+   "tests": [
+    "packages/web/test/build.test.ts",
+    "packages/web/test/key.test.ts",
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "Lint and storage canary exist; no runtime DOM canary e2e; recovery display and generated passphrase appear in DOM by design."
+  },
+  "QV-19-REQ-010": {
+   "status": "blocked_decision",
+   "impl": [
+    "packages/web/src/flow/onboarding.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts",
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "Held B3-01: web sends hashed invite and invite-bound PoP; server expects raw code, returns 401 BAD_SIGNATURE."
+  },
+  "QV-19-REQ-011": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Equal-dimension browser assertion absent."
+  },
+  "QV-19-REQ-012": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/flow/audit.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Tally exclusion proven in protocol tests, not web."
+  },
+  "QV-19-REQ-013": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/audit.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Audit file downloadable; offline verifier handles bundles only, no audit-package input."
+  },
+  "QV-19-REQ-014": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Heap canary not tested."
+  },
+  "QV-19-REQ-015": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/flow/receipt.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit2.test.ts",
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Fake-board only; no real-server run."
+  },
+  "QV-19-REQ-016": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/build/site.ts",
+    "packages/web/src/verifier/page.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/verifier.ts",
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "file:// launch and network-disabled load not explicitly asserted; hosted browser qualification pending."
+  },
+  "QV-19-REQ-017": {
+   "status": "blocked_decision",
+   "impl": [],
+   "tests": [],
+   "note": "Held D-92..D-96: strict comparator scripts/compare-verifiers.ts intentionally exits 1."
+  },
+  "QV-19-REQ-018": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/e2e/run.ts",
+    "packages/web/e2e/verifier.ts",
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "Static _headers emitted; deployed server header conformance for all HTML/JS not tested here."
+  },
+  "QV-19-REQ-019": {
+   "status": "implemented_tested",
+   "impl": [],
+   "tests": [
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "Complete."
+  },
+  "QV-19-REQ-020": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/build.test.ts",
+    "packages/web/test/lazy.test.ts"
+   ],
+   "note": "Static graph pinned; lazy catalog/chart chunks and module worker lack SRI (NOTES)."
+  },
+  "QV-19-REQ-021": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "Help about copy exists; explicit operator-risk wording and mitigations not verified."
+  },
+  "QV-19-REQ-022": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/api/client.ts",
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "Build accepts board connect origin; no two-origin e2e."
+  },
+  "QV-19-REQ-023": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "In-process deterministic rebuild test only; no repro-check.sh or two-builder gate."
+  },
+  "QV-19-REQ-024": {
+   "status": "partial",
+   "impl": [
+    ".github/workflows/ci.yml"
+   ],
+   "tests": [],
+   "note": "npm ci --ignore-scripts and pinned esbuild exist; no digest-pinned image or SOURCE_DATE_EPOCH found."
+  },
+  "QV-19-REQ-025": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No release tooling or qv verify-release in repo."
+  },
+  "QV-19-REQ-026": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Maintainer/key governance; nothing in repo."
+  },
+  "QV-19-REQ-027": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No provenance attestation in CI."
+  },
+  "QV-19-REQ-028": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Only scripts/licence-snapshot.mjs licence snapshot; no SBOM."
+  },
+  "QV-19-REQ-029": {
+   "status": "partial",
+   "impl": [
+    "scripts/lockfile-lint.mjs"
+   ],
+   "tests": [],
+   "note": "lockfile:lint covers registry/integrity/non-registry sources; allowlist and exact-pin negative tests not found."
+  },
+  "QV-19-REQ-030": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Review process; PR template/branch protection not verified."
+  },
+  "QV-19-REQ-031": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No release job or vendored copies."
+  },
+  "QV-19-REQ-032": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No client_release in manifest (grep protocol)."
+  },
+  "QV-19-REQ-033": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Not done (NOTES: /verify-client not done); asset-manifest.json exists as input."
+  },
+  "QV-19-REQ-034": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "No such code; no egress-deny default-config test."
+  },
+  "QV-19-REQ-035": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/election.ts"
+   ],
+   "tests": [],
+   "note": "Unknown proto fails schema to E-ORG-MANIFEST; no compatible-release message; no version-skew matrix."
+  },
+  "QV-19-REQ-036": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Release process not present."
+  },
+  "QV-19-REQ-037": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No revocation mechanism."
+  },
+  "QV-19-REQ-038": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/i18n/en.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [],
+   "note": "qv.key.residual shown inside collapsed more() details; QV-07 non-claim content review pending."
+  },
+  "QV-20-REQ-001": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/protocol/src/rules.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/e2e.test.ts",
+    "packages/protocol/test/verify.test.ts",
+    "test-vectors/v1/elections/small-approval-20v"
+   ],
+   "note": "Spec names (yesno/single/kofn) differ from implemented yes-no/single-choice/k-of-n (X-18)."
+  },
+  "QV-20-REQ-002": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/proofs.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/ballot.test.ts",
+    "packages/protocol/test/property.test.ts"
+   ],
+   "note": "Codes are E_CDS/E_LIMIT_PROOF, not E_PROOF."
+  },
+  "QV-20-REQ-003": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/proofs.ts",
+    "packages/crypto/src/transcript.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/cp08-fiat-shamir.test.ts",
+    "packages/protocol/test/ballot.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-20-REQ-004": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts",
+    "packages/protocol/src/verify.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "Mutant counted-ballot-dropped covers drops."
+  },
+  "QV-20-REQ-005": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/rules.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Base values are yes+no|counted; eligible/cast bases not implemented (X-18)."
+  },
+  "QV-20-REQ-006": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/rules.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts",
+    "test-vectors/v1/protocol/rules/rules.json"
+   ],
+   "note": "status-quo, declare-tie, lexicographic covered; beacon rejected in v1."
+  },
+  "QV-20-REQ-007": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/tally.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/bench-smoke.test.ts",
+    "packages/protocol/test/tally.test.ts"
+   ],
+   "note": "Verifier solves via BSGS table sized to V; no 2^40 or under-5 s perf test; weights uniform only."
+  },
+  "QV-20-REQ-008": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/tally.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/tally.test.ts"
+   ],
+   "note": "Bound and per-contest sum checks only; pairwise d[i][j] check belongs to ranked (absent)."
+  },
+  "QV-20-REQ-009": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Roll sizes 0-2 are accepted (probe); warning threshold is 8 not 10; floor 3 on min_counted_ballots only."
+  },
+  "QV-20-REQ-010": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballotlog.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/property.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-20-REQ-011": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/src/ballot.ts",
+    "packages/protocol/src/ballotlog.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/attacks.test.ts",
+    "packages/protocol/test/ballot.test.ts",
+    "packages/protocol/test/verify.test.ts"
+   ],
+   "note": "Randomness published only on opt-in per QV-ADR-020; default private mode."
+  },
+  "QV-20-REQ-020": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "Schema pins roll weights to uniform (schema.ts:217, test weights not uniform); D-05/D-15 defer to Phase 2."
+  },
+  "QV-20-REQ-021": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No delegation code; D-05 excludes from MVP; Phase 2."
+  },
+  "QV-20-REQ-030": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Manifest rejects beacon (manifest.ts:128); D-20 disables in v1."
+  },
+  "QV-20-REQ-040": {
+   "status": "deferred_out_of_v1",
+   "impl": [
+    "packages/protocol/src/schema.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/manifest-rules.test.ts"
+   ],
+   "note": "Ranked absent (method rejected by schema); release gate is also an external review."
+  },
+  "QV-20-REQ-041": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No ranked tally code; Phase 2."
+  },
+  "QV-20-REQ-042": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "Ranked not implemented; Phase 2."
+  },
+  "QV-24-REQ-001": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No rtm/trace script or duplicate/malformed ID check."
+  },
+  "QV-24-REQ-002": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Generator not built; N-23c proposes scripts/trace.mjs report-only."
+  },
+  "QV-24-REQ-003": {
+   "status": "not_implemented",
+   "impl": [
+    ".github/workflows/ci.yml"
+   ],
+   "tests": [],
+   "note": "No rtm job in any workflow."
+  },
+  "QV-24-REQ-004": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Tests use ad-hoc ID comments only; no annotation convention or checker."
+  },
+  "QV-24-REQ-005": {
+   "status": "blocked_decision",
+   "impl": [],
+   "tests": [],
+   "note": "No release script; N-23c (report-only vs blocking Must gate) undecided or unrecorded as approved."
+  },
+  "QV-24-REQ-006": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No waiver file or evidence directory."
+  },
+  "QV-24-REQ-007": {
+   "status": "partial",
+   "impl": [
+    "scripts/lint-claims.mjs"
+   ],
+   "tests": [],
+   "note": "Claims lint exists but is non-blocking and has no property-status input."
+  },
+  "QV-24-REQ-008": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No links.yaml or reviewedHash mechanism."
+  },
+  "QV-24-REQ-009": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No generated regions or generator."
+  },
+  "QV-24-REQ-010": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No evidence/ directory or bundle validator."
+  },
+  "QV-24-REQ-011": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Dated report or decision-log entry cannot exist until a generator and an assurance lead do."
+  },
+  "QV-24-REQ-012": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No generator; trivial once built with Node built-ins."
+  },
+  "QV-25-REQ-001": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No SPDX headers in packages/*/src and no REUSE or header check."
+  },
+  "QV-25-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "docs/reports/dependency-licence-snapshot.md",
+    "scripts/licence-snapshot.mjs"
+   ],
+   "tests": [],
+   "note": "Snapshot runs in CI but only reports; it never exits non-zero on incompatible licence; no failing fixture."
+  },
+  "QV-25-REQ-003": {
+   "status": "not_implemented",
+   "impl": [
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    "CONTRIBUTING.md",
+    "DCO"
+   ],
+   "tests": [],
+   "note": "DCO text and docs exist, but CONTRIBUTING claims a dco check that does not exist in any workflow."
+  },
+  "QV-25-REQ-004": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No source_url field found in server or instance descriptor."
+  },
+  "QV-25-REQ-005": {
+   "status": "partial",
+   "impl": [
+    "README.md",
+    "packages/web/src/i18n/en.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit3-ui.test.ts"
+   ],
+   "note": "Web banner and README present; CLI/server surfaces and full section 4 disclaimers not verified; translations unreviewed."
+  },
+  "QV-25-REQ-006": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Counsel sign-off required before hosted launch; templates not verified in repository."
+  },
+  "QV-25-REQ-007": {
+   "status": "implemented_untested",
+   "impl": [],
+   "tests": [],
+   "note": "No telemetry code found, but no network-capture or egress test."
+  },
+  "QV-25-REQ-008": {
+   "status": "blocked_decision",
+   "impl": [],
+   "tests": [],
+   "note": "D-75 (BIS notification, only if counsel advises) is an open owner decision."
+  },
+  "QV-25-REQ-009": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No bylaws notice found in packages/web/src."
+  },
+  "QV-26-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/http.ts",
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [],
+   "note": "Static _headers sets includeSubDomains; server header lacks includeSubDomains; TLS termination is deployment (external) and untested."
+  },
+  "QV-26-REQ-010": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No onion profile or socket binding found in server."
+  },
+  "QV-26-REQ-011": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/key/signer.ts",
+    "packages/web/src/key/storage.ts"
+   ],
+   "tests": [],
+   "note": "Read-only views work when IndexedDB fails; voting needs IndexedDB key storage; no Tor-like Playwright run."
+  },
+  "QV-26-REQ-012": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Stated in docs/26; doc review only."
+  },
+  "QV-26-REQ-020": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/logger.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Server app tested; reverse-proxy and OS layers are deployment; web side needs Referrer-Policy (set in _headers)."
+  },
+  "QV-26-REQ-030": {
+   "status": "partial",
+   "impl": [],
+   "tests": [
+    "packages/web/test/security.test.ts"
+   ],
+   "note": "Foreign-host sink check exists; denylist of fingerprinting APIs not implemented."
+  },
+  "QV-26-REQ-031": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/web/src/build/site.ts"
+   ],
+   "tests": [
+    "packages/web/test/build.test.ts"
+   ],
+   "note": "Static build is deterministic; no two-request server diff test."
+  },
+  "QV-26-REQ-032": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Not verified; server-side; no differential timing test."
+  },
+  "QV-26-REQ-040": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No such field in protocol/server/web src (grep)."
+  },
+  "QV-26-REQ-041": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No epoch batching in server or web."
+  },
+  "QV-26-REQ-042": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Client submits immediately; no delay logic."
+  },
+  "QV-26-REQ-043": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/flow/ballot-controller.ts"
+   ],
+   "tests": [
+    "packages/web/test/flow.test.ts"
+   ],
+   "note": "Web treats promise-only answers as pending; server appends synchronously; no crash-recovery test in web."
+  },
+  "QV-26-REQ-044": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Server-side storage review not done; no epoch concept."
+  },
+  "QV-26-REQ-050": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No such endpoint (grep)."
+  },
+  "QV-26-REQ-060": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [],
+   "note": "Warnings for roll<8 and privacy_ack for min_counted<10 found; R1 roll<3 rejection not verified; result-page notice not found."
+  },
+  "QV-27-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "GOVERNANCE.md",
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "MAINTAINERS.md, DEPRECATIONS.md, docs/RELEASE-KEYS.md missing; N-08b approves honest empty-state files; no docs-lint."
+  },
+  "QV-27-REQ-002": {
+   "status": "external",
+   "impl": [
+    ".github/CODEOWNERS"
+   ],
+   "tests": [],
+   "note": "CODEOWNERS has one placeholder owner; needs real people."
+  },
+  "QV-27-REQ-003": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs multiple maintainers and an annual affiliation audit."
+  },
+  "QV-27-REQ-004": {
+   "status": "partial",
+   "impl": [
+    ".github/ISSUE_TEMPLATE/spec-change.md",
+    "docs/decision-log.md"
+   ],
+   "tests": [],
+   "note": "Decision log and spec-change template exist; no CI blocking protocol/dependency PRs without ADR reference."
+  },
+  "QV-27-REQ-005": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Handover checklist is a human process with a deadline."
+  },
+  "QV-27-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "README.md",
+    "packages/cli/src/main.ts",
+    "packages/web/src/ui/app.ts"
+   ],
+   "tests": [
+    "packages/web/test/audit3-ui.test.ts"
+   ],
+   "note": "Web and README only; CLI --version prints no banner; no server banner; no E2E check."
+  },
+  "QV-27-REQ-007": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No release workflow exists; audit gate itself is external."
+  },
+  "QV-27-REQ-008": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No release yet; calendar starts with first tagged release."
+  },
+  "QV-27-REQ-009": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No gate checklist generator or release workflow."
+  },
+  "QV-27-REQ-010": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No releases to support yet."
+  },
+  "QV-27-REQ-011": {
+   "status": "deferred_out_of_v1",
+   "impl": [
+    "packages/verifier/src/verify.ts"
+   ],
+   "tests": [],
+   "note": "No stable release; only qv1 fixtures exist; depends on QV-30-REQ-024."
+  },
+  "QV-27-REQ-012": {
+   "status": "partial",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "Policy text exists but contact, PVR and keys are placeholders; no quarterly report."
+  },
+  "QV-27-REQ-013": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No advisory template with mandatory fields in the repository."
+  },
+  "QV-27-REQ-014": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs operators, mail infrastructure and published terms."
+  },
+  "QV-27-REQ-015": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No DEPRECATIONS.md, code annotations or drift check."
+  },
+  "QV-27-REQ-016": {
+   "status": "blocked_decision",
+   "impl": [],
+   "tests": [],
+   "note": "D-77 trademark/fork policy open; legal review is external."
+  },
+  "QV-27-REQ-017": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs a neutral legal entity or fiscal host (D-70)."
+  },
+  "QV-27-REQ-018": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/src/manifest.ts",
+    "packages/verifier/src/verify.ts"
+   ],
+   "tests": [],
+   "note": "Unknown-proto rejection exists in places; no verifier test with a foreign prefix and no fork policy text."
+  },
+  "QV-27-REQ-019": {
+   "status": "partial",
+   "impl": [
+    "CODE_OF_CONDUCT.md"
+   ],
+   "tests": [],
+   "note": "Short initial text; no neutrality clause, panel, graduated enforcement or roster; panel needs people."
+  },
+  "QV-27-REQ-020": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs fiscal host and real finances (D-70)."
+  },
+  "QV-27-REQ-021": {
+   "status": "process",
+   "impl": [
+    "GOVERNANCE.md"
+   ],
+   "tests": [],
+   "note": "Sponsorship terms and yearly survey are human practice; no sponsors yet."
+  },
+  "QV-27-REQ-022": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "No independent audit exists; audits/ absent; docs/reports reviews are AI-assisted, not audits."
+  },
+  "QV-27-REQ-023": {
+   "status": "implemented_untested",
+   "impl": [],
+   "tests": [],
+   "note": "No telemetry code found; QV-19-REQ-034 egress-deny test and site audit absent."
+  },
+  "QV-27-REQ-024": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs a second host account; no sync job."
+  },
+  "QV-27-REQ-025": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Incident-log practice; no incidents or log file."
+  },
+  "QV-27-REQ-026": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs maintainers, hardware tokens and key ceremony."
+  },
+  "QV-27-REQ-027": {
+   "status": "process",
+   "impl": [
+    "docs/decision-log.md"
+   ],
+   "tests": [],
+   "note": "Process rule; no major version has shipped."
+  },
+  "QV-28-REQ-001": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/controldb.ts",
+    "packages/server/src/db.ts",
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [],
+   "note": "node:sqlite and STRICT used; SQL lives in TS migration strings, no lint for concatenated SQL or table_list test."
+  },
+  "QV-28-REQ-002": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/controldb.ts",
+    "packages/server/src/pool.ts"
+   ],
+   "tests": [],
+   "note": "Layout elections/<shard>/<id>.sqlite; no ATTACH in src; no automated grep/fuzz test."
+  },
+  "QV-28-REQ-003": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/db.ts"
+   ],
+   "tests": [
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "All pragmas set; self-test reads back only foreign_keys and trusted_schema; no test asserts them."
+  },
+  "QV-28-REQ-004": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "Redaction path (UPDATE exception) not implemented; update fully forbidden."
+  },
+  "QV-28-REQ-005": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts"
+   ],
+   "note": "Append, projection, entry+checkpoint events atomic; phase/alert rows written in later tx; no merkle_node table; no crash-injection test."
+  },
+  "QV-28-REQ-006": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Only IP/UA canary scan tested; no qv audit-schema; sealed invite contacts remain until purge."
+  },
+  "QV-28-REQ-007": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No schema/columns.json and no CI check."
+  },
+  "QV-28-REQ-008": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/kek.ts",
+    "packages/server/src/webhooks.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts",
+    "packages/server/test/events.test.ts"
+   ],
+   "note": "Labels, contacts, webhook URL/secret sealed; no full raw-file sentinel email scan."
+  },
+  "QV-28-REQ-009": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/controldb.ts",
+    "packages/server/src/kek.ts",
+    "packages/server/src/pool.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "Wrapping and DEK-drop implemented; no test proves decrypt fails after erase; KEK file sits in same data dir."
+  },
+  "QV-28-REQ-010": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/db.ts"
+   ],
+   "tests": [],
+   "note": "Checksums and tx exist; no pre-migration backup, no log-root before/after check, no golden-DB migration test."
+  },
+  "QV-28-REQ-011": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/admin.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "Online backup job only; no restore procedure, qv-verify gate, replication or DR drill."
+  },
+  "QV-28-REQ-012": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "NOTES: backups not encrypted at rest beyond sealed fields; no remote target."
+  },
+  "QV-28-REQ-013": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts",
+    "packages/server/src/pool.ts",
+    "packages/server/src/retention.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Invite purge and state-gated delete done; export-ack/30-day grace, 12-month backup retention, event-prune test missing."
+  },
+  "QV-28-REQ-014": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/export.ts"
+   ],
+   "tests": [
+    "packages/server/test/e2e.test.ts",
+    "packages/server/test/range.test.ts"
+   ],
+   "note": "Anonymous public export only; no operator bundle; built on main thread, no p99 append-latency test."
+  },
+  "QV-28-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts",
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [
+    "packages/server/test/e2e.test.ts"
+   ],
+   "note": "Archive makes store logically read-only and erases keys; pool opens DB read-write (readOnly flag unused for archives)."
+  },
+  "QV-28-REQ-016": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/config.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [],
+   "note": "Free-space and maxLogBytes guards exist; tests disable them (minFreeBytes:0); no 5x-batch rule, no fault test."
+  },
+  "QV-28-REQ-017": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [],
+   "note": "NOTES: command absent; projections rebuilt by replay at open only, no equality check."
+  },
+  "QV-28-REQ-018": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/board/src/store.ts",
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": "BoardStore port exists; no shared contract-test suite."
+  },
+  "QV-28-REQ-019": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/controldb.ts"
+   ],
+   "tests": [
+    "packages/server/test/webhooks-persist.test.ts"
+   ],
+   "note": "webhook_outbox.body keeps public P0 payload and idempotency cache stores responses; flagged deviation awaiting owner choice."
+  },
+  "QV-28-REQ-020": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/admin.ts",
+    "packages/server/src/ext-routes.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "On-demand self-audit only; no 6 h/hourly scheduler or unclean-shutdown trigger."
+  },
+  "QV-28-REQ-021": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/package.json",
+    "packages/server/src/db.ts"
+   ],
+   "tests": [],
+   "note": "engines is >=22.18 (D-86); SQLite check present; no test of refusal on old runtime."
+  },
+  "QV-29-REQ-001": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-29-REQ-002": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/config.ts",
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts",
+    "packages/server/test/unit.test.ts"
+   ],
+   "note": ""
+  },
+  "QV-29-REQ-003": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/ratelimit.ts"
+   ],
+   "tests": [
+    "packages/server/test/audit.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Epoch rotation untested; IPv6 prefix /64 not /56."
+  },
+  "QV-29-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/config.ts",
+    "packages/server/src/http.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Bucket limits implemented with different defaults (auth 10/min); no PoW challenges."
+  },
+  "QV-29-REQ-005": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No proof-of-work anywhere in server or verified in web."
+  },
+  "QV-29-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Enforced before proofs but answers 429 RATE_LIMITED/REVOTE_LIMIT not E_QUOTA; REVOTE_LIMIT overrun untested."
+  },
+  "QV-29-REQ-007": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No QUOTA_GRANT entry type or verifier rule found in server."
+  },
+  "QV-29-REQ-008": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/electiondb.ts"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "128-bit codes, optional expiry without 30-day cap, distinct USED/EXPIRED codes (B2-10), no 100-parallel redemption test."
+  },
+  "QV-29-REQ-009": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/app.ts",
+    "packages/server/src/election.ts"
+   ],
+   "tests": [
+    "packages/server/test/consolidation.test.ts",
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Only keys in committed roll can vote; but registrants are auto-approved into the roll (no approval step)."
+  },
+  "QV-29-REQ-010": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "Only a 2x maxVoters invitation cap exists; no per-inviter or group-link model."
+  },
+  "QV-29-REQ-011": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No proposal subsystem in server (backlog T-066)."
+  },
+  "QV-29-REQ-012": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No proposal feature; client rendering rule not implemented server side."
+  },
+  "QV-29-REQ-013": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "No notifications; optional contact stored sealed for up to retention (7 d) not 24 h hash; deliver:true refused."
+  },
+  "QV-29-REQ-014": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No moderation actions implemented."
+  },
+  "QV-29-REQ-015": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/ext-routes.ts"
+   ],
+   "tests": [
+    "packages/server/test/admin.test.ts"
+   ],
+   "note": "Holds by absence (no IP stored; admin list shows registry columns); no API authorization inventory test."
+  },
+  "QV-29-REQ-016": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [],
+   "note": "Only queue-full 503 BUSY via maxVerifyQueue; no levels, hysteresis or /status."
+  },
+  "QV-29-REQ-017": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Not implemented."
+  },
+  "QV-29-REQ-018": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts"
+   ],
+   "tests": [],
+   "note": "Absolute free-bytes and per-election byte caps exist (507); no 5% rule, operator alert or fault-injection test."
+  },
+  "QV-29-REQ-019": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/election.ts",
+    "packages/server/src/verify-worker.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Queue bound 1000 with 503 BUSY; ballot proofs verify on main thread (workers only for imports); no L2 lag test."
+  },
+  "QV-29-REQ-020": {
+   "status": "partial",
+   "impl": [
+    "packages/web/src/net/sse.ts"
+   ],
+   "tests": [],
+   "note": "Client area; only SSE reconnect backoff seen; ballot-submit retry/offline save not verified."
+  },
+  "QV-29-REQ-021": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "NOTES: RESUME with new close time and max_total_hours not implemented (N-32 c/d pending control-record design)."
+  },
+  "QV-29-REQ-022": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/logger.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Sampled limit log lines done; no aggregate counters/metrics sink."
+  },
+  "QV-29-REQ-023": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "None present in code; review item with no automated dependency/network check."
+  },
+  "QV-29-REQ-024": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No group labels in server; UI item."
+  },
+  "QV-29-REQ-025": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No flood/load suite in CI; only functional flood and slowloris tests."
+  },
+  "QV-30-REQ-001": {
+   "status": "partial",
+   "impl": [
+    ".github/CODEOWNERS",
+    "scripts",
+    "test-vectors"
+   ],
+   "tests": [],
+   "note": "policy/ directory absent and no layout check; docs-lint does not exist."
+  },
+  "QV-30-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "tsconfig.base.json",
+    "tsconfig.json"
+   ],
+   "tests": [],
+   "note": "Strict flags set and typecheck runs in CI; one explicit any in packages/verifier/src/canary.ts; no grep gate."
+  },
+  "QV-30-REQ-003": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No ESLint configuration or lint job."
+  },
+  "QV-30-REQ-004": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/package.json"
+   ],
+   "tests": [],
+   "note": "src follows it, but web uses getRandomValues and a protocol bench imports @noble; no lint negative test."
+  },
+  "QV-30-REQ-005": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/crypto/src/bytes.ts"
+   ],
+   "tests": [],
+   "note": "No branded secret type or inspect/JSON redaction test found."
+  },
+  "QV-30-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/bytes.ts"
+   ],
+   "tests": [],
+   "note": "ctEqual exists and is used; no lint rule or fixtures banning direct equality."
+  },
+  "QV-30-REQ-007": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/rng.ts"
+   ],
+   "tests": [],
+   "note": "Injected rng exists; web signing, trustee fsutil and web sse use getRandomValues/Math.random outside crypto; no lint."
+  },
+  "QV-30-REQ-008": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/hash.ts",
+    "packages/crypto/src/transcript.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/transcript.test.ts"
+   ],
+   "note": "Registry test of labels exists; concatenation-collision fuzz test not found."
+  },
+  "QV-30-REQ-009": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/crypto/src/ed25519.ts",
+    "packages/crypto/src/ristretto.ts"
+   ],
+   "tests": [
+    "packages/crypto/test/ristretto.test.ts",
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Negative and mutation vectors run in CI via vectors:check; completeness of coverage not measured."
+  },
+  "QV-30-REQ-010": {
+   "status": "implemented_tested",
+   "impl": [
+    "test-vectors/v1/primitives"
+   ],
+   "tests": [
+    "packages/crypto/test/smoke.test.ts",
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "KATs run in CI; no vector coverage report."
+  },
+  "QV-30-REQ-011": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/errors.ts",
+    "test-vectors/schema/error-codes.json"
+   ],
+   "tests": [
+    "packages/server/test/negative.test.ts"
+   ],
+   "note": "Error registry and server negative tests exist; no contract test over every route."
+  },
+  "QV-30-REQ-012": {
+   "status": "partial",
+   "impl": [
+    "packages/verifier/canary/corpus.json"
+   ],
+   "tests": [
+    "packages/protocol/test/property.test.ts"
+   ],
+   "note": "No 10^7-input nightly fuzz or time bounds; only property and canary tests."
+  },
+  "QV-30-REQ-013": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No coverage collection or threshold in any workflow."
+  },
+  "QV-30-REQ-014": {
+   "status": "partial",
+   "impl": [
+    ".github/workflows/ci.yml"
+   ],
+   "tests": [],
+   "note": "Unit, integration, vector, browser layers run; no quarantine list or age report."
+  },
+  "QV-30-REQ-015": {
+   "status": "implemented_tested",
+   "impl": [
+    ".github/scripts/check-action-pins.mjs",
+    ".github/workflows/ci.yml",
+    ".npmrc"
+   ],
+   "tests": [
+    ".github/scripts/check-action-pins.test.mjs",
+    ".github/scripts/check-workflow-coverage.test.mjs"
+   ],
+   "note": "Pins enforced by script in CI; no actionlint or pull_request_target check; pseudo-locale job npm-installs Playwright outside lockfile."
+  },
+  "QV-30-REQ-016": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs repository admin settings; snapshot file .github/settings-snapshot.json absent."
+  },
+  "QV-30-REQ-017": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Repository admin settings; cannot be evidenced without owner export."
+  },
+  "QV-30-REQ-018": {
+   "status": "external",
+   "impl": [
+    ".github/CODEOWNERS"
+   ],
+   "tests": [],
+   "note": "CODEOWNERS has one placeholder owner; needs security-reviewer people and a ruleset."
+  },
+  "QV-30-REQ-019": {
+   "status": "not_implemented",
+   "impl": [
+    "CONTRIBUTING.md"
+   ],
+   "tests": [],
+   "note": "Documented only; no dco or commitlint-equivalent script or job."
+  },
+  "QV-30-REQ-020": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No release workflow; tag signing and protection need maintainer keys (external)."
+  },
+  "QV-30-REQ-021": {
+   "status": "partial",
+   "impl": [
+    ".npmrc",
+    "scripts/lockfile-lint.mjs"
+   ],
+   "tests": [],
+   "note": "Lockfile lint checks sources and integrity; no policy/ allowlist or package.json diff gate."
+  },
+  "QV-30-REQ-022": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No secret-scan step or script in any workflow."
+  },
+  "QV-30-REQ-023": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No SPDX headers and no lint."
+  },
+  "QV-30-REQ-024": {
+   "status": "partial",
+   "impl": [
+    "packages/verifier/src/verify.ts",
+    "test-vectors/v1"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Only qv1 exists; no multi-version fixture check; no stable release yet."
+  },
+  "QV-30-REQ-025": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No released API; API diff job unneeded until first release."
+  },
+  "QV-30-REQ-026": {
+   "status": "not_implemented",
+   "impl": [
+    "docs/SPEC-INDEX.md"
+   ],
+   "tests": [],
+   "note": "No docs-lint; duplicate spec numbers (17, 18, 19) exist in docs/."
+  },
+  "QV-30-REQ-027": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No generator or release gate; N-23c proposes report-only script."
+  },
+  "QV-30-REQ-028": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Error-code table and CLI reference generation not drift-checked."
+  },
+  "QV-30-REQ-029": {
+   "status": "implemented_untested",
+   "impl": [
+    ".github/PULL_REQUEST_TEMPLATE.md"
+   ],
+   "tests": [],
+   "note": "Template present; no enforcement or quarterly sample audit."
+  },
+  "QV-30-REQ-030": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/bench/tally-bench.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/bench-smoke.test.ts"
+   ],
+   "note": "Benchmarks exist; no regression comparison or client bundle size gate."
+  },
+  "QV-30-REQ-031": {
+   "status": "implemented_tested",
+   "impl": [
+    ".github/workflows/ci.yml"
+   ],
+   "tests": [
+    ".github/scripts/check-workflow-coverage.test.mjs"
+   ],
+   "note": "Full 3-OS x 2-node matrix runs only on main, nightly, merge queue or label; PRs run Linux."
+  },
+  "QV-30-REQ-032": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No unhandledRejection/uncaughtException handlers in package src or bin."
+  },
+  "QV-30-REQ-033": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/cli/src/common.ts",
+    "packages/trustee/src/cli.ts"
+   ],
+   "tests": [
+    "packages/cli/test/cli.test.ts"
+   ],
+   "note": "Design avoids argv secrets; no test greps process args or exercises TTY no-echo."
+  },
+  "QV-30-REQ-034": {
+   "status": "partial",
+   "impl": [
+    ".github/workflows/claims-lint.yml",
+    "docs/claims/banned-phrases.txt",
+    "docs/claims/claims-register-v0.md",
+    "scripts/lint-claims.mjs"
+   ],
+   "tests": [],
+   "note": "Lint runs non-blocking (continue-on-error); no security-reviewer approval of the register."
+  },
+  "QV-31-REQ-001": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/server/src/logger.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Logs only; no metrics sink exists."
+  },
+  "QV-31-REQ-002": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "NOTES: not implemented."
+  },
+  "QV-31-REQ-003": {
+   "status": "implemented_untested",
+   "impl": [],
+   "tests": [],
+   "note": "No telemetry code exists; no network-capture test."
+  },
+  "QV-31-REQ-004": {
+   "status": "implemented_untested",
+   "impl": [],
+   "tests": [],
+   "note": "No analytics code found in web src; no static scan or capture test."
+  },
+  "QV-31-REQ-005": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "Only /healthz and /readyz (QV-08 names); no /integrity; no contract tests."
+  },
+  "QV-31-REQ-006": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No /metrics endpoint exists."
+  },
+  "QV-31-REQ-007": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No metrics."
+  },
+  "QV-31-REQ-008": {
+   "status": "partial",
+   "impl": [
+    "packages/server/src/logger.ts"
+   ],
+   "tests": [
+    "packages/server/test/b2-fixes.test.ts"
+   ],
+   "note": "Minute rounding tested; logs go to stderr/sink with no rotation or retention config."
+  },
+  "QV-31-REQ-009": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No support bundle tool."
+  },
+  "QV-31-REQ-010": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No public status page."
+  },
+  "QV-31-REQ-011": {
+   "status": "implemented_untested",
+   "impl": [
+    "packages/server/src/app.ts"
+   ],
+   "tests": [],
+   "note": "Responses are static; no differential test."
+  },
+  "QV-31-REQ-012": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No alert rules or metrics."
+  },
+  "QV-32-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "packages/board/src/checkpoint.ts",
+    "packages/protocol/src/manifest.ts"
+   ],
+   "tests": [
+    "packages/board/test/log.test.ts",
+    "packages/protocol/test/loglayer.test.ts"
+   ],
+   "note": "Manifest bb.witnesses and witness_quorum exist with verifier witnessStatus; end-to-end rejection of under-cosigned heads not confirmed."
+  },
+  "QV-32-REQ-002": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No witness implementation; F1 phase after v1."
+  },
+  "QV-32-REQ-003": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No mirror generator; F1 phase."
+  },
+  "QV-32-REQ-004": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No federation exists; differential test belongs with F1."
+  },
+  "QV-32-REQ-005": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No relay transport exists."
+  },
+  "QV-32-REQ-006": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "F3 phase; simulation tests not started."
+  },
+  "QV-32-REQ-007": {
+   "status": "deferred_out_of_v1",
+   "impl": [],
+   "tests": [],
+   "note": "No relays exist; F2 phase."
+  },
+  "QV-32-REQ-008": {
+   "status": "partial",
+   "impl": [
+    "docs/claims/banned-phrases.txt",
+    "scripts/lint-claims.mjs"
+   ],
+   "tests": [],
+   "note": "Lint bans \"decentralised security/trust\" phrasing only and is non-blocking; no federated mode documented."
+  },
+  "QV-33-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "File exists but contact, PGP, age, security.txt and staging entries are placeholders; no CI link-check."
+  },
+  "QV-33-REQ-002": {
+   "status": "external",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "Repository admin setting and round-trip test by humans."
+  },
+  "QV-33-REQ-003": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No security.txt template or validator job; real contact is an owner choice."
+  },
+  "QV-33-REQ-004": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs real key generation by humans; fingerprint-equality CI check also absent."
+  },
+  "QV-33-REQ-005": {
+   "status": "process",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "Needs a security team and reports; no reports exist."
+  },
+  "QV-33-REQ-006": {
+   "status": "process",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "Stated in policy; applies only when advisories exist."
+  },
+  "QV-33-REQ-007": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No advisory template or validator script; signing needs a key (external)."
+  },
+  "QV-33-REQ-008": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No CI check linking advisory IDs to test names or RTM rows; no advisories yet."
+  },
+  "QV-33-REQ-009": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No known-bad list in manifest or verifier; signing is external."
+  },
+  "QV-33-REQ-010": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "Needs vetted recipients and delivery test."
+  },
+  "QV-33-REQ-011": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Applies only when advisories exist; depends on GitHub CNA workflow."
+  },
+  "QV-33-REQ-012": {
+   "status": "external",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "Counsel review required (D-73)."
+  },
+  "QV-33-REQ-013": {
+   "status": "process",
+   "impl": [
+    "SECURITY.md"
+   ],
+   "tests": [],
+   "note": "Stated in policy; access control on private repo is a settings matter."
+  },
+  "QV-33-REQ-014": {
+   "status": "partial",
+   "impl": [
+    "SECURITY.md",
+    "docs/claims/banned-phrases.txt"
+   ],
+   "tests": [],
+   "note": "SECURITY.md says no bounty; banned-phrases has no bounty rule and lint is non-blocking."
+  },
+  "QV-33-REQ-015": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Needs a team and exercise report."
+  },
+  "QV-34-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "test-vectors/v1"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "No coverage script mapping QV-16 step IDs to vector sets."
+  },
+  "QV-34-REQ-002": {
+   "status": "partial",
+   "impl": [
+    "test-vectors/schema"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Only envelope, unique-id, size and CR checks; no published container JSON Schema validated."
+  },
+  "QV-34-REQ-003": {
+   "status": "partial",
+   "impl": [
+    "test-vectors/v1/primitives"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "README says external sets not imported verbatim; source URL, date and source hash incomplete; no import script."
+  },
+  "QV-34-REQ-004": {
+   "status": "implemented_tested",
+   "impl": [
+    "packages/protocol/test/vecgen/write.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Generator lives in packages/protocol/test/vecgen, not tools/vecgen; RNG differs from QV-34 8.1 schedule."
+  },
+  "QV-34-REQ-005": {
+   "status": "external",
+   "impl": [
+    "verifier-py"
+   ],
+   "tests": [],
+   "note": "All sets candidate; no independent_confirmations list; Python verifier is unreviewed and not yet a recorded independent confirmation."
+  },
+  "QV-34-REQ-006": {
+   "status": "partial",
+   "impl": [
+    "test-vectors/MANIFEST.json"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Signature is the string 'unsigned'; no generator commit; Merkle root rule unreproducible (QV-ERR-PY-013)."
+  },
+  "QV-34-REQ-007": {
+   "status": "partial",
+   "impl": [
+    "test-vectors/schema/error-codes.json"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Failed-check sets compared exactly; error codes not a fixed registry (QV-ERR-PY-001, -002, -004)."
+  },
+  "QV-34-REQ-008": {
+   "status": "not_implemented",
+   "impl": [
+    "packages/cli/src/cmd-vectors.ts"
+   ],
+   "tests": [],
+   "note": "qv vectors check is an in-process runner; no stdin/stdout JSON Lines adapter and no conformance-report.json."
+  },
+  "QV-34-REQ-009": {
+   "status": "partial",
+   "impl": [
+    "test-vectors/v1/canary",
+    "test-vectors/v1/elections",
+    "test-vectors/v1/mutations"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts",
+    "packages/verifier/test/verifier.test.ts"
+   ],
+   "note": "23 mutants cover about half of the 21 table classes; trustee key, entry drop/reorder, weak-FS, bidi, quorum, anchor missing."
+  },
+  "QV-34-REQ-010": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Test keys only by construction; no secret scanner in .github/workflows/ci.yml."
+  },
+  "QV-34-REQ-011": {
+   "status": "partial",
+   "impl": [
+    "test-vectors/v1"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Only v1 exists; no directory immutability policy check."
+  },
+  "QV-34-REQ-012": {
+   "status": "partial",
+   "impl": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "Test checks CR and size only despite its title; no lowercase-hex, timestamp or float lint."
+  },
+  "QV-34-REQ-013": {
+   "status": "partial",
+   "impl": [
+    "packages/crypto/src/rng.ts"
+   ],
+   "tests": [
+    "packages/crypto/test"
+   ],
+   "note": "Injectable RNG exists; no --no-test-hooks build or release-build assertion that injection is absent."
+  },
+  "QV-34-REQ-014": {
+   "status": "partial",
+   "impl": [
+    "test-vectors"
+   ],
+   "tests": [
+    "packages/protocol/test/vectors.test.ts"
+   ],
+   "note": "1 MB per-file test present; 25 MB corpus check and on-demand scale cases absent (corpus is 2.8 MB)."
+  },
+  "QV-34-REQ-015": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "Wording review only; no conformance report template or badge exists."
+  },
+  "QV-34-REQ-016": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "No CHANGES.md; branch protection not verifiable from repo."
+  },
+  "QV-35-REQ-001": {
+   "status": "partial",
+   "impl": [
+    "verifier-py/README.md",
+    "verifier-py/qv_verifier"
+   ],
+   "tests": [],
+   "note": "No imports of packages/ found by grep; no automated CI import scan."
+  },
+  "QV-35-REQ-002": {
+   "status": "implemented_tested",
+   "impl": [
+    "verifier-py/qv_verifier/runner.py"
+   ],
+   "tests": [
+    "verifier-py/tests/test_vectors_cli.py"
+   ],
+   "note": "Observed run: 282 vectors, 229 PASS, 0 FAIL, 53 NOT-IMPLEMENTED; spec row counts are stale."
+  },
+  "QV-35-REQ-003": {
+   "status": "blocked_decision",
+   "impl": [
+    "verifier-py/qv_verifier/election.py"
+   ],
+   "tests": [
+    "verifier-py/tests/test_vectors_cli.py"
+   ],
+   "note": "Strict comparator: 24 of 27 cases agree; 3 differ pending D-92, D-93, D-94 (held)."
+  },
+  "QV-35-REQ-004": {
+   "status": "implemented_tested",
+   "impl": [
+    "verifier-py/qv_verifier/election.py"
+   ],
+   "tests": [
+    "verifier-py/tests/test_vectors_cli.py"
+   ],
+   "note": "Satisfied by absence: Python ignores any board export entirely."
+  },
+  "QV-35-REQ-005": {
+   "status": "blocked_decision",
+   "impl": [
+    "verifier-py/qv_verifier/election.py"
+   ],
+   "tests": [
+    "verifier-py/tests/test_report_semantics.py"
+   ],
+   "note": "Stop after manifest-signature failure is D-92; rules after published T mismatch is D-93; both held."
+  },
+  "QV-35-REQ-006": {
+   "status": "process",
+   "impl": [],
+   "tests": [],
+   "note": "15 entries in docs/errata/spec-errata-log.md; ID order -014/-013 not contiguous."
+  },
+  "QV-35-REQ-007": {
+   "status": "partial",
+   "impl": [
+    "verifier-py/qv_verifier/ed25519.py",
+    "verifier-py/qv_verifier/ristretto.py"
+   ],
+   "tests": [
+    "verifier-py/tests/test_audit_regressions.py",
+    "verifier-py/tests/test_primitives.py"
+   ],
+   "note": "Python rejects non-canonical/small-order A and R; R policy still unpinned by any vector (QV-ERR-PY-011, Q-34-1)."
+  },
+  "QV-35-REQ-008": {
+   "status": "blocked_decision",
+   "impl": [
+    "verifier-py/qv_verifier/errors.py"
+   ],
+   "tests": [
+    "verifier-py/tests/test_vectors_cli.py"
+   ],
+   "note": "QV-ERR-PY-001 and -002 await owner decision."
+  },
+  "QV-35-REQ-009": {
+   "status": "implemented_untested",
+   "impl": [
+    "verifier-py/requirements.txt"
+   ],
+   "tests": [],
+   "note": "requirements.txt empty; no automated dependency check."
+  },
+  "QV-35-REQ-010": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "No adapter and no shared runner exists (see QV-34-REQ-008)."
+  },
+  "QV-35-REQ-011": {
+   "status": "not_implemented",
+   "impl": [],
+   "tests": [],
+   "note": "Python reports log.verify_election NOT-IMPLEMENTED for all 48; TS passes them in protocol loglayer.test.ts."
+  },
+  "QV-35-REQ-012": {
+   "status": "blocked_decision",
+   "impl": [
+    "verifier-py/qv_verifier/election.py"
+   ],
+   "tests": [],
+   "note": "Manifests with spoil_trustee_decrypt rejected with generic E_SCHEMA; named error and class await D-95 and D-88."
+  },
+  "QV-35-REQ-013": {
+   "status": "implemented_untested",
+   "impl": [
+    ".github/workflows/ci.yml"
+   ],
+   "tests": [],
+   "note": "CI conformance job runs Python unit tests, vector sweep and comparator; spec row saying no job is stale. Comparator step fails by design."
+  },
+  "QV-35-REQ-014": {
+   "status": "external",
+   "impl": [],
+   "tests": [],
+   "note": "No review recorded in decision log; needs an outside reviewer."
+  },
+  "QV-35-REQ-015": {
+   "status": "partial",
+   "impl": [
+    "verifier-py/README.md",
+    "verifier-py/qv_verifier/cli.py"
+   ],
+   "tests": [],
+   "note": "README and vectors CLI banner present; election report output banner not verified."
+  }
+ }
+}

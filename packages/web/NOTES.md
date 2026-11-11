@@ -132,8 +132,8 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
 * Entry bodies are JCS bytes of protocol records/envelopes; ballots use type `ballot`, tests `ballot_audit`. Organizer auth
   challenge message and `bb.log_id = SHA-256(origin)` are my choices (undefined in specs).
 * Organizer management calls (createElection, putDraft, createInvites) are QV-08 signed requests (`api/signing.ts`, mirrors
-  server `auth.ts`), because the server has no `/auth/*` session routes. `authChallenge`/`authSession`/bearer in `ApiClient` are
-  left over from QV-09 and are not used by the server. The audience (`qv:<instance_id>@<publicUrl>`) is supplied by the caller.
+  server `auth.ts`), because the server has no `/auth/*` session routes. The QV-09 challenge/session bearer code (`authChallenge`, `authSession`,
+  `setSessionToken`, the `Challenge`/`Session` types) was removed under QV-ADR-027 (N-20); signed requests are the sole organizer auth. The audience (`qv:<instance_id>@<publicUrl>`) is supplied by the caller.
 * Client derives K/ctx itself by re-running DKG adjudication from the log. Word list is generated (placeholder, QV-19 open question).
 * Sealing runs in a Worker via a Trusted Types policy `qv-default` (script URL only); falls back in-thread.
 * Under hash-pinned CSP the standalone verifier page has inline script/style by spec (QV-19 section 7); index.html has none.
@@ -254,3 +254,20 @@ Deterministic DOM tests exercise cancellation, stale successful/rejected file re
 Required Chromium journeys add mobile/desktop cancel/retry, progress labels, no verification requests and stale-read checks.
 Local Chromium could not launch (`socket() EPERM`); this does not qualify those browser assertions. Hosted exact-candidate
 browser qualification remains required; see `docs/reports/next-offline-20261109.md`.
+
+## Web fixes, second batch (QV-ADR-027)
+
+* N-20: organizer/admin auth is QV-08 signed requests only. The QV-09 challenge/session bearer code is gone from `ApiClient`
+  and `api/types.ts` (test `no-bearer.test.ts`); `docs/09-api-data-contracts.md` section 3.2 and REQ-005/006 still describe it
+  and need the rewrite proposed in the work report.
+* B3-28 (option A): a key file whose Argon2id parameters exceed the defaults in `m`, `t` or `p` needs an explicit confirm before any
+  derivation (`kdfCostDecision`, `KeystoreDeps.confirmCost`); cancel throws `E_KEY_CANCELLED` with no KDF run. Floor and ceiling are
+  unchanged and previously valid files still unlock. Callers that pass no `confirmCost` (headless/tests) keep the old behaviour;
+  the UI key view, recovery-code display and organizer publish unlock all pass it. A cancelled organizer publish unlock shows the
+  generic error (there is no dedicated copy). `qv.key.cost*` locale entries are machine-drafted and unreviewed.
+* B3-06 (decision-free piece only): `uxPresentation` supplies `{time}`/`{seconds}` for the error codes that take them, so the
+  screen no longer falls back to the generic error. When a closed/not-open phase has no known time the unavailable copy is shown.
+  A PAUSED phase and its freshness/authority policy are NOT implemented (owner decision still open). `E-ORG-LANG`,
+  `E-BOARD-STALE` and `E-VERSION` have placeholders but are raised nowhere (test `error-args.test.ts` fails when one starts being).
+* W7: `LiveElection` reports `onRecovered` after the first good refresh following a failure; the status line is then re-derived
+  from the connection state instead of staying at "reload the page".

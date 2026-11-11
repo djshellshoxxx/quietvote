@@ -71,6 +71,8 @@ New in 2.2 and how we treat them:
 | QV-13-REQ-009 | Page `lang` and per-fragment `lang` shall be set correctly; election-authored text in another language is marked with its own `lang`. | M | Automated check of `lang` vs manifest text map tags. | T |
 | QV-13-REQ-010 | Organizer authoring tools shall help produce accessible ballots (required text for each option, no images-only options; alt text mandatory if images are ever allowed — images disallowed in MVP). | M | Form validation tests. | T |
 
+> **Note on QV-13-REQ-007 and the key auto-lock (decision B3-11a, approved under QV-ADR-027 in the [decision log](decision-log.md)).** The 15-minute figure in REQ-007 is the point above which a session-inactivity warning is mandatory. The default idle auto-lock of the browser key store is 10 minutes (QV-19: [client supply chain](19-client-supply-chain.md), key-store storage notes, "auto-locks after 10 min idle"), which is shorter than 15 minutes. A shorter lock does not conflict with REQ-007: the 10-minute default is stricter than, and compliant with, the 15-minute warning rule, so no requirement text, ID, priority or acceptance criterion changes. This is a documentation clarification only.
+
 ### 5.2 Per-component conformance requirements
 
 Component IDs are used by QV-10 and by test names (`a11y/<component>/*`). "SC" = WCAG 2.2 success criterion; levels A/AA unless noted.

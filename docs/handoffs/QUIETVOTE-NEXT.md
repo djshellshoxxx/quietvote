@@ -351,7 +351,7 @@ export-role, browser-verifier, guarantee copy, trust/authority, registration).
   12/12 checks in light and dark device modes.
 - New `e2e/a11y.ts` (Home, Help, not-found, real build + CSP): 45/45 automated checks.
   It found two real defects, now fixed: first Tab after load skipped the skip link
-  (`render()` stole focus on initial load) and long unbreakable text scrolled at 320px
+  (`render()` stole focus on initial load) and long unbreakable text scrolled at 320px <!-- claims-lint-ignore -->
   (`body{overflow-wrap:break-word}`).
 - `e2e/run.ts`: stepper assertions updated for the `ol` stepper (the old `getByText('Step N of 4')`
   could not match after C-STEPPER). The "import key file and unlock" step still fails, also on
