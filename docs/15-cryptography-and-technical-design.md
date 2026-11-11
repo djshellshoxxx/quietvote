@@ -31,7 +31,7 @@ This is a design direction to investigate, not a final architecture.
 |---|---|---|---|
 | Authenticate configuration and actions | Digital signatures | Sign the election manifest, rule changes, trustee contributions, tally, and transparency checkpoints | A signature proves integrity and key attribution; it does not prove the signer’s action was fair or authorized |
 | Keep a vote secret while tallying | Public-key ballot encryption | Encrypt each selection before it leaves the participant's client | Client compromise, coercion, side channels, or a bad protocol can still reveal or alter choices |
-| Prove ballot validity without revealing choice | Zero-knowledge proof | Prove encrypted choices satisfy the ballot's constraints (e.g., a selection is allowed and within the maximum) | Proof systems are easy to implement incorrectly; use a reviewed scheme and audited libraries |
+| Prove ballot validity without revealing choice | Zero-knowledge proof | Prove encrypted choices satisfy the ballot's constraints (e.g., a selection is allowed and within the maximum) | Proof systems are easy to implement incorrectly; use a reviewed scheme and libraries with published third-party audit reports |
 | Prove group membership privately | Anonymous credential or ZK membership proof | Show eligibility in the frozen member set without publishing the member's identity | The membership issuer/registrar still decides who is in the set; credential revocation and recovery are hard |
 | Enforce one vote per member per decision | Decision-scoped nullifier / one-use credential | Reject repeated submissions while avoiding a globally stable voter identifier | A wrongly scoped or deterministic identifier can make votes linkable across decisions |
 | Aggregate compatible ballots | Homomorphic encryption | Combine ciphertexts for additive tallies, then decrypt only the aggregate | Fit depends on voting method; this is not a general ranked-choice tally |
@@ -43,7 +43,7 @@ This is a design direction to investigate, not a final architecture.
 
 ### Candidate precedents to study
 
-- **Helios and Belenios:** research/deployed examples of end-to-end verifiable online voting. Belenios 3.0 specifies encrypted ballots, zero-knowledge well-formedness proofs, signed ballots, and homomorphic or mixnet tally modes. Study their threat models and user verification steps; do not copy components without reviewing fit and licensing.
+- **Helios and Belenios:** research/deployed examples of end-to-end verifiable online voting. Belenios 3.0 specifies encrypted ballots, zero-knowledge well-formedness proofs, signed ballots, and homomorphic or mixnet tally modes. Study their threat models and user verification steps; do not copy components without reviewing fit and licensing. <!-- claims-lint-ignore -->
 - **ElectionGuard:** a published design and implementation ecosystem for encrypted selections, validity proofs, homomorphic aggregation, and verifiable decryption. Its stated operating assumptions and use cases must be checked against QuietVote's online, voluntary-group setting.
 - **Semaphore:** a useful reference for the group-membership proof plus scope-specific nullifier pattern. It is not a complete election protocol and its examples often assume smart contracts; QuietVote must not inherit a blockchain requirement by default.
 - **W3C BBS Data Integrity Cryptosuite:** a candidate standardization path for selective disclosure and unlinkable derived proofs. Its current W3C status and implementation maturity must be rechecked before selection.

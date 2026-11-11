@@ -1,0 +1,134 @@
+// B1 audit PoC (2026-10-28): election-level confirmation that KNOWN findings with unmerged fixes (PR #10) reproduce at this SHA.
+// Bundles go to out/K-*.bundle.json (py_diff.py picks them up too). Synthetic data only. Run: node audit-b1-poc/known_election.ts
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { bytesToHex, ed25519Sign, sha256, utf8 } from '../packages/crypto/src/index.ts';
+import {
+  ballotCode, electionOpenBody, PROTO_ID, revealDigest, signRecord, signRecordRaw, spoilDigest, trusteeDecryptTally,
+  verifyElection, analyzeBallotLog, type ManifestContest,
+} from '../packages/protocol/src/index.ts';
+import {
+  bundleOf, castBallot, closeElection, publishTally, push, setup, trusteeKeyFor, voterEnvelopes, type SimOpts,
+} from '../packages/protocol/test/helpers/sim.ts';
+
+const H = bytesToHex;
+const here = dirname(fileURLToPath(import.meta.url));
+const out = join(here, 'out');
+const yesNo: ManifestContest = {
+  id: 'budget', title: 'Budget?', method: 'yes-no', options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }], selection_limit: 1,
+  min_selections: 0, rule: { type: 'threshold', num: 1, den: 2, basis: 'yes+no', strict: true }, tie_break: { type: 'status-quo', option: 'no' },
+};
+const base = (seed: string, extra: Partial<SimOpts> = {}): SimOpts => ({ seed, n: 3, t: 2, voters: 4, contests: [yesNo], ...extra });
+const results: Record<string, unknown> = JSON.parse(readFileSync(join(out, 'ts-results.json'), 'utf8'));
+async function report(name: string, b: any, note: string): Promise<any> {
+  writeFileSync(join(out, `${name}.bundle.json`), JSON.stringify(b));
+  const r = await verifyElection(JSON.parse(JSON.stringify(b)));
+  const failed = Object.entries(r.checks).filter(([, s]) => s === 'fail').map(([k]) => k);
+  const findings = r.findings.filter((f) => f.cls !== 'I').map((f) => `${f.code}/${f.cls}${f.seq === undefined ? '' : `@${f.seq}`}`);
+  results[name] = { note, verdict: r.verdict, failed, findings, checks: r.checks };
+  console.log(name.padEnd(30), r.verdict.padEnd(11), JSON.stringify(failed), JSON.stringify(findings));
+  return r;
+}
+
+// CP-01 (reveal mode): voter re-wraps its COUNTED cast body under another `supersedes`, spoils it with a published reveal of xi.
+{
+  const s = await setup(base('b1-k-cp01'));
+  const p = s.params!;
+  const c0 = castBallot(s, 0, { budget: ['yes'] });
+  castBallot(s, 1, { budget: ['no'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  const v = s.voters[0]!;
+  const body2 = { ...c0.built.body, supersedes: H(sha256(utf8('anything'))) };
+  const code2 = ballotCode(p.ctx, body2);
+  const reveal = { xi: H(c0.built.xi), selections: { budget: ['yes'] } };
+  const rd = revealDigest(p.ctx, reveal);
+  push(s, { intent: 'spoil', body: body2, reveal_digest: H(rd), reveal, sig: H(ed25519Sign(v.secretKey, spoilDigest(p.ctx, code2, rd))) });
+  closeElection(s); publishTally(s, [1, 2]);
+  const r = await report('K-CP01-rewrap-reveal', bundleOf(s), 'counted ballot re-wrapped as a published-reveal spoil');
+  const counted = (r.countedBallots ?? []).some((x: any) => x.code === H(c0.built.code));
+  console.log('   CP-01: counted ballot still counted =', counted, '; its xi is public in the spoil reveal; benaloh check =', r.checks['chk.benaloh.spoiled']);
+}
+
+// P3: a second signed tally record with a different body (results flipped) is only an L finding
+{
+  const s = await setup(base('b1-k-p3'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  const t = s.log[s.log.length - 1]!.entry as any;
+  const body2 = JSON.parse(JSON.stringify(t.body));
+  body2.results[0].outcome = { kind: 'rejected' };
+  const c = s.coord[0]!;
+  push(s, signRecord(c.secretKey, c.publicKey, s.params!.ctx, body2));
+  await report('K-P3-second-tally-differs', bundleOf(s), 'second coordinator-signed tally with flipped outcome');
+}
+
+// P11: tally.decrypters not compared with T_valid
+{
+  const s = await setup(base('b1-k-p11'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  const e = s.log[s.log.length - 1]!.entry as any;
+  e.body.decrypters = [3];
+  const c = s.coord[0]!;
+  e.sig = signRecordRaw(c.secretKey, c.publicKey, s.params!.ctx, 'tally', e.body);
+  await report('K-P11-decrypters-wrong', bundleOf(s), 'tally.decrypters = [3] although shares are from 1,2');
+}
+
+// P7: below the privacy floor (min_counted_ballots 5, 4 voters) -> chk.tally.decrypt reads pass, rules fail overwritten to not_run
+{
+  const s = await setup(base('b1-k-p7', { minCounted: 3 }));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  // raise the floor after the fact is impossible (manifest hash); instead build an election whose floor is 5 and 4 voters:
+  const s2 = await setup(base('b1-k-p7b', { minCounted: 5 }));
+  castBallot(s2, 0, { budget: ['yes'] }); castBallot(s2, 1, { budget: ['yes'] }); castBallot(s2, 2, { budget: ['no'] }); castBallot(s2, 3, { budget: ['yes'] });
+  closeElection(s2);
+  // trustees refuse below the floor (correct), so publish a tally record built without decryption shares
+  const an = analyzeBallotLog(s2.params!, new Set(s2.rollHex), voterEnvelopes(s2), s2.openSeq!, s2.closeSeq!);
+  const refuse = trusteeDecryptTally(s2.params!, trusteeKeyFor(s2, 1), an.counted, undefined, s2.rollHex.length, s2.rng);
+  console.log('   P7: trustee release below floor ->', refuse.ok ? 'released' : refuse.error);
+  const { aggregate, countedRoot } = await import('../packages/protocol/src/index.ts');
+  const aggs = aggregate(s2.params!, an.counted);
+  const { pointToBytes } = await import('../packages/crypto/src/index.ts');
+  const body = {
+    proto: PROTO_ID, type: 'tally' as const, ctx: H(s2.params!.ctx), n_counted: 4, counted_root: H(countedRoot(an.counted)), decrypters: [],
+    contests: [{ id: 'budget', options: ['yes', 'no'].map((o) => ({ id: o, A: H(pointToBytes(aggs.get('budget')!.get(o)!.A)), B: H(pointToBytes(aggs.get('budget')!.get(o)!.B)), shares: [], T: 0 })) }],
+    spoiled: [], results: [{ contest: 'budget', participation: 4, quorum_met: true, outcome: { kind: 'rejected' as const } }],
+  };
+  const c = s2.coord[0]!;
+  push(s2, signRecord(c.secretKey, c.publicKey, s2.params!.ctx, body));
+  const r = await report('K-P7-below-floor', bundleOf(s2), 'V=4 < min_counted_ballots=5; tally without shares');
+  console.log('   P7: chk.tally.decrypt =', r.checks['chk.tally.decrypt'], '; chk.result.rules =', r.checks['chk.result.rules'], '; verdict', r.verdict);
+}
+
+// P9: an invalid key confirmation from trustee 3 shadows its later valid one (n=3, t=3)
+{
+  const s = await setup(base('b1-k-p9', { t: 3 }));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2, 3]);
+  const b = bundleOf(s) as any;
+  // insert a trustee-3-signed, invalid keyconf right before its valid one; renumber and re-sign election-open (coordinator key)
+  const idx = b.log.findIndex((e: any) => e.entry?.body?.type === 'dkg-keyconf' && e.entry.body.j === 3);
+  const tk = s.trusteeKeys[2]!;
+  const bad = signRecord(tk.secretKey, tk.publicKey, s.mh, { proto: PROTO_ID, type: 'dkg-keyconf' as const, j: 3, c: '01'.padEnd(64, '0'), s: '02'.padEnd(64, '0') });
+  b.log.splice(idx, 0, { seq: b.log[idx].seq, entry: bad });
+  for (let k = idx + 1; k < b.log.length; k++) b.log[k].seq += 1;
+  const fin = b.log.find((e: any) => e.entry?.body?.name === 'dkg-final').seq;
+  const rc = b.log.find((e: any) => e.entry?.body?.type === 'roll-commit').seq;
+  const open = b.log.find((e: any) => e.entry?.body?.name === 'election-open');
+  open.entry.body = electionOpenBody(PROTO_ID, H(s.mh), fin, rc);
+  const c = s.coord[0]!;
+  open.entry.sigs = [signRecordRaw(c.secretKey, c.publicKey, s.params!.ctx, 'marker', open.entry.body)];
+  await report('K-P9-keyconf-shadow', b, 'invalid keyconf from trustee 3 before its valid one; t = n = 3');
+}
+
+// P2: trusteeDecryptTally accepts a counted set that repeats one ballot to pass the privacy floor
+{
+  const s = await setup(base('b1-k-p2'));
+  castBallot(s, 0, { budget: ['yes'] });
+  const an = analyzeBallotLog(s.params!, new Set(s.rollHex), voterEnvelopes(s), s.openSeq!, 1e9);
+  const one = an.counted[0]!;
+  const r = trusteeDecryptTally(s.params!, trusteeKeyFor(s, 1), [one, one, one], undefined, s.rollHex.length, s.rng);
+  console.log('P2 trusteeDecryptTally([b,b,b]) ->', r.ok ? 'RELEASED shares for a single ballot (AFFECTED)' : r.error);
+}
+writeFileSync(join(out, 'ts-results.json'), JSON.stringify(results, null, 2));

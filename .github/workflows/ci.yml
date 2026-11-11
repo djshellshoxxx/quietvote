@@ -1,0 +1,186 @@
+name: ci
+
+# Speed policy (measured on run 41556033098: each "typecheck + test" cell spent 463 s in a serial
+# `npm run check` across 8 workspaces, bounded by single long tests):
+# - Workspace tests are split into 4 parallel shards balanced by measured duration.
+# - Pull requests gate on Linux (node 22 floor + node 24 baseline). The 3-OS x 2-node matrix runs on
+#   main, merge queue, nightly, manual dispatch, or a PR carrying the `ci:full-matrix` label.
+# - Docs-only changes skip this workflow; files that tests read (audit evidence, COPY.md, vectors) still trigger it.
+#   Claims lint runs in claims-lint.yml so docs-only PRs are still linted.
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!wiki/**'
+      - '!**/*.md'
+      - 'docs/audit/**'
+      - 'packages/*/COPY.md'
+      - 'test-vectors/**'
+      - '.github/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!wiki/**'
+      - '!**/*.md'
+      - 'docs/audit/**'
+      - 'packages/*/COPY.md'
+      - 'test-vectors/**'
+      - '.github/**'
+  merge_group:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+# Deny everything by default; each job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: typecheck and supply-chain gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Test workflow action pin checker
+        run: node --test .github/scripts/check-action-pins.test.mjs
+      - name: Test workflow input coverage
+        run: node --test .github/scripts/check-workflow-coverage.test.mjs
+      - name: Test required browser journey runner
+        run: node --test .github/scripts/run-browser-journeys.test.mjs
+      - name: Test diagnostic verifier comparator triage (strict)
+        run: node --test scripts/triage-verifier-report.test.mjs
+      - name: Check workflow actions are pinned to full commit SHAs
+        run: node .github/scripts/check-action-pins.mjs
+      # Supply-chain gates (docs/30-engineering-standards.md, R-02).
+      - name: Lint package-lock.json sources and integrity
+        run: npm run lockfile:lint
+      - run: npm ci --ignore-scripts
+      - name: Audit dependencies (blocking for high and critical advisories)
+        run: npm audit --audit-level=high
+      - run: npm run typecheck
+
+  test:
+    name: test ${{ matrix.shard.name }} (node ${{ matrix.node }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON((github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci:full-matrix')) && '["ubuntu-24.04","macos-15","windows-2025"]' || '["ubuntu-24.04"]') }}
+        node:
+          - 22
+          - 24
+        # Balanced by measured CI duration (s): trustee 109, protocol 97, cli 80, server 58, board 47, web 32, verifier 26, crypto 4.
+        shard:
+          - name: trustee+crypto
+            ws: 'trustee crypto'
+          - name: protocol+verifier
+            ws: 'protocol verifier'
+          - name: cli+board
+            ws: 'cli board'
+          - name: server+web
+            ws: 'server web'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # Every workspace in the shard runs even if an earlier one fails, so one failure cannot hide another.
+      - name: Workspace tests
+        shell: bash
+        run: |
+          rc=0
+          for w in ${{ matrix.shard.ws }}; do
+            echo "::group::@quietvote/$w"
+            npm test -w "@quietvote/$w" || { rc=1; echo "::error::@quietvote/$w tests failed"; }
+            echo "::endgroup::"
+          done
+          exit $rc
+
+  conformance:
+    name: vectors, Python verifier and production build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Python verifier unit and regression tests
+        working-directory: verifier-py
+        run: python3 -I -m unittest
+      - name: Manifest hashes, honest, negative and mutation vectors
+        run: npm run vectors:check
+      - name: Python vector sweep (unsupported capabilities are reported)
+        run: python3 -I verifier-py/qv_verifier vectors test-vectors/v1
+      - name: Production web build
+        run: npm run build -w @quietvote/web
+      - name: Scoped i18n checks
+        run: npm run i18n:check -w @quietvote/web
+      - name: Dependency licence snapshot
+        run: node scripts/licence-snapshot.mjs --stdout
+      # Intentionally last: unresolved errata can fail this strict report check
+      # without suppressing the independent build/i18n/licence evidence above.
+      - name: Compare verifiers within shared capabilities
+        run: npm run verifiers:compare
+
+  browser:
+    name: production browser journeys, CSP and automated a11y
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      QV_REQUIRE_BROWSER: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Install the pinned Playwright Chromium revision
+        run: npx playwright install --with-deps chromium
+      - name: Run all required browser journeys
+        shell: bash
+        run: bash .github/scripts/run-browser-journeys.sh

@@ -1,0 +1,32 @@
+// B3 audit PoC: PENDING_UNCONFIRMED (append answered "sequenced": a signed promise but no inclusion proof yet) - what does the client keep?
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { streamRng } from '@quietvote/crypto';
+import { NO_SUPERSEDES } from '@quietvote/protocol';
+import { ApiClient } from '../src/api/client.ts';
+import { BallotController } from '../src/flow/ballot-controller.ts';
+import { deriveElectionContext } from '../src/flow/election.ts';
+import { entryRecord } from '../src/flow/entries.ts';
+import { inlineSealer } from '../src/flow/seal.ts';
+import { createSigner } from '../src/key/signer.ts';
+import { MemoryStorage } from '../src/key/storage.ts';
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+
+test('B3-F32: a "sequenced" receipt (signed promise, no inclusion yet) is not stored and cannot be re-checked later', async () => {
+  const sim = await sharedSim();
+  const board = new FakeBoard(sim);
+  board.lazyCheckpoints = true; // the board answers with the signed promise only (QV-18 MMD window)
+  const api = new ApiClient({ fetch: board.fetch, sleep: async () => undefined });
+  const all = await api.allEntries(board.apiId);
+  const r = await deriveElectionContext(all.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) })));
+  assert.ok(r.ok);
+  const storage = new MemoryStorage();
+  const signer = await createSigner(sim.voters[0]!.secretKey.slice());
+  const c = new BallotController({ ctx: r.value, apiElectionId: board.apiId, origin: board.origin, signer, api, sealer: inlineSealer, storage, rng: streamRng('b3'), logPk: board.logKey.publicKey, supersedes: NO_SUPERSEDES, clientBuild: 'poc', now: () => 1_790_000_100 });
+  c.select({ budget: ['yes'], board: ['p', 'q'] }); c.review(); await c.seal(); c.codeRendered();
+  const rep = await c.cast();
+  console.log('outcome:', rep?.outcome, '| state:', c.state.kind, '| receipt file offered:', rep?.receipt !== undefined, '| receipts stored on device:', (await storage.getReceipts(board.apiId)).length, '| pinned head stored:', (await storage.getHead(board.apiId)) !== undefined);
+  assert.equal(rep?.outcome, 'PENDING_UNCONFIRMED');
+  assert.equal(rep?.receipt, undefined);
+  assert.equal((await storage.getReceipts(board.apiId)).length, 0);
+});

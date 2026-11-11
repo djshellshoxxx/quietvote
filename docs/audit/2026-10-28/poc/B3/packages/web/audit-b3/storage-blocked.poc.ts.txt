@@ -1,0 +1,31 @@
+// B3 audit PoC (Playwright): QV-26-REQ-011 "Client shall function in Tor Browser at Standard level without storage, ..." and QV-10 E-KEY-STORAGE.
+// indexedDB exists but every open() fails (Firefox private browsing before v115, Tor Browser, "block site data" settings). What does the voter see?
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { exe, pw, startStack } from './harness.ts';
+
+const sim = await sharedSim();
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const base = `${stack.origin}/e/${board.apiId}`;
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const ctx = await browser.newContext();
+await ctx.addInitScript(() => {
+  const open = (): IDBOpenDBRequest => {
+    const r = {} as IDBOpenDBRequest;
+    setTimeout(() => { Object.defineProperty(r, 'error', { value: new DOMException('A mutation operation was attempted on a database that did not allow mutations.', 'InvalidStateError') }); r.onerror?.(new Event('error')); }, 0);
+    return r;
+  };
+  Object.defineProperty(indexedDB, 'open', { value: open });
+});
+const p = await ctx.newPage();
+const errors: string[] = [];
+p.on('pageerror', (e) => errors.push(e.message.slice(0, 120)));
+const text = async (): Promise<string> => (await p.locator('main').innerText()).replace(/\n+/g, ' | ').slice(0, 260);
+for (const [label, path] of [['overview', ''], ['rules', '/rules'], ['key', '/key'], ['vote', '/vote'], ['results', '/results']] as const) {
+  await p.goto(base + path);
+  await p.waitForTimeout(1500);
+  console.log(`${label.padEnd(9)} -> ${await text()}`);
+}
+console.log('forms on the key page:', await p.locator('main input').count(), '| uncaught page errors:', errors.length ? errors.join(' || ') : 'none');
+await browser.close();
+stack.close();

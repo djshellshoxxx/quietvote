@@ -1,0 +1,205 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "protocol/board",
+  "operation": "roll.merkle_root",
+  "description": "Voter roll Merkle root (RFC 9162 §2.1.1, leaf = pk || u32(1))",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "roll-1",
+      "input": {
+        "voter_pks": [
+          "84fd66799e3b47a905d3aaaf85f766126f65be938c9d5a2142d854d27342d35a"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "root_hex": "de91be5abb6873dabb836fd24a99f35bea6fe78e080173253e50b668310cf3c9",
+          "leaf_hashes": [
+            "de91be5abb6873dabb836fd24a99f35bea6fe78e080173253e50b668310cf3c9"
+          ]
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9162-split"
+      ]
+    },
+    {
+      "id": "roll-2",
+      "input": {
+        "voter_pks": [
+          "84fd66799e3b47a905d3aaaf85f766126f65be938c9d5a2142d854d27342d35a",
+          "c91cb35320c5d6ebbf923c1ecc507c3ee152cb6b3fd75e433d5fadbd7d0518ce"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "root_hex": "3fccc3d2f85ac06636c6503bdd8b3fe406d00729534868fa71f9a400c230db76",
+          "leaf_hashes": [
+            "de91be5abb6873dabb836fd24a99f35bea6fe78e080173253e50b668310cf3c9",
+            "bb42e7bb0983549cc3aa67e5dcac542308cb96a11055d6dc031fa34aba46ef88"
+          ]
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9162-split"
+      ]
+    },
+    {
+      "id": "roll-3",
+      "input": {
+        "voter_pks": [
+          "4e3ac2f12d45690e1bdf0e5af9bf62a498a78056417d7420f10a1d3094dd03ce",
+          "84fd66799e3b47a905d3aaaf85f766126f65be938c9d5a2142d854d27342d35a",
+          "c91cb35320c5d6ebbf923c1ecc507c3ee152cb6b3fd75e433d5fadbd7d0518ce"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "root_hex": "2d348eddf9b19621949075f5cbd8ca51842b444fdad9d689a6420668c060c71e",
+          "leaf_hashes": [
+            "ae76929526e749b9041b59799a232aadae9a86ae743db493951b68be0d6115f5",
+            "de91be5abb6873dabb836fd24a99f35bea6fe78e080173253e50b668310cf3c9",
+            "bb42e7bb0983549cc3aa67e5dcac542308cb96a11055d6dc031fa34aba46ef88"
+          ]
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9162-split"
+      ]
+    },
+    {
+      "id": "roll-5",
+      "input": {
+        "voter_pks": [
+          "4e3ac2f12d45690e1bdf0e5af9bf62a498a78056417d7420f10a1d3094dd03ce",
+          "6ee4add053e85fc33a6e3d3edc1d26ffdfa6f5a0b3faf8f5e3b818c78102ff7b",
+          "84fd66799e3b47a905d3aaaf85f766126f65be938c9d5a2142d854d27342d35a",
+          "c91cb35320c5d6ebbf923c1ecc507c3ee152cb6b3fd75e433d5fadbd7d0518ce",
+          "cd35c21703278d71146fd67eab7f4d510c719a2a51a8cde37998f3751df837f0"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "root_hex": "d8d6353fa518c20d6678b29d8be4f4e28febfb20a78a4f131d8e244d34e6c665",
+          "leaf_hashes": [
+            "ae76929526e749b9041b59799a232aadae9a86ae743db493951b68be0d6115f5",
+            "f4bc141cf7b2e7fffa230ab63513e5d9dac808c708431ddf6c00de823d0013f9",
+            "de91be5abb6873dabb836fd24a99f35bea6fe78e080173253e50b668310cf3c9",
+            "bb42e7bb0983549cc3aa67e5dcac542308cb96a11055d6dc031fa34aba46ef88",
+            "4d8eb05d1ec694e749d8461d64a56fa920cdc2efac79078c2d5a96aac377afc7"
+          ]
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9162-split"
+      ]
+    },
+    {
+      "id": "roll-8",
+      "input": {
+        "voter_pks": [
+          "4c03c3b34aaaf765657416eb43d0ac8176533f01c56e3664dd546f6bb3ece71a",
+          "4e3ac2f12d45690e1bdf0e5af9bf62a498a78056417d7420f10a1d3094dd03ce",
+          "6ee4add053e85fc33a6e3d3edc1d26ffdfa6f5a0b3faf8f5e3b818c78102ff7b",
+          "84fd66799e3b47a905d3aaaf85f766126f65be938c9d5a2142d854d27342d35a",
+          "c91cb35320c5d6ebbf923c1ecc507c3ee152cb6b3fd75e433d5fadbd7d0518ce",
+          "cad56680e188bb1cb804f32128d680c8d0934dc2ac728eaafb8ee1d08627c3de",
+          "cd35c21703278d71146fd67eab7f4d510c719a2a51a8cde37998f3751df837f0",
+          "f0767cde8904f5976caf17e9e19b8e278d89366a02addc2d688fdb4dd09a4443"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "root_hex": "a2ae8acbe064c009f7b38b54eb529d525d8a04d976a211f9eb6b80c09ba3ed2d",
+          "leaf_hashes": [
+            "990d020086cd57948f4d40477ecc5a12b0cc1635f949cf0c307e530195127352",
+            "ae76929526e749b9041b59799a232aadae9a86ae743db493951b68be0d6115f5",
+            "f4bc141cf7b2e7fffa230ab63513e5d9dac808c708431ddf6c00de823d0013f9",
+            "de91be5abb6873dabb836fd24a99f35bea6fe78e080173253e50b668310cf3c9",
+            "bb42e7bb0983549cc3aa67e5dcac542308cb96a11055d6dc031fa34aba46ef88",
+            "7806b93756ecdcbc44029c98f9d01894556b89b2580570c6d5a34391468fba9d",
+            "4d8eb05d1ec694e749d8461d64a56fa920cdc2efac79078c2d5a96aac377afc7",
+            "80c2b992030ff6bd6bec60f1eac6bece601d918e2960b46bf2bc32955048811e"
+          ]
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9162-split"
+      ]
+    },
+    {
+      "id": "roll-duplicate",
+      "input": {
+        "voter_pks": [
+          "4e3ac2f12d45690e1bdf0e5af9bf62a498a78056417d7420f10a1d3094dd03ce",
+          "4e3ac2f12d45690e1bdf0e5af9bf62a498a78056417d7420f10a1d3094dd03ce"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_ROLL"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "roll-unsorted",
+      "input": {
+        "voter_pks": [
+          "c91cb35320c5d6ebbf923c1ecc507c3ee152cb6b3fd75e433d5fadbd7d0518ce",
+          "4e3ac2f12d45690e1bdf0e5af9bf62a498a78056417d7420f10a1d3094dd03ce"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_ROLL"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "roll-small-order-key",
+      "input": {
+        "voter_pks": [
+          "0100000000000000000000000000000000000000000000000000000000000000"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_ROLL"
+      },
+      "tags": [
+        "negative",
+        "attack:small-order"
+      ]
+    }
+  ]
+}
