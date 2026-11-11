@@ -105,6 +105,17 @@ CREATE INDEX job_state ON job(state, created_at);
 ALTER TABLE election_registry ADD COLUMN quarantine TEXT;
 `,
   },
+  {
+    version: 5,
+    name: 'log_anchor',
+    // QV-ADR-027 B2-07 (QV-18 REQ-012/REQ-053): rollback anchor = the highest (size, root) this election's log key is known to have signed
+    // (own checkpoints, raised before release; and log-signed heads seen from gossip peers/witnesses). Kept here, outside the election DB, so
+    // restoring an older election DB alone is detected. Public checkpoint data only (part of the registry row, QV-28-REQ-019).
+    sql: `
+ALTER TABLE election_registry ADD COLUMN anchor_size INTEGER CHECK (anchor_size IS NULL OR anchor_size >= 0);
+ALTER TABLE election_registry ADD COLUMN anchor_root BLOB CHECK (anchor_root IS NULL OR length(anchor_root)=32);
+`,
+  },
 ];
 
 export interface OutboxRow {
@@ -181,6 +192,8 @@ export interface RegistryRow {
   bytes_used: number;
   imported?: number;
   quarantine?: string | null;
+  anchor_size?: number | null;
+  anchor_root?: Uint8Array | null;
 }
 
 export class ControlDb {
@@ -302,6 +315,28 @@ export class ControlDb {
   setQuarantineFlag(id: string, reason: string | null): void {
     run(this.db, 'UPDATE election_registry SET quarantine=? WHERE election_id=?', reason, id);
   }
+  /** QV-ADR-027 B2-07: the trusted rollback anchor of an election, if one was recorded. */
+  logAnchor(id: string): { size: number; root: Uint8Array } | undefined {
+    const r = get<{ anchor_size: number | null; anchor_root: Uint8Array | null }>(this.db, 'SELECT anchor_size, anchor_root FROM election_registry WHERE election_id=?', id);
+    if (!r || r.anchor_size === null || r.anchor_root === null) return undefined;
+    return { size: r.anchor_size, root: new Uint8Array(r.anchor_root) };
+  }
+
+  /**
+   * Monotonic raise of the rollback anchor (QV-ADR-027 B2-07: "take max"). A smaller size never lowers it; the same size with another root
+   * is reported as `conflict` and never overwrites. Callers raise only with heads signed by this election's log key.
+   */
+  raiseLogAnchor(id: string, size: number, root: Uint8Array): 'raised' | 'kept' | 'conflict' {
+    if (!Number.isSafeInteger(size) || size < 0 || root.length !== 32) throw new Error('raiseLogAnchor: bad anchor');
+    return this.tx(() => {
+      const cur = this.logAnchor(id);
+      if (cur !== undefined && size < cur.size) return 'kept';
+      if (cur !== undefined && size === cur.size) return Buffer.compare(Buffer.from(cur.root), Buffer.from(root)) === 0 ? 'kept' : 'conflict';
+      run(this.db, 'UPDATE election_registry SET anchor_size=?, anchor_root=? WHERE election_id=?', size, root, id);
+      return 'raised';
+    });
+  }
+
   quarantinedElections(): { election_id: string; quarantine: string }[] {
     return all<{ election_id: string; quarantine: string }>(this.db, "SELECT election_id,quarantine FROM election_registry WHERE quarantine IS NOT NULL AND state<>'DELETED' ORDER BY election_id");
   }

@@ -288,3 +288,44 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   an implementation choice; contacts are still accepted although server-side delivery is unsupported (QV-28/QV-09 allow the optional field; refusing it
   until delivery exists is the audit's stricter suggestion and would be an API change); `trustee_invite` (not implemented) is untouched; backups made before a
   purge keep the data until the backup policy (QV-28 §11.1: 12 months) removes them, which is not implemented. Tests: `test/b2-fixes.test.ts`.
+
+## QV-ADR-027 B2-07, B2-12, B2-16 C-lite (2026-11-04; AI-assisted, unaudited, not for real elections)
+
+* **B2-07 (rollback anchor; option B with option A as the local floor).**
+  * *A, local floor:* control.sqlite migration 5 adds `election_registry.anchor_size` / `anchor_root`, the highest `(size, root)` the
+    election's log key is known to have signed. This is public checkpoint data inside the registry row (QV-28-REQ-019).
+    `ControlDb.raiseLogAnchor` is monotonic: a smaller size is `kept`, and the same size with a different root is a `conflict` that is
+    never stored. `ElectionRuntime.open` passes the anchor as `BoardLog` `floor`. A DB behind the anchor or inconsistent with it opens
+    quarantined (read-only, 503 `QUARANTINED` on appends, reads continue).
+  * *Crash ordering (needs independent review):* `processLocked` raises the anchor after the election-DB transaction that stores the new
+    checkpoint has committed. It does this before the receipt or checkpoint is released (response, SSE/webhook publish), with no `await` in
+    between. A crash between commit and anchor write leaves the DB ahead of the anchor. On open, a healthy log re-anchors to its newest
+    stored checkpoint. This also covers elections that predate migration 5, by trust on first use. If the anchor write throws, the append
+    answers 503 `LOG_UNAVAILABLE`, the runtime is poisoned, and the reload re-anchors from the DB (or fails to open, fail closed).
+  * *B, gossip poll and "take max":* a runtime opened over an already-signed, native, public log calls `env.bootGossip`
+    (`GossipService.bootCheck`) once before its first signature. That is one exchange per configured peer, in parallel, each bounded by
+    `gossipTimeoutMs`. The existing `judge` quarantines on a log-signed head ahead of the tree. A `peer_ahead` judgement (inbound or
+    outbound) now also raises the anchor to that head, so the rollback stays detected after a further restore of the election DB. An
+    unreachable peer does not block the append; the local floor still applies.
+  * *Recovery:* only restoring the newer DB helps. `POST /admin/elections/{id}/quarantine/clear` answers 409 "behind the rollback anchor
+    ... restore the newer database first". There is no operator override (option C was not chosen).
+  * *Residual:* restoring control.sqlite together with the election DB defeats A. B covers that only for public elections with reachable
+    peers that hold a newer head; link elections are never gossiped. Elections without an anchor are trusted on first open. control.sqlite
+    runs `synchronous=NORMAL`, so a power loss can drop the last anchor raise after release (a process crash cannot). Admin backups contain
+    control.sqlite, so a full-instance restore from `/admin/backups` is the "both restored" case.
+* **B2-12 (keyless runtimes never sign; option A, interim).** The `new Uint8Array(32)` placeholder is gone: `BoardLog` gets `secretKey`
+  only when the log key was unsealed. A byte-identical duplicate on a runtime without the key (IMPORTED mirror, ARCHIVED after reload,
+  since `finalizeArchive` erased `log_sk_enc`) answers 503 `LOG_UNAVAILABLE` "receipts are not re-issued". Non-duplicate appends keep
+  their existing answers (409 phase, or 503 read-only). `outcomeFor` refuses the same way as a second guard. Residual: a live ARCHIVED
+  runtime still holds the key in memory until eviction or restart and re-issues duplicate receipts under the real key. Option B (stored
+  original receipt) is deferred.
+* **B2-16 C-lite (control reason).** `records.ts` `CONTROL_REASONS` is the QV-07 §15.2 catalog. The server admission schema accepts
+  `reason` only as one of these codes; free text, lower case, padded or prefixed values, and non-strings get 422 `E_SCHEMA` and are never
+  appended. `OTHER` is a bare code. QV-07 §15.2 is amended (marked QV-ADR-027 B2-16). **Protocol-side need (not changed here; excluded
+  package):** `packages/protocol/src/logcheck.ts` `CONTROL_RECORD` (`reason: str(256)`) and the verifier-py equivalent still accept free
+  text from other boards. Constraining them to the same enum is a verifier and test-vector change. Records imported from other boards are
+  verified by the protocol path, not by this schema.
+* Test changes: `test/admin.test.ts` expects control migration version 5. `test/e2e.test.ts` pauses with reason `AVAILABILITY` instead of
+  the free text `maintenance`, which is now refused (negative case in the new test). New tests are in `test/adr027-anchor.test.ts`: restore
+  detection, same-size fork, re-anchoring, failed anchor write, boot gossip ahead/down/junk, keyless duplicates on ARCHIVED and IMPORTED,
+  the reason catalog and its negatives. `npm test`: 158/158 pass.

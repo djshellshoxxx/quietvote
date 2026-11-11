@@ -75,6 +75,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const webhooks = new WebhookService(env);
   const jobs = new JobRunner(env);
   const gossip = new GossipService(env, pool);
+  env.bootGossip = (rt) => gossip.bootCheck(rt); // QV-ADR-027 B2-07
   const retention = new RetentionSweeper(env);
   env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
   const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;

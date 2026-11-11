@@ -408,3 +408,79 @@ test('grammar: tally_result needs election_close, not tally_aggregate; late aggr
   const late = add(log, 'tally_aggregate').r;
   assert.ok(!late.ok && late.error.code === 'QV_BOARD_GRAMMAR', 'aggregate after result');
 });
+
+// QV-ADR-027 B2-07: trusted rollback anchor kept outside the store.
+test('B2-07: a coherent older snapshot passes the in-store guard but is quarantined by the external anchor', () => {
+  const { log, store } = newLog();
+  prelude(log);
+  const old = log.checkpoint();
+  const oldSize = log.size;
+  for (let i = 0; i < 3; i++) add(log, 'ballot');
+  const fresh = log.checkpoint();
+  assert.ok(old.ok && fresh.ok);
+  const anchor = { size: log.size, root: log.root() };
+  // the "backup": entries and checkpoint as of `old`, internally consistent
+  const restored = new MemoryBoardStore();
+  for (let i = 0; i < oldSize; i++) restored.appendEntry(store.getEntry(i)!);
+  const oc = store.getCheckpoint(oldSize)!;
+  restored.putCheckpoint(oc);
+  const opts = { origin: ORIGIN, publicKey: LOG.publicKey, secretKey: LOG.secretKey, clock: () => NOW, resolveAuthorKey };
+  const blind = new BoardLog({ ...opts, store: restored });
+  assert.equal(blind.status.state, 'ok', 'without an external anchor the old snapshot looks healthy (the B2-07 gap)');
+  const guarded = new BoardLog({ ...opts, store: restored, floor: anchor });
+  assert.equal(guarded.status.state, 'quarantine');
+  assert.match(guarded.status.reason, /ROLLBACK.*behind the trusted anchor/);
+  const cp = guarded.checkpoint();
+  assert.ok(!cp.ok && cp.error.code === 'QV_BOARD_QUARANTINE', 'never signs a second root for an already-signed size');
+  const e = mk('ballot');
+  const r = guarded.append(e.headerBytes, e.body);
+  assert.ok(!r.ok && r.error.code === 'QV_BOARD_QUARANTINE');
+  assert.ok(guarded.inclusionProof(0, oldSize).ok, 'reads keep working');
+  // same size, different history
+  const other = newLog();
+  prelude(other.log);
+  for (let i = 0; i < 3; i++) add(other.log, 'ballot');
+  const forked = new BoardLog({ ...opts, store: other.store, floor: anchor });
+  assert.equal(other.log.size, anchor.size);
+  assert.equal(forked.status.state, 'quarantine');
+  assert.match(forked.status.reason, /differs from the trusted anchor/);
+  // malformed anchors fail closed
+  for (const bad of [{ size: -1, root: anchor.root }, { size: 1.5, root: anchor.root }, { size: 1, root: new Uint8Array(31) }]) {
+    assert.equal(new BoardLog({ ...opts, store, floor: bad }).status.state, 'quarantine', JSON.stringify(bad.size));
+  }
+  // the genuine store at, or ahead of, the anchor stays healthy and keeps signing
+  assert.equal(new BoardLog({ ...opts, store, floor: anchor }).status.state, 'ok');
+  const ahead = new BoardLog({ ...opts, store, floor: { size: oldSize, root: oc.root } });
+  assert.equal(ahead.status.state, 'ok');
+  assert.ok(add(ahead, 'ballot').r.ok);
+  assert.ok(ahead.checkpoint().ok);
+});
+
+// QV-ADR-027 B2-12: no placeholder key; a keyless log never signs.
+test('B2-12: a keyless log refuses appends (duplicates included) and checkpoints, and promise signing throws', () => {
+  const { log, store } = newLog();
+  prelude(log);
+  const dupe = mk('ballot');
+  assert.ok(log.append(dupe.headerBytes, dupe.body).ok);
+  assert.ok(log.checkpoint().ok);
+  assert.equal(log.canSign, true);
+  const keyless = new BoardLog({ origin: ORIGIN, store, publicKey: LOG.publicKey, clock: () => NOW, resolveAuthorKey });
+  assert.equal(keyless.canSign, false);
+  assert.equal(keyless.status.state, 'ok');
+  const d = keyless.append(dupe.headerBytes, dupe.body);
+  assert.ok(!d.ok && d.error.code === 'QV_BOARD_READ_ONLY', 'byte-identical duplicate gets no re-signed receipt');
+  const n = mk('ballot');
+  const a = keyless.append(n.headerBytes, n.body);
+  assert.ok(!a.ok && a.error.code === 'QV_BOARD_READ_ONLY');
+  assert.equal(store.size(), log.size, 'nothing stored');
+  const cp = keyless.checkpoint();
+  assert.ok(!cp.ok && cp.error.code === 'QV_BOARD_READ_ONLY');
+  assert.throws(() => keyless.getReceipt(0), /no signing key/);
+  // proofs and the stored (genuinely signed) note remain available
+  assert.ok(keyless.inclusionProof(0, store.latestCheckpoint()!.size).ok);
+  const stored = parseCheckpoint(store.latestCheckpoint()!.note);
+  assert.ok(stored.ok && verifyLogSignature(stored.value, LOG.publicKey));
+  // the keyed log still answers the duplicate with a receipt under the real key
+  const real = log.getReceipt(5);
+  assert.ok(real.ok && verifyReceipt(real.value, LOG.publicKey).ok);
+});

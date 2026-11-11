@@ -250,7 +250,11 @@ export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, 
     throw new ApiError(409, 'STATE_CONFLICT', 'the stored log cannot be re-opened (it does not replay); restore it from a verified backup first');
   }
   if (!rt) throw new ApiError(404, 'NOT_FOUND', 'no such election');
-  if (rt.log.status.state === 'quarantine') throw new ApiError(409, 'STATE_CONFLICT', 'the stored log is still inconsistent after a fresh replay');
+  if (rt.log.status.state === 'quarantine') {
+    // QV-ADR-027 B2-07: a DB behind the control.sqlite rollback anchor cannot be cleared; only restoring the newer database helps.
+    if (rt.log.status.reason.startsWith('ROLLBACK:')) throw new ApiError(409, 'STATE_CONFLICT', `the stored log is behind the rollback anchor (${rt.log.status.reason.slice(10)}): restore the newer database first`);
+    throw new ApiError(409, 'STATE_CONFLICT', 'the stored log is still inconsistent after a fresh replay');
+  }
   const audit = await auditLog(rt);
   if (!audit.ok) throw new ApiError(409, 'STATE_CONFLICT', `a full self-audit still fails (${audit.failures[0]?.rule ?? 'unknown'}${audit.failures[0]?.seq !== undefined ? ` at seq ${audit.failures[0].seq}` : ''})`);
   // TOCTOU (security review 2026-10-21, SR-2): gossip may have recorded evidence or re-quarantined the log while this request was

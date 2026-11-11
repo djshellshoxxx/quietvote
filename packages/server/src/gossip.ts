@@ -130,6 +130,9 @@ export function judge(env: Env, rt: ElectionRuntime, theirs: Checkpoint, theirNo
   const size = Math.max(theirs.size, rt.log.size);
   const recorded = rt.edb.addEvidence(fp, a.evidence.kind, size, source, now, JSON.stringify(a.evidence), MAX_EVIDENCE_ROWS);
   let incident: string | undefined;
+  // QV-ADR-027 B2-07 ("take max"): a head our own key signed beyond our tree raises the control.sqlite anchor, so the rollback stays detected
+  // on every later open even if the election DB (and the quarantine stored in it) is restored again.
+  if (!rt.imported && a.relation === 'peer_ahead') env.control.raiseLogAnchor(rt.id, theirs.size, theirs.root);
   if (!rt.imported) {
     incident = rt.markQuarantine(a.evidence.kind === 'rollback' ? 'ROLLBACK_SUSPECTED' : 'EQUIVOCATION', a.evidence.kind === 'rollback' ? theirs.size : 0, a.evidence.kind === 'rollback' ? 'rollback' : 'equivocation');
   } else if (recorded) {
@@ -196,6 +199,19 @@ export class GossipService {
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
+  }
+
+  /**
+   * QV-ADR-027 B2-07 option B: one exchange of `rt`'s latest note with every configured peer (in parallel, each bounded by gossipTimeoutMs),
+   * run by the runtime before it first signs after being (re)opened. Same filters as a round: public, native, signed. A peer that is down
+   * does not block; the control.sqlite anchor stays the local floor.
+   */
+  async bootCheck(rt: ElectionRuntime): Promise<void> {
+    if (this.stopped || this.peers.length === 0 || rt.imported) return;
+    if (this.env.control.election(rt.id)?.access !== 'public') return;
+    const note = rt.edb.store.latestCheckpoint()?.note;
+    if (note === undefined) return;
+    await Promise.all(this.peers.map((peer) => this.exchangeOne(rt, peer, note).catch(() => undefined)));
   }
 
   /** One round over all public, non-draft elections. Re-entrant calls return immediately. */

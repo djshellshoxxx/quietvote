@@ -79,3 +79,17 @@ Where QV-18 is ambiguous or depends on QV-16 (not yet written), the safest readi
     11. `MemoryBoardStore.putCheckpoint` compares full roots with `bytesEqual` and requires 32-byte roots.
     12. `isPow2` (merkle.ts, now exported for tests) uses exact arithmetic; `Math.log2(2**52+1)` rounds to 52.
     Not implemented on purpose: `broken_promise` second branch (F11) and origin base32-vs-hex spec wording (F13) are spec questions, left as is.
+
+## QV-ADR-027 B2-07 / B2-12 (2026-11-04; AI-assisted, unaudited, not for real elections)
+
+* **B2-07 rollback anchor (`BoardLogOptions.floor`).** Optional `{size, root}` kept outside the store (the server keeps it in control.sqlite).
+  On load, a tree smaller than `floor.size`, or whose root at `floor.size` differs, puts the log in QUARANTINE with reason `ROLLBACK: ...`.
+  A malformed floor (non-integer or negative size, root not 32 bytes) also quarantines. The in-store guard (stored checkpoints vs tree) stays
+  as is. It cannot catch a coherent older snapshot, because that snapshot's checkpoints match its own tree; the floor catches it. There is
+  no way to continue past the mismatch: `append`, `checkpoint` and `redact` refuse while quarantined, and reads and proofs keep working.
+  Raising the floor (own checkpoints, witness/gossip heads, "take max") is the caller's job.
+* **B2-12 keyless log (`BoardLogOptions.secretKey` optional).** The server no longer passes a zero-seed placeholder. Without a key,
+  `append` returns `QV_BOARD_READ_ONLY` before the duplicate lookup, so byte-identical duplicates are refused too (option A).
+  `checkpoint` returns `QV_BOARD_READ_ONLY`. `getReceipt` (promise signing) throws. `canSign` reports which case applies.
+  Option B (returning a stored original receipt) is deferred: it needs a persisted promise signature per entry.
+* Tests: `test/log.test.ts` "B2-07: ..." and "B2-12: ...". `npm test`: 76/76 pass.
