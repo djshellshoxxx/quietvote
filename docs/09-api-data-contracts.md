@@ -32,32 +32,31 @@ Crypto encodings (QV-16); UI (QV-10); identity proofing beyond invite codes (QV-
 | Anonymous observer / mirror / verifier | none (or read key for `link` elections) | all `GET` under `/elections/{id}`, SSE, export |
 | Voter | invite code once (registration); thereafter **entry signature** by voter key | `POST registrations`, `POST log/entries (ballot)`, proofs |
 | Trustee | invite code once (redeem); thereafter **entry signature** | `POST …/redeem`, `POST log/entries (dkg_*, decryption_share…)` |
-| Organizer | **session bearer** (Ed25519 challenge–response) for management; **entry signature** for log entries | org/election CRUD, invites, exports |
-| Instance admin | session bearer, `instance_admin` role | `/admin/*` |
+| Organizer | **signed requests** (`Authorization: QV-Sig`, QV-08 §7) for management; **entry signature** for log entries (QV-ADR-027 N-20) | org/election CRUD, invites, exports |
+| Instance admin | signed requests by an `instance_admin` key (QV-ADR-027 N-20) | `/admin/*` |
 | Witness | none for `add-checkpoint` (it is the *server* calling witness); `POST log/cosignatures` is signature-verified | cosignature push |
 
 ## 3. Authentication and authorization
 
 ### 3.1 Principles
-- **No cookies, no ambient credentials.** All credentials travel in `Authorization: Bearer …` or inside signed objects. CORS: public `GET`s allow `Access-Control-Allow-Origin: *` without credentials; authenticated endpoints allow only configured origins (the instance's own client origin).
+- **No cookies, no ambient credentials.** All credentials travel in `Authorization: QV-Sig …` (a per-request signature, §3.2) or inside signed objects; there are no bearer tokens (QV-ADR-027 N-20). CORS: public `GET`s allow `Access-Control-Allow-Origin: *` without credentials; authenticated endpoints allow only configured origins (the instance's own client origin).
 - **Key-based identity.** Organizer, admin, voter and trustee identities are public keys (QV-16 signature suites, Ed25519 default). Key identifier `key_id = KeyId(pk)`.
 - **No mandatory identity.** Account creation needs a key and (depending on instance policy) a registration token; no email, phone or name.
 
-### 3.2 Organizer / admin session (challenge–response)
+### 3.2 Organizer / admin signed requests
+
+*Amended by QV-ADR-027 N-20 (D-84): QV-08 §7 signed requests (QV-08-REQ-019, QV-ADR-P08-4) are the sole organizer/admin authentication. The earlier challenge–response session (`/auth/challenge`, `/auth/session`, `Bearer qvs_…` tokens) is retired; no session store, token rotation or revocation exists.*
 
 ```mermaid
 sequenceDiagram
   participant C as Client (holds sk)
   participant S as Server
-  C->>S: POST /api/v1/auth/challenge {key_id}
-  S-->>C: {challenge_id, nonce, audience, expires_at}
-  C->>C: sig = Sign(sk, AUTH-domain || audience || nonce || key_id || scope)   (QV-16)
-  C->>S: POST /api/v1/auth/session {challenge_id, key_id, signature}
-  S-->>C: {token: "qvs_…", expires_at, role, org_id}
-  C->>S: Authorization: Bearer qvs_…
+  C->>C: sig = Ed25519.Sign(sk, "QV-REQ-v1\0" ‖ method ‖ "\0" ‖ target ‖ "\0" ‖ audience ‖ "\0" ‖ ts ‖ "\0" ‖ nonce ‖ SHA-256(body))
+  C->>S: Authorization: QV-Sig keyid=…,ts=…,nonce=…,sig=…
+  S-->>C: response (or 401 UNAUTHENTICATED / BAD_SIGNATURE)
 ```
-- `audience` = instance id + origin (prevents relay between instances). Challenge TTL 120 s, single use. Token: 256-bit random, TTL 12 h, stored only as SHA-256 (QV-28). `DELETE /auth/session` revokes. Failed attempts rate-limited per `key_id` and bucket.
-- Registration of a new organization key uses the same flow with `purpose: "register"` and the public key supplied inline (proof of possession).
+- `audience` = `qv:<instance_id>@<public origin>` (prevents relay between instances); `target` = path and query as sent; `ts` = Unix seconds, accepted within ±120 s of server time; `nonce` ≥ 96 bits, single use per key inside the window (persisted replay cache). Unknown keys take the same verification path as known ones (uniform failure, no key enumeration). Failed attempts are rate-limited per bucket.
+- Organization registration (`POST /orgs`) is a signed request by the new owner key itself (proof of possession); an additional org key is added by an owner request carrying a proof of possession `pop` over `"QV-KEY-v1\0" ‖ org_id ‖ "\0" ‖ pk`.
 
 ### 3.3 Voter
 - **Registration** (`POST /elections/{id}/registrations`): body carries a one-time `invite_code` (128-bit; sent out-of-band by the organizer), the voter's new public key `pk`, and a proof-of-possession signature over `(election_id, pk)`. The code authorizes *only* registering one key.
@@ -74,7 +73,7 @@ sequenceDiagram
 
 ### 3.6 Authorization matrix
 
-| Endpoint class | anon | read key | voter (entry sig) | trustee (entry sig) | organizer (bearer) | org owner | admin |
+| Endpoint class | anon | read key | voter (entry sig) | trustee (entry sig) | organizer (QV-Sig) | org owner | admin |
 |---|---|---|---|---|---|---|---|
 | Instance info, release manifest | ✔ | | | | | | |
 | Election public reads (`GET /elections/{id}/…`) | public: ✔ | link: ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
@@ -84,7 +83,7 @@ sequenceDiagram
 | Delete election, manage org keys | | | | | | ✔ | ✔ |
 | `/admin/*` | | | | | | | ✔ |
 
-Cross-org access is impossible: the session’s `org_id` must equal the election’s `org_id` (QV-28 registry).
+Cross-org access is impossible: the signing key’s `org_id` must equal the election’s `org_id` (QV-28 registry; QV-ADR-027 N-20).
 
 ## 4. Conventions
 
@@ -127,7 +126,7 @@ All errors: `Content-Type: application/problem+json`.
 | HTTP | `code` | Meaning | Retryable |
 |---|---|---|---|
 | 400 | `BAD_REQUEST`, `MALFORMED_ENTRY`, `UNKNOWN_FIELD`, `INVALID_CURSOR` | syntax/shape | no |
-| 401 | `UNAUTHENTICATED`, `SESSION_EXPIRED`, `CHALLENGE_EXPIRED`, `BAD_SIGNATURE` | credentials | after re-auth |
+| 401 | `UNAUTHENTICATED`, `BAD_SIGNATURE` (QV-ADR-027 N-20: `SESSION_EXPIRED`, `CHALLENGE_EXPIRED` retired) | credentials | after re-signing |
 | 403 | `FORBIDDEN`, `AUTHOR_NOT_AUTHORIZED`, `READ_KEY_REQUIRED`, `REGISTRATION_CLOSED` | not permitted | no |
 | 404 | `NOT_FOUND` | no such resource (also for cross-org probes) | no |
 | 409 | `WRONG_PHASE`, `NONCE_REUSE`, `INVITE_USED`, `STATE_CONFLICT`, `WITNESS_QUORUM_REQUIRED`, `IDEMPOTENCY_IN_PROGRESS` | conflict with current state | sometimes (`IDEMPOTENCY_IN_PROGRESS`, `WITNESS_QUORUM_REQUIRED` after delay) |
@@ -166,12 +165,12 @@ Per QV-18 §10 and in addition:
 | `R` read | public GETs | 120 req/min/bucket; ≤ 4 SSE streams/bucket |
 | `P` proof | proof endpoints | 600 req/min/bucket |
 | `W` write-entry | `POST log/entries` | 10/min/author key; pre-auth 30/min/bucket |
-| `A` auth | `/auth/*`, `redeem`, `registrations` | 10/min/bucket + 5 failures/10 min/key_id/invite |
-| `M` manage | org/election management | 60/min/session |
+| `A` auth | `POST /orgs`, `redeem`, `registrations` (QV-ADR-027 N-20: no `/auth/*`) | 10/min/bucket + 5 failures/10 min/key_id/invite |
+| `M` manage | org/election management | 60/min/key |
 | `X` export | export creation | 2/hour/election |
 | `G` gossip | `POST /gossip/checkpoints`, `log/cosignatures` | 30/min/bucket |
 
-Responses carry `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` and `Retry-After` on `429`. Note: the `RateLimit-*` names are early-draft names of the IETF httpapi RateLimit header fields; the current Internet-Draft (draft-ietf-httpapi-ratelimit-headers-11, May 2026, not final) uses `RateLimit-Policy` and `RateLimit` instead. The reference server currently emits the early-draft names (see docs/errata/spec-errata-log.md); the names may change again before the draft is published as an RFC. "Bucket" semantics: in-memory HMAC of client address, daily rotating, never persisted (QV-18 §10); with `logging.ip=off` and on onion deployments all unauthenticated callers share one bucket, and per-key limits dominate.
+Responses carry `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` and `Retry-After` on `429`. Note: the `RateLimit-*` names are early-draft names of the IETF httpapi RateLimit header fields; the current Internet-Draft (draft-ietf-httpapi-ratelimit-headers-11, May 2026, not final) uses `RateLimit-Policy` and `RateLimit` instead. The reference server currently emits the early-draft names (see docs/errata/spec-errata-log.md); the names may change again before the draft is published as an RFC. **Decided (QV-ADR-027 N-16, D-90):** the early-draft names are kept until the draft is an RFC; then old and new names are emitted together for one release (errata E-002 resolved). "Bucket" semantics: in-memory HMAC of client address, daily rotating, never persisted (QV-18 §10); with `logging.ip=off` and on onion deployments all unauthenticated callers share one bucket, and per-key limits dominate.
 
 ## 5. Requirements
 
@@ -181,9 +180,9 @@ Responses carry `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` and 
 | QV-09-REQ-002 | Schemas in `packages/protocol/schemas` shall be the single source; OpenAPI 3.1 shall be generated; CI shall fail on drift between code, schemas and this document's endpoint tables. | Must | CI job. | T |
 | QV-09-REQ-003 | All errors shall be RFC 9457 `application/problem+json` with stable `code`, `retryable`, `request_id`; no stack traces. | Must | Fuzz: every error path returns the shape. | T |
 | QV-09-REQ-004 | No endpoint shall set cookies, require third-party resources, or log client IP/User-Agent by default. | Must | Header scan; log scan with canary headers. | T |
-| QV-09-REQ-005 | Log appends shall be self-authenticating; the server shall verify entry signatures and authorization (QV-18 §5.3) independent of any bearer token, and shall ignore bearer tokens on `POST log/entries`. | Must | Test: valid bearer + invalid entry sig → rejected; no bearer + valid sig → accepted. | T |
-| QV-09-REQ-006 | Organizer/admin sessions shall use the challenge–response flow with audience binding, single-use 120 s challenges, 12 h tokens stored hashed. | Must | Replay and cross-instance tests fail. | T |
-| QV-09-REQ-007 | Invite codes, session tokens and read keys shall be ≥ 128-bit random, compared in constant time, and never logged. | Must | Code review; log scan. | T/R |
+| QV-09-REQ-005 | Log appends shall be self-authenticating; the server shall verify entry signatures and authorization (QV-18 §5.3) independent of any request credential, and shall ignore the `Authorization` header on `POST log/entries` (QV-ADR-027 N-20). | Must | Test: any `Authorization` header + invalid entry sig → rejected; no header + valid sig → accepted. | T |
+| QV-09-REQ-006 | Organizer/admin requests shall be authenticated only by QV-08 §7 signed requests (`QV-Sig`) with audience binding, a ±120 s timestamp window and a single-use nonce per key; no session or bearer token shall be issued or accepted (QV-ADR-027 N-20). | Must | Replay, stale-timestamp, cross-instance and bearer-token tests fail. | T |
+| QV-09-REQ-007 | Invite codes and read keys (QV-ADR-027 N-20: no session tokens exist) shall be ≥ 128-bit random, compared in constant time, and never logged. | Must | Code review; log scan. | T/R |
 | QV-09-REQ-008 | Idempotency semantics of §4.4 shall hold, including crash-retry of the same entry bytes returning the original receipt. | Must | Chaos test. | T |
 | QV-09-REQ-009 | Public read endpoints shall be CORS-enabled (`*`, no credentials) so third-party verifiers and mirrors can fetch from browsers. | Must | Browser fetch test from foreign origin. | T |
 | QV-09-REQ-010 | The server shall provide SSE (`/events`) with `Last-Event-ID` resume, at-least-once delivery, heartbeat ≤ 20 s, containing only P0 data. | Must | Disconnect/resume test; payload audit. | T |
@@ -200,7 +199,7 @@ Responses carry `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` and 
 
 ## 6. Instance, auth, organization, election management
 
-Endpoint notation: Auth = `anon` / `read` (public or read key) / `org` (organizer bearer, same org) / `owner` / `admin` / `sig` (self-authenticating). Class = rate class §4.7. Idem = `Idempotency-Key` required (R) / honored (h) / n.a.
+Endpoint notation: Auth = `anon` / `read` (public or read key) / `org` (organizer QV-Sig key, same org; QV-ADR-027 N-20) / `owner` / `admin` / `sig` (self-authenticating). Class = rate class §4.7. Idem = `Idempotency-Key` required (R) / honored (h) / n.a.
 
 ### 6.1 Instance and health
 
@@ -214,23 +213,17 @@ Endpoint notation: Auth = `anon` / `read` (public or read key) / `org` (organize
 
 ### 6.2 Auth
 
-| Method & path | Auth | Class | Request | Response | Errors |
-|---|---|---|---|---|---|
-| `POST /api/v1/auth/challenge` | anon | A | `{key_id}` or `{pk, alg, purpose:"register"}` | `201 Challenge` | 404 unknown key (uniform delay to avoid key enumeration—see note) |
-| `POST /api/v1/auth/session` | anon | A | `{challenge_id, key_id, signature}` | `201 Session` | 401 `BAD_SIGNATURE`, `CHALLENGE_EXPIRED` |
-| `DELETE /api/v1/auth/session` | org/admin | M | — | `204` | |
-
-Note: unknown `key_id` returns a normal-looking challenge (the failure appears at `session`), preventing account enumeration.
+Retired (QV-ADR-027 N-20): there are no `/api/v1/auth/*` endpoints. Every management endpoint is authenticated per request with `QV-Sig` (§3.2); unknown keys fail on the same path as bad signatures, preventing account enumeration.
 
 ### 6.3 Organizations
 
 | Method & path | Auth | Class | Idem | Request | Response |
 |---|---|---|---|---|---|
-| `POST /api/v1/orgs` | anon (per `registration_mode`) | A | R | `OrgCreate` | `201 Org` + owner key registered |
+| `POST /api/v1/orgs` | anon (per `registration_mode`), signed by the new owner key (QV-ADR-027 N-20) | A | R | `OrgCreate` | `201 Org` + owner key registered |
 | `GET /api/v1/orgs/{org_id}` | org | M | n.a. | — | `Org` |
 | `PATCH /api/v1/orgs/{org_id}` | owner | M | h | `{name?}` | `Org` |
 | `GET /api/v1/orgs/{org_id}/keys` | org | M | n.a. | — | `Page<OrgKey>` |
-| `POST /api/v1/orgs/{org_id}/keys` | owner | M | R | `{pk, alg, role, label?, challenge_id, signature}` (PoP) | `201 OrgKey` |
+| `POST /api/v1/orgs/{org_id}/keys` | owner | M | R | `{pk, alg, role, label?, pop}` (PoP over `"QV-KEY-v1\0" ‖ org_id ‖ "\0" ‖ pk`; QV-ADR-027 N-20) | `201 OrgKey` |
 | `DELETE /api/v1/orgs/{org_id}/keys/{key_id}` | owner | M | h | — | `204` (cannot remove last owner) |
 | `GET /api/v1/orgs/{org_id}/elections` | org | M | n.a. | `?state=&cursor=&limit=` | `Page<ElectionSummary>` |
 | `POST /api/v1/orgs/{org_id}/webhooks` / `GET` / `DELETE …/{id}` | owner | M | R | `{url, events[], election_id?}` | *Could* — public events only (REQ-014); HMAC-signed deliveries |
@@ -256,7 +249,7 @@ Publishing the manifest = `POST log/entries` with `type=manifest` signed by an o
 
 | Method & path | Auth | Class | Idem | Request | Response |
 |---|---|---|---|---|---|
-| `POST /elections/{id}/invites` | org | M | R | `InviteCreate`: `{count?: 1..1000, items?: [{label?, contact?}], expires_at?, deliver?: false}` | `201 {invites:[{invite_id, code, label?}]}` — **`code` returned once**; stored hashed. If `deliver:true` and server mail configured, `contact` used then purged. |
+| `POST /elections/{id}/invites` | org | M | R | `InviteCreate`: `{count?: 1..1000, items?: [{label?, contact?}], expires_at?, deliver?: false}`; omitted `expires_at` ⇒ creation + 14 days (QV-02-REQ-010; QV-ADR-027 B2-10) | `201 {invites:[{invite_id, code, label?}]}` — **`code` returned once**; stored hashed. If `deliver:true` and server mail configured, `contact` used then purged. |
 | `GET /elections/{id}/invites` | org | M | n.a. | `?state=&cursor=` | `Page<InviteStatus>` (no codes, no contacts unless `include_label=true`) |
 | `DELETE /elections/{id}/invites/{invite_id}` | org | M | h | — | `204`; code unusable |
 | `POST /elections/{id}/registrations` | anon+code | A | h | `Registration` | `201 RegistrationResult` `{voter_kid, status}`; `409 INVITE_USED`; `422 INVITE_EXPIRED`; `403 REGISTRATION_CLOSED` |
@@ -372,6 +365,8 @@ event: alert     data: {"kind":"quarantine|equivocation|rollback","detail_code":
 | `POST /admin/elections/{id}/self-audit` | admin | M | R | — | `202 Job` |
 | `POST /admin/elections/{id}/quarantine/clear` | admin | M | R | `{ack: "<incident id>", verified_against:["witness:w1"]}` | `200` only after server re-verification against witnesses/mirrors (QV-18-REQ-053); audit-logged |
 | `DELETE /admin/elections/{id}` | admin | M | h | `{confirm}` | `202 Job` (policy preconditions as §6.4) |
+
+*QV-ADR-027 N-32(b):* the reference server implements `kind:"public"` only (`operator` → `422 VALIDATION_FAILED`). `download_url` is an org-signed `GET`; the first successful organizer download sets `ExportRecord.acknowledged_at`, which (or 30 days after `created_at`) satisfies the QV-28 §11.2 export precondition for deleting an ARCHIVED election.
 
 **Behaviour of the reference server (`packages/server`, additive to the table above).**
 - **Range.** `export.qvb` and `export.json` answer `Accept-Ranges: bytes`. Exactly one byte range is served (`a-b`, `a-`, `-n`): `206` with `Content-Range: bytes a-b/len`. `If-Range` is honoured only with the current strong ETag, otherwise the full `200` is sent. Any other well-formed-or-not `bytes=` request (several ranges, `a>b`, `-0`, start beyond the end, non-numeric, header over 128 characters, an empty representation) is `416` with `Content-Range: bytes */len` and a small problem body; a non-`bytes` unit is ignored. Several ranges are never expanded (no multipart/byteranges). `If-None-Match` wins over `Range`. The ETag is `"<size>:<root16>:<gen>"`; built bundles are cached per election for 10 minutes (bounded), so resumed downloads do not rebuild them.
@@ -512,23 +507,12 @@ Shared definitions (`$defs`) — abbreviated; complete files live in `packages/p
         "features": {"type": "array", "items": {"type": "string"}}
       }
     },
-    "Challenge": {"type": "object", "required": ["challenge_id", "nonce", "audience", "expires_at"],
-      "properties": {"challenge_id": {"type": "string"}, "nonce": {"$ref": "common.json#/$defs/B64u"},
-                     "audience": {"type": "string"}, "expires_at": {"$ref": "common.json#/$defs/Ts"}}},
-    "SessionRequest": {"type": "object", "required": ["challenge_id", "key_id", "signature"], "additionalProperties": false,
-      "properties": {"challenge_id": {"type": "string"}, "key_id": {"$ref": "common.json#/$defs/KeyId"},
-                     "signature": {"$ref": "common.json#/$defs/B64u"}}},
-    "Session": {"type": "object", "required": ["token", "expires_at", "role"],
-      "properties": {"token": {"type": "string", "pattern": "^qvs_[A-Za-z0-9_-]{43}$"},
-                     "expires_at": {"$ref": "common.json#/$defs/Ts"},
-                     "role": {"enum": ["org_owner", "org_organizer", "instance_admin"]},
-                     "org_id": {"$ref": "common.json#/$defs/Id"}}},
-    "OrgCreate": {"type": "object", "required": ["name", "owner_key", "challenge_id", "signature"], "additionalProperties": false,
+    "OrgCreate": {"type": "object", "required": ["name", "owner_key"], "additionalProperties": false,
+      "description": "QV-ADR-027 N-20: proof of possession is the QV-Sig signature of this request by owner_key (no challenge_id/signature members; Challenge, SessionRequest and Session schemas retired).",
       "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 120},
                      "owner_key": {"type": "object", "required": ["pk", "alg"],
                                    "properties": {"pk": {"$ref": "common.json#/$defs/B64u"}, "alg": {"$ref": "common.json#/$defs/Alg"}}},
-                     "registration_token": {"type": "string"},
-                     "challenge_id": {"type": "string"}, "signature": {"$ref": "common.json#/$defs/B64u"}}},
+                     "registration_token": {"type": "string"}}},
     "ElectionCreate": {"type": "object", "required": ["title"], "additionalProperties": false,
       "properties": {"title": {"type": "string", "minLength": 1, "maxLength": 200},
                      "access": {"enum": ["public", "link"], "default": "public"}}},
@@ -579,13 +563,12 @@ Shared definitions (`$defs`) — abbreviated; complete files live in `packages/p
 
 ### 11.3 Examples
 
-*Organization registration and organizer login*
+*Organization registration (signed by the new owner key; QV-ADR-027 N-20)*
 
 ```
-POST /api/v1/auth/challenge          {"pk":"…","alg":"ed25519","purpose":"register"}
- -> 201 {"challenge_id":"c_9f…","nonce":"…","audience":"qv:inst_7d…@https://vote.example","expires_at":"2026-11-02T18:02:00Z"}
 POST /api/v1/orgs  (Idempotency-Key: 5d1b8c0e-…)
- {"name":"Riverside Co-op","owner_key":{"pk":"…","alg":"ed25519"},"challenge_id":"c_9f…","signature":"…"}
+Authorization: QV-Sig keyid=<KeyId(pk)>,ts=1793642520,nonce=<b64u>,sig=<b64u>
+ {"name":"Riverside Co-op","owner_key":{"pk":"…","alg":"ed25519"}}
  -> 201 {"org_id":"kq2…","name":"Riverside Co-op","keys":[{"key_id":"…","role":"org_owner"}]}
 ```
 
@@ -626,10 +609,10 @@ POST …/log/entries  (ballot with bad proof)
 | Case | Attacker | Impact | Mitigation | Residual |
 |---|---|---|---|---|
 | Replay of a signed entry to another election | Any | Wrong-election ballot | `origin` in signed header (QV-18) | None known |
-| Session token theft | XSS/log leak | Organizer actions | No cookies; short TTL; hashed storage; strict CSP; entries still need signatures so token cannot publish manifest/open/close | Management actions (invites, drafts, export) |
+| Signed-request replay (QV-ADR-027 N-20: no session tokens) | Network/log leak | Organizer actions | ±120 s window; single-use nonce per key; audience binding; no cookies; strict CSP; entries still need signatures so a replayed request cannot publish manifest/open/close | Theft of the organizer signing key |
 | Invite code guessing | Bot | Unauthorized registration | 128-bit codes, rate limits, per-invite fail counters | None |
 | Registration flooding (open mode) | Bot | Roll pollution | `registration_mode=token`, approval policy, organizer review of roll before commit | Organizer workload |
-| Account enumeration | Bot | Privacy | Uniform challenge response | Timing noise |
+| Account enumeration | Bot | Privacy | Unknown keys take the same signature-verification path (QV-ADR-027 N-20) | Timing noise |
 | Cross-org probing | Org user | Disclosure | 404 for foreign resources, constant-time-ish | None |
 | Request smuggling / oversized bodies | Attacker | DoS | Body caps, header limits, slowloris timeouts (reverse proxy guidance, QV-12) | Availability |
 | CORS abuse | Malicious site | Credentialed requests | No ambient credentials; credentials only in headers; authenticated endpoints origin-restricted | None |
@@ -662,7 +645,7 @@ POST …/log/entries  (ballot with bad proof)
 ## 17. Testing and verification
 
 - **Contract tests** generated from JSON Schemas (every request/response, positive and negative); OpenAPI lint (Spectral or equivalent `[VERIFIED: spectral README, OpenAPI 3.1, 2026-10-21]`).
-- **Auth tests**: replay, cross-audience, expired/used challenges, bearer on `POST entries` ignored, cross-org access matrix.
+- **Auth tests**: replay (reused nonce), cross-audience, stale timestamps, bearer tokens refused, `Authorization` on `POST entries` ignored, cross-org access matrix (QV-ADR-027 N-20).
 - **Idempotency/chaos**: kill server between append commit and response; client retry returns original receipt.
 - **Conformance suite** shared with mirrors/witnesses: proof endpoints vs QV-18 vectors; checkpoint note parsing.
 - **Privacy tests**: no cookies; log/DB scan for IP/UA with canary values; payload audits for SSE/webhooks/exports.
@@ -685,14 +668,14 @@ POST …/log/entries  (ballot with bad proof)
 | Q3 | How can integrations avoid receiving identity/ballot-choice data? | QV-06 | Integrations receive P0/P1 only (REQ-014); server holds no choices | Closed |
 | Q4 | Which records are portable between deployments? | QV-12 | Public bundle (complete log) and operator bundle; no live migration of OPEN elections | Closed (see QV-18 §12) |
 | Q5 | Should voters get optional sessions for convenience (notifications)? | QV-10 | No in v1 (no identity) | Pending |
-| Q6 | WebAuthn/passkey support for organizer login (as key storage, signs the challenge)? | UX | Client-side only; server sees Ed25519 or ECDSA P-256 if QV-16 adds suite | Pending |
+| Q6 | WebAuthn/passkey support for organizer keys (as key storage, signs each request; QV-ADR-027 N-20)? | UX | Client-side only; server sees Ed25519 or ECDSA P-256 if QV-16 adds suite | Pending |
 | Q7 | `Idempotency-Key` header standardization status | API | Use as specified; revisit if IETF RFC lands | Pending |
 | Q8 | `link` access read-key rotation | QV-12 | Organizer can rotate; old key invalid after 24 h | Pending |
 
 ## 20. Proposed ADRs
 
-- **QV-ADR-P09-1 — Self-authenticating writes: state changes only via signed log entries.** No endpoint sets election state; bearer tokens are for management conveniences only.
-- **QV-ADR-P09-2 — No cookies, bearer-in-header, no ambient authority.**
+- **QV-ADR-P09-1 — Self-authenticating writes: state changes only via signed log entries.** No endpoint sets election state; signed management requests (QV-ADR-027 N-20) are for management conveniences only.
+- **QV-ADR-P09-2 — No cookies, per-request signature in the `Authorization` header (`QV-Sig`; QV-ADR-027 N-20 replaced bearer-in-header), no ambient authority.**
 - **QV-ADR-P09-3 — Public API == internal API; OpenAPI generated from JSON Schemas.**
 - **QV-ADR-P09-4 — Entries transported as canonical bytes (never re-serialized JSON).** Avoids canonicalization attacks.
 

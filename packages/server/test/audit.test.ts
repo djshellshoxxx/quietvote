@@ -47,7 +47,7 @@ async function organizerKey(): Promise<ReturnType<typeof kp>> {
 
 // ------------------------------------------------------------------------------------------------ rate-limit buckets
 
-test('SRV-002: IPv6 clients inside one /64 share a bucket even when the textual address is compressed', () => {
+test('SRV-002 / QV-ADR-027 N-32(a): IPv6 clients inside one /56 share a bucket even when the textual address is compressed', () => {
   const k = new BucketKeyer(() => 0);
   // Node prints zero runs as "::", so the first four colon-separated tokens can contain host bits
   const a = k.bucket('2001:db8::1:2:3:4');
@@ -55,8 +55,14 @@ test('SRV-002: IPv6 clients inside one /64 share a bucket even when the textual 
   const c = k.bucket('2001:db8:0:0:aaaa:bbbb:cccc:dddd');
   assert.equal(a, b);
   assert.equal(a, c);
-  assert.notEqual(a, k.bucket('2001:db8:0:1::1'), 'a different /64 is a different bucket');
+  // QV-29 §6.1: the bucket is the /56, so the 256 /64s of one /56 (fourth group 0x00xx) cannot each get their own bucket
+  assert.equal(a, k.bucket('2001:db8:0:1::1'), 'another /64 inside the same /56 shares the bucket');
+  assert.equal(a, k.bucket('2001:db8:0:ff:ffff:ffff:ffff:ffff'), 'the last /64 of the /56 shares the bucket');
+  assert.equal(k.bucket('2001:db8:0:1200::1'), k.bucket('2001:db8:0:12ff::2'), 'the low byte of the fourth group is host-side');
+  assert.notEqual(a, k.bucket('2001:db8:0:100::1'), 'the next /56 is a different bucket');
   assert.notEqual(a, k.bucket('2001:db8:1::1'));
+  assert.notEqual(k.bucket('2001:db8:0:1200::1'), k.bucket('2001:db8:0:1300::1'));
+  assert.notEqual(k.bucket('10.0.0.1'), k.bucket('::a00:1'), 'an IPv6 prefix never collides with an IPv4 /24 bucket');
   assert.equal(k.bucket('::ffff:10.1.2.3'), k.bucket('10.1.2.200'), 'v4-mapped addresses bucket by /24');
   assert.equal(k.bucket('fe80::1%eth0'), k.bucket('fe80::2'), 'zone ids do not split buckets');
 });

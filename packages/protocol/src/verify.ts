@@ -183,7 +183,8 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     return done();
   }
   R.checks['chk.manifest.sig'] = 'pass';
-  R.checks['chk.encoding.canonical'] = 'pass';
+  // chk.encoding.canonical ("all objects canonically encoded") becomes `pass` only once the voter envelopes were examined (C4);
+  // an earlier stop leaves it `not_run` unless a record already failed it (QV-35-REQ-003: no `pass` without its evidence).
 
   // ---- roll
   const rr = rollRoot(rollHex);
@@ -481,6 +482,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   R.checks['chk.time.window'] = an.checkFailures.window ? 'pass' : 'fail';
   R.checks['chk.benaloh.spoiled'] = an.checkFailures.benaloh ? 'pass' : 'fail';
   if (!an.checkFailures.encoding) R.checks['chk.encoding.canonical'] = 'fail';
+  else if (R.checks['chk.encoding.canonical'] !== 'fail') R.checks['chk.encoding.canonical'] = 'pass';
   const V = an.counted.length;
   R.countedBallots = an.counted.map((c) => ({ voter: c.voter, code: c.code }));
 

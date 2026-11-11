@@ -6,6 +6,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build as esbuild, type BuildOptions } from 'esbuild';
 import { EN } from '../i18n/en.ts';
+import { LOCALE_META, type LocaleMeta } from '../i18n/locales-core.ts';
+import { hasReviews } from '../i18n/runtime.ts';
 import { precompileI18nPlugin } from './precompile.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -60,7 +62,16 @@ const common: BuildOptions = {
   define: { 'process.env.NODE_ENV': '"production"' }, absWorkingDir: PKG,
 };
 
-export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: Asset[]; version: string; buildId: string; connectOrigins: string[] }): string {
+/**
+ * QV-ADR-027 W15 (option A): source files of the lazy chunks that get an integrity-pinned modulepreload: the results chart and
+ * the catalog of every locale with review records (the only catalogs `loadLocaleDefs()` ever fetches). Unreviewed catalogs are
+ * never fetched by the app, so they are not preloaded (no eager download). The seal worker is not covered (documented gap).
+ */
+export function lazyPreloadSources(meta: readonly LocaleMeta[] = LOCALE_META): string[] {
+  return ['src/ui/charts.ts', ...meta.filter((m) => m.tier !== 'source' && hasReviews(m)).map((m) => `src/i18n/catalogs/${m.tag}.ts`)];
+}
+
+export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: Asset[]; lazy?: Asset[]; version: string; buildId: string; connectOrigins: string[] }): string {
   const { meta } = csp(a.connectOrigins);
   return `<!doctype html>
 <html lang="en" dir="ltr">
@@ -76,7 +87,7 @@ export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: As
 <title>${esc(EN['qv.app.name'].message)}</title>
 <link rel="stylesheet" href="/${a.css.path}" integrity="${a.css.integrity}" crossorigin="anonymous">
 <link rel="modulepreload" href="/${a.js.path}" integrity="${a.js.integrity}" crossorigin="anonymous">
-${(a.modules ?? []).map((m) => `<link rel="modulepreload" href="/${m.path}" integrity="${m.integrity}" crossorigin="anonymous">`).join('\n')}
+${[...(a.modules ?? []), ...(a.lazy ?? [])].map((m) => `<link rel="modulepreload" href="/${m.path}" integrity="${m.integrity}" crossorigin="anonymous">`).join('\n')}
 </head>
 <body>
 <div id="app"><p>${esc(EN['qv.shell.loading'].message)}</p><noscript><p>${esc(EN['qv.shell.noscript'].message)}</p></noscript></div>
@@ -111,7 +122,7 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
   return { html, scriptHash: sh, styleHash: st, policy };
 }
 
-export async function buildSite(outDir: string, opts: { version?: string; connectOrigins?: string[] } = {}): Promise<{ assets: Asset[]; buildId: string; verifierBytes: number }> {
+export async function buildSite(outDir: string, opts: { version?: string; connectOrigins?: string[]; /** tests only: which locales count as reviewed for preloads */ localeMeta?: readonly LocaleMeta[] } = {}): Promise<{ assets: Asset[]; buildId: string; verifierBytes: number }> {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(join(outDir, 'assets'), { recursive: true });
   const assets: Asset[] = [];
@@ -146,16 +157,27 @@ export async function buildSite(outDir: string, opts: { version?: string; connec
   const buildId = hashOf('sha256', assets.map((a) => a.sha256).sort().join('\n'), 'hex').slice(0, 12);
   const version = opts.version ?? (JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8')) as { version: string }).version;
   const connectOrigins = opts.connectOrigins ?? [];
-  const staticModules = new Set<string>();
-  const visit = (path: string): void => {
+  const visit = (path: string, into: Set<string>): void => {
     for (const imp of app.metafile!.outputs[path]?.imports ?? []) {
-      if (imp.kind !== 'import-statement' || imp.external || staticModules.has(imp.path)) continue;
-      staticModules.add(imp.path); visit(imp.path);
+      if (imp.kind !== 'import-statement' || imp.external || into.has(imp.path)) continue;
+      into.add(imp.path); visit(imp.path, into);
     }
   };
-  visit(Object.keys(app.metafile!.outputs).find((p) => p.endsWith('/app.js'))!);
-  const staticNames = new Set([...staticModules].map((p) => `assets/${p.split('/').pop()!}`));
-  writeFileSync(join(outDir, 'index.html'), htmlPage({ js, css: cs, worker: wk, modules: assets.filter((a) => staticNames.has(a.path)), version, buildId, connectOrigins }));
+  const staticModules = new Set<string>();
+  visit(Object.keys(app.metafile!.outputs).find((p) => p.endsWith('/app.js'))!, staticModules);
+  // QV-ADR-027 W15: each pinned lazy chunk plus its own static imports (a module the import() graph would otherwise fetch unpinned).
+  const lazyModules = new Set<string>();
+  for (const src of lazyPreloadSources(opts.localeMeta)) {
+    const out = Object.entries(app.metafile!.outputs).find(([, o]) => o.entryPoint === src)?.[0];
+    if (out === undefined) throw new Error(`lazy chunk for ${src} missing from build output`);
+    lazyModules.add(out); visit(out, lazyModules);
+  }
+  const nameOf = (p: string): string => `assets/${p.split('/').pop()!}`;
+  const staticNames = new Set([...staticModules].map(nameOf));
+  const lazyNames = new Set([...lazyModules].map(nameOf).filter((n) => !staticNames.has(n)));
+  const lazy = assets.filter((a) => lazyNames.has(a.path));
+  if (lazy.length !== lazyNames.size) throw new Error('a pinned lazy chunk is missing from the emitted assets');
+  writeFileSync(join(outDir, 'index.html'), htmlPage({ js, css: cs, worker: wk, modules: assets.filter((a) => staticNames.has(a.path)), lazy, version, buildId, connectOrigins }));
   const v = await verifierHtml();
   writeFileSync(join(outDir, 'verifier.html'), v.html);
   if (Buffer.byteLength(v.html) >= 400 * 1024) throw new Error('verifier.html exceeds 400 KB (QV-19-REQ-016)');

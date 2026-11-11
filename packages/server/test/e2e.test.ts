@@ -52,7 +52,7 @@ test('full election over HTTP: 3-of-5 trustees, 22 voters, revotes, spoils, clos
     assert.equal(vi.ballot_count, 3);
 
     // pause / resume (steward action), ballots rejected while paused
-    assert.equal((await w.post('notice', w.coord[0]!, w.control('pause', 'maintenance'))).status, 201);
+    assert.equal((await w.post('notice', w.coord[0]!, w.control('pause', 'AVAILABILITY'))).status, 201);
     assert.equal((await w.get(`/api/v1/elections/${w.electionId}/state`)).json.phase, 'PAUSED');
     assert.equal((await w.cast(21, { budget: ['yes'], chair: ['ann'] })).status, 409);
     assert.equal((await w.post('notice', w.coord[1]!, w.control('resume'))).status, 201);

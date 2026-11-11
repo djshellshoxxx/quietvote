@@ -15,7 +15,8 @@ Layout target: spec [30 Engineering standards](https://github.com/djshellshoxxx/
 | `scripts/` | Repo tooling: `lint-claims.mjs` (public-claims lint), `licence-snapshot.mjs` (dependency licence report) | Present |
 | `docs/` | Specifications, decision log, plan, reports | Present. Claims register in `docs/claims/`, licence snapshot in `docs/reports/`. |
 | `CONTRIBUTING.md`, `SECURITY.md`, `README.md`, `LICENSE`, `DCO` | Project files | Present |
-| `.github/workflows/ci.yml` | CI: typecheck and tests on three operating systems and two Node versions; pin check; non-blocking claims lint | Present. No DCO check yet. |
+| `.github/workflows/ci.yml` | CI: typecheck, pin and supply-chain gates; workspace tests in 4 parallel shards on Linux (node 22/24) per PR, and on three operating systems x two Node versions on main, nightly, manual dispatch or the `ci:full-matrix` PR label; conformance and browser jobs | Present. No DCO check yet. |
+| `.github/workflows/claims-lint.yml` | Non-blocking claims lint (runs on docs-only changes too) | Present. |
 | `.github/scripts/check-action-pins.mjs` | Checks that every GitHub Action is pinned to a full commit SHA | Present |
 | ESLint config | Planned in spec 30 | Not yet in repo |
 

@@ -347,7 +347,7 @@ Each step is idempotent; posting twice returns the same receipt.
 ## 12. Trustee client and CLI behaviour
 
 ### 12.1 Deliverables
-- **Web client** `/t/...`: invitation redemption and read-only ceremony status only. Per QV-ADR-024 it shall not generate, hold or use trustee secrets (shares, signing keys, polynomials); those operations run only in `qv-trustee`/`qv-ceremony`. (Superseded text: an earlier draft ran key operations in a Web Worker in the browser.)
+- **Web client** `/t/...`: invitation redemption and read-only ceremony status only. Per QV-ADR-024 it shall not generate, hold or use trustee secrets (shares, signing keys, polynomials); those operations run only in `qv-trustee`/`qv-ceremony`. QV-ADR-027 N-37c confirms this: the web only posts organizer markers and relays records a trustee already signed. (Superseded text: an earlier draft ran key operations in a Web Worker in the browser.)
 - **CLI** `qv-trustee` (Node 22/24 single executable, QV-ADR-014) and `qv-ceremony` (air-gapped build with no network code).
 
 ### 12.2 CLI surface (illustrative)

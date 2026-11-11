@@ -9,11 +9,22 @@ import {
 export const CONTROL_ACTIONS = ['pause', 'resume', 'invalidate', 'security-notice', 'audit-close', 'cancel', 'abort'] as const;
 export type ControlAction = (typeof CONTROL_ACTIONS)[number];
 
+/**
+ * QV-ADR-027 B2-16 (C-lite): the optional control `reason` is one code of the QV-07 §15.2 catalog, never free text (the public log is permanent,
+ * QV-31 §4.3). `OTHER` is accepted as a bare code; the "(with text)" part of §15.2 is not carried in the record. Enforced at the server boundary
+ * (admission); the protocol verifier still accepts `str(256)` for records from other boards (see NOTES.md).
+ */
+export const CONTROL_REASONS = [
+  'KEY_COMPROMISE_TRUSTEE', 'KEY_COMPROMISE_STEWARD', 'PROOF_SYSTEM_FLAW', 'VERIFIER_FLAW', 'CLIENT_COMPROMISE', 'SUPPLY_CHAIN',
+  'BOARD_EQUIVOCATION', 'BOARD_ROLLBACK', 'ROLL_INTEGRITY', 'TALLY_MISMATCH', 'AVAILABILITY', 'OPERATOR_COMPROMISE', 'COERCION_EVIDENCE', 'OTHER',
+] as const;
+export type ControlReason = (typeof CONTROL_REASONS)[number];
+
 export interface ControlBody {
   proto: string;
   type: 'control';
   action: ControlAction;
-  reason?: string;
+  reason?: ControlReason;
 }
 export interface AggregateBody {
   proto: string;
@@ -30,7 +41,7 @@ export interface DecSharesBody {
   shares: { contest: string; opt: string; M: string; c: string; s: string }[];
 }
 
-export const controlSchema: Schema = obj({ proto: lit(PROTO_ID), type: lit('control'), action: oneOf(...CONTROL_ACTIONS) }, { reason: str(256) });
+export const controlSchema: Schema = obj({ proto: lit(PROTO_ID), type: lit('control'), action: oneOf(...CONTROL_ACTIONS) }, { reason: oneOf(...CONTROL_REASONS) });
 export const aggregateSchema: Schema = obj({
   proto: lit(PROTO_ID), type: lit('tally-aggregate'), ctx: hex(32), n_counted: int(0, 1 << 20), counted_root: hex(32),
   aggregates: arr(obj({ contest: str(64, ID_RE), option: str(64, ID_RE), A: hex(32), B: hex(32) }), 1, 16384),

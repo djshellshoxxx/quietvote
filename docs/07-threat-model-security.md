@@ -786,6 +786,8 @@ Spec frozen with changelog; test vectors published; threat model current; build 
 ### 15.2 Reason codes for `PAUSE`/`INVALIDATE`
 `KEY_COMPROMISE_TRUSTEE`, `KEY_COMPROMISE_STEWARD`, `PROOF_SYSTEM_FLAW`, `VERIFIER_FLAW`, `CLIENT_COMPROMISE`, `SUPPLY_CHAIN`, `BOARD_EQUIVOCATION`, `BOARD_ROLLBACK`, `ROLL_INTEGRITY`, `TALLY_MISMATCH`, `AVAILABILITY`, `OPERATOR_COMPROMISE`, `COERCION_EVIDENCE`, `OTHER` (with text).
 
+*Amended 2026-11-04 (QV-ADR-027 B2-16, C-lite):* in the board `control` record (`{proto, type: "control", action, reason?}`), `reason`, when present, **shall** be exactly one of the codes above. Free text is not carried in the public record. This includes the "(with text)" of `OTHER`, which is sent as the bare code `OTHER`; any explanation goes in the linked evidence bundle. The reference server enforces this at admission. Enforcement in the verifiers (QV-16 record schema) is pending.
+
 ### 15.3 Decision principles
 1. **Pause** when continuing could cause irreversible harm (secrecy loss for ballots not yet cast, unverifiable counted ballots) and the harm of delay is smaller. Pausing is cheap, reversible, and fast; **prefer pause on uncertainty**.
 2. **Invalidate** when: (a) integrity of the counted set or tally cannot be restored or re-derived from the board (e.g., invalid ballots may have been counted and their number ≥ margin or unknown); (b) the election key is believed compromised and the manifest declares `secrecyRequired = true` (default true); (c) the board has forked and the authoritative history cannot be established from witnesses/mirrors; (d) the rules/roll were altered outside declared amendments; (e) systematic coercion/vote-buying evidence meets the group's own policy (QV-03).

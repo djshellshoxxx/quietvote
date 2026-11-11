@@ -13,7 +13,8 @@ export interface ProblemExtra {
 
 const TITLES: Record<string, string> = {
   BAD_REQUEST: 'Bad request', MALFORMED_ENTRY: 'Malformed entry', UNKNOWN_FIELD: 'Unknown field', INVALID_CURSOR: 'Invalid cursor',
-  UNAUTHENTICATED: 'Authentication required', SESSION_EXPIRED: 'Session expired', CHALLENGE_EXPIRED: 'Challenge expired', BAD_SIGNATURE: 'Bad signature',
+  // QV-ADR-027 N-20: SESSION_EXPIRED / CHALLENGE_EXPIRED retired with the QV-09 challenge/session bearer (QV-Sig only).
+  UNAUTHENTICATED: 'Authentication required', BAD_SIGNATURE: 'Bad signature',
   FORBIDDEN: 'Forbidden', AUTHOR_NOT_AUTHORIZED: 'Author not authorized', READ_KEY_REQUIRED: 'Read key required', REGISTRATION_CLOSED: 'Registration closed',
   NOT_FOUND: 'Not found', METHOD_NOT_ALLOWED: 'Method not allowed',
   WRONG_PHASE: 'Wrong phase', NONCE_REUSE: 'Nonce reuse', INVITE_USED: 'Invite already used', STATE_CONFLICT: 'State conflict',

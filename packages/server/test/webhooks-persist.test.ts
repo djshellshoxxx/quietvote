@@ -67,7 +67,7 @@ function boot(dir: string, now: () => number, o: Partial<ServerOptions> & { stat
   const control = new ControlDb(dir, now, 'test');
   const env = {
     cfg, control, kek: KEK, logger: new Logger(() => undefined, now), nowSec: () => Math.floor(now() / 1000),
-    stats: { proofVerifications: 0, requests: 0, appended: 0 }, inflight: { n: 0 },
+    stats: { proofVerifications: 0, requests: 0, appended: 0, importVerifications: 0 }, inflight: { n: 0 },
   } as unknown as Env;
   const svc = new WebhookService(env);
   return {

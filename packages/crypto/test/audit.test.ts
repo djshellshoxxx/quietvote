@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ed25519 } from '@noble/curves/ed25519.js';
-import { ed25519IsStrictPoint, ed25519Verify, ed25519Keypair, ed25519Sign, hexToBytes } from '../src/index.ts';
+import {
+  IDENTITY, baseMul, constantRng, ed25519IsStrictPoint, ed25519Verify, ed25519Keypair, ed25519Sign, elgamalEncrypt, hexToBytes, scalarRandomNonZero,
+  spoilDecProve, spoilDecVerify, streamRng, utf8,
+} from '../src/index.ts';
 
 // CP-04: a mixed-order key (prime-order point + order-8 torsion) must not be a strict point.
 const T = ed25519.Point.fromHex('c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a');
@@ -25,4 +28,20 @@ test('B1-11: a key-holder signature with identity R is rejected even though the 
   const sig = hexToBytes('0100000000000000000000000000000000000000000000000000000000000000a956cfd790020b17d61e57d0b7803d18c7c41ed8aa9b3a2a56dba578da032f0c');
   assert.equal(ed25519.verify(sig, msg, pk, { zip215: false }), true, 'equation control: S = k*a, R = O');
   assert.equal(ed25519Verify(pk, sig, msg), false, 'QV strict R policy');
+});
+
+// C8 parity (found by the 2026-11-04 CP-08 review): spoilDecVerify had no identity-Y_j guard, unlike decVerify. With s_j = 0 a
+// prover produces Y_j = M = identity and a proof that verified; a key share is never the identity, so it must be refused.
+test('C8: cp-dec-spoil refuses an identity key share Y_j (parity with cp-dec)', () => {
+  const rng = streamRng(utf8('c8-spoil-identity'));
+  const K = baseMul(scalarRandomNonZero(rng));
+  const ct = elgamalEncrypt(K, 1, scalarRandomNonZero(rng));
+  const base = { ctx: new Uint8Array(32).fill(1), ballotCode: new Uint8Array(32).fill(2), cid: 'c', oid: 'o', j: 1, Yj: IDENTITY, alpha: ct.A, beta: ct.B };
+  const { M, proof } = spoilDecProve(base, 0n, constantRng(7));
+  assert.equal(spoilDecVerify({ ...base, M }, proof), false);
+  // control: an honest non-identity share still verifies
+  const sj = scalarRandomNonZero(rng);
+  const ok = { ...base, Yj: baseMul(sj) };
+  const honest = spoilDecProve(ok, sj, constantRng(7));
+  assert.equal(spoilDecVerify({ ...ok, M: honest.M }, honest.proof), true);
 });

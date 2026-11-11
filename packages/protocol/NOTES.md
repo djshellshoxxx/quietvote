@@ -298,3 +298,55 @@ Details and evidence: `docs/audit/crypto-protocol.md` § "Second-wave triage". R
 * Open / design (no code change): P1 (PASS without `opts.log`, TSV-05), P10 (duplicate election markers first-wins, L), C3 (unhedged
   DKG/complaint nonces, OQ-7), CP-02/C2, C11 (test RNGs exported from the index; other packages' tests import them).
 * Second-wave vector change: the canary `expected-report.json` now has `chk.tally.decrypt: not_run` (was `pass`): the check is `pass` only after decryption actually ran (P7/TSV-03); the canary's wrong aggregate stops the pipeline earlier. Regenerated with `node packages/protocol/test/vecgen/write.ts`.
+
+## Report semantics (strict differential, 2026-11-04)
+* `verifyElection`: `chk.encoding.canonical` ("all objects canonically encoded", QV-34 §9.1 #13) becomes `pass` only after C4
+  has examined every voter envelope. A stop before that leaves it `not_run`, unless a record already failed it
+  (QV-35-REQ-003: "no check reported as `pass` without its evidence"). Before this change it was set to `pass` right after the
+  manifest. That was visible on the 8 `mutations/open-*` binding failures, where `verifier-py` reports `not_run`. No vector
+  changed: the mutation vectors fix only `failed_checks`, and every exact check map belongs to a run that reaches C4. Test:
+  `test/report-semantics.test.ts`. Open report-semantics decisions: `docs/plan/OPEN-DECISIONS.md` §I (D-92..D-96).
+## CP-08 mutation survivors: crypto-level coverage (2026-11-04)
+AI-assisted test work, not an independent audit. Tests only; no production code changed. New files:
+`crypto/test/cp08-fiat-shamir.test.ts` (13 tests) and `crypto/test/cp08-ed25519-zip215.test.ts` (3 tests); crypto suite 58 -> 74.
+* Transcript conformance: for every proof label (`pok`, `pok-share`, `cp-dh`, `cds01`, `cp-limit`, `cp-dec`, `cp-dec-spoil`) the
+  test recomputes the commitments from `(c, s)` and the challenge from the QV-16 §5.4 field list with a test-local frame/SHA-512 model
+  (no production transcript code), and requires equality. This is the only crypto-level check that sees an omitted field that also
+  enters the commitment equations (CP-08 M3 `ct.A`, M7 `L`, M8 `Y_j`).
+* Adaptive-statement (Frozen-Heart) forgeries, rejected by the real verifier and accepted by the matching mutant: `cds01` with alpha
+  solved after the challenge (non-bit ciphertext), `cp-dec` and `cp-dec-spoil` with `Y_j` solved after the challenge (false share).
+  A compensated `(L+1, B_sigma+G)` cp-limit statement has identical commitments and is rejected; that alone does NOT kill M7
+  (`B_sigma` stays hashed and `L` is a u32), so M7 is killed only by the conformance test (and the frozen vectors).
+* One-change-at-a-time matrix over every hashed statement input of every proof type (adds the previously untested `pok-share` Y_j,
+  `cp-dh` i and j separately, and all `cp-dec-spoil` fields); the matrix asserts it covers every `hs` proof label in the registry.
+* `hs_nz` counter position (M15): spec model for every hs_nz label, the frozen `tagged-hash.json` hs/hs_nz vectors (read only), and
+  the prover nonces (`proof-w`, `proof-csim/ssim`, `limit-w`, `cp-dec-nonce` incl. the spoil `oid || 0x00 || code` field).
+* Ed25519 ZIP-215 sensitivity: seven signatures that noble's ZIP-215 mode accepts and a test-local strict RFC 8032 (cofactorless,
+  canonical, no small-order) model rejects (small-order A, non-canonical A/R encodings of the identity, mixed-order R and A) are all
+  rejected by `ed25519Verify`. M18 (`zip215: true`) is behaviourally equivalent through `ed25519Verify` at this SHA (the
+  `ed25519IsStrictPoint` pre-checks reject everything ZIP-215 relaxes; noble's equation is cofactored in both modes), so it is killed
+  by a static pin test: every noble `ed25519.verify` call in `crypto/src` passes `{ zip215: false }` (noble's ed25519 default is
+  `zip215: true`). The corpus test does kill M18 combined with removing the pre-checks, and removing the CP-04 torsion check.
+* Mutation proof (each applied to `crypto/src`, crypto suite run, reverted; `git diff --stat -- packages/crypto/src` empty after):
+  M3, M7, M8, M15, M18 all KILLED (before these tests all five SURVIVED with 58/58 passing).
+## Performance baseline (2026-11-04)
+* New `bench/tally-bench.ts` (`npm run bench -- [N] [--shape=referendum|full] [--full=auto|none|1000,2000] ...`, protocol package only):
+  a seeded, network-free synthetic 3-of-5 election with trustee-mode spoils enabled. It times ballot encryption+proofs+signature and
+  `verifyEnvelope` on a 200-ballot sample (N-totals are **extrapolated** and labelled so), and measures aggregation,
+  `trusteeDecryptTally`, `decryptAggregates` and BSGS (`dlogTable`/`dlogSolve` for T = bound) **at N** over a synthetic counted set
+  that cycles the sample's valid ciphertexts. It runs `verifyElectionText` on real sim-built bundles (at N when the estimate fits
+  ~10 min, else at 1000/2000), plus Ed25519 (CP-04 strict torsion check, with a no-torsion reference) and ristretto255 micro costs.
+  It self-checks: decrypted counts equal the plaintext, BSGS returns the bound, the bundle verdict is PASS.
+  Coordinator shortcut in the full-bundle phase: the counted set comes from the generator, not from `analyzeBallotLog`. The
+  verifier recomputes everything, so a wrong shortcut shows up as FAIL.
+* `test/bench-smoke.test.ts` runs the whole bench at N=12 (about 5.4 s; see the 2026-11-04 follow-up bullet) and checks CLI parsing, so the bench cannot rot. It asserts
+  nothing about speed.
+* Results, machine and the recommended optimisation are in `docs/reports/performance-baseline-2026-11-04.md`. In short, at 10k
+  referendum ballots, `verifyElection` takes 426 s (measured, PASS) and per-ballot proof verification dominates. BSGS is negligible
+  (7-21 ms table plus 7-21 ms solve at V = 10^4, depending on load). No production code was changed.
+* Review fixes (same day): the smoke test now runs a deterministic N=12 election (`--shape=smoke --pattern=fixed`, see
+  `fixedSelections`; about 5.6 s) and asserts the exact decrypted, coordinator and published counts (yes 4, no 4, a 12, b 6).
+  Ballot 0 selects every option it may and approval option `a` totals V = N, so mutants `counted.slice(1)` in `aggregate()` and
+  `dlogTable(V - 1)` in `decryptAggregates` both fail it (applied, run and reverted; no `src/` change). The projections are now
+  Stats flagged `extrapolated: true` (`encrypt.projectedN`, `verify.projectedN`; `projectedNMs` kept), and the smoke test checks
+  that these are the only extrapolated Stats in the result. The 10k evidence JSON is in `docs/reports/perf-2026-11-04/`.

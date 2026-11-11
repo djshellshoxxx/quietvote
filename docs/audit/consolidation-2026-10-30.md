@@ -37,21 +37,21 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | ID | Original severity | Interim verdict | Revised severity | Consolidation disposition | Fix/partial fix |
 |---|---|---|---|---|---|
 | B2-01 | High | confirmed | High | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B2-02 | Medium | confirmed | Medium | open | No semantic repair commit; open/owner gate. |
+| B2-02 | Medium | confirmed | Medium | fixed (2026-11-04) | [50b8639](https://github.com/djshellshoxxx/quietvote/commit/50b8639bfdbbd5d9eb8f0f5f69fea4de08d7042b), [b5956b2](https://github.com/djshellshoxxx/quietvote/commit/b5956b260d9740a3142b628d18118b4213c5ac10); residual main-thread verifyLog/tar work noted in server NOTES; not independently audited. |
 | B2-03 | Medium | confirmed | Medium | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-04 | Medium | confirmed | Medium | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-05 | Medium | confirmed | Medium | blocked_protocol_review | No semantic repair commit; open/owner gate. |
 | B2-06 | Medium | confirmed | Medium | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B2-07 | Medium | confirmed | Medium | blocked_integrity_design | No semantic repair commit; open/owner gate. |
+| B2-07 | Medium | confirmed | Medium | fixed (2026-11-04, pending commit) | QV-ADR-027 B2-07 (option B with A as local floor): `BoardLog` `floor` option; control.sqlite migration 5 anchor (`election_registry.anchor_size/anchor_root`) raised after the election-DB commit and before release; DB behind the anchor opens quarantined (read-only), cannot be admin-cleared; reopened signed logs poll gossip peers once before signing again, and a log-signed head ahead raises the anchor ("take max"). Residual: control.sqlite restored together with the election DB defeats A (B covers it only with public elections and reachable peers; link elections are never gossiped); TOFU for elections without an anchor; power-loss window under control.sqlite `synchronous=NORMAL`; crash ordering needs independent review. Tests: board `log.test.ts`, server `adr027-anchor.test.ts`. AI-assisted, unaudited. |
 | B2-08 | Medium | confirmed | Low | fixed | [8cf2669](https://github.com/djshellshoxxx/quietvote/commit/8cf26691f87af3a10c55c896f15bf4169aa862fa) |
 | B2-09 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B2-10 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
-| B2-11 | Low | confirmed | Low | open | No semantic repair commit; open/owner gate. |
-| B2-12 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
+| B2-10 | Low | confirmed | Low | partial (2026-11-04, pending commit) | QV-ADR-027 B2-10 option A, invite-creation side: 14-day default `expires_at` (`packages/server/test/adr027-c2.test.ts`). Still open: unknown code must answer like used (`409 INVITE_USED`) in the registration handler, owned with B3-01/QV-ADR-028; not independently audited. |
+| B2-11 | Low | confirmed | Low | fixed (2026-11-04) | [50b8639](https://github.com/djshellshoxxx/quietvote/commit/50b8639bfdbbd5d9eb8f0f5f69fea4de08d7042b); 7-day default retention pending owner confirmation; backup retention not implemented. |
+| B2-12 | Low | confirmed | Low | fixed (2026-11-04, pending commit) | QV-ADR-027 B2-12 option A (interim): no zero-seed placeholder; `BoardLog.secretKey` optional, keyless `append`/`checkpoint` return `QV_BOARD_READ_ONLY`, promise signing throws; server answers duplicates on IMPORTED mirrors and reloaded ARCHIVED elections with 503 `LOG_UNAVAILABLE`. Option B (stored original receipts) deferred. Residual: a live ARCHIVED runtime still holds the key in memory until reload and re-issues duplicate receipts under the real log key. Tests: board `log.test.ts`, server `adr027-anchor.test.ts`. AI-assisted, unaudited. |
 | B2-13 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-14 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | B2-15 | Medium | confirmed | Low | documentation_reconciled | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2), [247df39](https://github.com/djshellshoxxx/quietvote/commit/247df393ea1ace300fe5ed1f569a12090e1364dc) |
-| B2-16 | Low | confirmed | Low | open | No semantic repair commit; open/owner gate. |
+| B2-16 | Low | confirmed | Low | partially fixed (2026-11-11) | [50b8639](https://github.com/djshellshoxxx/quietvote/commit/50b8639bfdbbd5d9eb8f0f5f69fea4de08d7042b): log fields and minute rounding repaired. QV-ADR-027 B2-16 C-lite (pending commit): the server admits a control `reason` only as a QV-07 §15.2 catalog code (`records.ts` `CONTROL_REASONS`; QV-07 §15.2 amended). Residual: the protocol verifiers (`packages/protocol` logcheck `CONTROL_RECORD`, verifier-py) still accept `reason: str(256)` from other boards; QV-31-REQ-002 CI check not implemented. AI-assisted, unaudited. |
 | B2-17 | Low | confirmed | Low | fixed_bounded_cache | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
 | KNOWN TR-07/TR-08 | Low | confirmed | Low | partially_fixed | [8cf2669](https://github.com/djshellshoxxx/quietvote/commit/8cf26691f87af3a10c55c896f15bf4169aa862fa) |
 | B1-01 | Medium | confirmed | Medium | fixed | [48a2b73](https://github.com/djshellshoxxx/quietvote/commit/48a2b73c6a4c77666284f094372eb683e2a5364a) |
@@ -79,7 +79,7 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B3-01 | High | confirmed | High | blocked | No semantic repair commit; open/owner gate. |
 | B3-02 | High | confirmed | Medium | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [f58533b](https://github.com/djshellshoxxx/quietvote/commit/f58533b13c87f06af50f8d104c5a28b77bb8c270) |
 | B3-03 | Medium | confirmed | Low | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B3-04 | Medium | confirmed | Low | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
+| B3-04 | Medium | confirmed | Low | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec); lazy chart/reviewed-catalog chunks pinned per QV-ADR-027 W15 (2026-11-04 decision, pending commit); module worker URL stays a documented gap, so not closed. |
 | B3-05 | Medium | confirmed | Medium | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-06 | Medium | confirmed | Medium | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-07 | Medium | confirmed | Medium | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
@@ -93,21 +93,21 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B3-15 | Low | confirmed | Low | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-16 | Low | confirmed | Low | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-17 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [f58533b](https://github.com/djshellshoxxx/quietvote/commit/f58533b13c87f06af50f8d104c5a28b77bb8c270) |
-| B3-18 | Low | pending | pending | open | No semantic repair commit; open/owner gate. |
+| B3-18 | Low | pending | pending | fixed (2026-11-04) | [421c879](https://github.com/djshellshoxxx/quietvote/commit/421c8792c030f16f907fe454da98127e934b2a97); automated checks only, real screen-reader review still required. |
 | B3-19 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-20 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [f58533b](https://github.com/djshellshoxxx/quietvote/commit/f58533b13c87f06af50f8d104c5a28b77bb8c270) |
 | B3-21 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-22 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
-| B3-23 | Low | pending | pending | open | No semantic repair commit; open/owner gate. |
+| B3-23 | Low | pending | pending | fixed (2026-11-04) | [421c879](https://github.com/djshellshoxxx/quietvote/commit/421c8792c030f16f907fe454da98127e934b2a97); unit-tested, no organizer browser journey yet. |
 | B3-24 | Low | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-25 | Low | pending | pending | blocked | No semantic repair commit; open/owner gate. |
-| B3-26 | Low | pending | pending | open | No semantic repair commit; open/owner gate. |
+| B3-26 | Low | pending | pending | open (2026-11-04) | QV-ADR-027 option A approved (main-thread yielding + progress, no Worker); a blob: Worker version was merged and reverted; waiting on a verifyElection progress hook. |
 | B3-27 | Low | pending | pending | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-28 | Info | pending | pending | open | No semantic repair commit; open/owner gate. |
 | B3-29 | Info | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-30 | Info | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [963c577](https://github.com/djshellshoxxx/quietvote/commit/963c57716dbceced04114d5119c61740b0cfb0fb) |
 | B3-31 | Info | pending | pending | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
-| B3-32 | Info | pending | pending | open | No semantic repair commit; open/owner gate. |
+| B3-32 | Info | pending | pending | fixed (2026-11-04) | [421c879](https://github.com/djshellshoxxx/quietvote/commit/421c8792c030f16f907fe454da98127e934b2a97); axe not re-run, automated heuristics 49/49; manual AT review still required. |
 
 ### Disposition counts
 
@@ -615,7 +615,7 @@ node --test packages/server/test/consolidation.test.ts
 
 ### B2-10
 
-**Severity and historical review:** Low → Low; interim verdict confirmed. Consolidation disposition: `blocked_contract_review`.
+**Severity and historical review:** Low → Low; interim verdict confirmed. Consolidation disposition: `blocked_contract_review`; **2026-11-04 update: partial (pending commit)** — owner approved option A (QV-ADR-027 B2-10). Invites now default to a 14-day expiry; the unknown-vs-used registration oracle remains until the registration handler (B3-01 / QV-ADR-028 scope) answers an unknown code as `409 INVITE_USED`.
 
 **Original summary:** Invites without expires_at never expire, unknown vs used codes answer differently, and a used code with another registered key answers 201.
 
@@ -2562,7 +2562,7 @@ Any complete interim `poc_source`, known-overlap fields and other original field
 
 **Regression evidence:** Build traverses esbuild import-statement graph; build.test.ts checks integrity contents; verifier.ts static-chunk tamper negative control.
 
-**Remaining gate:** Lazy chart/catalog modules and module worker still lack SRI. No full subresource-integrity or cross-browser support claim; unoffered locales remain unpreloaded. All new source repairs are AI-assisted, unaudited and require independent security/cryptographic review before any real use.
+**Remaining gate:** ~~Lazy chart/catalog modules and module worker still lack SRI.~~ Update (QV-ADR-027 W15, pending commit): the lazy chart chunk and reviewed catalog chunks, with their static imports, now have integrity modulepreloads, and each lazy `import()` first re-checks them (packages/web/src/build/site.ts, packages/web/src/util/pinned-preload.ts). A Chromium e2e test tampers with the chart chunk on disk after the build and shows that it does not execute (packages/web/e2e/verifier.ts). The module worker URL still lacks SRI (accepted documented gap). Disposition stays `partial`. No full subresource-integrity or cross-browser support claim; unoffered locales remain unpreloaded. All new source repairs are AI-assisted, unaudited and require independent security/cryptographic review before any real use.
 
 **Reproducible checked-in commands** (run from repository root; strict comparison deliberately stays nonzero while reports differ):
 
@@ -2720,11 +2720,11 @@ QV_REQUIRE_BROWSER=1 QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/verifie
 PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node packages/web/e2e/verify-b3b2.ts (repo e2e harness: FakeBoard + built site + Chromium at /opt/pw-browsers/chromium)
 ```
 
-**Interim output excerpt (verbatim):** AUDITED SCREEN {"matchQuestion":1,"tables":0,"selectionLabelShown":false,"links":0}
+**Interim output excerpt (verbatim):** AUDITED SCREEN {"matchQuestion":1,"tables":0,"selectionLabelShown":false,"links":0} <!-- claims-lint-ignore -->
 
 **Interim refutation attempt (verbatim):** I looked for any rendering of lastAudit selections or the link elsewhere in app.ts and found none. I checked whether the spec allows omitting the table: V8 and C-BENALOH both require it. I checked whether the gap is disclosed: NOTES.md N-36 says 'no QR codes', and TODO T-181 is Open. Neither covers asking the match question with nothing shown. The selection label 'YES' was selected but does not appear in the audited screen text.
 
-**Interim notes:** The audited branch at packages/web/src/ui/app.ts:492-499 renders: the automatic checks list, 'same software' text, posted/not posted, the 'Do these match what you picked?' radio group, the ok/mismatch line, a Download button, second-device help text, and 'Seal a new ballot'. It renders nothing from the sealed selections: no contest->selection table, no randomness, and no link or QR (ctl.lastAudit.link exists but is not shown). QV-10 §V8 (docs/10-user-experience.md:266) and QV-13 C-BENALOH (docs/13-accessibility-localization.md:89) require a contest -> 'what your device sealed' result table that the voter confirms by eye. QV-10-REQ-008 is an M requirement. The automated 'plaintext' check compares against selections supplied by the same software, so the human comparison is the defence the spec relies on. Mitigation: the downloaded qv-audit.json carries the package for a second device. Note that docs/plan/TODO.md:284 lists T-181 'Benaloh audit UX' as Open, so this is not a status-inflation claim; it is a conformance gap in UI that is shipped and reachable.
+**Interim notes:** The audited branch at packages/web/src/ui/app.ts:492-499 renders: the automatic checks list, 'same software' text, posted/not posted, the 'Do these match what you picked?' radio group, the ok/mismatch line, a Download button, second-device help text, and 'Seal a new ballot'. It renders nothing from the sealed selections: no contest->selection table, no randomness, and no link or QR (ctl.lastAudit.link exists but is not shown). QV-10 §V8 (docs/10-user-experience.md:266) and QV-13 C-BENALOH (docs/13-accessibility-localization.md:89) require a contest -> 'what your device sealed' result table that the voter confirms by eye. QV-10-REQ-008 is an M requirement. The automated 'plaintext' check compares against selections supplied by the same software, so the human comparison is the defence the spec relies on. Mitigation: the downloaded qv-audit.json carries the package for a second device. Note that docs/plan/TODO.md:284 lists T-181 'Benaloh audit UX' as Open, so this is not a status-inflation claim; it is a conformance gap in UI that is shipped and reachable. <!-- claims-lint-ignore -->
 
 Any complete interim `poc_source`, known-overlap fields and other original fields are preserved without truncation in [docs/audit/consolidation-2026-10-30.json](consolidation-2026-10-30.json).
 

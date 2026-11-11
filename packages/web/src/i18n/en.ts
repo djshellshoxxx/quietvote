@@ -392,6 +392,7 @@ export const EN = {
   'qv.org.closed': n('Voting is closed.', 'Status.'),
   'qv.org.invites': n('Create invitation links', 'Button.'),
   'qv.org.inviteCount': n('How many invitations', 'Field.'),
+  'qv.org.inviteCopy': n('Copy invitation link {n}', 'Accessible name of the per-row copy button in the invitation list. {n} is the 1-based row number; keep the number so the buttons are told apart.'),
   'qv.org.inviteList': n('Invitation links (shown once)', 'Heading.'),
   'qv.org.dashboard': n('Dashboard', 'Heading.'),
   'qv.org.ballotsReceived': n('Valid ballots received: {count}', 'Dashboard.'),
@@ -480,6 +481,7 @@ export const EN = {
   'qv.err.E-READ-KEY.body': n('Ask your organizer for the complete link.', 'Error body.'),
   // ---- phishing: UX 7.7
   'qv.phish.mismatch': g('Stop. This Election ID does not match the one you were given. You may be on a copy of the real site. Don\'t enter anything. Tell your organizer, and use the link or ID they gave you in person or by another channel.', 'Phishing stop.'),
+  'qv.phish.announce': n('Stop. This Election ID does not match. Do not enter anything. Tell your organizer.', 'Short screen-reader announcement (under 140 characters) played with the full qv.phish.mismatch text shown on screen. Keep it under 140 characters.'),
   'qv.phish.unconfirmed': g('You haven\'t confirmed the Election ID yet.', 'Persistent chip text.'),
   'qv.phish.verifierwarn': g('A checker you didn\'t download or compare yourself can lie. See "How to trust a verifier".', 'Fake verifier.'),
   'qv.phish.neverask': g('We will never ask for your voting key file or passphrase by email, chat, or on any page other than the one that created it.', 'Never ask.'),
@@ -517,6 +519,27 @@ export const EN = {
   'qv.a11y.checkNotRun': n('{name}: not run', 'Accessible name of a check that did not run.'),
   'qv.a11y.table': n('Showing {from}–{to} of {total}', 'Pagination text.'),
   'qv.a11y.working': n('Working', 'Busy indicator name.'),
+
+  // ---- trustee-opened test ballots (QV-ADR-020). Locale text for these keys is machine-drafted and unreviewed (packages/web/NOTES.md).
+  // Translator notes: share = one trustee's partial decryption; opened = decrypted; board = the public bulletin board; keep 'trustee' as in qv.org.trustee*.
+  'qv.spoil.title': n('Test ballots', 'Heading and tab label.'),
+  'qv.spoil.unavailable': n('Test ballots are not opened by trustees in this election, or voting has not closed yet.', 'Shown when this election has no trustee-opened test ballots or is still open.'),
+  'qv.spoil.reason.invalid': n('failed verification', 'Fragment after a colon; no full stop.'),
+  'qv.spoil.none': n('No test ballots are waiting to be opened.', 'Empty list.'),
+  'qv.spoil.refresh': n('Check again', 'Button.'),
+  'qv.spoil.code': n('Ballot code {code}', 'Heading; {code} is the ballot code.'),
+  'qv.spoil.waiting': n('Waiting: {have} of {need} trustee shares verified.', 'Status; numbers.'),
+  'qv.spoil.decoded': n('Opened with {have} verified trustee shares.', 'Status; opened.'),
+  'qv.spoil.invalid': n('Not opened: {have} of {need} shares verified.', 'Status; shares listed below failed checks.'),
+  'qv.spoil.bad': n('Trustee {j}: {reason}', '{reason} is a qv.spoil.reason.* text; {j} may be ?.'),
+  'qv.spoil.reason.other': n('does not match any test ballot of this election', 'Fragment after a colon.'),
+  'qv.spoil.add.title': n('Add a trustee share', 'Heading and paste-box label.'),
+  'qv.spoil.add.file': n('Or choose a file', 'File input label.'),
+  'qv.spoil.add.send': n('Check and send', 'Button.'),
+  'qv.spoil.add.unreadable': n('Paste a readable share record or choose its file.', 'Validation.'),
+  'qv.spoil.out.accepted': n('Trustee {j}: share accepted.', 'Result line.'),
+  'qv.spoil.out.local': n('Not sent: {reason}', '{reason} is a qv.spoil.reason.* text.'),
+  'qv.spoil.out.server': n('The board refused this share (status {status}).', '{status} is an HTTP status.'),
 } as const satisfies Record<string, CatalogEntry>;
 
 export type MessageKey = keyof typeof EN;

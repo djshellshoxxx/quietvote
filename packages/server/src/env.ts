@@ -2,6 +2,7 @@ import type { WitnessPolicy } from '@quietvote/board';
 import type { ServerConfig } from './config.ts';
 import type { ControlDb } from './controldb.ts';
 import type { EventRow } from './electiondb.ts';
+import type { ElectionRuntime } from './election.ts';
 import type { Logger } from './logger.ts';
 import type { FailureCounter, RateLimiter } from './ratelimit.ts';
 
@@ -14,11 +15,13 @@ export interface Env {
   failures: FailureCounter;
   logger: Logger;
   /** Counters exposed for tests (e.g. QV-29-REQ-001: no proof verification before cheap checks pass). */
-  stats: { proofVerifications: number; requests: number; appended: number };
+  stats: { proofVerifications: number; requests: number; appended: number; importVerifications: number };
   inflight: { n: number };
   nowMs(): number;
   nowSec(): number;
   witnessPolicy(quorum: number): WitnessPolicy;
   /** Committed outbox events; wired to the webhook dispatcher. */
   onEvent?: (who: { electionId: string; orgId: string }, ev: EventRow) => void;
+  /** QV-ADR-027 B2-07: one gossip exchange with every configured peer before a reopened, already-signed log signs again. */
+  bootGossip?: (rt: ElectionRuntime) => Promise<void>;
 }

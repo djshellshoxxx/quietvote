@@ -1,6 +1,6 @@
 # B3 — QuietVote web client audit (`packages/web`)
 
-**Auditor:** B3 (read-only, one of six parallel auditors) · **Repo:** `djshellshoxxx/quietvote` · **SHA audited:** `424110d90e23dc443aa4498a4340973d3c8cb8b6` (merge of PR #19 on top of PR #18 branch `claude/quietvote-ui-locale-a11y-sltfb3`) · **Worktree:** `/home/user/audit/quietvote-b3` (detached) · **Report date:** 2026-10-28
+**Auditor:** B3 (read-only, one of six parallel auditors) · **Repo:** `djshellshoxxx/quietvote` · **SHA audited:** `424110d90e23dc443aa4498a4340973d3c8cb8b6` (merge of PR #19 on top of PR #18 branch `claude/quietvote-ui-locale-a11y-sltfb3`) · **Worktree:** `/home/user/audit/quietvote-b3` (detached) · **Report date:** 2026-10-28 <!-- claims-lint-ignore -->
 
 > QuietVote is labelled unaudited and not for real elections. This report is an AI-assisted code audit with automated checks. It makes **no** claim that the software is secure and **no** claim of WCAG conformance (the accessibility checks below are automated heuristics only; no assistive technology was used). All data used is synthetic.
 
@@ -55,7 +55,7 @@ Paths in the file:line column without a package prefix are under `packages/web/`
 
 Counts: **High 2 · Medium 12 · Low 13 · Info 6 (33 findings)**. By confidence: CONFIRMED 31, LIKELY 2 (B3-23, B3-29), SPECULATIVE 0 in the table (see Appendix A). B3-26 is CONFIRMED for the blocking/no-progress behaviour; its 10,000-ballot time is an extrapolation and is marked as such.
 
-| ID | Sev | Confidence | Category | Spec IDs | file:line (audited SHA) | One-line summary |
+| ID | Sev | Confidence | Category | Spec IDs | file:line (audited SHA) | One-line summary | <!-- claims-lint-ignore -->
 |---|---|---|---|---|---|---|
 | B3-01 | High | CONFIRMED | interop / conformance | QV-04-REQ-005, QV-19 §6.1, QV-19-REQ-010, QV-09 §4 | `packages/web/src/flow/onboarding.ts:117-127`; `src/ui/app.ts:382`; server `packages/server/src/app.ts:520-521` | Web registration request is refused by the reference server (PoP layout and `invite_code` semantics differ); no test could notice |
 | B3-02 | High | CONFIRMED | conformance / integrity | QV-16 §5.19.1, QV-10 §6.2 V10, QV-10 §1(1) | `src/flow/election.ts:134-149`; `src/ui/app.ts:576-604` | Results page shows a coordinator-signed tally without verifying it; the protocol verifier FAILs the same log |

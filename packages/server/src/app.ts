@@ -11,11 +11,13 @@ import { audienceOf, authenticate, keyIdOf } from './auth.ts';
 import { resolveConfig, type ServerConfig, type ServerOptions } from './config.ts';
 import { ControlDb } from './controldb.ts';
 import { SERVER_VERSION, type ElectionRuntime } from './election.ts';
+import type { ExportRow } from './electiondb.ts';
 import type { Env } from './env.ts';
 import { electionBundle, qvb } from './export.ts';
 import { registerExtRoutes } from './ext-routes.ts';
 import { GossipService } from './gossip.ts';
-import { JobRunner } from './jobs.ts';
+import { RetentionSweeper } from './retention.ts';
+import { JobRunner, jobView } from './jobs.ts';
 import { createHttpApp, type Ctx, type HttpApp, type Reply, type Route } from './http.ts';
 import { loadOrCreateKek, seal, open as unsealBytes } from './kek.ts';
 import { Logger } from './logger.ts';
@@ -26,7 +28,7 @@ import { SseHub } from './sse.ts';
 import { TargetRejected } from './ssrf.ts';
 import { StaticAssets } from './static.ts';
 import { WEBHOOK_EVENTS, WebhookService } from './webhooks.ts';
-import { ctEq, fArr, fBool, fEnum, fInt, fObj, fStr, opt, originOf as _o, req, toIso } from './util.ts';
+import { ctEq, fArr, fBool, fEnum, fInt, fObj, fStr, opt, originOf as _o, randomId, req, toIso } from './util.ts';
 import { effectiveMinCounted } from '@quietvote/protocol';
 void _M; void _o;
 
@@ -38,12 +40,15 @@ export interface QuietVoteServer {
   webhooks: WebhookService;
   jobs: JobRunner;
   gossip: GossipService;
+  retention: RetentionSweeper;
   start(): Promise<{ port: number; host: string; url: string }>;
   stop(): Promise<void>;
 }
 
 const MAX_ENTRY_REQ = 1_153_434;
 const b64uRe = /^[A-Za-z0-9_-]*$/;
+/** QV-02-REQ-010 default invite lifetime (14 days = QV-04 §5.1's 336 h); QV-ADR-027 B2-10. */
+export const INVITE_DEFAULT_TTL_MS = 14 * 86_400_000;
 
 function receiptView(r: Receipt): Record<string, unknown> {
   const v: Record<string, unknown> = {
@@ -62,7 +67,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const witnesses = cfg.witnesses.map((w) => ({ name: w.name, alg: 'ed25519' as const, publicKey: hexToBytes(w.publicKey, 32) }));
   const env: Env = {
     cfg, control, kek: loadOrCreateKek(cfg.dataDir), limiter: new RateLimiter(nowMs), failures: new FailureCounter(nowMs),
-    logger: new Logger(cfg.logSink, nowMs), stats: { proofVerifications: 0, requests: 0, appended: 0 }, inflight: { n: 0 },
+    logger: new Logger(cfg.logSink, nowMs), stats: { proofVerifications: 0, requests: 0, appended: 0, importVerifications: 0 }, inflight: { n: 0 },
     nowMs, nowSec: () => Math.floor(nowMs() / 1000),
     witnessPolicy: (quorum): WitnessPolicy => ({ witnesses, quorum, noneAcknowledged: quorum === 0 }),
   };
@@ -73,6 +78,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const webhooks = new WebhookService(env);
   const jobs = new JobRunner(env);
   const gossip = new GossipService(env, pool);
+  env.bootGossip = (rt) => gossip.bootCheck(rt); // QV-ADR-027 B2-07
+  const retention = new RetentionSweeper(env);
   env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
   const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
   const releaseKey = cfg.releaseSeedHex ? ed25519Keypair(hexToBytes(cfg.releaseSeedHex, 32)) : undefined;
@@ -99,6 +106,11 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     if (c.auth?.role === 'instance_admin') return rt;
     if (c.auth?.orgId !== rt.orgId) throw notFound('election'); // cross-org probes look like 404
     return rt;
+  };
+  /** QV-28 §11.1 lazy purge: invite P2 data past its retention is removed whenever the invites of an election are touched. */
+  const purgeInvites = (rt: ElectionRuntime): void => {
+    const n = rt.edb.purgeInviteData(nowMs(), cfg.inviteRetentionMs);
+    if (n > 0) control.audit('system', 'invite.purge', rt.id, { rows: n });
   };
   const orgOf = (c: Ctx): string => {
     const o = c.params['org']!;
@@ -480,7 +492,9 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       if ((b.count === undefined) === (b.items === undefined)) throw new ApiError(400, 'BAD_REQUEST', 'exactly one of count or items is required');
       if (b.deliver) throw new ApiError(422, 'VALIDATION_FAILED', 'server-side delivery is not configured');
       if (['READY', 'OPEN'].includes(rt.state) || rt.terminal) throw new ApiError(403, 'REGISTRATION_CLOSED', 'roll is committed');
-      let exp: number | null = null;
+      // QV-ADR-027 B2-10 (option A): an invite without `expires_at` expires after the QV-02-REQ-010 default of 14 days
+      // (QV-04 §5.1: 336 h); no invite is a permanent bearer token.
+      let exp: number = nowMs() + INVITE_DEFAULT_TTL_MS;
       if (b.expires_at !== undefined) {
         exp = Date.parse(b.expires_at);
         if (Number.isNaN(exp)) throw new ApiError(400, 'BAD_REQUEST', 'bad expires_at');
@@ -488,6 +502,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       const dek = unlockDek(rt);
       const n = b.count ?? b.items!.length;
       return idem(c, c.auth!.keyId, async () => {
+        purgeInvites(rt);
         if (rt.edb.inviteCount() + n > cfg.maxVotersPerElection * 2) throw new ApiError(429, 'RATE_LIMITED', 'too many invites', { retryable: false });
         const out: { invite_id: string; code: string; label?: string }[] = [];
         const rows = [];
@@ -510,6 +525,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     method: 'GET', path: '/api/v1/elections/:id/invites', cls: 'M', auth: 'sig',
     handler: async (c) => {
       const rt = await orgElection(c);
+      purgeInvites(rt);
       const limit = Math.max(1, intQ(c, 'limit', 100, 500));
       const rows = rt.edb.invites(c.query.get('state') ?? undefined, c.query.get('cursor') ?? undefined, limit + 1);
       const more = rows.length > limit;
@@ -527,7 +543,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       const rt = await orgElection(c);
       const inv = rt.edb.inviteById(c.params['invite']!);
       if (!inv) throw notFound('invite');
-      if (inv.state === 'issued' || inv.state === 'sent') rt.edb.setInviteState(inv.invite_id, 'revoked');
+      if (inv.state === 'issued' || inv.state === 'sent') rt.edb.setInviteState(inv.invite_id, 'revoked', Math.floor(nowMs() / 3_600_000) * 3_600_000);
+      purgeInvites(rt);
       return { status: 204 };
     },
   });
@@ -894,14 +911,75 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       return { status: 200, bytes: b.bytes, ranges: true, contentType: 'application/json; charset=utf-8', cache: 'public, max-age=600', etag: b.etag };
     },
   });
+
+  // ---- recorded public exports (QV-09 §10 `POST /elections/{id}/exports`, `GET …/exports/{export_id}`; QV-28 §8.2, §11.2).
+  // QV-ADR-027 N-32(b): an ARCHIVED election is deletable only after a public export of its final log was generated here and the
+  // organizer downloaded it through `download_url` (that download sets `acknowledged_at`), or 30 days passed after it was generated.
+  // Only `kind: "public"` is implemented; the operator bundle (.qvx) is not. The bytes are not stored: the bundle is rebuilt with the
+  // recorded `created_at` and must hash to the recorded `sha256`, otherwise the download is refused (the log or its cosignatures changed).
+  const EXPORT_DOWNLOAD_MS = 7 * 86_400_000;
+  const exportView = (rt: ElectionRuntime, r: ExportRow): Record<string, unknown> => ({
+    export_id: r.export_id, kind: r.kind, tree_size: r.tree_size, root_hash: toHex(r.root_hash), sha256: toHex(r.sha256),
+    created_at: toIso(Math.floor(r.created_at / 1000)), acknowledged_at: r.acknowledged_at === null ? null : toIso(Math.floor(r.acknowledged_at / 1000)),
+    download_url: `/api/v1/elections/${rt.id}/exports/${r.export_id}/download`, download_expires_at: toIso(Math.floor((r.created_at + EXPORT_DOWNLOAD_MS) / 1000)),
+  });
+  const exportOf = (rt: ElectionRuntime, id: string): ExportRow => {
+    const r = rt.edb.exportById(id); // the router admits only ORG_ID_RE-shaped ids
+    if (!r) throw notFound('export');
+    return r;
+  };
+  add({
+    method: 'POST', path: '/api/v1/elections/:id/exports', cls: 'X', auth: 'sig', body: 'json', maxBody: 1024,
+    handler: async (c) => {
+      const rt = await orgElection(c);
+      const b = c.parse(fObj({ kind: req(fEnum('public', 'operator')), include_contacts: opt(fBool), encrypt_to: opt(fStr({ max: 200 })) }));
+      if (b.kind !== 'public' || b.include_contacts !== undefined || b.encrypt_to !== undefined) throw new ApiError(422, 'VALIDATION_FAILED', 'only kind "public" exports are implemented');
+      if (!rt.st.manifest) throw new ApiError(409, 'WRONG_PHASE', 'nothing to export before the manifest');
+      const a = c.auth!;
+      return idem(c, a.keyId, async () => {
+        const job = jobs.submit('export', 4, { kind: 'export', election_id: rt.id, params: { kind: 'public' }, created_by: a.keyId }, async () => {
+          const cur = await pool.get(rt.id);
+          if (!cur) throw new ApiError(404, 'NOT_FOUND', 'election not found');
+          const createdSec = env.nowSec();
+          const bytes = qvb(cur, createdSec);
+          const exportId = randomId();
+          cur.edb.addExport({ export_id: exportId, kind: 'public', tree_size: cur.log.size, root_hash: cur.log.root(), sha256: sha256(bytes), created_at: createdSec * 1000 });
+          control.audit(a.keyId, 'export.create', rt.id, { tree_size: cur.log.size });
+          return { result: { export_id: exportId }, result_ref: `/api/v1/elections/${rt.id}/exports/${exportId}` };
+        });
+        return { status: 202, headers: { Location: `/api/v1/jobs/${job.job_id}` }, json: jobView(job) };
+      });
+    },
+  });
+  add({
+    method: 'GET', path: '/api/v1/elections/:id/exports/:export', cls: 'M', auth: 'sig',
+    handler: async (c) => {
+      const rt = await orgElection(c);
+      return { status: 200, cache: 'no-store', json: exportView(rt, exportOf(rt, c.params['export']!)) };
+    },
+  });
+  add({
+    method: 'GET', path: '/api/v1/elections/:id/exports/:export/download', cls: 'X', auth: 'sig',
+    handler: async (c) => {
+      const rt = await orgElection(c);
+      const r = exportOf(rt, c.params['export']!);
+      if (nowMs() - r.created_at > EXPORT_DOWNLOAD_MS) throw conflict('the download link of this export has expired; request a new export');
+      const bytes = qvb(rt, Math.floor(r.created_at / 1000));
+      if (!ctEq(sha256(bytes), new Uint8Array(r.sha256))) throw conflict('the bundle changed since this export was generated; request a new export');
+      rt.edb.acknowledgeExport(r.export_id, nowMs());
+      control.audit(c.auth!.keyId, 'export.acknowledge', rt.id, { tree_size: r.tree_size });
+      return { status: 200, bytes, contentType: 'application/x-tar', cache: 'no-store', headers: { 'Content-Disposition': `attachment; filename="${rt.id}-${r.export_id}.qvb"` } };
+    },
+  });
   void audienceOf;
 
   registerExtRoutes({ env, pool, jobs, add, idem, readable, intQ });
 
   const http = createHttpApp(env, R, statics);
   return {
-    http, env, pool, sse, webhooks, jobs, gossip,
+    http, env, pool, sse, webhooks, jobs, gossip, retention,
     async start() {
+      retention.start();
       const a = await http.listen();
       return { ...a, url: `http://${a.host}:${a.port}` };
     },
@@ -909,6 +987,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       sse.closeAll();
       webhooks.stop();
       gossip.stop();
+      retention.stop();
       await jobs.stop();
       await http.close();
       await pool.closeAll();

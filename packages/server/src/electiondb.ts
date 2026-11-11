@@ -116,7 +116,43 @@ CREATE TABLE spoil_share (
 ) STRICT;
 `,
   },
+  {
+    version: 5,
+    name: 'invite_retention',
+    // QV-28 §11.1 (B2-11): voter_invite.label_enc/contact_enc are NULLed 7 d after the invite is registered/revoked/expired or the election
+    // opens. `closed_at` records when an invite was registered or revoked (hour-rounded, like registered_at). Existing closed rows are
+    // backfilled with registered_at, else created_at (never later than the true time, so legacy data is purged no later than the spec allows).
+    sql: `
+ALTER TABLE voter_invite ADD COLUMN closed_at INTEGER;
+UPDATE voter_invite SET closed_at = COALESCE(registered_at, created_at) WHERE state IN ('registered','revoked','expired');
+`,
+  },
+  {
+    version: 6,
+    name: 'export_record',
+    // QV-28 §8.2 `export_record` (schema verbatim) for the QV-28 §11.2 deletion precondition (QV-ADR-027 N-32(b)): an ARCHIVED election
+    // is deleted only after a public export of its final log was generated and the organizer downloaded it (`acknowledged_at`), or
+    // 30 days passed since it was generated. Public (P0) metadata only; the bundle bytes are not stored.
+    sql: `
+CREATE TABLE export_record (
+  export_id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('public','operator')),
+  tree_size INTEGER NOT NULL, root_hash BLOB NOT NULL, sha256 BLOB NOT NULL,
+  created_at INTEGER NOT NULL, acknowledged_at INTEGER
+) STRICT;
+`,
+  },
 ];
+
+/** One row of `export_record` (QV-28 §8.2). Times are epoch milliseconds. */
+export interface ExportRow {
+  export_id: string;
+  kind: 'public' | 'operator';
+  tree_size: number;
+  root_hash: Uint8Array;
+  sha256: Uint8Array;
+  created_at: number;
+  acknowledged_at: number | null;
+}
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
 export interface EventRow {
@@ -172,6 +208,7 @@ export interface InviteRow {
   created_at: number;
   expires_at: number | null;
   registered_at: number | null;
+  closed_at?: number | null;
 }
 
 interface EntryRow {
@@ -382,6 +419,23 @@ export class ElectionDb {
     return all<{ seq: number; redacted_at: number; reason: string }>(this.db, 'SELECT seq,redacted_at,reason FROM redaction ORDER BY seq').map((r) => ({ seq: r.seq, redactedAt: r.redacted_at, reason: r.reason }));
   }
 
+  // ---- export records (QV-28 §8.2, §11.2; QV-ADR-027 N-32(b))
+  addExport(r: Omit<ExportRow, 'acknowledged_at'>): void {
+    run(this.db, 'INSERT INTO export_record(export_id,kind,tree_size,root_hash,sha256,created_at,acknowledged_at) VALUES (?,?,?,?,?,?,NULL)',
+      r.export_id, r.kind, r.tree_size, r.root_hash, r.sha256, r.created_at);
+  }
+  exportById(id: string): ExportRow | undefined {
+    return get<ExportRow>(this.db, 'SELECT * FROM export_record WHERE export_id=?', id);
+  }
+  /** Sets `acknowledged_at` once (the first organizer download); later downloads keep the first time. */
+  acknowledgeExport(id: string, atMs: number): void {
+    run(this.db, 'UPDATE export_record SET acknowledged_at=? WHERE export_id=? AND acknowledged_at IS NULL', atMs, id);
+  }
+  /** Public export records of exactly this tree (size and root), newest first. */
+  publicExportsOf(treeSize: number, root: Uint8Array): ExportRow[] {
+    return all<ExportRow>(this.db, "SELECT * FROM export_record WHERE kind='public' AND tree_size=? AND root_hash=? ORDER BY created_at DESC", treeSize, root);
+  }
+
   // ---- invites
   addInvites(rows: Omit<InviteRow, 'registered_at'>[]): void {
     this.tx(() => {
@@ -404,12 +458,26 @@ export class ElectionDb {
     return all<InviteRow>(this.db, 'SELECT * FROM voter_invite WHERE (? IS NULL OR state=?) AND (? IS NULL OR invite_id>?) ORDER BY invite_id LIMIT ?',
       state ?? null, state ?? null, after ?? null, after ?? null, limit);
   }
-  setInviteState(id: string, state: InviteRow['state']): void {
-    run(this.db, 'UPDATE voter_invite SET state=? WHERE invite_id=?', state, id);
+  /** `closedAt` (hour-rounded) starts the QV-28 §11.1 retention clock when the invite leaves issued/sent. */
+  setInviteState(id: string, state: InviteRow['state'], closedAt: number | null = null): void {
+    run(this.db, 'UPDATE voter_invite SET state=?, closed_at=COALESCE(?, closed_at) WHERE invite_id=?', state, closedAt, id);
+  }
+  /**
+   * QV-28 §11.1 / QV-28-REQ-013: NULLs label_enc and contact_enc (secure_delete is ON) once `graceMs` has passed since the invite was
+   * registered/revoked, since it expired, or since the election opened, whichever came first. Returns the number of rows purged.
+   */
+  purgeInviteData(nowMs: number, graceMs: number): number {
+    const cutoff = nowMs - graceMs;
+    const r = run(this.db,
+      `UPDATE voter_invite SET label_enc=NULL, contact_enc=NULL WHERE (label_enc IS NOT NULL OR contact_enc IS NOT NULL) AND (
+         (closed_at IS NOT NULL AND closed_at <= ?1)
+         OR (state IN ('issued','sent') AND expires_at IS NOT NULL AND expires_at <= ?1)
+         OR EXISTS (SELECT 1 FROM log_entry WHERE type='election_open' AND received_at <= ?1))`, cutoff);
+    return Number(r.changes);
   }
   /** Marks an invite used and purges contact data; deliberately stores no link to the voter row (QV-28 §8.2). */
   consumeInvite(id: string, hourRounded: number): boolean {
-    const r = run(this.db, "UPDATE voter_invite SET state='registered', registered_at=?, contact_enc=NULL, label_enc=label_enc WHERE invite_id=? AND state IN ('issued','sent')", hourRounded, id);
+    const r = run(this.db, "UPDATE voter_invite SET state='registered', registered_at=?, closed_at=?, contact_enc=NULL WHERE invite_id=? AND state IN ('issued','sent')", hourRounded, hourRounded, id);
     return Number(r.changes) === 1;
   }
 

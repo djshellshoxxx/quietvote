@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { gzipSync } from 'node:zlib';
-import { buildSite } from '../src/build/site.ts';
+import { buildSite, lazyPreloadSources } from '../src/build/site.ts';
 import { LOCALE_META, type LocaleMeta } from '../src/i18n/locales-core.ts';
 import { hasReviews, loadLocaleDefs } from '../src/i18n/runtime.ts';
 import { gate, offeredLocales } from '../src/i18n/locales-core.ts';
@@ -107,4 +107,31 @@ test('main.ts loads locale tables before starting and passes them in; the app ha
     assert.ok(!/^import .*catalogs\//m.test(src), `${f} has no static catalog import`);
     assert.ok(!/from '\.\/locales\.ts'|from '\.\.\/i18n\/locales\.ts'/.test(src), `${f} does not pull the all-locales module`);
   }
+});
+
+// QV-ADR-027 W15 (option A): offered/reviewed lazy chunks and the chart chunk get integrity-pinned modulepreloads.
+test('W15: the chart chunk and its static imports are preloaded with matching integrity; unreviewed catalogs are not', async () => {
+  const { dir } = await build();
+  const html = text(dir, 'index.html');
+  const preloads = new Map([...html.matchAll(/<link rel="modulepreload" href="\/(assets\/[^"]+)" integrity="(sha384-[^"]+)" crossorigin="anonymous">/g)].map((m) => [m[1]!, m[2]!]));
+  const names = readdirSync(join(dir, 'assets'));
+  const charts = `assets/${names.find((n) => n.startsWith('charts-'))!}`;
+  assert.ok(preloads.has(charts), 'chart chunk is preloaded');
+  for (const [p, integrity] of preloads) assert.equal(integrity, `sha384-${createHash('sha384').update(readFileSync(join(dir, p))).digest('base64')}`, p);
+  for (const imp of text(dir, charts).matchAll(/(?:import[^;]*?from|import)["']\.\/([^"']+)["']/g)) assert.ok(preloads.has(`assets/${imp[1]}`), `chart dependency ${imp[1]} is pinned`);
+  for (const l of ['es', 'fr', 'de', 'pt-BR', 'ar']) assert.ok(![...preloads.keys()].some((p) => p.startsWith(`assets/${l}-`)), `unreviewed ${l} catalog is not preloaded`);
+  assert.ok(!/modulepreload[^>]*seal-worker/.test(html), 'the worker is not a module preload (documented gap)');
+});
+
+test('W15: lazyPreloadSources picks the chart plus catalogs with review records only; a reviewed catalog is pinned in the build', async () => {
+  assert.deepEqual(lazyPreloadSources(), ['src/ui/charts.ts']);
+  const meta: LocaleMeta[] = LOCALE_META.map((m) => (m.tag === 'ar' ? { ...m, review: { 'qv.privacy.g1': 'x' } } : m));
+  assert.deepEqual(lazyPreloadSources(meta), ['src/ui/charts.ts', 'src/i18n/catalogs/ar.ts']);
+  const dir = mkdtempSync(join(tmpdir(), 'qvW15-'));
+  await buildSite(dir, { localeMeta: meta });
+  const html = text(dir, 'index.html');
+  const ar = readdirSync(join(dir, 'assets')).find((n) => n.startsWith('ar-'))!;
+  const want = `sha384-${createHash('sha384').update(readFileSync(join(dir, 'assets', ar))).digest('base64')}`;
+  assert.ok(html.includes(`<link rel="modulepreload" href="/assets/${ar}" integrity="${want}" crossorigin="anonymous">`));
+  assert.ok(!/modulepreload[^>]*\/assets\/es-/.test(html), 'other unreviewed catalogs stay unpinned and unfetched');
 });

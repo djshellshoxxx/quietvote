@@ -15,11 +15,9 @@ import type { ElectionPool } from './pool.ts';
 import { ApiError, forbidden } from './problem.ts';
 
 /**
- * THE admin authorization decision (owner decision D-84 is pending).
- * Today (QV-08 as recommended): the request already carried a valid `QV-Sig` signature (checked by the HTTP layer for every
- * `auth: 'sig'` route) and the key must be registered with role `instance_admin` (seeded from `adminKeys`; no API creates admin keys).
- * If the owner picks QV-09's session bearer instead, only this function and the token check in http.ts change; every /admin handler
- * calls nothing else.
+ * THE admin authorization decision (D-84 decided: QV-ADR-027 N-20, QV-08 signed requests are the sole organizer/admin auth).
+ * The request already carried a valid `QV-Sig` signature (checked by the HTTP layer for every `auth: 'sig'` route) and the key
+ * must be registered with role `instance_admin` (seeded from `adminKeys`; no API creates admin keys). There is no session bearer.
  */
 export function authorizeAdmin(c: Ctx): AuthInfo {
   const a = c.auth;
@@ -250,7 +248,11 @@ export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, 
     throw new ApiError(409, 'STATE_CONFLICT', 'the stored log cannot be re-opened (it does not replay); restore it from a verified backup first');
   }
   if (!rt) throw new ApiError(404, 'NOT_FOUND', 'no such election');
-  if (rt.log.status.state === 'quarantine') throw new ApiError(409, 'STATE_CONFLICT', 'the stored log is still inconsistent after a fresh replay');
+  if (rt.log.status.state === 'quarantine') {
+    // QV-ADR-027 B2-07: a DB behind the control.sqlite rollback anchor cannot be cleared; only restoring the newer database helps.
+    if (rt.log.status.reason.startsWith('ROLLBACK:')) throw new ApiError(409, 'STATE_CONFLICT', `the stored log is behind the rollback anchor (${rt.log.status.reason.slice(10)}): restore the newer database first`);
+    throw new ApiError(409, 'STATE_CONFLICT', 'the stored log is still inconsistent after a fresh replay');
+  }
   const audit = await auditLog(rt);
   if (!audit.ok) throw new ApiError(409, 'STATE_CONFLICT', `a full self-audit still fails (${audit.failures[0]?.rule ?? 'unknown'}${audit.failures[0]?.seq !== undefined ? ` at seq ${audit.failures[0].seq}` : ''})`);
   // TOCTOU (security review 2026-10-21, SR-2): gossip may have recorded evidence or re-quarantined the log while this request was

@@ -90,18 +90,6 @@ export interface RollPage {
   roll_size?: number;
 }
 
-export interface Challenge {
-  challenge_id: string;
-  nonce: string;
-  audience: string;
-  expires_at: string;
-}
-export interface Session {
-  token: string;
-  expires_at: string;
-  role: string;
-  org_id?: string;
-}
 export interface InviteResult {
   /** `code` is present only on the first (non-replayed) response; replays carry `code_withheld: true`. */
   invites: { invite_id: string; code?: string; code_withheld?: boolean; label?: string }[];
@@ -112,4 +100,20 @@ export interface VoterStatus {
   ballot_count: number;
   first_seq?: number;
   latest_seq?: number;
+}
+
+/** GET /elections/:id/spoil-shares (no `code`): which trustees have posted for which ballot code (QV-ADR-020). */
+export interface SpoilShareIndex {
+  items: { code: string; trustees: number[] }[];
+}
+/** GET /elections/:id/spoil-shares?code=: the stored trustee-signed records. The records are untrusted until verified locally. */
+export interface SpoilShareList {
+  code: string;
+  items: { j: number; spoil_seq: number; record: unknown }[];
+}
+/** POST /elections/:id/spoil-shares: 201 `accepted`, 200 `duplicate` (byte-identical replay). */
+export interface SpoilSharePosted {
+  status: 'accepted' | 'duplicate';
+  j: number;
+  code: string;
 }
