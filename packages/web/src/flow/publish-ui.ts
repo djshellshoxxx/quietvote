@@ -4,7 +4,7 @@
 import { ApiClient, type ClientOptions } from '../api/client.ts';
 import { ApiError, uxCodeFor, type UxCode } from '../api/errors.ts';
 import type { Instance } from '../api/types.ts';
-import { KeyError } from '../key/keystore.ts';
+import { KeyError, type KeystoreDeps } from '../key/keystore.ts';
 import type { Signer } from '../key/signer.ts';
 import type { DeviceStorage } from '../key/storage.ts';
 import type { Rng } from '@quietvote/crypto';
@@ -40,6 +40,8 @@ export interface PublishRun {
   origin: string;
   rng?: Rng | undefined;
   now?: (() => number) | undefined;
+  /** B3-28: key-store dependencies for the unlock (carries the KDF cost confirm). Defaults to the real key store. */
+  deps?: KeystoreDeps | undefined;
   /** Test seams; the defaults are the real key store and the real ApiClient. */
   unlock?: ((passphrase: string) => Promise<Signer>) | undefined;
   makeClient?: ((o: ClientOptions) => PublishClient & Pick<ApiClient, 'instance'>) | undefined;
@@ -74,7 +76,7 @@ export async function runPublish(r: PublishRun): Promise<PublishOutcome> {
     return { kind: 'locked', ux: 'E-KEY-STORAGE' };
   }
   if (stored === undefined) return { kind: 'noKey' };
-  const unlock = r.unlock ?? (async (p: string) => (await unlockKey({ storage: r.storage, slot: ORGANIZER_SLOT, passphrase: p })).signer);
+  const unlock = r.unlock ?? (async (p: string) => (await unlockKey({ storage: r.storage, slot: ORGANIZER_SLOT, passphrase: p, ...(r.deps === undefined ? {} : { deps: r.deps }) })).signer);
   let signer: Signer;
   try {
     signer = await unlock(r.passphrase);

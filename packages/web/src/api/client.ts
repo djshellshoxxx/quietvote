@@ -5,8 +5,8 @@ import { utf8 } from '@quietvote/crypto';
 import { ApiError, BAD_RESPONSE, NETWORK, TIMEOUT, isRetryable } from './errors.ts';
 import { qvSigHeader, type RequestSigning } from './signing.ts';
 import type {
-  AppendResult, Challenge, ConsistencyProofView, ElectionState, ElectionSummary, EntryPage, EntryView, InclusionProofView,
-  Instance, InviteResult, RegistrationBody, RegistrationResult, RollPage, Session, SpoilShareIndex, SpoilShareList, SpoilSharePosted, VoterStatus,
+  AppendResult, ConsistencyProofView, ElectionState, ElectionSummary, EntryPage, EntryView, InclusionProofView,
+  Instance, InviteResult, RegistrationBody, RegistrationResult, RollPage, SpoilShareIndex, SpoilShareList, SpoilSharePosted, VoterStatus,
 } from './types.ts';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -35,7 +35,6 @@ export class ApiClient {
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly onRetry: ClientOptions['onRetry'];
   private readonly signing: RequestSigning | undefined;
-  private token: string | undefined;
 
   constructor(o: ClientOptions = {}) {
     this.base = (o.baseUrl ?? '').replace(/\/+$/, '');
@@ -47,11 +46,7 @@ export class ApiClient {
     this.signing = o.signing;
   }
 
-  setSessionToken(t: string | undefined): void {
-    this.token = t;
-  }
-
-  private async req(method: string, path: string, opts: { body?: unknown; bearer?: boolean; signed?: boolean; headers?: Record<string, string>; accept?: string; signal?: AbortSignal; query?: Record<string, string | number | undefined> } = {}): Promise<Response> {
+  private async req(method: string, path: string, opts: { body?: unknown; signed?: boolean; headers?: Record<string, string>; accept?: string; signal?: AbortSignal; query?: Record<string, string | number | undefined> } = {}): Promise<Response> {
     let target = path;
     if (opts.query) {
       const q = Object.entries(opts.query).filter(([, v]) => v !== undefined).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
@@ -60,7 +55,6 @@ export class ApiClient {
     const url = `${this.base}${target}`;
     const headers: Record<string, string> = { Accept: opts.accept ?? 'application/json', ...opts.headers };
     if (this.readKey !== undefined) headers['QV-Read-Key'] = this.readKey;
-    if (opts.bearer === true && this.token !== undefined) headers.Authorization = `Bearer ${this.token}`;
     const init: RequestInit = { method, headers, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer' };
     let bodyBytes: Uint8Array = new Uint8Array(0);
     if (opts.body !== undefined) {
@@ -215,14 +209,6 @@ export class ApiClient {
   }
 
   // ---- organizer
-  async authChallenge(body: { key_id: string } | { pk: string; alg: string; purpose: 'register' }): Promise<Challenge> {
-    return this.json(await this.req('POST', `${API}/auth/challenge`, { body }));
-  }
-  async authSession(body: { challenge_id: string; key_id: string; signature: string }): Promise<Session> {
-    const s = await this.json<Session>(await this.req('POST', `${API}/auth/session`, { body }));
-    this.token = s.token;
-    return s;
-  }
   async createElection(orgId: string, title: string, idempotencyKey: string): Promise<ElectionSummary> {
     return this.json(await this.req('POST', `${API}/orgs/${enc(orgId)}/elections`, { body: { title }, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
   }

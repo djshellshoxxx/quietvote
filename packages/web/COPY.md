@@ -145,6 +145,9 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.key.forgetConfirm`: Remove my key, receipts and drafts from this browser
 - `qv.key.forgetBody`: This removes your voting key, receipts and drafts from this browser. Make sure you have a key file or recovery code first.
 - `qv.key.cancel`: Cancel
+- `qv.key.costWarn`: This key file needs more memory and time than usual to unlock. It asks for {mem} MiB of memory, {passes} passes and {lanes} lanes. On a slow device this can take long or fail. Continue only if you trust the file.
+- `qv.key.costConfirm`: Unlock anyway
+- `qv.key.costCancelled`: Unlock cancelled. Nothing was unlocked.
 
 ## Ballot
 
