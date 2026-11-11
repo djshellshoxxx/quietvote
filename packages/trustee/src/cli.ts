@@ -42,6 +42,13 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
 Passphrase: --passphrase-file F (or QV_TRUSTEE_PASSPHRASE_FILE), otherwise a hidden prompt. Never on the command line.
 Options: --json   Exit codes: 0 ok, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
 
+/** Every option any command reads (value options and boolean flags). Anything else is a usage error, never silently ignored. */
+const OPTIONS = new Set([
+  'bundle', 'manifest', 'manifest-hash', 'ceremony-id', 'log', 'out', 'compared-with', 'words', 'claimed', 'election',
+  'override-unwitnessed', 'codes', 'reason', 'to', 'backup-passphrase-file', 'passphrase-file', 'ledger', 'override-no-ledger',
+  'from', 'confirm', 'audit-close', 'severity', 'mode', 'in', 'witness-key', 'json', 'generate-passphrase',
+]);
+
 function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags: Set<string> } {
   const [cmd = '', ...rest] = argv;
   const o = new Map<string, string>();
@@ -51,6 +58,11 @@ function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags
     const a = rest[i]!;
     if (!a.startsWith('--')) throw new TrusteeError('USAGE', 'USAGE', `unexpected argument ${a}`);
     const k = a.slice(2);
+    // Checked before any value is consumed, and the value is never echoed. The name is echoed only when it is a plain option-shaped word.
+    if (!OPTIONS.has(k)) {
+      const shown = /^[a-z][a-z0-9-]{0,39}$/.test(k) ? `--${k}` : '(name withheld)';
+      throw new TrusteeError('USAGE', 'USAGE', `unknown option ${shown}; run with no arguments for usage`);
+    }
     if (bool.has(k)) flags.add(k);
     else {
       const v = rest[++i];
