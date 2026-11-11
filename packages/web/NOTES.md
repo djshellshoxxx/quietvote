@@ -132,8 +132,8 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
 * Entry bodies are JCS bytes of protocol records/envelopes; ballots use type `ballot`, tests `ballot_audit`. Organizer auth
   challenge message and `bb.log_id = SHA-256(origin)` are my choices (undefined in specs).
 * Organizer management calls (createElection, putDraft, createInvites) are QV-08 signed requests (`api/signing.ts`, mirrors
-  server `auth.ts`), because the server has no `/auth/*` session routes. `authChallenge`/`authSession`/bearer in `ApiClient` are
-  left over from QV-09 and are not used by the server. The audience (`qv:<instance_id>@<publicUrl>`) is supplied by the caller.
+  server `auth.ts`), because the server has no `/auth/*` session routes. The QV-09 leftovers (`authChallenge`, `authSession`, the bearer
+  option) were removed under QV-ADR-027 N-20 (see the 2026-11-04 section). The audience (`qv:<instance_id>@<publicUrl>`) is supplied by the caller.
 * Client derives K/ctx itself by re-running DKG adjudication from the log. Word list is generated (placeholder, QV-19 open question).
 * Sealing runs in a Worker via a Trusted Types policy `qv-default` (script URL only); falls back in-thread.
 * Under hash-pinned CSP the standalone verifier page has inline script/style by spec (QV-19 section 7); index.html has none.
@@ -217,3 +217,12 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   yielding with progress on the main thread, closed offline verifier CSP kept, no Worker). Option A needs a progress/yield hook in
   `@quietvote/protocol` `verifyElection` (owned by the #26 integration line); the page wiring follows once that hook lands.
   B3-26 is therefore open again; the verifier CSP is unchanged (no worker-src).
+
+## QV-ADR-027 N-20: QV-Sig only, bearer client code removed (2026-11-04; AI-assisted, unaudited, not for real elections)
+
+* D-84 decided (QV-ADR-027 N-20): QV-08 `QV-Sig` signed requests are the sole organizer/admin authentication; QV-09 §3.2 and REQ-005/006 were rewritten.
+* Removed as dead code: `ApiClient.authChallenge`, `ApiClient.authSession`, `ApiClient.setSessionToken`, the private token and the `bearer` request option
+  (`src/api/client.ts`), and the `Challenge`/`Session` types (`src/api/types.ts`). No UI, string or catalog entry referenced them; no shared wire contract
+  that the server serves changed.
+* Negative tests: `test/n20-auth.test.ts` (no session methods; no `/auth/*` or bearer construction in `src/`; unsigned calls carry no `Authorization`,
+  management calls carry only `QV-Sig`).

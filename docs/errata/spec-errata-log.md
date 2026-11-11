@@ -61,3 +61,12 @@ The full reasoning is in [OPEN-DECISIONS](../plan/OPEN-DECISIONS.md) §I.
   manifest. No vector changed.
 * **Still open:** stopping after `E_MANIFEST_SIG` (D-92), rules after a published-`T` mismatch (D-93), the `results`
   member after a failure (D-94), the zero-digest spoil without trustee mode (D-95, PY-01), INCOMPLETE (D-96, PY-02).
+
+## Owner resolution, 2026-11-04 (QV-ADR-027)
+
+Append-only addendum; the rows above are unchanged.
+
+* **E-002 resolved (QV-ADR-027 N-16, D-90 option A).** Keep the early-draft names `RateLimit-Limit`, `RateLimit-Remaining`,
+  `RateLimit-Reset` (plus `Retry-After` on `429`) as emitted by `packages/server/src/http.ts`; no code change. Revisit when
+  draft-ietf-httpapi-ratelimit-headers becomes an RFC, then emit both old and new names for one release. The QV-09 §4.7 note
+  records the decision.

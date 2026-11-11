@@ -32,10 +32,11 @@ export function electionBundle(rt: ElectionRuntime): ElectionBundle {
   return { manifest: st.manifestRec, manifest_hash: bytesToHex(manifestHash(st.manifest!)), roll: st.rollSet ? [...st.rollSet].sort() : rt.edb.approvedKeysHex(), log };
 }
 
-export function logBundle(rt: ElectionRuntime): LogBundle {
+/** `createdAtSec` pins the bundle's `created_at` so a recorded export (QV-28 `export_record`) can be rebuilt byte for byte. */
+export function logBundle(rt: ElectionRuntime, createdAtSec?: number): LogBundle {
   const w = rt.witnessPolicy();
   return exportBundle(rt.edb.store, {
-    origin: rt.origin, createdAt: rt.env.nowSec(), generator: `quietvote-server/${SERVER_VERSION}`,
+    origin: rt.origin, createdAt: createdAtSec ?? rt.env.nowSec(), generator: `quietvote-server/${SERVER_VERSION}`,
     policy: { logPublicKey: rt.logPk, witnessPolicy: w }, redactions: rt.edb.redactions(),
   });
 }
@@ -53,8 +54,8 @@ export function organizerPk(rt: ElectionRuntime): Uint8Array | undefined {
   return k ? new Uint8Array(k.pk) : undefined;
 }
 
-export function qvb(rt: ElectionRuntime): Uint8Array {
-  const lb = logBundle(rt);
+export function qvb(rt: ElectionRuntime, createdAtSec?: number): Uint8Array {
+  const lb = logBundle(rt, createdAtSec);
   const j = bundleToJson(lb) as Record<string, unknown> & { entries: unknown[]; checkpoints: string[]; policy: unknown; redactions: unknown };
   const files: { name: string; data: Uint8Array }[] = [];
   const entries = utf8(j.entries.map((e) => JSON.stringify(e)).join('\n') + '\n');

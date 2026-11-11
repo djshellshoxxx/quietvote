@@ -15,11 +15,9 @@ import type { ElectionPool } from './pool.ts';
 import { ApiError, forbidden } from './problem.ts';
 
 /**
- * THE admin authorization decision (owner decision D-84 is pending).
- * Today (QV-08 as recommended): the request already carried a valid `QV-Sig` signature (checked by the HTTP layer for every
- * `auth: 'sig'` route) and the key must be registered with role `instance_admin` (seeded from `adminKeys`; no API creates admin keys).
- * If the owner picks QV-09's session bearer instead, only this function and the token check in http.ts change; every /admin handler
- * calls nothing else.
+ * THE admin authorization decision (D-84 decided: QV-ADR-027 N-20, QV-08 signed requests are the sole organizer/admin auth).
+ * The request already carried a valid `QV-Sig` signature (checked by the HTTP layer for every `auth: 'sig'` route) and the key
+ * must be registered with role `instance_admin` (seeded from `adminKeys`; no API creates admin keys). There is no session bearer.
  */
 export function authorizeAdmin(c: Ctx): AuthInfo {
   const a = c.auth;

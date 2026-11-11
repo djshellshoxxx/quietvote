@@ -11,6 +11,22 @@ import { originOf } from './util.ts';
 import { sha256 } from '@quietvote/crypto';
 import { ApiError, conflict } from './problem.ts';
 
+/** QV-28 §11.2 / QV-18-REQ-031 grace after an export is generated (the "notice") before an unacknowledged export suffices. */
+export const EXPORT_ACK_GRACE_MS = 30 * 86_400_000;
+
+/**
+ * QV-ADR-027 N-32(b), QV-28 §11.2: an ARCHIVED election may be deleted only when a public export of its final log (same tree size
+ * and root) exists and the organizer downloaded it (`acknowledged_at`), or 30 days have passed since that export was generated.
+ * Returns the unmet condition, or undefined when deletion may proceed. Other deletable states are not gated here (N-32(b) scope).
+ */
+export function archiveExportUnmet(rt: ElectionRuntime, nowMs: number): string | undefined {
+  const recs = rt.edb.publicExportsOf(rt.log.size, rt.log.root());
+  if (recs.some((r) => r.acknowledged_at !== null || nowMs - r.created_at >= EXPORT_ACK_GRACE_MS)) return undefined;
+  return recs.length === 0
+    ? 'a public export of the final log must exist (POST /elections/{id}/exports) and be downloaded by the organizer, or 30 days must pass after it was generated'
+    : 'the public export of the final log must be downloaded by the organizer (acknowledged), or 30 days must pass after it was generated';
+}
+
 export class ElectionPool {
   private readonly env: Env;
   private readonly open = new Map<string, ElectionRuntime>();
@@ -107,6 +123,11 @@ export class ElectionPool {
     if (!reg) return;
     const ok = ['DRAFT', 'ARCHIVED', 'CANCELLED', 'ABORTED', 'IMPORTED'].includes(reg.state);
     if (!ok) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED or ABORTED`);
+    if (reg.state === 'ARCHIVED') {
+      const rt = await this.get(id);
+      const unmet = rt ? archiveExportUnmet(rt, this.env.nowMs()) : 'the election database could not be opened';
+      if (unmet !== undefined) throw conflict(`election in state ARCHIVED cannot be deleted yet; unmet condition: ${unmet} (QV-28 §11.2)`);
+    }
     this.env.control.markDeleted(id); // wraps DEK away first
     await this.evict(id);
     const base = join(this.env.cfg.dataDir, reg.db_path);

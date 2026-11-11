@@ -45,7 +45,7 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B2-07 | Medium | confirmed | Medium | fixed (2026-11-04, pending commit) | QV-ADR-027 B2-07 (option B with A as local floor): `BoardLog` `floor` option; control.sqlite migration 5 anchor (`election_registry.anchor_size/anchor_root`) raised after the election-DB commit and before release; DB behind the anchor opens quarantined (read-only), cannot be admin-cleared; reopened signed logs poll gossip peers once before signing again, and a log-signed head ahead raises the anchor ("take max"). Residual: control.sqlite restored together with the election DB defeats A (B covers it only with public elections and reachable peers; link elections are never gossiped); TOFU for elections without an anchor; power-loss window under control.sqlite `synchronous=NORMAL`; crash ordering needs independent review. Tests: board `log.test.ts`, server `adr027-anchor.test.ts`. AI-assisted, unaudited. |
 | B2-08 | Medium | confirmed | Low | fixed | [8cf2669](https://github.com/djshellshoxxx/quietvote/commit/8cf26691f87af3a10c55c896f15bf4169aa862fa) |
 | B2-09 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B2-10 | Low | confirmed | Low | blocked_contract_review | No semantic repair commit; open/owner gate. |
+| B2-10 | Low | confirmed | Low | partial (2026-11-04, pending commit) | QV-ADR-027 B2-10 option A, invite-creation side: 14-day default `expires_at` (`packages/server/test/adr027-c2.test.ts`). Still open: unknown code must answer like used (`409 INVITE_USED`) in the registration handler, owned with B3-01/QV-ADR-028; not independently audited. |
 | B2-11 | Low | confirmed | Low | fixed (2026-11-04) | [50b8639](https://github.com/djshellshoxxx/quietvote/commit/50b8639bfdbbd5d9eb8f0f5f69fea4de08d7042b); 7-day default retention pending owner confirmation; backup retention not implemented. |
 | B2-12 | Low | confirmed | Low | fixed (2026-11-04, pending commit) | QV-ADR-027 B2-12 option A (interim): no zero-seed placeholder; `BoardLog.secretKey` optional, keyless `append`/`checkpoint` return `QV_BOARD_READ_ONLY`, promise signing throws; server answers duplicates on IMPORTED mirrors and reloaded ARCHIVED elections with 503 `LOG_UNAVAILABLE`. Option B (stored original receipts) deferred. Residual: a live ARCHIVED runtime still holds the key in memory until reload and re-issues duplicate receipts under the real log key. Tests: board `log.test.ts`, server `adr027-anchor.test.ts`. AI-assisted, unaudited. |
 | B2-13 | Low | confirmed | Low | fixed | [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
@@ -615,7 +615,7 @@ node --test packages/server/test/consolidation.test.ts
 
 ### B2-10
 
-**Severity and historical review:** Low → Low; interim verdict confirmed. Consolidation disposition: `blocked_contract_review`.
+**Severity and historical review:** Low → Low; interim verdict confirmed. Consolidation disposition: `blocked_contract_review`; **2026-11-04 update: partial (pending commit)** — owner approved option A (QV-ADR-027 B2-10). Invites now default to a 14-day expiry; the unknown-vs-used registration oracle remains until the registration handler (B3-01 / QV-ADR-028 scope) answers an unknown code as `409 INVITE_USED`.
 
 **Original summary:** Invites without expires_at never expire, unknown vs used codes answer differently, and a used code with another registered key answers 201.
 
