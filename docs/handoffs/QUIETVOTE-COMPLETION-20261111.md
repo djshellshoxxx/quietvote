@@ -37,25 +37,25 @@ Environment: Linux, Node 22.23.4, npm 10.9.9, Python 3.13.18, `npm ci --ignore-s
 
 | Check | Baseline `ab84f16` | Integration head (see section 3.1) |
 |---|---|---|
-| `npm run typecheck` | pass | pending, see 3.1 |
-| Workspace tests | 907 run, 907 pass, 0 fail, 0 skipped | pending, see 3.1 |
-| Python unit tests | 58 pass | pending, see 3.1 |
-| TypeScript vectors | 412 of 412; one DKG file not run | pending, see 3.1 |
-| Python vectors | 229 pass, 0 fail, 53 not implemented | pending, see 3.1 |
-| Production web build, i18n check | pass | pending, see 3.1 |
-| Lockfile lint, `npm audit --audit-level=high`, licence snapshot, action pins | pass | pending, see 3.1 |
-| Strict verifier comparison | **exit 1**: 27 of 27 verdicts agree, 3 reports differ (held decisions D-92 to D-94) | pending, see 3.1 |
+| `npm run typecheck` | pass | pass |
+| Workspace tests | 907 run, 907 pass, 0 fail, 0 skipped | 938 run, 938 pass, 0 fail, 0 skipped (crypto 75, board 76, protocol 215, verifier 25, cli 48, trustee 87, server 169, web 243) |
+| Python unit tests | 58 pass | 58 pass |
+| TypeScript vectors | 412 of 412; one DKG file not run | 412 of 412; one DKG file not run |
+| Python vectors | 229 pass, 0 fail, 53 not implemented | 229 pass, 0 fail, 53 not implemented |
+| Production web build, i18n check | pass | pass; 198.9 kB gzip JavaScript against the 200 kB budget |
+| Lockfile lint, `npm audit --audit-level=high`, licence snapshot, action pins | pass | pass; 0 vulnerabilities reported |
+| Strict verifier comparison | **exit 1**: 27 of 27 verdicts agree, 3 reports differ (held decisions D-92 to D-94) | **exit 1**, unchanged: 27 of 27 verdicts agree, 3 reports differ in 17 fields |
 | Claims lint | exit 1, 20 findings | exit 0, 0 findings (see item 5 above) |
-| Tooling tests, `deps:check`, link check, `trace --check` | not present | pending, see 3.1 |
+| Tooling tests, `deps:check`, link check, `trace --check` | not present | pass at the final head: 55 tooling tests; no new dependency violation (2 known deviations, D-97); 1204 links, none broken; trace check exit 0 |
 | Five required browser journeys in Chromium | not run | pass, exit 0, at `4cb2f9a` and again with the web fixes applied |
 
 The strict verifier comparison is expected to fail and is not suppressed. Browser journeys were run with the pre-installed Chromium through `QV_CHROMIUM`; they are automated checks, not WCAG or assistive-technology acceptance, and they use the pinned Playwright 1.57.0 against a newer Chromium build than the one it pins.
 
 ### 3.1 Exact head for the right-hand column
 
-A full qualification of commit `946b120` (the last commit that changes code) was still running when this document was first committed. If this sentence is still here, the result was not recorded in the repository: use the description of pull request #42.
+The right-hand column was measured on commit `946b120f03564f9c61958f17d4c8b9ae7c3b957e` (tree `b1f0b99e0712e8df6ccf35788a465268d3355caa`), the last commit that changes code, in a clean worktree with its own `npm ci`, started at 01:25 UTC on 2026-11-11. Every later commit changes only Markdown and the preserved work-in-progress files under `docs/`; for those, the link, claims and traceability checks and the tooling tests were run again at the final head. Workspace tests went from 907 to 938: board +2, cli +1 and server +4 from the merged pull requests, and web +24 (five from two merged pull requests, nineteen from the web fixes). The web fixes commit message says "was 219"; 219 is the baseline before the merges, and the count just before the web fixes was 224.
 
-Hosted CI on #42: not yet read when this document was first committed.
+Hosted CI on #42: **no hosted result was read.** Runs for earlier pushes were cancelled by the next push before any job started (the workflows cancel superseded runs), and the runs for the final head were still queued when the session stopped. The `conformance` job is expected to fail at the strict verifier comparison, exactly as it does on PR #30; any other red job is new and needs a look.
 
 ## 4. What the agents produced
 
