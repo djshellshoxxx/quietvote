@@ -58,6 +58,12 @@ test('only table rows whose ID matches the file number define a requirement', ()
   assert.deepEqual(parseSpec(SPEC_05, 'notes.md'), []);
 });
 
+test('list-item definitions are parsed with their priority; a foreign ID in a list is not a definition', () => {
+  const text = ['- QV-13-REQ-020 (M): Support matrix.', '* **QV-13-REQ-024** (S): Help page.', '- QV-10-REQ-001 (M): other spec.', '- see QV-13-REQ-020 (M) above'].join('\n');
+  const rows = parseSpec(text, '13-a11y.md');
+  assert.deepEqual(rows.map((r) => [r.id, r.priority, r.line]), [['QV-13-REQ-020', 'Must', 1], ['QV-13-REQ-024', 'Should', 2]]);
+});
+
 test('test paths are recognised by directory and suffix', () => {
   assert.equal(isTestPath('packages/protocol/test/tally.test.ts'), true);
   assert.equal(isTestPath('packages/web/e2e/run.ts'), true);

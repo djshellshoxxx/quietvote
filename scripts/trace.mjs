@@ -6,8 +6,9 @@
 //
 // Sources of truth and inputs:
 //   1. Requirement tables in docs/NN-*.md. A requirement is DEFINED by a table row whose first
-//      cell is `QV-NN-REQ-nnn` in the spec file with the same NN prefix. Priority comes from the
-//      `Pri`/`Priority` column (M/S/C or Must/Should/Could).
+//      cell is `QV-NN-REQ-nnn` (or by a list item `- QV-NN-REQ-nnn (M): text`) in the spec file
+//      with the same NN prefix. Priority comes from the `Pri`/`Priority` column or the list
+//      item's parenthesis (M/S/C or Must/Should/Could).
 //   2. `@verifies QV-NN-REQ-nnn ...` annotations in source and test files.
 //   3. Hand-maintained links in trace/links.json (QV-24 section 5: JSON form of links.yaml):
 //      { "schema": "qv-trace-links/1", "requirements": { "<id>": { "status", "impl", "tests", "note" } } }
@@ -31,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 
 export const REQ_ID = /QV-(\d{2})-REQ-(\d{3})/g;
 const REQ_ID_EXACT = /^QV-(\d{2})-REQ-(\d{3})$/;
+const LIST_DEFINITION = /^\s*[-*]\s+\**(QV-(\d{2})-REQ-\d{3})\**\s*\(([^)]+)\)\s*:\s*(.*)$/;
 
 // docs/SPEC-INDEX.md "Retained pre-renumbering drafts": non-authoritative files whose old QV
 // numbers collide with the current index. Their IDs are not active requirements.
@@ -85,6 +87,11 @@ export function parseSpec(text, file) {
     const line = lines[i];
     if (!line.trimStart().startsWith('|')) {
       priIdx = -1;
+      // List form used by some specs: "- QV-13-REQ-020 (M): requirement text".
+      const item = LIST_DEFINITION.exec(line);
+      if (item && item[2] === specNo) {
+        out.push({ id: item[1], spec: `QV-${specNo}`, file: `docs/${file}`, line: i + 1, priority: normalizePriority(item[3]), text: item[4].slice(0, 240) });
+      }
       continue;
     }
     const cells = splitRow(line);
@@ -157,7 +164,7 @@ export function scanAnnotations(root) {
 
 function stripLocator(p) {
   // "path/to/file.ts:12" or "path/to/file.test.ts#name fragment" -> "path/to/file.ts"
-  return String(p).replace(/#.*$/, '').replace(/:\d+(-\d+)?$/, '').trim();
+  return String(p).replace(/#.*$/, '').replace(/:[\d,\s-]+$/, '').trim();
 }
 
 export function buildMatrix(root, linksPath) {
