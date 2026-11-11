@@ -288,3 +288,11 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   an implementation choice; contacts are still accepted although server-side delivery is unsupported (QV-28/QV-09 allow the optional field; refusing it
   until delivery exists is the audit's stricter suggestion and would be an API change); `trustee_invite` (not implemented) is untouched; backups made before a
   purge keep the data until the backup policy (QV-28 §11.1: 12 months) removes them, which is not implemented. Tests: `test/b2-fixes.test.ts`.
+
+## Traceability tags (2026-11-04, pending commit)
+
+* QV-ADR-027 N-23c: three SSE tests in `test/events.test.ts` carry `// @verifies` comment tags (QV-09-REQ-010 for Last-Event-ID
+  resume and disconnect/resume; QV-09-REQ-010 and QV-09-REQ-014 for the event-body/secret-exclusion test), read by the report-only
+  `scripts/trace.mjs`. Comments only: no assertion, test name or test count changed. The registration handler was not touched.
+* QV-ADR-027 RECON-REQ063-SERVER: no server-rendered no-JavaScript locale path is built (deferred in docs/13 REQ-063), so the
+  server neither reads nor logs `Accept-Language` for locale selection. Unaudited, not for real elections.

@@ -84,6 +84,7 @@ test('SSE: headers, comment preamble, heartbeat comments, public CORS, HEAD does
   assert.equal(w.server.sse.stats.active, 0);
 });
 
+// @verifies QV-09-REQ-010, QV-09-REQ-014
 test('SSE: live entry/checkpoint/phase events, ordered ids, bodies and secrets never included', async () => {
   const s = await SseClient.open(w.base, EV());
   try {
@@ -110,6 +111,7 @@ test('SSE: live entry/checkpoint/phase events, ordered ids, bodies and secrets n
   }
 });
 
+// @verifies QV-09-REQ-010
 test('SSE: Last-Event-ID resume returns exactly the missed events, in order, no duplicates (header and query forms)', async () => {
   const a = await SseClient.open(w.base, EV());
   // CLOSED now: use control notices to generate events instead of ballots
@@ -149,6 +151,7 @@ test('SSE: Last-Event-ID resume returns exactly the missed events, in order, no 
   tail.close();
 });
 
+// @verifies QV-09-REQ-010
 test('SSE: disconnect during activity then resume loses nothing (ballot-driven)', async () => {
   // a second, live election keeps this independent of the closed one
   const r = await w.signed('POST', `/api/v1/orgs/${w.orgId}/elections`, { title: 'Second' }, w.owner, w.idemKey());

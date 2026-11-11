@@ -217,3 +217,12 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   yielding with progress on the main thread, closed offline verifier CSP kept, no Worker). Option A needs a progress/yield hook in
   `@quietvote/protocol` `verifyElection` (owned by the #26 integration line); the page wiring follows once that hook lands.
   B3-26 is therefore open again; the verifier CSP is unchanged (no worker-src).
+
+## Traceability tags and REQ-063 scope (2026-11-04, pending commit)
+
+* QV-ADR-027 N-23c: `test/locale-preference.test.ts` (QV-13-REQ-063) and the three REQ-064 tests in `test/i18n-catalogs.test.ts`
+  (QV-13-REQ-064) now carry `// @verifies` comment tags, read by the report-only `scripts/trace.mjs`
+  (`docs/reports/traceability-matrix.md`). Comments only: no assertion, test name or test count changed.
+* QV-ADR-027 RECON-REQ063-SERVER: REQ-063 is scoped to the browser client. The server-rendered no-JavaScript `Accept-Language`
+  path is deferred (docs/13 REQ-063 and §10 are marked). No server or web code changed. The REQ-063 tags cover only the client path.
+* A tag records that the test author linked the test to the requirement; it is not a review of sufficiency. Unaudited, not for real elections.
