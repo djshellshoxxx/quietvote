@@ -44,6 +44,8 @@ export class ElectionPool {
     if (!reg) return undefined;
     const rt = await ElectionRuntime.open(this.env, reg);
     this.open.set(id, rt);
+    // finish a tally aggregate interrupted by a crash (idempotent; a failure is retried on the next cosignature)
+    await rt.recoverTally().catch(() => this.env.logger.event('tally_recover', { outcome: 'error' }));
     await this.trim();
     return rt;
   }
@@ -105,8 +107,11 @@ export class ElectionPool {
   async remove(id: string): Promise<void> {
     const reg = this.env.control.election(id);
     if (!reg) return;
-    const ok = ['DRAFT', 'ARCHIVED', 'CANCELLED', 'ABORTED', 'IMPORTED'].includes(reg.state);
-    if (!ok) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
+    const deletable = (s: string): boolean => ['DRAFT', 'ARCHIVED', 'CANCELLED', 'ABORTED', 'IMPORTED'].includes(s);
+    if (!deletable(reg.state)) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
+    // The registry may lag the log after a crash: the election's own replayed state is authoritative (opening it also heals the registry).
+    const rt = await this.get(id);
+    if (rt && !deletable(rt.logState)) throw conflict(`election in state ${rt.logState} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
     this.env.control.markDeleted(id); // wraps DEK away first
     await this.evict(id);
     const base = join(this.env.cfg.dataDir, reg.db_path);
