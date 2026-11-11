@@ -17,7 +17,7 @@ production CSP and static-import SRI behavior is checked by the new browser
 regression suite. Dynamic chunks and workers do not gain full SRI from that test;
 the remaining scope is recorded under B3-04.
 Translations are draft catalogs, unreviewed and unoffered. No claim is promoted
-to approved or independently reviewed by this update.
+to approved or independently reviewed by this update. <!-- claims-lint-ignore -->
 
 ## How to read this register
 
