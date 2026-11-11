@@ -36,6 +36,7 @@ import { buildHeader } from './shell.ts';
 import { electionPath, parseRoute, type Route } from './route.ts';
 import { isCurrentPage, shouldHandleNavigation } from './navigation.ts';
 import { spoilSharesPanel } from './spoil-shares.ts';
+import { pinnedPreloads } from '../util/pinned-preload.ts';
 
 export interface AppEnv {
   root: HTMLElement;
@@ -687,7 +688,13 @@ export function startApp(env: AppEnv): void {
       return;
     }
     // The chart code is a separate chunk, fetched only when a tally exists. Without it the table below still shows every number.
-    const charts = await import('./charts.ts').catch(() => undefined);
+    // QV-ADR-027 W15: import only after every integrity-pinned preload (this chunk's included) is in the module map; a failed
+    // (e.g. tampered) preload means no import() at all, so a refetch without integrity can never run the chunk.
+    let chart: ((title: string, input: { options: { id: string; label: string; count: number }[]; winners: string[] }) => HTMLElement) | undefined;
+    if (await pinnedPreloads().then(() => true, () => false)) {
+      const charts = await import('./charts.ts').catch(() => undefined);
+      if (charts) chart = (title, input) => charts.renderBarChart({ t, rtl: tr.dir === 'rtl' }, title, input);
+    }
     if (!currentRoute(epoch)) return;
     if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
     const sections = (): HTMLElement[] => {
@@ -700,7 +707,7 @@ export function startApp(env: AppEnv): void {
         const text = opts.map((o) => `${label(o.id)} ${o.T}`).join(', ');
         const winners = res.outcome.kind === 'winners' ? res.outcome.winners ?? [] : [];
         return h('section', {}, h('h2', {}, c?.title ?? res.contest),
-          charts ? charts.renderBarChart({ t, rtl: tr.dir === 'rtl' }, c?.title ?? res.contest, { options: opts.map((o) => ({ id: o.id, label: label(o.id), count: o.T })), winners }) : null,
+          chart ? chart(c?.title ?? res.contest, { options: opts.map((o) => ({ id: o.id, label: label(o.id), count: o.T })), winners }) : null,
           h('table', {}, h('caption', {}, c?.title ?? res.contest), h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, t('qv.results.option')), h('th', { scope: 'col' }, t('qv.results.count')))),
             h('tbody', {}, ...opts.map((o) => h('tr', {}, h('th', { scope: 'row' }, label(o.id)), h('td', {}, String(o.T)))))),
           h('p', {}, t('qv.results.summary', { text })), h('p', {}, t('qv.results.participation', { count: res.participation })),

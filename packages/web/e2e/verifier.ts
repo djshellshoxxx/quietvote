@@ -82,7 +82,8 @@ try {
   await offline(address.url); // actual server StaticAssets policy, no routing interception
   await page.goto(`${origin}/e/${board.apiId}/results`);
   await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
-  assert.ok(await page.getByRole('table').count() > 0); checks++;
+  assert.ok(await page.getByRole('table').count() > 0);
+  assert.ok(await page.locator('svg.qv-bar-svg').count() > 0, 'positive control: the pinned chart chunk renders'); checks++;
   const forgedSim = { ...sim, log: forged.log };
   board = new FakeBoard(forgedSim);
   await page.reload();
@@ -119,6 +120,11 @@ try {
   const chartPending = new Promise<void>((resolve) => { chartsRequested = resolve; });
   const racing = await browser.newPage();
   await racing.goto(`${origin}/e/${board.apiId}/results`); await chartPending;
+  // QV-ADR-027 W15: the chart chunk is now requested by its head modulepreload at page load, so the request alone no longer means
+  // the app has reached its import. pinnedPreloads() adds a re-check link that stays until the held response settles: wait for it.
+  const pinnedCount = (readFileSync(join(dist, 'index.html'), 'utf8').match(/rel="modulepreload"/g) ?? []).length;
+  await racing.waitForFunction((n) => document.querySelectorAll('link[rel="modulepreload"]').length > n, pinnedCount, { timeout: 30000 });
+  assert.ok(eventClients.size > 0, 'live stream is connected while the chart import is pending');
   const appendedSeq = board.entries.length;
   board = new FakeBoard({ ...sim, log: [...sim.log, { seq: appendedSeq, entry: tally.entry }] });
   const firstRead = racing.waitForResponse((r) => r.url().includes(`/log/entries?from=${appendedSeq}&`));
@@ -150,9 +156,33 @@ try {
   await tamperPage.goto(origin); await blocked;
   assert.equal(await tamperPage.evaluate(() => Object.hasOwn(globalThis, '__qvTamper')), false);
   await tamperPage.close(); writeFileSync(join(dist, chunk), bytes); checks++;
+  // QV-ADR-027 W15: a lazy chunk (the results chart) modified on disk after the build is blocked by its integrity modulepreload
+  // and never executes, even though the results page later reaches its import(); the table still shows every number.
+  const lazy = /rel="modulepreload" href="\/(assets\/charts-[^"]+\.js)" integrity="sha384-/.exec(entryHtml)?.[1];
+  assert.ok(lazy, 'lazy chart chunk has an integrity preload');
+  const lazyBytes = readFileSync(join(dist, lazy));
+  writeFileSync(join(dist, lazy), Buffer.concat([Buffer.from('globalThis.__qvLazyTamper=true;'), lazyBytes]));
+  board = new FakeBoard(sim);
+  const fresh = await browser.newContext();
+  try {
+    const lazyPage = await fresh.newPage();
+    const pageErrors: string[] = []; lazyPage.on('pageerror', (e) => pageErrors.push(e.message));
+    let lazyFetches = 0; lazyPage.on('request', (r) => { if (r.url() === `${origin}/${lazy}`) lazyFetches++; });
+    const lazyBlocked = lazyPage.waitForEvent('console', { predicate: (m) => /integrity|valid digest/i.test(m.text()) && m.text().includes(lazy), timeout: 10000 });
+    await lazyPage.goto(`${origin}/e/${board.apiId}/results`); await lazyBlocked;
+    await lazyPage.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
+    assert.ok(await lazyPage.getByRole('table').count() > 0, 'results table still renders without the chart');
+    assert.equal(await lazyPage.locator('svg.qv-bar-svg').count(), 0, 'no chart from a tampered chunk');
+    assert.equal(await lazyPage.evaluate(() => Object.hasOwn(globalThis, '__qvLazyTamper')), false, 'tampered lazy chunk did not execute');
+    assert.ok(lazyFetches >= 1, 'the tampered chunk was actually served');
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await fresh.close(); writeFileSync(join(dist, lazy), lazyBytes);
+  }
+  checks++;
   assert.deepEqual(errors, [], 'no CSP, Trusted Types, or uncaught page errors');
   assert.deepEqual(thirdParty, []); checks++;
-  console.log(`verifier browser: ${checks}/${checks} passed (generated policies, real server, proof gate, anchor, skipped checks, static SRI, stale navigation, blocked storage, size bounds, live append during chart import)`);
+  console.log(`verifier browser: ${checks}/${checks} passed (generated policies, real server, proof gate, anchor, skipped checks, static SRI, lazy-chunk SRI, stale navigation, blocked storage, size bounds, live append during chart import)`);
 } finally {
   await browser.close(); await real.stop(); await new Promise<void>((resolve) => site.close(() => resolve())); rmSync(dir, { recursive: true, force: true });
 }

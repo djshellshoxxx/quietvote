@@ -271,6 +271,8 @@ Never shows contest selections (REQ-005).
 
 ### 6.3 Trustee flow
 
+> **QV-ADR-027 N-37c (with QV-ADR-024):** the trustee screens below are delivered by the `qv-trustee` CLI/localhost UI only. The web client does not drive any trustee ceremony or tally step and never holds trustee secrets. It posts organizer markers and relays already-signed trustee records (for example `qv-trustee spoil-release` output). The `/e/{id}/trustee` node in the §5.2 sitemap is not a web route.
+
 Screens: **T1 Invitation** → **T2 Create trustee key & backup** → **T3 Ceremony round 1 (commit)** → **T4 Round 2 (receive/verify shares)** → **T5 Complaint window / confirm** → **T6 Idle ("Standing by")** → **T7 Decrypt** → **T8 Retire (destroy share)**.
 
 - T1 shows what a trustee is and the duty in plain words (§7.4 `qv.trustee.role`), who the other trustees are (labels), the threshold, and the Election ID to compare.
