@@ -1,0 +1,25 @@
+import { World } from '/home/user/qv-wt/t2-concurrency/packages/server/test/helpers/world.ts';
+const sel = { budget: ['yes'], chair: ['ann'] };
+const w = new World({ seed: 'fail1', n: 3, t: 2, voters: 4 });
+await w.start();
+await w.setupOrgAndElection(); await w.registerVoters(); await w.publishManifest(); await w.ceremony(); await w.open();
+const st = async () => (await w.get(`/api/v1/elections/${w.electionId}/state`)).json;
+const show = (label: string, r: any) => console.log(label, r.status, JSON.stringify({ code: r.json.code, reason: r.json.reason, retryable: r.json.retryable, detail: r.json.detail }), 'retry-after', r.headers.get('retry-after'));
+for (const point of ['appendEntry', 'putCheckpoint', 'insertEvent', 'COMMIT'] as const) {
+  w.tick(5);
+  const rt = (await w.server.pool.get(w.electionId))! as any;
+  const before = (await st()).tree_size;
+  let restore: () => void;
+  if (point === 'appendEntry') { const o = rt.edb.store.appendEntry; rt.edb.store.appendEntry = () => { throw new Error('SQLITE_FULL: database or disk is full'); }; restore = () => { rt.edb.store.appendEntry = o; }; }
+  else if (point === 'putCheckpoint') { const o = rt.edb.store.putCheckpoint; rt.edb.store.putCheckpoint = () => { throw new Error('SQLITE_IOERR'); }; restore = () => { rt.edb.store.putCheckpoint = o; }; }
+  else if (point === 'insertEvent') { rt.edb.insertEvent = () => { throw new Error('SQLITE_IOERR'); }; restore = () => { delete rt.edb.insertEvent; }; }
+  else { const db = rt.edb.db; const o = db.exec; let armed = true; db.exec = function (sql: string) { if (armed && sql === 'COMMIT') { armed = false; throw new Error('SQLITE_IOERR: disk I/O error'); } return o.call(db, sql); }; restore = () => { delete db.exec; }; }
+  const r = await w.cast(0, sel);
+  restore();
+  show(point.padEnd(14), r);
+  console.log('   tree', before, '->', (await st()).tree_size, 'poisoned', rt.poisoned);
+  w.tick(5);
+  const ok = await w.cast(0, sel);
+  console.log('   next cast', ok.status, ok.json.receipt?.seq ?? ok.text);
+}
+await w.stop();

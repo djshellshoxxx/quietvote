@@ -1,0 +1,12 @@
+import { fullElection } from '/home/user/qv-wt/t3-privacy-canary/packages/server/test/helpers/full.ts';
+const t0 = Date.now();
+const marks: [string, number][] = [];
+const w = await fullElection('timing-probe', { stopAt: 'READY' });
+marks.push(['READY', Date.now() - t0]);
+await w.open();
+marks.push(['open', Date.now() - t0]);
+for (let i = 0; i < 4; i++) { const r = await w.cast(i, { budget: [i % 2 ? 'no' : 'yes'], chair: ['ann'] }); if (r.status !== 201) throw new Error(r.text); }
+marks.push(['4 casts', Date.now() - t0]);
+console.log(JSON.stringify(marks), 'logs', w.logs.length, w.logs.slice(0, 3), w.logs.slice(-3));
+console.log('dir', w.dir);
+await w.stop();

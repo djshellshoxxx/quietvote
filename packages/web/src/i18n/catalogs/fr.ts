@@ -515,4 +515,8 @@ export const FR = {
   'qv.spoil.out.accepted': 'Gardien {j} : part acceptée.',
   'qv.spoil.out.local': 'Non envoyée : {reason}',
   'qv.spoil.out.server': 'Le tableau a refusé cette part (état {status}).',
+  // Machine-drafted, unreviewed (key-file KDF cost confirm, B3-28).
+  'qv.key.costWarn': 'Ce fichier de clé demande plus de mémoire et de temps que d’habitude pour être déverrouillé : {mem} Mio de mémoire, {passes} passes, {lanes} voies. Sur un appareil lent ou à faible mémoire, cela peut être long ou échouer. Continuez seulement si vous faites confiance à l’origine de ce fichier.',
+  'qv.key.costConfirm': 'Déverrouiller quand même',
+  'qv.key.costCancelled': 'Déverrouillage annulé. Rien n’a été déverrouillé.',
 } as const satisfies Record<MessageKey, string>;

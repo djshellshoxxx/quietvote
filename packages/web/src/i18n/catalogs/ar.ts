@@ -516,4 +516,8 @@ export const AR = {
   'qv.spoil.out.accepted': 'الأمين {j}: قُبلت الحصة.',
   'qv.spoil.out.local': 'لم تُرسل: {reason}',
   'qv.spoil.out.server': 'رفضت اللوحة هذه الحصة (الحالة {status}).',
+  // Machine-drafted, unreviewed (key-file KDF cost confirm, B3-28).
+  'qv.key.costWarn': 'يطلب ملف المفتاح هذا ذاكرة ووقتاً أكثر من المعتاد لفتحه: {mem} MiB من الذاكرة، و{passes} جولات، و{lanes} مسارات. على جهاز بطيء أو قليل الذاكرة قد يستغرق ذلك وقتاً طويلاً أو يفشل. تابع فقط إذا كنت تثق بمصدر هذا الملف.',
+  'qv.key.costConfirm': 'افتح على أي حال',
+  'qv.key.costCancelled': 'أُلغي الفتح. لم يُفتح شيء.',
 } as const satisfies Record<MessageKey, string>;

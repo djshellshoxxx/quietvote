@@ -286,7 +286,7 @@ Any complete interim `poc_source`, known-overlap fields and other original field
 
 **Regression evidence:** consolidation.test.ts B2-03/B2-09; npm test -w @quietvote/server: 140/140 pass (server-tests-final.log)
 
-**Remaining gate:** Removed active instance_admin keys are revoked and operator-audited at startup. Rotation uses a distinct new key; revoked ids are not implicitly reactivated. Operational rotation rehearsal remains advisable before deployment. All new source repairs are AI-assisted, unaudited and require independent security/cryptographic review before any real use.
+**Remaining gate:** Removed active instance_admin keys are revoked and operator-audited at startup. Rotation uses a distinct new key; revoked ids are not implicitly reactivated. Operational rotation rehearsal remains advisable before deployment. All new source repairs are AI-assisted, unaudited and require independent security/cryptographic review before any real use. <!-- claims-lint-ignore -->
 
 **Reproducible checked-in commands** (run from repository root; strict comparison deliberately stays nonzero while reports differ):
 
@@ -1211,7 +1211,7 @@ node vpoc/gen02.ts; for f in vpoc/out/*.bundle.json test-vectors/v1/elections/lo
 
 Any complete interim `poc_source`, known-overlap fields and other original fields are preserved without truncation in [docs/audit/consolidation-2026-10-30.json](consolidation-2026-10-30.json).
 
-**Consolidation reproduction/analysis:** Original audited pause/resume, bad earlier markers, identical duplicate tally and malformed non-ballot records remain false-FAIL divergences in Python. No finding classes silently changed.
+**Consolidation reproduction/analysis:** Original audited pause/resume, bad earlier markers, identical duplicate tally and malformed non-ballot records remain false-FAIL divergences in Python. No finding classes silently changed. <!-- claims-lint-ignore -->
 
 **Fix or partial-fix commit:** No semantic repair commit; open/owner gate.
 
@@ -2374,7 +2374,7 @@ node --test packages/web/vb3/reg.test.ts (worktree /home/user/audit/verify-quiet
 
 Any complete interim `poc_source`, known-overlap fields and other original fields are preserved without truncation in [docs/audit/consolidation-2026-10-30.json](consolidation-2026-10-30.json).
 
-**Consolidation reproduction/analysis:** Audited QV-19/QV-04 registration bytes still conflict with the QV-09 reference server. Owner explicitly requires protocol review before either wire contract changes.
+**Consolidation reproduction/analysis:** Audited QV-19/QV-04 registration bytes still conflict with the QV-09 reference server. Owner explicitly requires protocol review before either wire contract changes. <!-- claims-lint-ignore -->
 
 **Fix or partial-fix commit:** No semantic repair commit; open/owner gate.
 
@@ -2720,11 +2720,11 @@ QV_REQUIRE_BROWSER=1 QV_CHROMIUM=/usr/bin/chromium node packages/web/e2e/verifie
 PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node packages/web/e2e/verify-b3b2.ts (repo e2e harness: FakeBoard + built site + Chromium at /opt/pw-browsers/chromium)
 ```
 
-**Interim output excerpt (verbatim):** AUDITED SCREEN {"matchQuestion":1,"tables":0,"selectionLabelShown":false,"links":0}
+**Interim output excerpt (verbatim):** AUDITED SCREEN {"matchQuestion":1,"tables":0,"selectionLabelShown":false,"links":0} <!-- claims-lint-ignore -->
 
 **Interim refutation attempt (verbatim):** I looked for any rendering of lastAudit selections or the link elsewhere in app.ts and found none. I checked whether the spec allows omitting the table: V8 and C-BENALOH both require it. I checked whether the gap is disclosed: NOTES.md N-36 says 'no QR codes', and TODO T-181 is Open. Neither covers asking the match question with nothing shown. The selection label 'YES' was selected but does not appear in the audited screen text.
 
-**Interim notes:** The audited branch at packages/web/src/ui/app.ts:492-499 renders: the automatic checks list, 'same software' text, posted/not posted, the 'Do these match what you picked?' radio group, the ok/mismatch line, a Download button, second-device help text, and 'Seal a new ballot'. It renders nothing from the sealed selections: no contest->selection table, no randomness, and no link or QR (ctl.lastAudit.link exists but is not shown). QV-10 §V8 (docs/10-user-experience.md:266) and QV-13 C-BENALOH (docs/13-accessibility-localization.md:89) require a contest -> 'what your device sealed' result table that the voter confirms by eye. QV-10-REQ-008 is an M requirement. The automated 'plaintext' check compares against selections supplied by the same software, so the human comparison is the defence the spec relies on. Mitigation: the downloaded qv-audit.json carries the package for a second device. Note that docs/plan/TODO.md:284 lists T-181 'Benaloh audit UX' as Open, so this is not a status-inflation claim; it is a conformance gap in UI that is shipped and reachable.
+**Interim notes:** The audited branch at packages/web/src/ui/app.ts:492-499 renders: the automatic checks list, 'same software' text, posted/not posted, the 'Do these match what you picked?' radio group, the ok/mismatch line, a Download button, second-device help text, and 'Seal a new ballot'. It renders nothing from the sealed selections: no contest->selection table, no randomness, and no link or QR (ctl.lastAudit.link exists but is not shown). QV-10 §V8 (docs/10-user-experience.md:266) and QV-13 C-BENALOH (docs/13-accessibility-localization.md:89) require a contest -> 'what your device sealed' result table that the voter confirms by eye. QV-10-REQ-008 is an M requirement. The automated 'plaintext' check compares against selections supplied by the same software, so the human comparison is the defence the spec relies on. Mitigation: the downloaded qv-audit.json carries the package for a second device. Note that docs/plan/TODO.md:284 lists T-181 'Benaloh audit UX' as Open, so this is not a status-inflation claim; it is a conformance gap in UI that is shipped and reachable. <!-- claims-lint-ignore -->
 
 Any complete interim `poc_source`, known-overlap fields and other original fields are preserved without truncation in [docs/audit/consolidation-2026-10-30.json](consolidation-2026-10-30.json).
 

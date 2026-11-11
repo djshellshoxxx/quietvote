@@ -18,7 +18,8 @@
     "e2e": "node e2e/run.ts"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
   },
   "dependencies": {
     "@quietvote/board": "*",
