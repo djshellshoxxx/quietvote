@@ -3,14 +3,16 @@
 // cannot pass gate() whatever its table holds, so skipping its table changes nothing a voter can see.
 import type { LocaleDef } from './locales-core.ts';
 import { LOCALE_META, type LocaleMeta } from './locales-core.ts';
+import { pinnedPreloads } from '../util/pinned-preload.ts';
 
 type Table = LocaleDef['messages'];
+// QV-ADR-027 W15: a catalog chunk is imported only after every integrity-pinned modulepreload (build/site.ts) is in the module map.
 const LOADERS: Record<string, () => Promise<Table>> = {
-  es: async () => (await import('./catalogs/es.ts')).ES,
-  fr: async () => (await import('./catalogs/fr.ts')).FR,
-  de: async () => (await import('./catalogs/de.ts')).DE,
-  'pt-BR': async () => (await import('./catalogs/pt-BR.ts')).PT_BR,
-  ar: async () => (await import('./catalogs/ar.ts')).AR,
+  es: async () => { await pinnedPreloads(); return (await import('./catalogs/es.ts')).ES; },
+  fr: async () => { await pinnedPreloads(); return (await import('./catalogs/fr.ts')).FR; },
+  de: async () => { await pinnedPreloads(); return (await import('./catalogs/de.ts')).DE; },
+  'pt-BR': async () => { await pinnedPreloads(); return (await import('./catalogs/pt-BR.ts')).PT_BR; },
+  ar: async () => { await pinnedPreloads(); return (await import('./catalogs/ar.ts')).AR; },
 };
 
 export const hasReviews = (m: { review: object }): boolean => Object.keys(m.review).length > 0;

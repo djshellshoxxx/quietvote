@@ -15,8 +15,9 @@ remain evidence of the audited revision, not claims that the current tree has pa
 * Both verifier UIs make an outside Election-ID mismatch a visible failure. The English PASS headline is “Supplied checks
   passed”; not-run checks and caveats remain explicit. Protocol report verdict rules are unchanged. Both file inputs reject
   more than 64 MiB before reading. The offline verifier remains on the main thread without a worker pool/progress/resume.
-* The build pins transitive **static** app imports with integrity modulepreloads. Lazy catalog/chart chunks and the module
-  worker still lack SRI. Unreviewed/unoffered catalogs are not preloaded. The common generated CSP permits only the exact
+* The build pins transitive **static** app imports with integrity modulepreloads. Since QV-ADR-027 W15 (2026-11-04 section
+  below) the lazy chart chunk and every reviewed catalog chunk are pinned the same way; the module worker still lacks SRI.
+  Unreviewed/unoffered catalogs are not preloaded. The common generated CSP permits only the exact
   offline inline script/style hashes, and the verifier route adds its closed offline policy; simultaneous matching policies
   work. The app's strict meta policy continues to reject inline script/style. The server independently recomputes the
   offline file's hashes and recognizes only this closed policy before serving its route exception.
@@ -152,7 +153,7 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
 
 ## Gaps
 * es/fr/de/pt-BR/ar have complete message tables (`src/i18n/catalogs/*.ts`), drafted by an AI model and not native-reviewed (the publish strings added later are drafts in the same way). They stay unoffered (only `en`) until each locale's `review` map holds a hash for every guarantee key; the matching-review path is tested in `test/i18n-catalogs.test.ts`. RTL CSS is logical-only; the ar layout has not been checked visually.
-* App ICU messages are precompiled at build time (REQ-062; see "Ordinary app ICU precompilation"). Lazy chunks exist (see "Live updates, standing, charts, chunks"), but chunks loaded by `import()` carry no SRI and there is no import-map integrity (it would need an inline script); they are same-origin, content-hashed by esbuild, listed in `asset-manifest.json`, and covered by `script-src 'self'`. Whoever can alter a chunk on the host can also alter `index.html`, which carries the entry's SRI.
+* App ICU messages are precompiled at build time (REQ-062; see "Ordinary app ICU precompilation"). Lazy chunks exist (see "Live updates, standing, charts, chunks"). QV-ADR-027 W15: the chart chunk and reviewed catalog chunks are pinned by integrity modulepreloads (see the 2026-11-04 W15 section); unreviewed catalogs (never fetched) and the seal worker URL are not, and there is no import-map integrity (it would need an inline script). They are same-origin, content-hashed by esbuild, listed in `asset-manifest.json`, and covered by `script-src 'self'`. Whoever can alter a chunk on the host can also alter `index.html`, which carries the entry's SRI.
 * No QR codes (text/file alternatives only). `/verify-client` not done.
 * Organizer publish: `flow/publish.ts` (`publishElection`: election, signed manifest, dkg-open marker, invites; `commitRoll`:
   roll-commit) is unit-tested against a fake client and against the real `ApiClient` over a fake fetch. The create view
@@ -165,7 +166,7 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   the organization ID is typed by the organizer (no lookup or creation in the web client); other ceremony markers (r1..r3,
   dkg-final) and trustee invites are not driven from the web; withheld invite codes on a replayed request are not recoverable
   (the batch is re-issued, the old invites stay open).
-  Trustee flows are CLI-only (ADR-024).
+  Trustee flows are CLI-only (ADR-024; confirmed by QV-ADR-027 N-37c, see the 2026-11-04 section below).
 * Standalone verifier does bundle verification only (no audit-package or canary self-test; packages/verifier was in flux).
 * Live/standing/chart UI wiring is checked by source assertions only; the e2e stub server (`e2e/run.ts`, FakeBoard) has no `/events` route, so the e2e shows "live updates are off". No browser run of the chart in forced-colors/RTL or with a screen reader was done.
 * Not covered: `witness` events are ignored; the `checkpoint` event is a re-read hint only (no head pinning from it); a voter's ballot count/`max_per_voter` edge cases beyond the verifier's chain walk are not cross-checked against `analyzeBallotLog` output on the same log (roll membership is not checked for standing).
@@ -217,3 +218,61 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
   yielding with progress on the main thread, closed offline verifier CSP kept, no Worker). Option A needs a progress/yield hook in
   `@quietvote/protocol` `verifyElection` (owned by the #26 integration line); the page wiring follows once that hook lands.
   B3-26 is therefore open again; the verifier CSP is unchanged (no worker-src).
+
+## QV-ADR-027 W15 and N-37c (2026-11-04 decisions, implemented 2026-11-11, uncommitted)
+
+AI-assisted work, not an independent audit. QuietVote stays unaudited and not for real elections.
+
+**W15 (option A): integrity modulepreloads for lazy chunks.**
+* Spec check first (primary source). html.spec.whatwg.org could not be reached from the sandbox (proxy 403). The same text was
+  read from the WHATWG `source` file at whatwg/html main `a0442320781555c99544448e30134662bfc39190` and whatwg/fetch main
+  `59afe349913d56898c947576216f1c2579308be7` (both fetched 2026-11-11 from raw.githubusercontent.com):
+  * HTML "fetch a single module script" (webappapis.html#fetch-a-single-module-script). The module map is keyed by
+    (URL, module type). An existing module script is reused. An in-flight entry ("list") gets the new caller appended. "Set up
+    the module script request" copies the options' integrity metadata into the request. On failure (null/failed body or
+    non-ok status), the entry is **removed**. On success, it is **set** to the module script.
+  * HTML `modulepreload` "fetch and process the linked resource" (links.html). The integrity attribute becomes the options'
+    integrity metadata (import-map integrity applies only if the attribute is missing). The steps call "fetch a modulepreload
+    module script graph" (fires `error` on null, else `load`). Descendants are fetched only *optionally*.
+  * Fetch "main fetch": a body that does not match the request's integrity metadata is handed over as a network error.
+  * So the claim holds for a successful preload: a later `import()` of the same URL finds the checked module script in the map
+    and does not refetch. The claim does **not** hold for a failed preload. The entry is removed, so a later `import()` would
+    refetch without integrity. Chromium 153.0.8010.12 was observed to keep the failure (mutation run below), but this cannot be
+    relied on.
+* Implementation: `build/site.ts` `lazyPreloadSources()` covers `src/ui/charts.ts` plus `src/i18n/catalogs/<tag>.ts` for each
+  locale with review records. Today that is the chart only, so no eager catalog download. Each chunk and its own static
+  imports get `<link rel="modulepreload" integrity crossorigin>` in `index.html`. Static imports are pinned because the spec
+  makes descendant preloading optional. `util/pinned-preload.ts` `pinnedPreloads()` runs before every lazy `import()`
+  (chart in `ui/app.ts`, catalogs in `i18n/runtime.ts`). It re-requests every integrity preload through a fresh link and
+  resolves only if all of them fire `load`. A module-map hit is immediate. A removed (failed) entry is refetched **with** the
+  same integrity. A tampered chunk fires `error`, so `import()` is never reached: no chart, and the catalog stays empty and
+  unoffered. The results table still shows every number.
+* No CSP change. The seal worker URL stays a documented gap (no SRI for the `Worker` constructor).
+* Tests:
+  * `test/lazy.test.ts`: chart and its static imports are pinned with matching sha384; unreviewed catalogs are not; a
+    reviewed catalog is pinned.
+  * `test/pinned-preload.test.ts`: re-request with the same integrity; negatives for a failed preload, a missing
+    href/integrity, and a catalog not imported after a failed preload; wiring of every lazy `import()`.
+  * `e2e/verifier.ts` (Chromium): after the build, the chart chunk on disk is prefixed with a marker. A fresh context loads
+    results. The integrity error is logged, the marker is absent, no chart SVG renders, and the table still renders. A
+    positive control earlier in the same run proves that the untampered chart does render.
+* Mutation checks (temporary, reverted):
+  * With the chart preload removed from `index.html`, the tampered chunk ran (14 chart SVGs; the e2e test failed as it should).
+  * With the `pinnedPreloads()` gate removed, Chromium 153 still blocked the chunk. This shows Chromium keeps the failed entry,
+    so the re-check path is covered only by unit tests in this browser.
+* Build: all-JS gzip 196.8 kB (< 200 KiB budget unchanged), entry 97.2 kB.
+
+**N-37c: CLI-only trustees; web relays signed records only.**
+* Confirmed in the source: the web client has no trustee route (`ui/route.ts`), does not import `@quietvote/trustee`/`cli`,
+  and imports no protocol function that needs a trustee secret (`dkgDeal`, `dkgMakeShares`, `dkgReceiveShare`,
+  `dkgMakeComplaint`, `dkgFinalShare`, `dkgKeyconf`, `trusteeDecryptTally`, `trusteeDecryptSpoiled`).
+* What the web does:
+  * Verifies public DKG/keyconf/tally records (`flow/election.ts`).
+  * Signs the organizer `dkg-open` marker (`flow/publish.ts`).
+  * Relays `qv-trustee spoil-release` records unchanged (`api/client.ts` `postSpoilShare`, after local verification in
+    `flow/spoil-shares.ts`).
+* Nothing that relays signed records was removed. Organizer/coordinator marker wiring stays allowed.
+* `test/trustee-scope.test.ts` guards the boundary, with negative controls for each forbidden import form and for trustee
+  record bodies.
+* The spec text that describes in-browser trustee screens (docs/10 §6.3) now carries a QV-ADR-027 N-37c note. docs/17 §12.1
+  (web client deliverable) already says this (QV-ADR-024) and gets the same marker.

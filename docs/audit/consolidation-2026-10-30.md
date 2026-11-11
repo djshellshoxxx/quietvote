@@ -79,7 +79,7 @@ Pinned test tooling is recorded in [docs/decision-log.md](../decision-log.md) (Q
 | B3-01 | High | confirmed | High | blocked | No semantic repair commit; open/owner gate. |
 | B3-02 | High | confirmed | Medium | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [f58533b](https://github.com/djshellshoxxx/quietvote/commit/f58533b13c87f06af50f8d104c5a28b77bb8c270) |
 | B3-03 | Medium | confirmed | Low | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec), [f2fc966](https://github.com/djshellshoxxx/quietvote/commit/f2fc966db01cd6e4dc1f5104d67a769240d35ee2) |
-| B3-04 | Medium | confirmed | Low | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
+| B3-04 | Medium | confirmed | Low | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec); lazy chart/reviewed-catalog chunks pinned per QV-ADR-027 W15 (2026-11-04 decision, pending commit); module worker URL stays a documented gap, so not closed. |
 | B3-05 | Medium | confirmed | Medium | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-06 | Medium | confirmed | Medium | partial | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
 | B3-07 | Medium | confirmed | Medium | fixed | [88b376a](https://github.com/djshellshoxxx/quietvote/commit/88b376a81d464617e8f5fe3da65fc327dfcba9ec) |
@@ -2562,7 +2562,7 @@ Any complete interim `poc_source`, known-overlap fields and other original field
 
 **Regression evidence:** Build traverses esbuild import-statement graph; build.test.ts checks integrity contents; verifier.ts static-chunk tamper negative control.
 
-**Remaining gate:** Lazy chart/catalog modules and module worker still lack SRI. No full subresource-integrity or cross-browser support claim; unoffered locales remain unpreloaded. All new source repairs are AI-assisted, unaudited and require independent security/cryptographic review before any real use.
+**Remaining gate:** ~~Lazy chart/catalog modules and module worker still lack SRI.~~ Update (QV-ADR-027 W15, pending commit): the lazy chart chunk and reviewed catalog chunks, with their static imports, now have integrity modulepreloads, and each lazy `import()` first re-checks them (packages/web/src/build/site.ts, packages/web/src/util/pinned-preload.ts). A Chromium e2e test tampers with the chart chunk on disk after the build and shows that it does not execute (packages/web/e2e/verifier.ts). The module worker URL still lacks SRI (accepted documented gap). Disposition stays `partial`. No full subresource-integrity or cross-browser support claim; unoffered locales remain unpreloaded. All new source repairs are AI-assisted, unaudited and require independent security/cryptographic review before any real use.
 
 **Reproducible checked-in commands** (run from repository root; strict comparison deliberately stays nonzero while reports differ):
 
