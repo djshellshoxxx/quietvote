@@ -21,7 +21,7 @@ const failures = [];
 for (const file of files) {
   const lines = readFileSync(file, 'utf8').split(/\r?\n/);
   lines.forEach((line, index) => {
-    const match = line.match(/^\s*uses:\s*([^\s#]+)/);
+    const match = line.match(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/);
     if (!match || match[1].startsWith('./')) return;
 
     const reference = match[1].split('@')[1];
