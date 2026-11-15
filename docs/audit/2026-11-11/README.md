@@ -2,8 +2,8 @@
 
 **AI-assisted review. It is not an independent professional audit. QuietVote remains unaudited and not for real elections.**
 
-Source reviewed: `ab84f16136184cb1fa0fa67b41e113424e134ba8` (the PR #30 milestone head). Nothing listed here is fixed.
-The owner paused the project before any fix was started, so every finding below is **open**.
+Source reviewed: `ab84f16136184cb1fa0fa67b41e113424e134ba8` (the PR #30 milestone head). The findings below describe the 2026-11-11 baseline. A follow-up patch for S1-02 is recorded at the end of this report.
+The owner paused the project before the original completion cycle began fixes. The later S1-02 follow-up is isolated on a review branch; all other listed findings remain open.
 
 ## Coverage, stated plainly
 
@@ -22,7 +22,7 @@ Severities for S1-01 and S1-02 are proposed by the coordinator from the reproduc
 | ID | Severity | Summary | Status |
 |---|---|---|---|
 | S1-01 | Medium (availability) | With the roll pinned in the manifest, one invite holder, or one absent member, makes `roll_commit` impossible; the election cannot open and there is no recovery route | Open; needs an owner decision |
-| S1-02 | Medium (integrity signal, Benaloh rule) | A cast that reuses the ciphertexts of an already admitted, published test ballot is admitted and counted | Open; fixable at admission without changing verifier semantics |
+| S1-02 | Medium (integrity signal, Benaloh rule) | A cast that reuses the ciphertexts of an already admitted, published test ballot is admitted and counted | Fix proposed on `chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114`; CI/review pending |
 | S3-01 | Low (privacy) | Ballot entries carry second-precision timestamps on the public board; the spec and the privacy notice promise minute precision | Open |
 | S3-02 | Info | The re-wrap guard omits placeholder ciphertexts; not exploitable end to end | Open |
 
@@ -75,3 +75,8 @@ These came from read-only inventory work, not from the review lanes. Each is des
 | QV-12-REQ-003 | Instance-admin keys are reported to act across organizations; not reproduced | [server.tasks.md](../../reports/inventory-20261111/server.tasks.md) |
 
 The full lists, including lower-priority items, are in the `*.tasks.md` and `ledger.findings.md` files under [docs/reports/inventory-20261111/](../../reports/inventory-20261111/).
+
+
+## Follow-up patch — S1-02 (2026-11-14)
+
+A focused patch on `chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114` adds a replay-derived set of alpha ciphertext values from admitted spoils. Cast admission now rejects reuse of any such alpha with `422 E_SPOILED_CODE_CAST`, even if `supersedes` changes the ballot code. The reverse-order regression is promoted into `packages/server/test/s1-spoil-then-cast-rewrap.test.ts`; the existing cast-then-spoil control remains in the same test. No verifier semantics or protocol bytes change. This report's original reproduction describes the pre-fix baseline. **The patch has not yet been executed locally or qualified by hosted CI; status remains pending until those results are inspected.**
