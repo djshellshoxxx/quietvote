@@ -1,5 +1,20 @@
 # QuietVote audit and QA index
 
+
+## Second-pass security audit — 2026-11-15
+
+The additional source review, cross-branch comparison and new findings are recorded in
+[SECOND_PASS_SECURITY_AUDIT_2026-11-15](../audits/SECOND_PASS_SECURITY_AUDIT_2026-11-15.md).
+The review identifies the reverse-order spoil/cast ciphertext-reuse defect (S1-02), verifier PASS
+semantics when board evidence is absent, optional out-of-band manifest anchoring, rollback and
+control-record replay risks, and remaining key-custody, retention, client-integrity and deployment
+gaps. The dated [ChatGPT audit ledger](../audits/CHATGPT_RANDOM_AUDIT_LEDGER.md) indexes the pass.
+
+This was source inspection only: tests, builds, fuzzing and live penetration testing were not run.
+It is not an independent professional audit or security certification. QuietVote remains unaudited
+and not for real elections.
+
+
 ## Current consolidation — 2026-10-30
 
 The current source accounting is [CONSOLIDATION](../plan/CONSOLIDATION.md),
