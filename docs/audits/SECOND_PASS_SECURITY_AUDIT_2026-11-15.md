@@ -506,3 +506,27 @@ The branch comparison reports **22 commits ahead and 11 behind** the integration
 | Code changes | None; documentation only |
 
 **Final conclusion:** QuietVote remains an experimental prototype and must not be used for real elections. The newly identified S1-02 defect, verifier PASS semantics, missing external trust anchors and rollback exposure are release blockers. This report is evidence for remediation planning, not a security certification.
+
+
+### QV2P-19 — Replay of previously authorized control records
+
+**Severity:** HIGH  
+**Status:** Previously PoC-confirmed; remains an unresolved protocol decision in the consolidation record.
+
+**Affected file:** `packages/server/src/election.ts`
+
+The historical B2-05 finding concerns pause/resume control records whose signature authenticates the original authorization but does not sufficiently bind it to a unique election state transition and monotonic control sequence. A previously valid multi-signature control record can be replayed under a new board-entry header if the record-level authorization is not made fresh.
+
+**Impact**
+
+A stale authorization may be reused to pause or resume an election at a later point than the signers intended, undermining the intended multi-party control policy and creating an election-availability attack.
+
+**Required fix**
+
+- Bind the authorization to the election ID, current state, expected prior control sequence and exact action.
+- Require monotonic control sequence numbers and unique nonces.
+- Reject duplicate or stale control records during both admission and independent verification.
+- Add replay tests across state transitions, restart, import and alternate log headers.
+- Preserve the historical PoC as a regression test and obtain protocol-owner approval for the record format.
+
+Do not treat a new board-entry header as proof that the underlying control authorization is fresh.
