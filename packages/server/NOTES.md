@@ -321,3 +321,8 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   the held partial upload, then still requires a full upload to complete. The competing archive body is withheld during early refusal;
   production HTTP behavior is unchanged. A missing-release mutation still fails recovery (503 rather than 202). See the report's
   Windows follow-up for the observed reset and qualification boundary.
+
+
+## S1-02 reverse spoil/cast guard (2026-11-14; AI-assisted, pending CI)
+
+Admission now records the ElGamal ciphertext alpha values from admitted spoils and rejects a later cast if any alpha is reused, regardless of a changed `supersedes` value or ballot code. This mirrors the existing cast-then-spoil exclusion. The projection is rebuilt from the append-only log on runtime replay. Regression: `test/s1-spoil-then-cast-rewrap.test.ts` exercises the reverse order, preserves the existing cast-then-spoil refusal control, and checks the exported verifier result. No wire format, cryptographic primitive, vector, or verifier rule changes. This fix has not yet received a local or hosted test result; do not treat the regression as passing until CI reports it.
