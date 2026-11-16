@@ -3,16 +3,17 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { rmSync, rmdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { cosignLine } from '@quietvote/board';
 import { DATA_LOCK_NAME } from '../src/data-lock.ts';
 import type { EventRow } from '../src/electiondb.ts';
 import { World } from './helpers/world.ts';
 
-async function crashedWorld(mode: 'append' | 'witness'): Promise<World> {
+async function crashedWorld(mode: 'append' | 'witness' | 'archive' | 'archive_erase'): Promise<World> {
   const info = await new Promise<{ dir: string; electionId: string; clock: number }>((resolve, reject) => {
     execFile(process.execPath, ['--max-old-space-size=256', fileURLToPath(new URL('./helpers/supplemental-crash.ts', import.meta.url)), mode],
-      { timeout: 30_000 }, (error, stdout, stderr) => {
+      { timeout: 120_000 }, (error, stdout, stderr) => {
         if (!error || error.code !== 73) return reject(new Error(`child did not reach crash boundary: ${String(error)} ${stderr}`));
         try { resolve(JSON.parse(stdout.trim())); } catch (e) { reject(e); }
       });
@@ -56,6 +57,13 @@ test('supplemental completion rollback retains the intent and never publishes th
     assert.equal(rt.edb.hasAppendCompletions(), true);
     assert.deepEqual(rt.edb.eventsAfter(0, 20).map((r) => r.type), ['entry', 'checkpoint']);
     assert.deepEqual(live.map((r) => r.type), ['entry', 'checkpoint']);
+    // Exercise the archive-retention guard with this real failed completion still pending.
+    rt.st.state = 'ARCHIVED';
+    w.server.env.control.setState(w.electionId, 'ARCHIVED');
+    w.tick(31 * 86400);
+    assert.equal(rt.pruneEventsIfExpired(), false, 'retention cannot discard history before its pending events complete');
+    assert.equal(rt.edb.eventsAfter(0, 20).length, 2);
+    rt.st.state = 'SETUP';
     w.tick(60);
     await w.server.stop(); await w.start();
     const recovered = (await w.server.pool.get(w.electionId))!;
@@ -127,5 +135,36 @@ test('process exit after cosignature commit retains witness events without regen
     assert.deepEqual(rows.map((r) => r.type), ['entry', 'checkpoint', 'phase', 'witness', 'checkpoint']);
     await w.server.stop(); await w.start();
     assert.deepEqual((await w.server.pool.get(w.electionId))!.edb.eventsAfter(0, 20), rows);
+  } finally { await w.stop(); }
+});
+
+for (const mode of ['archive', 'archive_erase'] as const) test(`process exit at ${mode} resumes archive key destruction before resolving its intent`, { timeout: 150_000 }, async () => {
+  const w = await crashedWorld(mode);
+  const raw = new DatabaseSync(join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`));
+  try {
+    const row = raw.prepare('SELECT log_sk_enc,srv_sk_enc,state FROM election').get()!;
+    assert.equal(row.state, 'AUDIT', 'crash occurred before archive projection and key destruction');
+    assert.ok(row.log_sk_enc && row.srv_sk_enc);
+    assert.equal(raw.prepare("SELECT value FROM meta WHERE key='read_only'").get(), undefined);
+    assert.equal(raw.prepare('SELECT COUNT(*) AS n FROM append_completion').get()!.n, 1);
+  } finally { raw.close(); }
+  await w.start();
+  try {
+    const rt = (await w.server.pool.get(w.electionId))!;
+    assert.equal(rt.logState, 'ARCHIVED');
+    assert.equal(rt.edb.row().state, 'ARCHIVED');
+    assert.equal(rt.edb.row().log_sk_enc, null);
+    assert.equal(rt.edb.row().srv_sk_enc, null);
+    assert.equal(rt.edb.store.isReadOnly(), true);
+    assert.equal(rt.edb.hasAppendCompletions(), false);
+    const rows = rt.edb.eventsAfter(0, 500);
+    assert.deepEqual(JSON.parse(rows.at(-1)!.data), { from: 'AUDIT', to: 'ARCHIVED', seq: rt.log.size - 1 });
+    assert.equal(rt.log.checkpoint().ok, false, 'archive stays unable to sign checkpoints');
+    await w.server.stop(); await w.start();
+    const reopened = (await w.server.pool.get(w.electionId))!;
+    assert.equal(reopened.edb.row().log_sk_enc, null);
+    assert.equal(reopened.edb.row().srv_sk_enc, null);
+    assert.equal(reopened.edb.store.isReadOnly(), true);
+    assert.deepEqual(reopened.edb.eventsAfter(0, 500), rows);
   } finally { await w.stop(); }
 });

@@ -262,6 +262,7 @@ export class ElectionRuntime {
     const at = this.env.control.election(this.id)?.archived_at ?? null;
     if (this.st.state !== 'ARCHIVED' || at === null || this.env.nowMs() - at < 30 * 86400_000) return false;
     if (this.edb.eventBounds() === undefined) return false;
+    if (this.edb.hasAppendCompletions()) return false; // Complete retained intents before their history can be pruned.
     if (!this.recoverEvents()) return false; // Do not prune a row that was never admitted to the durable bridge.
     this.edb.pruneEvents();
     return true;
@@ -373,6 +374,8 @@ export class ElectionRuntime {
         if (!h.ok) throw new Error(`stored entry ${r.seq} has a bad header`);
         const fromState = this.st.state;
         await this.apply(r.seq, h.value.type, rec, r.sequencedAt);
+        // Finish archive key destruction before deleting the intent that causes startup to reopen this election.
+        if (h.value.type === 'audit_close') this.finalizeArchive();
         // A crash can leave a durable entry without its supplemental event. Only explicit intents permit recovery.
         // The pool forwards committed rows after replay; no historical event is emitted to live subscribers here.
         this.completeAppendEvents(r.seq, fromState);
@@ -1374,8 +1377,10 @@ export class ElectionRuntime {
   /** Called after an audit_close entry: erase signing keys and make the store read-only (QV-28 §5: deleted at ARCHIVED). */
   finalizeArchive(): void {
     if (this.st.state !== 'ARCHIVED') return;
-    this.edb.eraseKeys();
-    this.edb.store.setReadOnly(true);
+    this.edb.tx(() => {
+      this.edb.eraseKeys();
+      this.edb.store.setReadOnly(true);
+    });
   }
 
   quarantineReason(): string | undefined {

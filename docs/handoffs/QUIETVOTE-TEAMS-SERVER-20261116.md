@@ -112,3 +112,18 @@ This milestone itself reconstructs on runtime replay; it does not claim startup 
 integration. It deliberately avoids reopening every election or healing unrelated lifecycle projections.
 The v8 operation-receipt migration belongs to that separate lane. Existing bridge migration regressions
 now drop schema-v7 objects when simulating the pre-v6 database; future schema fixtures must do likewise.
+
+Final review correction: archive event retention now waits for pending append completions before pruning.
+Replay also resumes the existing `audit_close` finalization (erase stored signing keys and set the board
+store read-only) before deleting that sequence's completion intent. Key erasure and read-only state commit
+together. This closes a pre-existing crash gap after durable `audit_close`; it changes neither admission,
+authorization nor archive policy. It does not claim secure physical-media erasure or zeroization of runtime
+copies beyond the existing archive behavior.
+
+The updated supplemental file passed **6 tests** including the new real child-process exit immediately
+after `audit_close` commit. A further targeted test passed after exiting inside the key-erasure transaction:
+SQLite rolled that incomplete transaction back, and reopening completed erasure before resolving the intent.
+That is **7 distinct supplemental tests** exercised across those two runs, not a whole-project count.
+The archive regressions assert both stored signing-key blobs become NULL, the store remains read-only,
+checkpoint signing is refused, and the recovered ARCHIVED phase does not duplicate on another restart.
+Final server package typecheck and `git diff --check` pass.
