@@ -134,7 +134,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     if (!control.getOrg(o)) throw notFound('organization');
     return o;
   };
-  const idem = async (c: Ctx, principal: string, fn: () => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply> => {
+  const idem = async (c: Ctx, principal: string, fn: (save: (reply: Reply) => void) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply> => {
     const key = c.header('idempotency-key');
     if (key === undefined || key.length < 8 || key.length > 128 || !/^[\x21-\x7e]+$/.test(key)) throw new ApiError(400, 'BAD_REQUEST', 'Idempotency-Key header (8-128 printable chars) is required');
     const h = new Uint8Array(createHash('sha256').update(`${c.method}\n${c.target}\n`).update(c.body).digest());
@@ -147,11 +147,17 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     }
     control.storeIdem(principal, key, c.method, c.path, h, 0, null);
     let completed = false;
-    try {
-      const r = await fn();
-      completed = true;
+    let recorded = false;
+    // Control-only mutations call save inside their own transaction so no committed resource can lose its replay receipt.
+    const save = (r: Reply): void => {
       const stored = redact ? redact(r) : r;
       control.storeIdem(principal, key, c.method, c.path, h, r.status, stored.json === undefined ? null : Buffer.from(JSON.stringify(stored.json)));
+      recorded = true;
+    };
+    try {
+      const r = await fn(save);
+      completed = true;
+      if (!recorded) save(r);
       return r;
     } catch (e) {
       // Only a known refusal can release the binding. Internal errors (including response-cache writes after successful work)
@@ -262,11 +268,15 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       const pk = unb64u(b.owner_key.pk);
       if (!pk || pk.length !== 32 || !ed25519IsStrictPoint(pk)) throw new ApiError(400, 'BAD_REQUEST', 'owner_key.pk is not a strict Ed25519 key');
       const a = authenticate(env, c.method, c.target, c.header('authorization'), c.body, pk); // proof of possession
-      return idem(c, a.keyId, async () => {
+      return idem(c, a.keyId, async (save) => {
         if (control.keyAnyById(a.keyId)) throw conflict('key already registered');
-        const org = control.tx(() => control.createOrg(b.name, a.keyId, pk));
-        control.audit(a.keyId, 'org.create', org.org_id);
-        return { status: 201, json: { org_id: org.org_id, name: org.name, keys: [{ key_id: a.keyId, role: 'org_owner' }] } };
+        return control.tx(() => {
+          const org = control.createOrg(b.name, a.keyId, pk);
+          control.audit(a.keyId, 'org.create', org.org_id);
+          const reply = { status: 201, json: { org_id: org.org_id, name: org.name, keys: [{ key_id: a.keyId, role: 'org_owner' }] } };
+          save(reply);
+          return reply;
+        });
       });
     },
   });
@@ -839,7 +849,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
         election_id: opt(fStr({ min: 32, max: 32, re: /^[0-9a-f]{32}$/ })),
       }));
       if (b.events.length === 0) throw new ApiError(400, 'BAD_REQUEST', 'events must not be empty');
-      return idem(c, c.auth!.keyId, async () => {
+      return idem(c, c.auth!.keyId, async (save) => {
         if (b.election_id !== undefined) {
           const rt = await pool.get(b.election_id);
           if (!rt || rt.orgId !== org) throw notFound('election');
@@ -847,12 +857,14 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
         if (control.countWebhooks(org) >= cfg.maxWebhooksPerOrg) throw new ApiError(429, 'RATE_LIMITED', 'webhook quota reached for this organization', { retryable: false });
         let made;
         try {
-          made = await webhooks.create(org, b.url, b.events, b.election_id);
+          made = await webhooks.create(org, b.url, b.events, b.election_id, (created) => {
+            control.audit(c.auth!.keyId, 'webhook.create', created.row.webhook_id);
+            save({ status: 201, json: { ...webhooks.view(created.row), secret: created.secret } });
+          });
         } catch (e) {
           if (e instanceof TargetRejected) throw new ApiError(422, 'VALIDATION_FAILED', e.message, { reason: e.code });
           throw e;
         }
-        control.audit(c.auth!.keyId, 'webhook.create', made.row.webhook_id);
         return { status: 201, json: { ...webhooks.view(made.row), secret: made.secret } };
       }, (r) => {
         const j = { ...(r.json as Record<string, unknown>) };
@@ -875,11 +887,18 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     handler: (c) => {
       const org = orgOf(c);
       ownerOnly(c);
-      const w = control.webhook(c.params['wh']!);
-      if (!w || w.org_id !== org) throw notFound('webhook');
-      control.deleteWebhook(w.webhook_id);
-      control.audit(c.auth!.keyId, 'webhook.delete', w.webhook_id);
-      return { status: 204 };
+      const remove = (save?: (reply: Reply) => void): Reply => control.tx(() => {
+        const w = control.webhook(c.params['wh']!);
+        if (!w || w.org_id !== org) throw notFound('webhook');
+        control.deleteWebhook(w.webhook_id);
+        // The audit is the deletion tombstone used by restore floors; it must commit with the removal.
+        control.audit(c.auth!.keyId, 'webhook.delete', w.webhook_id);
+        const reply = { status: 204 };
+        save?.(reply);
+        return reply;
+      });
+      // Existing clients need no idempotency key; clients that supply one can recover an uncertain completion.
+      return c.header('idempotency-key') === undefined ? remove() : idem(c, c.auth!.keyId, async (save) => remove(save));
     },
   });
 
@@ -964,10 +983,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
         let after: string | undefined;
         for (;;) {
           const page = control.listAllElections(undefined, after, 100);
-          for (const row of page) {
-            try { await pool.get(row.election_id); }
-            catch { env.logger.event('webhook_bridge', { outcome: 'error', note: 'election_recovery_pending' }); }
-          }
+          for (const row of page) webhooks.recoverStored(row);
           if (page.length < 100) break;
           after = page.at(-1)!.election_id;
         }

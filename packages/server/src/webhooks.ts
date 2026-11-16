@@ -16,8 +16,11 @@
 // counted, as before persistence). Admitting a delivery beyond the cap prunes the OLDEST queued/waiting rows (counted in
 // stats.dropped, their retry timers cancelled); the newcomer is always kept. A delivery in flight is never pruned.
 import { createHmac, randomBytes } from 'node:crypto';
-import type { WebhookRow } from './controldb.ts';
-import type { ElectionDb, EventRow } from './electiondb.ts';
+import { lstatSync, realpathSync } from 'node:fs';
+import { join } from 'node:path';
+import type { RegistryRow, WebhookRow } from './controldb.ts';
+import { ElectionDb, type EventRow } from './electiondb.ts';
+import { SERVER_VERSION } from './election.ts';
 import type { Env } from './env.ts';
 import { open as unseal, seal } from './kek.ts';
 import { TargetRejected, httpsTransport, systemResolver, validateTarget, type WebhookResolver, type WebhookTransport } from './ssrf.ts';
@@ -80,7 +83,8 @@ export class WebhookService {
   // ------------------------------------------------------------------ management
 
   /** Validates the target (throws TargetRejected) and stores the sealed URL and a fresh secret. The secret is returned once. */
-  async create(orgId: string, url: string, events: readonly string[], electionId: string | undefined): Promise<{ row: WebhookRow; secret: string }> {
+  async create(orgId: string, url: string, events: readonly string[], electionId: string | undefined,
+    committed?: (created: { row: WebhookRow; secret: string }) => void): Promise<{ row: WebhookRow; secret: string }> {
     const t = await validateTarget(url, this.resolve);
     const id = randomId();
     const secret = 'whsec_' + randomBytes(32).toString('base64url');
@@ -90,8 +94,12 @@ export class WebhookService {
       secret_enc: seal(this.env.kek, new TextEncoder().encode(secret), `webhook:${id}:secret`),
       events: JSON.stringify([...new Set(events)].sort()),
     };
-    this.env.control.insertWebhook(row);
-    return { row: this.env.control.webhook(id)!, secret };
+    return this.env.control.tx(() => {
+      this.env.control.insertWebhook(row);
+      const created = { row: this.env.control.webhook(id)!, secret };
+      committed?.(created);
+      return created;
+    });
   }
 
   view(r: WebhookRow): WebhookView {
@@ -109,6 +117,25 @@ export class WebhookService {
   }
 
   // ------------------------------------------------------------------ fan-out
+
+  /** Startup event-only recovery never opens secret keys or heals lifecycle projections. */
+  recoverStored(reg: RegistryRow): boolean {
+    let db: ElectionDb | undefined;
+    try {
+      if (!/^[0-9a-f]{32}$/.test(reg.election_id) || reg.db_path !== join('elections', reg.election_id.slice(0, 2), `${reg.election_id}.sqlite`)) {
+        throw new Error('invalid election path');
+      }
+      const path = join(this.env.cfg.dataDir, reg.db_path);
+      if (!lstatSync(path).isFile() || realpathSync.native(path) !== path) throw new Error('election path must be a canonical regular file');
+      db = new ElectionDb(path, SERVER_VERSION);
+      const row = db.row();
+      if (row.election_id !== reg.election_id || row.org_id !== reg.org_id) throw new Error('election registry mismatch');
+      return this.recover({ electionId: reg.election_id, orgId: reg.org_id }, db);
+    } catch {
+      this.env.logger.event('webhook_bridge', { outcome: 'error', note: 'election_recovery_pending' });
+      return false;
+    } finally { db?.close(); }
+  }
 
   /** Replay durable election events in order. The upgrade floor excludes pre-cursor delivery history. */
   recover(who: { electionId: string; orgId: string }, db: ElectionDb): boolean {

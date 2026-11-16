@@ -428,3 +428,16 @@ before. Forwarding uses subscriptions still enabled when recovery runs and exclu
 source timestamp; it is not an immutable historical subscription snapshot. Missing/corrupt election storage
 is logged with static tokens and remains pending. No remote delivery guarantee, power-loss or cross-platform
 qualification is claimed. Supplemental phase/witness events that never committed remain a separate gap.
+
+## Atomic control-management replay receipts — 2026-11-16
+
+Organization and webhook creation, and import/backup/self-audit/deletion job admission, now store their
+redacted idempotency response in the same control transaction as the mutation. Job execution is enqueued
+after commit. A cache/audit write failure rolls that mutation back; a lost completion after commit replays
+the original resource/job identifier. Read keys, invite codes, webhook secrets and webhook URLs are not
+added to the plaintext cache. Job inputs still live in memory, so interrupted jobs remain failed on restart.
+
+Webhook removal and its deletion audit now commit atomically; that audit is a restore-floor tombstone.
+DELETE callers may optionally supply Idempotency-Key for durable 204 replay; existing no-key calls remain
+supported. Election creation, invitation creation and quarantine clearing still cross store boundaries and
+retain conservative IDEMPOTENCY_INTERRUPTED handling if their final response cannot be saved.

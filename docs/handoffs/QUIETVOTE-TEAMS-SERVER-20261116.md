@@ -38,3 +38,47 @@ without a client request. Existing retry, cap, shutdown, deletion and backup tes
 - A transient forwarding failure without any subsequent runtime access waits until restart. Missing/corrupt
   election storage emits a static diagnostic and is not silently reported as recovered.
 - External crash/power-loss/filesystem/browser/platform qualification remains unexecuted.
+
+## Milestone 2: atomic control-management responses and fresh-review corrections
+
+Bridge milestone commit: `7c11dc4`. A fresh review found no immediate cursor/fanout flaw and requested
+pending-retry migration coverage. Added a regression that leaves three attempt-2 rows across simulated
+legacy migration, then proves original IDs/bodies resume once without old-event replay.
+
+The first whole-server run exposed an unintended startup behavior change: opening full runtimes healed
+a stale registry before the existing deletion guard test could exercise its job. Corrected startup to scan
+only event storage, checking canonical existing regular paths and matching election/org rows, and close
+each DB immediately. It does not decrypt keys, replay the protocol, recover a tally or change lifecycle
+projections. The stale-registry guard test now passes with its original assertions.
+
+Organization/webhook creation and import/backup/self-audit/delete job admission now save redacted
+idempotency receipts atomically with control mutations. Transport/execution begins after durable commit.
+Fault injection proves pre-commit receipt failure rolls back and post-commit completion loss replays the
+original identifier. Webhook creation replay still omits URL and secret. Existing election interrupted
+response regressions remain unchanged and pass.
+
+Fresh cross-lane review identified that a webhook could be deleted without its restore-floor audit
+if audit writing failed. Deletion + audit now commit together; optional Idempotency-Key also caches 204
+in that transaction. Existing clients are not required to add that header. Regression proves audit failure
+preserves the hook and lost post-commit completion replays 204 without another tombstone.
+
+Executed after corrections:
+
+- Bridge recovery + stale-registry guard + management response tests: 10 pass (before added deletion test).
+- Management response + existing idempotency + events suite: **33 pass, 0 fail/skip** (includes deletion test).
+- Final package typecheck: pass. `git diff --check`: pass.
+- Earlier 60 focused passes remain supporting evidence; counts overlap and must not be summed as a project total.
+- First full server run is still in progress at this checkpoint and used a superseded startup implementation
+  for early tests; it reported the stale-registry failure above. It is **not** final-candidate qualification.
+
+Next fresh agent can continue with transactional completion intents for supplemental phase/witness events,
+and explicit cross-database operation journals for election/invitation/quarantine response recovery. Neither
+is silently claimed complete. Suggested phase design: persist a sequence-bound completion intent with the
+log append, delete it in the transaction that records the phase event, and resolve retained intents while
+replaying the log; do not regenerate previously pruned historical events. This is a proposal, not implemented.
+
+Final focused bridge/retry/rollback/deletion/shutdown run: **22 pass, 0 fail/skip**.
+Fresh agent `fresh_server_review` independently reviewed the current changes and ran bridge recovery +
+management-response recovery: **10 pass, 0 fail/skip**. It found no unresolved blocker in this slice.
+This remains AI review, not external security acceptance. The first full run still has the superseded
+startup failure and must not be described as final-candidate green.

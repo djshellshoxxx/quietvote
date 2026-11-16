@@ -92,7 +92,7 @@ test('cursor failure after pending delivery insertion cannot send uncommitted de
   } finally { await w.stop(); }
 });
 
-test('upgrade floors pre-cursor history, preserving existing pending deliveries without replaying already delivered events', async () => {
+test('upgrade floors pre-cursor history without replaying already delivered events', async () => {
   const { w, sent } = fixture('bridge-upgrade');
   await w.start();
   try {
@@ -117,5 +117,46 @@ test('upgrade floors pre-cursor history, preserving existing pending deliveries 
     await w.server.webhooks.idle();
     assert.equal(sent.length, 6, 'new committed events cross the new durable bridge');
     assert.equal(new Set(eventIds(sent)).size, 6);
+  } finally { await w.stop(); }
+});
+
+
+test('legacy pending webhook retries survive bridge migration with their original ID, body and next attempt', async () => {
+  const { w, sent } = fixture('bridge-upgrade-pending');
+  let status = 500;
+  w.o.server!.webhookTransport = async (req) => { sent.push(req); return { status, truncated: false }; };
+  w.o.server!.webhookBackoffBaseMs = 60_000;
+  await w.start();
+  try {
+    await w.setupOrgAndElection(); await hook(w);
+    assert.equal((await w.publishManifest()).status, 201);
+    const end = Date.now() + 5000;
+    while (w.server.webhooks.stats.retries !== 3) {
+      assert.ok(Date.now() < end, 'three pending retry rows must be recorded');
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+    const pending = w.server.env.control.outboxAll();
+    assert.equal(pending.length, 3);
+    assert.ok(pending.every((row) => row.attempt === 2));
+    const rel = w.server.env.control.election(w.electionId)!.db_path;
+    await w.server.stop();
+    const oldElection = new DatabaseSync(join(w.dir, rel));
+    oldElection.exec("DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version=6; PRAGMA user_version=5");
+    oldElection.close();
+    const oldControl = new DatabaseSync(join(w.dir, 'control.sqlite'));
+    oldControl.exec('DROP TABLE webhook_event_cursor; DELETE FROM schema_migration WHERE version=7; PRAGMA user_version=6');
+    oldControl.close();
+    status = 200; w.tick(61);
+    await w.start(); await w.server.webhooks.idle();
+    assert.equal(sent.length, 6, 'one original attempt plus one resumed attempt per event');
+    const replayed = sent.slice(3);
+    assert.deepEqual(eventIds(replayed).sort(), pending.map((row) => row.delivery_id).sort());
+    for (const request of replayed) {
+      const original = pending.find((row) => row.delivery_id === request.headers['QV-Webhook-Id'])!;
+      assert.equal(Buffer.from(request.body).toString(), original.body);
+    }
+    assert.equal(w.server.env.control.outboxCount(), 0);
+    await w.server.stop(); await w.start(); await w.server.webhooks.idle();
+    assert.equal(sent.length, 6, 'the upgrade floor prevents replay after pending delivery completion');
   } finally { await w.stop(); }
 });
