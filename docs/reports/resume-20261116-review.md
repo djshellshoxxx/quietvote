@@ -1,7 +1,8 @@
 # QuietVote continuation: bounded independent agent review
 
-Date: 2026-11-16. Review target: `codex/quietvote-resume-20261116` through
-`182cb508503c1ee5f6e6410a7beed6abcd02423c`. Discovery started at
+Date: 2026-11-16. Initial review target: `codex/quietvote-resume-20261116` through
+`182cb508503c1ee5f6e6410a7beed6abcd02423c`, with a pool-lifecycle follow-up at
+`c79d8760eb46be51c161e44a4ff46ce6157faa4e`. Discovery started at
 `5382d5f89226a7464025480c3a6be606da79859a`.
 
 This is a separate AI worker's source and focused-test review, not an exhaustive
@@ -11,7 +12,7 @@ reviewer authored the S1-02 regression-fixture repair at `438e2ba` after finding
 that the inherited test did not reach its final assertions. Production changes
 and that test repair also require the lead's review and final qualification.
 
-The review worktree's source tree matched the target at the recorded review tip.
+The review worktree's source tree matched the target at each recorded review tip.
 Tests ran locally on Linux, Node v24.22.1, Python 3.12.14; Python execution is not
 part of the focused results below. Later commits need their own qualification.
 
@@ -35,6 +36,7 @@ part of the focused results below. Later commits need their own qualification.
 | RV-02 | Opener derived its wrapping key before entering cleanup and derived the payload key outside its cleanup boundary. Injecting a KDF-entry exception left the captured passphrase buffer nonzero. | Fixed in `eccf7e3af5aaf77a176dca8f37bc3c5d73968668`. Independent opening-failure tests pass. No container-format or proof-policy change. |
 | RV-03 | Retention summary audit write preceded its structured log event. An injected audit-store failure produced no event and left success status set. | Fixed in `ebb045a633d48ba2ad9ce7ac08620a6f62a69fe1`: `RETENTION_AUDIT_FAILED`, failed health status, rejected operation and secret-free diagnostic. Independent regression passes. Audit durability cannot be promised while its store is unavailable. |
 | RV-04 | Initial lock lifecycle relied on `JobRunner.stop()`'s five-second timeout for non-import work and did not await in-flight webhooks/gossip. A paused real JobRunner backup remained active after stop returned and a second server acquired the directory. | Fixed in `182cb508503c1ee5f6e6410a7beed6abcd02423c`: all jobs, current gossip, webhook outcomes, accepted HTTP handlers and opening runtimes drain before storage closes/lock releases. Independent focused drain tests pass. |
+| RV-05 | The lead's subsequent whole-suite qualification found that the first drain fix made existing `pool.closeAll()` permanently reject later acquisitions. Three unchanged pre-existing tests expected runtime replay afterward (archived elections, compromised gossip state and imported mirrors). The initial focused review did not catch that compatibility regression. | Fixed in `c79d8760eb46be51c161e44a4ff46ce6157faa4e`: `closeAll()` drains/evicts transiently and clears its closing flag; new `shutdown()` permanently refuses acquisition and is used by application stop. Independent source review and all six shutdown-drain tests pass, including explicit eviction/replay/HTTP reuse. The lead's final whole-suite rerun remains the acceptance gate for the three original scenarios. |
 
 No additional blocking defect was identified in the reviewed static-boundary,
 secret-cleanup, retention, trustee-option, launcher or final drain diffs. This is
@@ -54,9 +56,13 @@ stage; overlapping suites are not added into an inflated total.
 | Through trustee `55609c2` | `node --test packages/server/test/launcher.test.ts packages/trustee/test/cli-transcript-options.test.ts` | 9 pass; real process/config/start/readiness/SIGTERM and transcript options. |
 | Final reviewed code `182cb50` | `node --test packages/server/test/shutdown-drain.test.ts packages/server/test/tally-crash-window.test.ts` | 7 pass; pending runtime, accepted HTTP handler, long-running backup, webhook, gossip, crash recovery and aggregate idempotence. |
 | Final reviewed code `182cb50` | `npm run typecheck` | Pass. |
+| Pool follow-up `c79d876` | `node --test packages/server/test/shutdown-drain.test.ts` | 6 pass; transient eviction/replay and permanent shutdown are distinguished without restoring the premature ownership transfer. |
 | Review document | `git diff --check`; `node scripts/check-links.mjs` | Pass; 1,209 links in 206 files, none broken. |
 
-The lead's final qualification record must supply whole-workspace, vector,
+The later online CLI/shared request-auth changes (`2c0d365`) were reviewed by a
+different worker; this review did not independently inspect or qualify those
+diffs. Their presence in the final tree is not covered by the earlier focused
+source conclusions. The lead's final qualification record must supply whole-workspace, vector,
 cross-verifier, browser/build, tooling and supply-chain results on the final
 integration SHA. Historical successful runs do not substitute for those results.
 
