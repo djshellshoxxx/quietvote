@@ -24,7 +24,7 @@ export interface AdminViewDeps {
 
 export function adminPanel(d: AdminViewDeps): { element: HTMLElement; invalidate: () => void } {
   const t = (key: MessageKey): string => d.tr.t(key);
-  const root = h('section', {}), result = h('div', {}), preview = h('pre', { tabindex: 0, dir: 'ltr' });
+  const root = h('section', {}), result = h('div', {}), preview = h('pre', { tabindex: 0, dir: 'ltr', class: 'admin-packet' });
   const pin = h('input', { type: 'text', spellcheck: false, autocomplete: 'off', maxlength: 64, dir: 'ltr' }) as HTMLInputElement;
   const pass = h('input', { type: 'password', autocomplete: 'current-password' }) as HTMLInputElement;
   const action = h('select', {}, ...ADMIN_ACTIONS.map((a) => h('option', { value: a }, t(ACTION_KEYS[a])))) as HTMLSelectElement;
