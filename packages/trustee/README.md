@@ -35,6 +35,9 @@ a successful `tally-release` first, including its election-evidence and release
 ledger checks. It maps those saved proofs to the server's existing `dec-shares`
 record without performing another decryption or changing the release ledger.
 It does not export spoil shares, drill records or compromise reports.
+An output saved privately for crash recovery is not automatically releasable:
+the normal command must reach its release state first. In particular,
+`r1-dealing` cannot be exported after `commit` until `reveal` succeeds.
 
 Existing output files are never overwritten. An aborted, disqualified or
 destroying bundle cannot export. A bundle changed by another process must be

@@ -227,6 +227,9 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
   It accepts no arbitrary payload, origin, private key or ciphertext and never invokes decryption itself.
 * A bundle lock and sealed-file comparison reject stale instances. Failed-save invalidation, destruction and
   abort gates remain effective. Output publication is exclusive; protected paths and existing files are refused.
+* Review found that `commit` also persists unreleased dealing data for crash recovery. A new regression failed
+  on the initial exporter because it could export that dealing before `reveal`. Each export now enforces the
+  existing command's permitted release states, in addition to requiring saved output. The regression passes.
 * `test/board-export.test.ts` covers envelope signatures/origin, canonical record/proof preservation, missing
   outputs, missing tally evidence, stale/aborted bundles, unchanged release ledgers and CLI argument/path checks.
   `test/online-executable.test.ts` exercises actual trustee executables with production RNG/default KDF against

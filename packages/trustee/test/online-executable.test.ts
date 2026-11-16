@@ -157,7 +157,7 @@ test('shipped trustee executable completes 2-of-3 DKG and tally over HTTP withou
       await submit(i, 'tally-share');
       assert.equal((await trustee(i, 'status'))['state'], 'RELEASED');
     }
-    assert.equal((await trustee(3, 'status'))['state'], 'TALLYING', 'threshold succeeds without the third share');
+    assert.equal((await trustee(3, 'status'))['state'], 'STANDBY', 'threshold succeeds without the third trustee releasing');
     assert.equal(w.tkeys.size, 0, 'the HTTP harness never generated or held trustee decryption shares');
     const tally = await w.get(`/api/v1/elections/${w.electionId}/tally/draft?decrypters=1,2`);
     assert.equal(tally.status, 200, tally.text);

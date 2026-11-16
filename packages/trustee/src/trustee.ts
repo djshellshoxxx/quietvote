@@ -334,19 +334,21 @@ export class Trustee {
       throw new TrusteeError('STATE', 'WRONG_STATE', 'this bundle cannot export board entries');
     }
     const out = this.d.out;
-    const outputs = new Map<string, { type: EntryType; records: unknown[] }>([
-      ['r1-commit', { type: 'dkg_round1', records: [out.commit] }],
-      ['r1-dealing', { type: 'dkg_round1', records: [out.dealing] }],
-      ['r2-shares', { type: 'dkg_round2', records: [out.shares] }],
-      ['r3-complaints', { type: 'dkg_complaint', records: out.complaints }],
-      ['r4-keyconf', { type: 'key_confirm', records: [out.keyconf] }],
-      ['tally-share', { type: 'decryption_share', records: [out.release] }],
+    const outputs = new Map<string, { type: EntryType; records: unknown[]; states: readonly TrusteeState[] }>([
+      ['r1-commit', { type: 'dkg_round1', records: [out.commit], states: AT_OR_AFTER.commit }],
+      ['r1-dealing', { type: 'dkg_round1', records: [out.dealing], states: AT_OR_AFTER.reveal }],
+      ['r2-shares', { type: 'dkg_round2', records: [out.shares], states: AT_OR_AFTER.shares }],
+      ['r3-complaints', { type: 'dkg_complaint', records: out.complaints, states: ['COMPLAINING', 'VERIFIED', ...AT_OR_AFTER.finalize] }],
+      ['r4-keyconf', { type: 'key_confirm', records: [out.keyconf], states: AT_OR_AFTER.confirm }],
+      ['tally-share', { type: 'decryption_share', records: [out.release], states: ['RELEASED', 'AUDIT_WAIT'] }],
     ]);
     const selected = outputs.get(round);
     if (selected === undefined) throw new TrusteeError('USAGE', 'USAGE', 'unsupported board export round');
     if (!Number.isSafeInteger(index) || index < 0) throw new TrusteeError('USAGE', 'USAGE', 'record index must be a nonnegative safe integer');
     const record = selected.records[index];
     if (record === undefined) throw new TrusteeError('STATE', 'OUTPUT_NOT_READY', 'no persisted output at that round and index');
+    // commit also saves the unreleased dealing for recovery: persistence alone is not release authorization.
+    this.need(...selected.states);
     return withLock(this.path, async () => {
       const current = H(sha256(new Uint8Array(await readFile(this.path))));
       if (current !== this.sealedHash) throw new TrusteeError('STATE', 'BUNDLE_CHANGED', 'the bundle changed; reopen before exporting');

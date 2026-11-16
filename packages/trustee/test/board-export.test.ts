@@ -20,6 +20,9 @@ test('board export signs only generated outputs for the joined election and dete
     await c.sync(1);
     const current = await c.act(1, async (x) => x);
     const packet = await current.commit();
+    // commit persists the dealing for crash recovery, but it must stay private until reveal opens the round.
+    assert.ok(current.data.out.dealing);
+    await assert.rejects(current.exportBoardEntry('r1-dealing'), { code: 'WRONG_STATE' });
     for (const index of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
       await assert.rejects(current.exportBoardEntry('r1-commit', index), { code: 'USAGE' });
     }
