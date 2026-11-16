@@ -12,4 +12,3 @@ export function signRequest(sk: Uint8Array, pk: Uint8Array, method: string, targ
   const sig = ed25519Sign(sk, requestMessage(method, target, audience, ts, nonce, body));
   return `QV-Sig keyid=${b64u(authorKeyId('ed25519', pk))},ts=${ts},nonce=${b64u(nonce)},sig=${b64u(sig)}`;
 }
-
