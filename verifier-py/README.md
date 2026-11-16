@@ -31,10 +31,21 @@ From the repository root:
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1            # one line per vector
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet    # only non-PASS lines
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --report out.json
+python3 -I verifier-py/qv_verifier verify election.json --board board.json
+python3 -I verifier-py/qv_verifier verify election.json --board board.json --receipts receipts.json --observed observed.json
 ```
 
 Each vector is reported `PASS`, `FAIL` or `NOT-IMPLEMENTED`. The exit status is **1 only if a
 vector FAILs**, 0 otherwise (NOT-IMPLEMENTED does not fail the run), and 2 on usage errors.
+
+`verify` writes the full JSON report to stdout: exit 0 for verdict PASS, 1 for FAIL,
+2 for input/usage errors, and **3 for an explicitly unsupported notice/control input**.
+Receipt samples are an array of `{receipt, voter?, code?}`; observed checkpoints are
+an array of signed-note strings. The API is `verify_bundle(bundle, log={"board": board,
+"receipts": samples, "observed": notes})`; omitted log evidence keeps the original
+core-only behavior. Optional `witnesses` (CLI `--witnesses`) supplies trusted `{name,pk}`
+keys only when the manifest has no witness list. `extraAuthorKeys` (`--extra-author-key`)
+never overrides coordinator, trustee or voter authorization for recognised records.
 
 About `python -I -m qv_verifier`: from Python 3.11 on, `-I` implies `-P` (safe path), so the
 current directory is **not** put on `sys.path`. `python -I -m qv_verifier …` therefore works only
@@ -57,19 +68,23 @@ cd verifier-py && python3 -I -m unittest
 | Ed25519 | `ed25519.py` | RFC 8032 sign/verify. Strict policy: S < ℓ, canonical and non-small-order A and R, cofactorless equation |
 | Framed hash, label registry | `framed_hash.py` | QV-16 §5.3/§5.4: H256, H512, hs, hs_nz (counter field), 27 labels |
 | QV-JSON / JCS | `qvjson.py` | strict parse (duplicate keys, floats, null, -0, unsafe ints, lone surrogates, non-NFC, control chars, trailing data, BOM); RFC 8785 serialisation |
-| RFC 9162 Merkle, voter roll | `merkle.py` | roll leaves `pk ‖ u32(1)`, sorted, unique, valid non-small-order keys |
+| RFC 9162 Merkle, voter roll | `merkle.py` | roll leaves `pk ‖ u32(1)`; bounded inclusion and consistency proof verification |
 | Sigma proofs | `proofs.py` | Schnorr PoK, DH-reveal DLEQ, CDS 0/1, selection limit, partial decryption |
 | HKDF, AES-256-GCM | `aead.py` | for public adjudication of DKG complaints |
 | DKG adjudication | `dkg.py` | R1, R2, complaints → Q, K, Y_j, transcript hash, ctx |
 | Manifest | `manifest.py` | closed schema + semantic rules + privacy floor; manifest hash |
 | Ballots | `ballot.py` | deterministic encryption from ξ, §5.14.4 checks 1–9, public and private Benaloh audits with signed reveal-digest binding and exact body reproduction |
 | Rules | `rules.py` | quorum, threshold, tie-breaks, multi-winner (exact integers) |
-| Full election (Appendix C) | `election.py` | the 14 QV-34 §9.1 checks (board/witness/receipts → `not_run`), counts, ctx prefix, results |
+| Full election (Appendix C) | `election.py` | the 14 QV-34 §9.1 checks, optional log evidence, counts, ctx prefix, results |
+| Stable QV-18 log evidence | `logwire.py`, `logcheck.py`, `logio.py` | authenticated entry/record binding, checkpoints/prefix consistency, witness gates/times, fork/rollback and receipt samples |
 | Runner / CLI | `runner.py`, `cli.py`, `__main__.py` | QV-34 §10.3 comparison, applied strictly |
 
-Not implemented: the QV-18 log layer (`log.verify_election`, i.e. checkpoints, consistency and
-inclusion proofs, witness cosignatures, receipts, notices), so `chk.board.*` and
-`chk.receipts.sample` are always `not_run`. Also not implemented: trustee-decryption spoil mode
+The stable non-control `log.verify_election` subset is implemented. With no log evidence,
+`chk.board.*` and `chk.receipts.sample` remain `not_run`. The **13 notice/control vectors remain
+NOT-IMPLEMENTED per input** because protocol NOTES X31 leaves the record shape/authority unresolved
+and the core verifiers disagree on the unknown-record finding class. The Python core's fatal
+`E_SCHEMA` behavior is unchanged. See [the stable log handoff](../docs/handoffs/python-stable-log-20261116.md)
+for exact supported/held cases and validation. Also not implemented: trustee-decryption spoil mode
 (§5.13.4), the ristretto255 one-way map / hash-to-group, the QV-34 §10.2 stdin/stdout adapter
 protocol, scale vectors, and anything from Phase 2 or 3.
 
@@ -159,8 +174,8 @@ Each is recorded in `docs/errata/spec-errata-log.md`:
 Remaining work for a real second verifier, in priority order:
 
 1. Review by someone other than the author.
-2. The QV-18 log layer: checkpoints, consistency and inclusion proofs, witnesses and receipts,
-   which are the 48 `log.verify_election` vectors.
+2. Resolve the QV-18 notice/control authority and core-class decisions before implementing
+   the remaining 13 `log.verify_election` vectors; independently review the stable 35-case subset.
 3. The QV-34 §10.2 adapter protocol, so the shared runner can drive this verifier.
 4. Constant-time review, if any secret-handling op is ever used outside the test vectors.
 5. Resolving the errata with the spec owner, then regenerating the vectors.

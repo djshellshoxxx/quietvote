@@ -16,7 +16,8 @@ docs/errata/spec-errata-log.md):
   * Record signatures: DKG records and ``dkg-*`` markers use scope manifest_hash (QV-16
     §5.6.3 "pre-key scope"), every later record uses ctx; record_type is ``body.type``.
     The tally signature is a convenience signature and is reported only as a note.
-  * Board consistency / witnesses / receipts are ``not_run`` (no STHs in v1 bundles).
+  * Board consistency / witnesses / receipts are ``not_run`` when optional log
+    evidence is absent; the stable QV-18 path is composed only when supplied.
   * A stop makes only the checks that have not run yet ``not_run``; checks already completed
     (``chk.manifest.sig`` after App. C steps 2-4, ``chk.keys.trustees`` after steps 5-10) keep their
     result. ``chk.encoding.canonical`` is complete only once the voter envelopes were examined, so a
@@ -197,7 +198,16 @@ def bsgs(D: RPoint, bound: int) -> int | None:
     return None
 
 
-def verify_bundle(bundle: dict) -> dict:
+def verify_bundle(bundle: dict, *, log: dict | None = None) -> dict:
+    """Verify an election, optionally with independent QV-18 evidence.
+
+    ``log`` contains ``board`` and optional ``receipts``, ``observed``,
+    ``witnesses`` and ``extraAuthorKeys``. Held X31 control/notice inputs raise
+    NotImplementedOp; omitting log preserves the original core semantics.
+    """
+    if log is not None:
+        from . import logcheck
+        logcheck.require_supported(bundle, log)
     st = State()
     st.skip("chk.board.append_only", "chk.receipts.sample")
     out: dict[str, Any] = {"counts": {"cast": 0, "spoiled": 0, "counted": 0}}
@@ -205,6 +215,9 @@ def verify_bundle(bundle: dict) -> dict:
         _verify(bundle, st, out)
     except _Stop:
         pass
+    if log is not None and "chk.manifest.sig" in st.completed and not any(
+            st.failed(c) for c in ("chk.manifest.hash", "chk.manifest.sig")):
+        logcheck.verify_into(bundle, log, st)
     checks = {}
     for c in CHECKS:
         if any(f.check == c for f in st.findings):

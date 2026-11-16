@@ -48,8 +48,8 @@ results are recorded in the integration validation report; historical README num
   QV-16 §5.12.2 says a zero-digest spoil is "valid only if the manifest enables it", but no spec gives the code, check or
   class for the invalid case, so it is not implemented here (TS does not enforce it at the ballot level either). See D-95.
   **PY-02/D-96:** verdicts remain PASS/FAIL. QV-16 App. C defines only "PASS or FAIL", so INCOMPLETE waits for D-96 (with
-  P1/TSV-05). No QV-18 board/witness/receipt verification or adapter protocol was added.
-* Shipped unsupported vectors stay explicit: 48 `log.verify_election` cases. Their absence is not a pass
+  P1/TSV-05). The stable QV-18 board/witness/receipt subset is now implemented below; no adapter protocol was added.
+* Shipped unsupported vectors stay explicit: 13 notice/control `log.verify_election` cases. Their absence is not a pass
   or a claim of cross-verifier conformance. The corpus is unsigned; constant-time, large-scale and external-audit gates remain open.
 
 ## Private Benaloh audit — 2026-11-16
@@ -67,3 +67,29 @@ but independently re-randomized CDS/limit proofs that pass envelope verification
 reproduction. `python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet` reports **282 total,
 234 PASS, 0 FAIL, 48 NOT-IMPLEMENTED**; all five formerly unsupported private-audit cases pass and all
 79 manifest-listed file hashes match. No vector, shared comparator or D-92 through D-96 behavior changed.
+
+## Stable QV-18 log evidence — 2026-11-16
+
+`verify_bundle(bundle, log={"board": board, ...})` and the `verify --board` CLI now authenticate the
+stable non-control board path: exact entry/record binding, header signatures/authorization/nonces,
+RFC9162 roots and proofs, signed checkpoints/observations, witness quorum/gates/times, receipt
+promises/inclusion and nonfatal receipt claims. The standalone proof APIs include consistency;
+the full-board path proves consistency by recomputing authenticated prefix roots. Sources are
+QV-18, the documented board/protocol contracts, primary RFC/C2SP specifications and public fixtures,
+using the existing independent Python cryptography. No TypeScript implementation was translated.
+
+The full vector sweep reports **282 total, 269 PASS, 0 FAIL, 13 NOT-IMPLEMENTED** with all 79 file
+hashes matching. The 13 held inputs depend on X31 notice/control shape and authority and the
+existing unknown-record class discrepancy. Hold detection examines input content, not IDs or
+expected outputs. The core's fatal `E_SCHEMA` semantics remain unchanged. The CLI explicitly exits
+3 for unsupported input; no-log API behavior is unchanged. Full Python suite: **113 tests, OK**;
+the final transport-tightening focused rerun is recorded in the linked handoff.
+
+Two independent submodules and an integration review added hostile-input, signature/replay,
+Merkle boundary, timestamp-permutation and malformed receipt tests. A fresh review additionally
+required complete v1 transport metadata and ballot-only ownership claims. Exported witness policy
+is structurally validated but cannot supply trusted keys/quorum. Every valid witness observation
+is retained so duplicate notes/lines cannot hide earlier times; malformed unsigned receipt
+inclusion cannot erase an authentic broken promise. See
+[`python-stable-log-20261116.md`](../docs/handoffs/python-stable-log-20261116.md) for the exact
+35-supported/13-held inventory, interface, limitations, validation and continuation instructions.
