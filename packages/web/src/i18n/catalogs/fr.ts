@@ -4,6 +4,28 @@
 import type { MessageKey } from '../en.ts';
 
 export const FR = {
+  "qv.admin.help": "Utilisez le hachage du manifeste enregistré pour vérifier ce scrutin. Examinez chaque paquet public avant de l’envoyer. Les dépositaires conservent leurs clés secrètes dans leur outil. Ces vérifications ne confirment ni la fraîcheur du registre ni l’approbation des témoins.",
+  "qv.admin.pin": "Hachage du manifeste enregistré (64 caractères hexadécimaux)",
+  "qv.admin.action": "Action de l’organisateur",
+  "qv.admin.prepare": "Préparer le paquet signé",
+  "qv.admin.relay": "Examiner le paquet du dépositaire",
+  "qv.admin.file": "Paquet public du dépositaire (.json)",
+  "qv.admin.submit": "Envoyer le paquet examiné",
+  "qv.admin.save": "Télécharger le paquet public",
+  "qv.admin.review": "Examinez l’enregistrement signé avant de l’envoyer.",
+  "qv.admin.loaded": "Hachage et signatures des coordinateurs vérifiés. Examinez les événements avant de choisir une action.",
+  "qv.admin.refused": "Impossible de préparer cette action. Vérifiez le hachage, la clé, la cérémonie et les échéances.",
+  "qv.admin.accepted": "Le serveur a accepté ce paquet. Actualisez pour vérifier le scrutin.",
+  "qv.admin.uncertain": "Livraison incertaine. Téléchargez ce paquet et réessayez les mêmes octets. Ne créez pas d’action de remplacement.",
+  "qv.admin.dkgOpen": "Démarrer la cérémonie des clés",
+  "qv.admin.r1Open": "Ouvrir les contributions des dépositaires",
+  "qv.admin.r1Close": "Fermer les contributions des dépositaires",
+  "qv.admin.r2Close": "Fermer l’échange des parts",
+  "qv.admin.r3Close": "Fermer les réclamations des dépositaires",
+  "qv.admin.final": "Finaliser la cérémonie des clés",
+  "qv.admin.roll": "Valider la liste des votants approuvés",
+  "qv.admin.tally": "Vérifier et publier le dépouillement",
+
   'qv.app.name': 'QuietVote',
   'qv.shell.skip': 'Aller au contenu principal',
   'qv.shell.nav': 'Principal',

@@ -4,6 +4,28 @@
 import type { MessageKey } from '../en.ts';
 
 export const DE = {
+  "qv.admin.help": "Prüfen Sie diese Abstimmung mit dem gespeicherten Manifest-Hash. Prüfen Sie jedes öffentliche Paket vor dem Senden. Treuhänder behalten ihre geheimen Schlüssel im Treuhänderwerkzeug. Diese Prüfungen bestätigen weder die Aktualität des Protokolls noch die Zustimmung der Zeugen.",
+  "qv.admin.pin": "Gespeicherter Manifest-Hash (64 Hexadezimalzeichen)",
+  "qv.admin.action": "Organisatoraktion",
+  "qv.admin.prepare": "Signiertes Paket vorbereiten",
+  "qv.admin.relay": "Treuhänderpaket prüfen",
+  "qv.admin.file": "Öffentliches Treuhänderpaket (.json)",
+  "qv.admin.submit": "Geprüftes Paket senden",
+  "qv.admin.save": "Öffentliches Paket herunterladen",
+  "qv.admin.review": "Prüfen Sie den signierten Eintrag vor dem Senden.",
+  "qv.admin.loaded": "Manifest-Hash und Koordinatorsignaturen geprüft. Prüfen Sie die Ereignisse, bevor Sie eine Aktion wählen.",
+  "qv.admin.refused": "Aktion konnte nicht vorbereitet werden. Prüfen Sie Hash, Organisatorschlüssel, Zeremoniefortschritt und Fristen.",
+  "qv.admin.accepted": "Der Server hat das Paket angenommen. Aktualisieren Sie die Abstimmung.",
+  "qv.admin.uncertain": "Zustellung unklar. Laden Sie dieses Paket herunter und senden Sie dieselben Bytes erneut. Erstellen Sie keine Ersatzaktion.",
+  "qv.admin.dkgOpen": "Schlüsselzeremonie starten",
+  "qv.admin.r1Open": "Treuhänderbeiträge öffnen",
+  "qv.admin.r1Close": "Treuhänderbeiträge schließen",
+  "qv.admin.r2Close": "Austausch der Schlüsselanteile schließen",
+  "qv.admin.r3Close": "Treuhänderbeschwerden schließen",
+  "qv.admin.final": "Schlüsselzeremonie abschließen",
+  "qv.admin.roll": "Genehmigte Wählerliste festschreiben",
+  "qv.admin.tally": "Auszählung prüfen und veröffentlichen",
+
   'qv.app.name': 'QuietVote',
   'qv.shell.skip': 'Zum Hauptinhalt springen',
   'qv.shell.nav': 'Hauptmenü',

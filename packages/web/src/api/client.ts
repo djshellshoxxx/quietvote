@@ -150,6 +150,12 @@ export class ApiClient {
     return this.json(await this.req('GET', `${API}/elections/${enc(id)}/export.json`));
   }
 
+  /** Untrusted coordinator proposal; the organizer verifies it locally before publication. */
+  async tallyDraft(id: string): Promise<unknown> {
+    const result = await this.json<{ body?: unknown }>(await this.req('GET', `${API}/elections/${enc(id)}/tally/draft`));
+    return result.body;
+  }
+
   /**
    * Opens the live event stream (QV-09 §9). The resume cursor goes in the Last-Event-ID header and the read key in QV-Read-Key,
    * so the URL carries nothing but the election id. The caller owns the body and aborts it through `signal`.

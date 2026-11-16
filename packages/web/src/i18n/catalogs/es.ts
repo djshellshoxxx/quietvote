@@ -4,6 +4,28 @@
 import type { MessageKey } from '../en.ts';
 
 export const ES = {
+  "qv.admin.help": "Usa el hash del manifiesto guardado para comprobar esta elección. Revisa cada paquete público antes de enviarlo. Los custodios mantienen sus claves secretas en su herramienta. Estas comprobaciones no confirman la actualidad del registro ni la aprobación de testigos.",
+  "qv.admin.pin": "Hash del manifiesto guardado (64 caracteres hexadecimales)",
+  "qv.admin.action": "Acción del organizador",
+  "qv.admin.prepare": "Preparar paquete firmado",
+  "qv.admin.relay": "Revisar paquete de custodio",
+  "qv.admin.file": "Paquete público de custodio (.json)",
+  "qv.admin.submit": "Enviar paquete revisado",
+  "qv.admin.save": "Descargar paquete público",
+  "qv.admin.review": "Revisa el registro firmado antes de enviarlo.",
+  "qv.admin.loaded": "Hash y firmas de coordinadores comprobados. Revisa los eventos antes de elegir una acción.",
+  "qv.admin.refused": "No se pudo preparar la acción. Comprueba el hash, la clave del organizador, la ceremonia y los plazos.",
+  "qv.admin.accepted": "El servidor aceptó el paquete. Actualiza para comprobar la elección.",
+  "qv.admin.uncertain": "Entrega incierta. Descarga este paquete y reintenta los mismos bytes. No crees una acción de reemplazo.",
+  "qv.admin.dkgOpen": "Iniciar ceremonia de claves",
+  "qv.admin.r1Open": "Abrir publicaciones de custodios",
+  "qv.admin.r1Close": "Cerrar publicaciones de custodios",
+  "qv.admin.r2Close": "Cerrar intercambio de participaciones",
+  "qv.admin.r3Close": "Cerrar reclamaciones de custodios",
+  "qv.admin.final": "Finalizar ceremonia de claves",
+  "qv.admin.roll": "Confirmar lista de votantes aprobados",
+  "qv.admin.tally": "Verificar y publicar recuento",
+
   'qv.app.name': 'QuietVote',
   'qv.shell.skip': 'Ir al contenido principal',
   'qv.shell.nav': 'Principal',

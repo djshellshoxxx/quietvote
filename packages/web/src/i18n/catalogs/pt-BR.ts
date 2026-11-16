@@ -4,6 +4,28 @@
 import type { MessageKey } from '../en.ts';
 
 export const PT_BR = {
+  "qv.admin.help": "Use o hash do manifesto salvo para verificar esta eleição. Revise cada pacote público antes de enviar. Os guardiões mantêm as chaves secretas em sua ferramenta. Estas verificações não confirmam a atualização do registro nem a aprovação das testemunhas.",
+  "qv.admin.pin": "Hash do manifesto salvo (64 caracteres hexadecimais)",
+  "qv.admin.action": "Ação do organizador",
+  "qv.admin.prepare": "Preparar pacote assinado",
+  "qv.admin.relay": "Revisar pacote do guardião",
+  "qv.admin.file": "Pacote público do guardião (.json)",
+  "qv.admin.submit": "Enviar pacote revisado",
+  "qv.admin.save": "Baixar pacote público",
+  "qv.admin.review": "Revise o registro assinado antes de enviar.",
+  "qv.admin.loaded": "Hash e assinaturas dos coordenadores verificados. Revise os eventos antes de escolher uma ação.",
+  "qv.admin.refused": "Não foi possível preparar a ação. Verifique o hash, a chave, a cerimônia e os prazos.",
+  "qv.admin.accepted": "O servidor aceitou o pacote. Atualize para verificar a eleição.",
+  "qv.admin.uncertain": "Entrega incerta. Baixe este pacote e tente novamente com os mesmos bytes. Não crie uma ação substituta.",
+  "qv.admin.dkgOpen": "Iniciar cerimônia de chaves",
+  "qv.admin.r1Open": "Abrir contribuições dos guardiões",
+  "qv.admin.r1Close": "Encerrar contribuições dos guardiões",
+  "qv.admin.r2Close": "Encerrar troca de partes",
+  "qv.admin.r3Close": "Encerrar reclamações dos guardiões",
+  "qv.admin.final": "Finalizar cerimônia de chaves",
+  "qv.admin.roll": "Confirmar lista de eleitores aprovados",
+  "qv.admin.tally": "Verificar e publicar apuração",
+
   'qv.app.name': 'QuietVote',
   'qv.shell.skip': 'Ir para o conteúdo principal',
   'qv.shell.nav': 'Principal',

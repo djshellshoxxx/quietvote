@@ -275,3 +275,26 @@ browser qualification remains required; see `docs/reports/next-offline-20261109.
   `E-BOARD-STALE` and `E-VERSION` have placeholders but are raised nowhere (test `error-args.test.ts` fails when one starts being).
 * W7: `LiveElection` reports `onRecovered` after the first good refresh following a failure; the status line is then re-derived
   from the connection state instead of staying at "reload the page".
+
+## Connected organizer console — 2026-11-16
+
+`/e/:id/admin` now works before the key ceremony is complete. An explicit saved
+manifest hash authenticates the manifest and coordinator set. The console
+prepares the existing DKG round markers, roll commitment, bound opening, scheduled
+closing and tally records, then requires a separate Send action. It can review
+and relay bounded public `qv-trustee export-entry` packets without trustee secrets.
+
+Organizer unlocks use `rewrap: false`, lock after each preparation, and discard
+late work after navigation or device clearing. A failed send retains the exact
+public packet for download and explicit retry; no mutation is retried automatically.
+Tally preparation checks the existing full content verifier, including aggregate,
+decryption and result rules, before releasing any packet. Manifest/scoped-record
+checks do not establish board freshness or witness qualification. The server
+remains authoritative for admission. Content verification uses the existing
+verifier behavior without changing policy or report expectations.
+
+This console supports the one-coordinator setup produced by `/new`; multi-signature
+coordination continues through the CLI. Registration decisions remain held.
+Uncertain packets are retained in this page only and can be downloaded; reloading
+requires the saved packet and existing CLI relay rather than silently recreating
+an action. Native locale review remains outstanding; new translations are drafts.

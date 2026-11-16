@@ -11,6 +11,27 @@ const g = (message: string, description: string): CatalogEntry => ({ message, de
 const n = (message: string, description: string): CatalogEntry => ({ message, description, sensitivity: 'normal' });
 
 export const EN = {
+  "qv.admin.help": n("Use the saved manifest hash to check this election. Review each public packet before sending. Trustees keep their secret keys in the trustee tool. Content checks do not establish board freshness or witness approval.", "Organizer console: help"),
+  "qv.admin.pin": n("Saved manifest hash (64 hexadecimal characters)", "Organizer console: pin"),
+  "qv.admin.action": n("Organizer action", "Organizer console: action"),
+  "qv.admin.prepare": n("Prepare signed packet", "Organizer console: prepare"),
+  "qv.admin.relay": n("Review trustee packet", "Organizer console: relay"),
+  "qv.admin.file": n("Public trustee packet (.json)", "Organizer console: file"),
+  "qv.admin.submit": n("Send reviewed packet", "Organizer console: submit"),
+  "qv.admin.save": n("Download public packet", "Organizer console: save"),
+  "qv.admin.review": n("Review the signed record below before sending it.", "Organizer console: review"),
+  "qv.admin.loaded": n("Manifest pin and coordinator signatures checked. Review the listed events before choosing an action.", "Organizer console: loaded"),
+  "qv.admin.refused": n("Could not prepare this action. Check the manifest hash, organizer key, ceremony progress and voting deadlines.", "Organizer console: refused"),
+  "qv.admin.accepted": n("The server accepted this packet. Refresh to check the updated election.", "Organizer console: accepted"),
+  "qv.admin.uncertain": n("Delivery is uncertain. Download this packet and retry the same bytes. Do not create a replacement action.", "Organizer console: uncertain"),
+  "qv.admin.dkgOpen": n("Start key ceremony", "Organizer console: dkgOpen"),
+  "qv.admin.r1Open": n("Open trustee dealings", "Organizer console: r1Open"),
+  "qv.admin.r1Close": n("Close trustee dealings", "Organizer console: r1Close"),
+  "qv.admin.r2Close": n("Close trustee share exchange", "Organizer console: r2Close"),
+  "qv.admin.r3Close": n("Close trustee complaints", "Organizer console: r3Close"),
+  "qv.admin.final": n("Finalize key ceremony", "Organizer console: final"),
+  "qv.admin.roll": n("Commit approved voter list", "Organizer console: roll"),
+  "qv.admin.tally": n("Verify and publish tally", "Organizer console: tally"),
   // ---- shell
   'qv.app.name': n('QuietVote', 'Product name. Do not translate.'),
   'qv.shell.skip': n('Skip to main content', 'Skip link, first focusable element.'),
