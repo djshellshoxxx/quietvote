@@ -6,8 +6,10 @@ list of findings (check id, error code, fatal?, detail).
 
 Design decisions where the specs leave the behaviour open (each is listed in
 docs/errata/spec-errata-log.md):
-  * If the manifest does not hash to the out-of-band anchor, nothing downstream is trusted:
-    every other check is ``not_run`` (QV-ERR-PY-007).
+  * If the manifest does not hash to the out-of-band anchor or lacks its coordinator quorum,
+    dependent checks are ``not_run`` (QV-ERR-PY-007; QV-ADR-027).
+  * Failed tally decryption prevents rule evaluation. Failed rule verification emits no results
+    (QV-ADR-027, approved DIFF-count-altered / DIFF-result-flipped decisions).
   * A tally aggregate that cannot be confirmed (ctx, counted root, aggregate mismatch) makes
     ``chk.tally.decrypt`` and ``chk.result.rules`` ``not_run``: decrypting or evaluating
     unconfirmed aggregates proves nothing (QV-ERR-PY-008).
@@ -310,6 +312,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     coord = m["coordinator"]
     if not _coordinator_ok(mh, m, env["sigs"], coord):
         st.add("chk.manifest.sig", "E_MANIFEST_SIG", True, "fewer than m valid coordinator signatures")
+        _stop(st, *ALL_AFTER_MANIFEST)
     roll_root_hex: str | None = None
     try:
         if not all(hex_field(x, 32) for x in roll_hex):
@@ -690,11 +693,14 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         st.add("chk.benaloh.spoiled", "E_SPOIL_MISMATCH", False, "tally.spoiled differs from reproduced reveals")
 
     # ------------------------------------------------ C7 results
+    if st.failed("chk.tally.decrypt"):
+        _stop(st, "chk.result.rules")
     try:
         results = [rules.evaluate(m.get("quorum"), mc, counts[mc["id"]], V, n_roll) for mc in m["contests"]]
     except (QVError, KeyError, TypeError, ValueError) as e:
         st.add("chk.result.rules", "E_RESULT", True, f"rule evaluation failed: {e}")
         return
-    out["results"] = results
     if tb.get("results") != results:
         st.add("chk.result.rules", "E_RESULT", True, "published results differ from evaluation")
+    else:
+        out["results"] = results

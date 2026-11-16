@@ -37,6 +37,19 @@ results are recorded in the integration validation report; historical README num
   Those 3 are owner decisions D-92/D-93/D-94 in `docs/plan/OPEN-DECISIONS.md` §I. `compare-verifiers.ts` is unchanged
   and still exits 1.
 
+### Approved report dependencies implemented, 2026-11-16
+
+The preceding differential status is historical. QV-ADR-027 adopted the approved
+register's A/A/A recommendations for DIFF-manifest-signature-removed,
+DIFF-count-altered and DIFF-result-flipped. Python now stops after insufficient
+manifest signatures, does not evaluate rules after any decryption failure, and
+emits results only when rule verification passes. QV-35-REQ-003/005 and the errata
+addendum document this existing approval. The later OPEN-DECISIONS alternatives
+were proposals, not superseding decisions. The vector corpus, expected reports
+and strict comparator remain unchanged; this does not resolve other report or
+control semantics. See `tests/test_approved_report_parity.py` and the milestone
+handoff for execution receipts and independent-review status.
+
 ## Remaining capabilities and owner gates
 
 * **B1-02/SG7:** malformed/unknown non-ballot records, bad earlier markers and duplicate tally finding classes still differ from TS.

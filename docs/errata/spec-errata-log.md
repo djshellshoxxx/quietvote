@@ -61,3 +61,26 @@ The full reasoning is in [OPEN-DECISIONS](../plan/OPEN-DECISIONS.md) §I.
   manifest. No vector changed.
 * **Still open:** stopping after `E_MANIFEST_SIG` (D-92), rules after a published-`T` mismatch (D-93), the `results`
   member after a failure (D-94), the zero-digest spoil without trustee mode (D-95, PY-01), INCOMPLETE (D-96, PY-02).
+
+## Approved report-dependency implementation, 2026-11-16
+
+The preceding "still open" observation for D-92–D-94 is superseded by the
+existing approval recorded in QV-ADR-027, which adopts the recommendations in
+[the 2026-11-04 decision register](../plan/DECISIONS-2026-11-04.md):
+
+- **DIFF-manifest-signature-removed = A:** insufficient valid coordinator
+  signatures stop every dependent check. The verified manifest hash remains
+  `pass`, signatures are `fail`, counts remain zero and no context or results
+  are emitted. Untrusted log content is not examined.
+- **DIFF-count-altered = A:** any failed decryption check, including a published
+  count differing from the independently recovered count, prevents rule
+  evaluation; `chk.result.rules` is `not_run` and no results are emitted.
+- **DIFF-result-flipped = A:** a result mismatch is `E_RESULT`; recomputed results
+  are not emitted as a report outcome when `chk.result.rules` fails.
+
+QV-35-REQ-003/005 now state these approved dependency rules explicitly.
+`verifier-py/tests/test_approved_report_parity.py` checks the unchanged mutation
+corpus plus independently altered signatures/counts and an honest control.
+No vector, expected report, TypeScript implementation or comparator exclusion
+changed. This addendum resolves only these three report-dependency differences;
+other historical errata and unsupported capabilities retain their own scope.
