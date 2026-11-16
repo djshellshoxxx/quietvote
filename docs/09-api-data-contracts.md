@@ -142,7 +142,7 @@ All errors: `Content-Type: application/problem+json`.
 
 ### 4.4 Idempotency
 - **Log appends** are naturally idempotent: identical `(header, body)` ⇒ `200` with original receipt; same `(author,type,author_nonce)` with different bytes ⇒ `409 NONCE_REUSE`. Clients retry safely after network errors with the **same bytes**.
-- **Other mutating `POST`/`PUT`/`PATCH`/`DELETE`** accept `Idempotency-Key: <8–128 chars>`; required on `POST /orgs`, `POST …/elections`, `…/invites`, `…/exports`, `/imports`. Same key + same request hash ⇒ stored response replayed (header `Idempotent-Replay: true`) for 24 h; same key + different request ⇒ `422 IDEMPOTENCY_MISMATCH`; concurrent in-flight ⇒ `409 IDEMPOTENCY_IN_PROGRESS`. Scope of a key: `(principal, key)`.
+- **Other mutating `POST`/`PUT`/`PATCH`/`DELETE`** accept `Idempotency-Key: <8–128 chars>`; required on `POST /orgs`, `POST …/elections`, `…/invites`, `…/exports`, `/imports`. Same key + same request hash ⇒ stored response replayed (header `Idempotent-Replay: true`) for 24 h; same key + different request ⇒ `422 IDEMPOTENCY_MISMATCH`; concurrent in-flight ⇒ `409 IDEMPOTENCY_IN_PROGRESS`. Scope of a key: `(principal, key)`. If an internal failure or restart leaves the original outcome unknown, the server retains the request binding and returns `409 STATE_CONFLICT` with reason `IDEMPOTENCY_INTERRUPTED` and `retryable: false` until the original expiry. The operation may already have committed; reconcile resources/jobs before issuing a new request.
 - `POST registrations` is idempotent on `(invite_code, pk)`: repeating with the same pk returns the original result; a different pk → `409 INVITE_USED`.
 - `PUT`/`DELETE` are idempotent by definition.
 

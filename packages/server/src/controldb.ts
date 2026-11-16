@@ -118,6 +118,17 @@ CREATE TABLE gossip_health (
 ) STRICT;
 `,
   },
+  {
+    version: 6,
+    name: 'resumable_election_deletion',
+    // Tombstone/DEK removal and the cleanup cursor commit together. Resume historical interrupted deletions too.
+    sql: `
+CREATE TABLE election_cleanup (
+  election_id TEXT PRIMARY KEY REFERENCES election_registry(election_id)
+) STRICT;
+INSERT INTO election_cleanup(election_id) SELECT election_id FROM election_registry WHERE state='DELETED';
+`,
+  },
 ];
 
 export interface GossipHealthRow {
@@ -312,7 +323,22 @@ export class ControlDb {
     run(this.db, 'UPDATE election_registry SET bytes_used=? WHERE election_id=?', bytes, id);
   }
   markDeleted(id: string): void {
-    run(this.db, "UPDATE election_registry SET state='DELETED', dek_wrapped=NULL, deleted_at=? WHERE election_id=?", this.now(), id);
+    tx(this.db, () => {
+      run(this.db, "UPDATE election_registry SET state='DELETED', dek_wrapped=NULL, deleted_at=? WHERE election_id=?", this.now(), id);
+      run(this.db, "INSERT OR IGNORE INTO election_cleanup(election_id) SELECT election_id FROM election_registry WHERE election_id=? AND state='DELETED'", id);
+    });
+  }
+
+  pendingElectionCleanup(): { election_id: string; db_path: string }[] {
+    return all(this.db, "SELECT r.election_id,r.db_path FROM election_cleanup c JOIN election_registry r USING(election_id) WHERE r.state='DELETED' ORDER BY r.election_id");
+  }
+
+  finishElectionCleanup(id: string): void {
+    tx(this.db, () => {
+      if (!get(this.db, 'SELECT election_id FROM election_cleanup WHERE election_id=?', id)) return;
+      this.audit('system', 'election.delete', id);
+      run(this.db, 'DELETE FROM election_cleanup WHERE election_id=?', id);
+    });
   }
 
   /** Any registry row, deleted tombstones included (an id is never reused). */
@@ -453,6 +479,11 @@ export class ControlDb {
   }
 
   // ---- idempotency (QV-09 §4.4)
+  /** Exclusive startup only: an interrupted request may already have committed its side effect. Never execute it again. */
+  failInterruptedIdempotency(): void {
+    run(this.db, 'UPDATE idempotency SET status=-1 WHERE status=0');
+  }
+
   idem(principal: string, key: string): { req_sha256: Uint8Array; status: number; response: Uint8Array | null; expires_at: number } | undefined {
     return get(this.db, 'SELECT req_sha256,status,response,expires_at FROM idempotency WHERE principal=? AND idem_key=?', principal, key) as never;
   }
@@ -461,6 +492,11 @@ export class ControlDb {
     run(this.db, 'DELETE FROM idempotency WHERE expires_at < ?', t);
     run(this.db, 'INSERT OR REPLACE INTO idempotency(principal,idem_key,method,path,req_sha256,status,response,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?)',
       principal, key, method, path, reqHash, status, response, t, t + 24 * 3600_000);
+  }
+
+  /** Preserve the request binding when an internal failure leaves the committed outcome uncertain. */
+  interruptIdem(principal: string, key: string): void {
+    run(this.db, 'UPDATE idempotency SET status=-1 WHERE principal=? AND idem_key=? AND status=0', principal, key);
   }
 
   /** Removes the in-progress marker of a request that failed, so the client may retry with the same key. */

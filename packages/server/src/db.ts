@@ -65,26 +65,31 @@ export interface OpenOpts {
 
 export function openDb(o: OpenOpts): DatabaseSync {
   const db = new DatabaseSync(o.path, { readOnly: o.readOnly ?? false, enableForeignKeyConstraints: true, allowExtension: false, timeout: 5000 });
-  const ver = (get<{ v: string }>(db, 'SELECT sqlite_version() AS v')?.v ?? '0').split('.').map(Number);
-  if ((ver[0] ?? 0) < 3 || ((ver[0] ?? 0) === 3 && (ver[1] ?? 0) < 37)) throw new Error('SQLite >= 3.37 (STRICT tables) required');
-  if (o.readOnly !== true) {
-    db.exec('PRAGMA journal_mode=WAL');
-    db.exec(`PRAGMA synchronous=${o.synchronous}`);
-    db.exec('PRAGMA trusted_schema=OFF');
-    db.exec('PRAGMA secure_delete=ON');
-    db.exec('PRAGMA cell_size_check=ON');
-    db.exec('PRAGMA foreign_keys=ON');
-    db.exec('PRAGMA busy_timeout=5000');
-    const appId = get<{ application_id: number }>(db, 'PRAGMA application_id')?.application_id ?? 0;
-    if (appId === 0) db.exec(`PRAGMA application_id=${o.applicationId}`);
-    else if (appId !== o.applicationId) throw new Error(`unexpected application_id ${appId} in ${o.path}`);
-    migrate(db, o.migrations, o.appVersion);
+  try {
+    const ver = (get<{ v: string }>(db, 'SELECT sqlite_version() AS v')?.v ?? '0').split('.').map(Number);
+    if ((ver[0] ?? 0) < 3 || ((ver[0] ?? 0) === 3 && (ver[1] ?? 0) < 37)) throw new Error('SQLite >= 3.37 (STRICT tables) required');
+    if (o.readOnly !== true) {
+      db.exec('PRAGMA journal_mode=WAL');
+      db.exec(`PRAGMA synchronous=${o.synchronous}`);
+      db.exec('PRAGMA trusted_schema=OFF');
+      db.exec('PRAGMA secure_delete=ON');
+      db.exec('PRAGMA cell_size_check=ON');
+      db.exec('PRAGMA foreign_keys=ON');
+      db.exec('PRAGMA busy_timeout=5000');
+      const appId = get<{ application_id: number }>(db, 'PRAGMA application_id')?.application_id ?? 0;
+      if (appId === 0) db.exec(`PRAGMA application_id=${o.applicationId}`);
+      else if (appId !== o.applicationId) throw new Error(`unexpected application_id ${appId} in ${o.path}`);
+      migrate(db, o.migrations, o.appVersion);
+    }
+    // startup self-test: read the pragmas back
+    const fk = get<{ foreign_keys: number }>(db, 'PRAGMA foreign_keys')?.foreign_keys;
+    const ts = get<{ trusted_schema: number }>(db, 'PRAGMA trusted_schema')?.trusted_schema;
+    if (fk !== 1 || ts !== 0) throw new Error('sqlite pragma self-test failed');
+    return db;
+  } catch (error) {
+    try { db.close(); } catch { /* preserve the initialization error */ }
+    throw error;
   }
-  // startup self-test: read the pragmas back
-  const fk = get<{ foreign_keys: number }>(db, 'PRAGMA foreign_keys')?.foreign_keys;
-  const ts = get<{ trusted_schema: number }>(db, 'PRAGMA trusted_schema')?.trusted_schema;
-  if (fk !== 1 || ts !== 0) throw new Error('sqlite pragma self-test failed');
-  return db;
 }
 
 function sha(s: string): Uint8Array {
@@ -93,6 +98,7 @@ function sha(s: string): Uint8Array {
 
 function migrate(db: DatabaseSync, ms: Migration[], appVersion: string): void {
   const cur = get<{ user_version: number }>(db, 'PRAGMA user_version')?.user_version ?? 0;
+  if (cur > (ms.at(-1)?.version ?? 0)) throw new Error('database schema is newer than this server; use a compatible binary');
   for (const m of ms) {
     if (m.version <= cur) {
       // verify the checksum of already-applied migrations

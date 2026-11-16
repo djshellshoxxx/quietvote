@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
 import { basename, dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { LOCALES } from '../src/i18n/locales.ts';
 import { test } from 'node:test';
 import { build } from 'esbuild';
 import { precompileI18nPlugin } from '../src/build/precompile.ts';
@@ -57,4 +60,17 @@ test('ordinary app build precompiles ICU deterministically within gzip budgets',
   const allGzip = [...outputs, ...worker.outputFiles].reduce((total, file) => total + gzipSync(file.contents).byteLength, 0);
   assert.ok(entryGzip < 110 * 1024, `entry gzip is ${entryGzip} bytes, expected below 110 KiB`);
   assert.ok(allGzip < 200 * 1024, `app and worker gzip total is ${allGzip} bytes, expected below 200 KiB`);
+});
+
+test('indexed production catalogs preserve every message and review gate', async () => {
+  const compiled = await build({ ...options, entryPoints: ['src/i18n/locales.ts'], outdir: 'out', plugins: [precompileI18nPlugin()] });
+  const dir = mkdtempSync(resolve(tmpdir(), 'qv-catalog-parity-'));
+  try {
+    const path = resolve(dir, 'catalogs.mjs');
+    writeFileSync(path, compiled.outputFiles[0]!.contents);
+    const output = await import(pathToFileURL(path).href) as { LOCALES: typeof LOCALES };
+    assert.deepEqual(output.LOCALES, LOCALES, 'compiled catalogs preserve text, missing keys and review metadata exactly');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

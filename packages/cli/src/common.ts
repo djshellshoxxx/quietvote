@@ -1,4 +1,4 @@
-import { closeSync, constants as fsc, fchmodSync, openSync, readFileSync, writeSync } from 'node:fs';
+import { closeSync, constants as fsc, fchmodSync, fstatSync, openSync, readFileSync, readSync, writeSync } from 'node:fs';
 import { bytesToHex, hexToBytes, pointFromBytes } from '@quietvote/crypto';
 import { loadBundle, type LoadedBundle } from '@quietvote/verifier';
 import { manifestHash, validateManifest, verifyElection, type ElectionParams, type Manifest, type VerificationReport } from '@quietvote/protocol';
@@ -22,8 +22,30 @@ export function readJson(path: string): unknown {
   }
 }
 
+/** Public election context is a regular, bounded snapshot; never wait for FIFO/device input. */
+function readPublicBundle(path: string): Uint8Array {
+  let fd: number | undefined;
+  try {
+    fd = openSync(path, fsc.O_RDONLY | fsc.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size > 64 * 1024 * 1024) throw new InputError('election bundle must be a regular file of at most 64 MiB');
+    const bytes = Buffer.alloc(stat.size + 1);
+    let size = 0;
+    while (size < bytes.length) {
+      const n = readSync(fd, bytes, size, bytes.length - size, null);
+      if (n === 0) break;
+      size += n;
+    }
+    if (size !== stat.size) throw new InputError('election bundle changed while reading');
+    return bytes.subarray(0, size);
+  } catch (e) {
+    if (e instanceof InputError) throw e;
+    throw new InputError('cannot read election bundle');
+  } finally { if (fd !== undefined) closeSync(fd); }
+}
+
 export function loadBundleFile(path: string): LoadedBundle {
-  const r = loadBundle(readFile(path));
+  const r = loadBundle(readPublicBundle(path));
   if (!r.ok) throw new InputError(`${path} is not an election bundle: ${r.errors.join('; ')}`);
   return r.value;
 }

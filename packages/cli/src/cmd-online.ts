@@ -182,3 +182,24 @@ export async function cmdOnlineElectionExport(argv: string[], io: Io): Promise<n
   printJson(io, { file: out, bytes: bytes.length, format, verified: false });
   return EXIT.ok;
 }
+
+/** Fetch the server's existing public tally proposal for offline coordinator signing. */
+export async function cmdOnlineElectionTallyDraft(argv: string[], io: Io): Promise<number> {
+  const p = args(argv, { id: 'value', decrypters: 'value', out: 'value', 'read-key-file': 'value' });
+  const path = electionPath(p), out = needFlag(p, 'out');
+  const decrypters = needFlag(p, 'decrypters');
+  const ids = decrypters.split(',').map(Number);
+  if (!/^[1-9]\d?(,[1-9]\d?)*$/.test(decrypters) || ids.some((v) => v > 32) || new Set(ids).size !== ids.length) throw new UsageError('--decrypters must be distinct comma-separated trustee indices from 1 to 32');
+  if (existsSync(out)) throw new InputError('draft file exists; existing files are never overwritten');
+  const bytes = await request(p, io, 'GET', `${path}/tally/draft?decrypters=${decrypters}`);
+  let body: unknown;
+  try {
+    const value = parseQvJson(bytes) as { body?: { type?: unknown } };
+    if (value?.body?.type !== 'tally') throw new Error('missing tally body');
+    body = value.body;
+  } catch { throw new FailError('server returned a malformed tally draft'); }
+  try { writeFileSync(out, JSON.stringify(body) + '\n', { flag: 'wx', mode: 0o600 }); }
+  catch { throw new InputError('cannot create draft file; existing files are never overwritten'); }
+  printJson(io, { file: out, verified: false });
+  return EXIT.ok;
+}

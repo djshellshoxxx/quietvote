@@ -3,13 +3,14 @@ import { cmdBallotAudit, cmdBallotEncrypt } from './cmd-ballot.ts';
 import { cmdVerifyReceipt } from './cmd-receipt.ts';
 import { cmdBoardVerify } from './cmd-board.ts';
 import { cmdElectionPrepare } from './cmd-prepare.ts';
+import { cmdElectionSignRecord, cmdElectionExportEntry } from './cmd-packet.ts';
 import { cmdElectionInspect } from './cmd-election.ts';
 import { cmdElectionSpoilCollect } from './cmd-spoil.ts';
 import { cmdKeygen } from './cmd-keygen.ts';
 import { cmdSelftest, cmdVerify } from './cmd-verify.ts';
 import { cmdVectorsCheck } from './cmd-vectors.ts';
 import { EXIT, type Io } from './io.ts';
-import { cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
+import { cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 
 export const VERSION = '0.1.0';
 
@@ -37,6 +38,11 @@ usage:
   qv election prepare <archive.qvb> --manifest-hash <hex> --out <file> [--format election|ceremony] [--json]
                                    checks archive, pinned manifest and board before preparing trustee inputs;
                                    accepts regular files up to 64 MiB and 10000 entries; refuses existing outputs
+  qv election sign-record --manifest <manifest.json> --manifest-hash <hex> --body <body.json> | --record <record.json>
+                    --key <keyfile> --out <file> [--election <bundle>] [passphrase options] [--json]
+                                   add one coordinator signature; quorum:false means additional signers are needed
+  qv election export-entry --origin <quietvote/v1/id> --type <board-type> --file <signed-record.json>
+                    --key <outer-author-keyfile> --out <packet.json> [passphrase options] [--json]
   qv election inspect <bundle> [--json]
   qv election spoil-collect --election <bundle> --code <hex> --packet <file> [--packet <file>]... [--manifest-hash <hex>]
                     [--post-body-out <dir>] [--json]
@@ -49,6 +55,7 @@ usage:
   qv online election-inspect --server <origin> --id <id> [--read-key-file <file>] [--json]
   qv online election-draft --server <origin> --id <id> --file <draft.json>
                     --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
+  qv online election-tally-draft --server <origin> --id <id> --decrypters <1,2> --out <body.json> [--read-key-file <file>] [--json]
   qv online election-submit --server <origin> --id <id> --file <signed-entry.json> [--json]
   qv online election-export --server <origin> --id <id> --out <file> [--format qvb|json]
                     [--read-key-file <file>] [--json]
@@ -68,8 +75,8 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   keygen: cmdKeygen,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
-  election: { prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
-  online: { instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
+  election: { 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
+  online: { instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
 };
 

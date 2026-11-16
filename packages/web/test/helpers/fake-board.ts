@@ -141,7 +141,9 @@ export class FakeBoard {
       return note ? new Response(note, { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }) : this.problem(503, 'LOG_UNAVAILABLE');
     }
     if (p === `${base}/log/proof/inclusion`) {
-      const seq = Number(url.searchParams.get('seq'));
+      const leaf = url.searchParams.get('leaf_hash');
+      const seq = leaf === null ? Number(url.searchParams.get('seq')) : this.entries.findIndex((e) => b64uEncode(e.leaf) === leaf);
+      if (seq < 0) return this.problem(404, 'NOT_FOUND');
       const size = Number(url.searchParams.get('tree_size') ?? this.tree.size);
       if (!Number.isInteger(seq) || seq >= size || size > this.tree.size) return this.problem(seq >= this.tree.size ? 404 : 400, seq >= this.tree.size ? 'NOT_FOUND' : 'BAD_REQUEST');
       const path = this.tree.inclusionProof(seq, size).map((h) => stdB64(h));

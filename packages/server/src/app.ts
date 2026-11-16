@@ -85,6 +85,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     nowMs, nowSec: () => Math.floor(nowMs() / 1000),
     witnessPolicy: (quorum): WitnessPolicy => ({ witnesses, quorum, noneAcknowledged: quorum === 0 }),
   };
+  control.failInterruptedIdempotency();
   for (const k of cfg.adminKeys) control.seedAdmin(keyIdOf(hexToBytes(k, 32)), hexToBytes(k, 32));
   control.revokeRemovedAdmins(new Set(cfg.adminKeys.map((k) => keyIdOf(hexToBytes(k, 32)))));
   const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
@@ -140,17 +141,25 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     const prev = control.idem(principal, key);
     if (prev && prev.expires_at > nowMs()) {
       if (Buffer.compare(Buffer.from(prev.req_sha256), Buffer.from(h)) !== 0) throw new ApiError(422, 'IDEMPOTENCY_MISMATCH', 'Idempotency-Key was used with a different request');
+      if (prev.status === -1) throw new ApiError(409, 'STATE_CONFLICT', 'this request outcome was not recorded; inspect the resource or job before submitting another request', { reason: 'IDEMPOTENCY_INTERRUPTED', retryable: false });
       if (prev.status === 0) throw new ApiError(409, 'IDEMPOTENCY_IN_PROGRESS', 'original request still running', { retryAfter: 1 });
       return { status: prev.status, headers: { 'Idempotent-Replay': 'true' }, json: prev.response ? JSON.parse(Buffer.from(prev.response).toString()) : undefined };
     }
     control.storeIdem(principal, key, c.method, c.path, h, 0, null);
+    let completed = false;
     try {
       const r = await fn();
+      completed = true;
       const stored = redact ? redact(r) : r;
       control.storeIdem(principal, key, c.method, c.path, h, r.status, stored.json === undefined ? null : Buffer.from(JSON.stringify(stored.json)));
       return r;
     } catch (e) {
-      control.dropIdemInProgress(principal, key);
+      // Only a known refusal can release the binding. Internal errors (including response-cache writes after successful work)
+      // can follow committed mutations. Retain them for reconciliation rather than repeat the operation.
+      if (!completed && e instanceof ApiError && e.status < 500) control.dropIdemInProgress(principal, key);
+      else {
+        try { control.interruptIdem(principal, key); } catch { /* an unavailable store leaves status=0 for startup recovery */ }
+      }
       throw e;
     }
   };

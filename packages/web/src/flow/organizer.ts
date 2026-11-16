@@ -67,6 +67,9 @@ export type OrgProblem = 'E-ORG-QUORUM' | 'E-ORG-TRUSTEES' | 'E-ORG-MANIFEST';
 export type BuildResult = { ok: true; manifest: Manifest; warnings: string[] } | { ok: false; code: OrgProblem; detail: string };
 
 export function buildManifest(f: ManifestForm): BuildResult {
+  // Match the reference server's existing admission bound before creating a draft.
+  if (!Number.isInteger(f.maxBallots) || f.maxBallots < 1 || f.maxBallots > 20) return { ok: false, code: 'E-ORG-MANIFEST', detail: 'max ballots must be an integer from 1 to 20' };
+  if (!Number.isInteger(f.quorumCount) || f.quorumCount < 0) return { ok: false, code: 'E-ORG-QUORUM', detail: 'quorum must be a nonnegative integer' };
   const rr = rollRoot(f.rollHex);
   if (!rr.ok) return { ok: false, code: 'E-ORG-MANIFEST', detail: rr.detail ?? 'roll invalid' };
   if (f.quorumCount > f.rollHex.length) return { ok: false, code: 'E-ORG-QUORUM', detail: 'quorum exceeds roll size' };

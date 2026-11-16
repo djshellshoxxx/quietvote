@@ -368,3 +368,48 @@ does not override election integrity. This measures peer contact, not successful
 The existing 256-election round limit and enumeration behavior are unchanged. No public health endpoint
 or configuration default is changed. Tests cover real database reopen, outage, malformed response, DNS
 rebinding, recovery, stale contact, scheduler failure and log privacy.
+
+## Interrupted election file cleanup
+
+Control schema v6 records a cleanup cursor atomically with the DELETED tombstone
+and wrapped-DEK removal. The cursor remains until DB, WAL and SHM unlink succeeds;
+completion audit and cursor removal commit together. On startup, before election
+handles or HTTP work exist, the pool resumes every pending cleanup. Existing
+DELETED rows are queued by the migration so older interrupted deletions recover.
+A persistent filesystem failure refuses startup; correct the filesystem problem
+and restart. The tombstone stays inaccessible and its wrapped DEK stays absent.
+Tests: `test/delete-recovery.test.ts` injects an unlink failure after main-file
+removal, exercises failed and successful restart, verifies audit idempotence and
+qualifies migration of a historical tombstone. This does not add export-ack or
+backup-purge policy, overwrite guarantees on SSDs, or recall exported copies.
+
+## Interrupted management request outcomes
+
+With exclusive directory ownership, startup can distinguish orphaned idempotency
+markers from active work. It reserves orphaned keys until their original 24-hour
+expiry and responds with `409 STATE_CONFLICT`, reason
+`IDEMPOTENCY_INTERRUPTED`, `retryable: false`. The operation may have committed;
+inspect its resources/jobs before issuing a new request. A hash mismatch still
+returns `422 IDEMPOTENCY_MISMATCH`. Internal failures and response-cache failures
+also preserve this binding; known API refusals before successful completion
+release it. A currently active request retains the existing retryable
+`IDEMPOTENCY_IN_PROGRESS` behavior. The marker is not an exactly-once transaction
+across the control/election databases. Tests: `test/idempotency-recovery.test.ts`.
+
+Supplemental phase/alert events are staged separately from committed append
+rows and enter SSE/webhook publication only after their own transaction commits.
+A rollback cannot publish a phantom event ID which SQLite might later reuse.
+`test/outbox-rollback.test.ts` injects a commit failure after phase insertion and
+checks callbacks, durable rows, later ID uniqueness and election replay. Phase
+and alert generation still follow the append transaction; cross-database webhook
+enqueue and missing supplemental event recovery remain separate work.
+Cleanup also requires the canonical `elections/<id-prefix>/<id>.sqlite` path
+before any unlink. Malformed tombstone metadata refuses startup without touching
+DB/WAL/SHM targets; correcting the metadata permits cleanup to resume. This is
+an input path boundary, with privately owned filesystem parents still required.
+## Offline local backup recovery
+
+`qv-backup verify|restore` verifies full local server snapshots using an independently
+retained KEK and restores only into a new directory. See
+[the recovery runbook](../../docs/OFFLINE-BACKUP-RESTORE.md) for commands, the required
+minimum-history backup, activation gates and bounded verification claims.

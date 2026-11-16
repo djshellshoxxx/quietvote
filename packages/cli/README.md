@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-inspect|election-draft|election-submit|election-export`.
+Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-inspect|election-draft|election-submit|election-tally-draft|election-export`.
 Exit codes: 0 ok, 1 failure, 2 usage, 3 incomplete/partial, 4 bad input, 70 internal. Design notes: `packages/verifier/NOTES.md`.
 
 See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
@@ -52,7 +52,7 @@ protect the command output. Read commands accept `--read-key-file` for that key 
 
 `election-submit` relays a JSON object containing only `header` and `body`, each base64url-encoded board-entry
 bytes. `qv-trustee export-entry` now creates this format for persisted trustee ceremony outputs and gated tally
-shares; coordinator and voter envelope preparation still requires separate tooling. The server checks
+shares; the offline `election sign-record` and `election export-entry` commands prepare coordinator and voter packets below. The server checks
 signatures, protocol validity and allowed state transitions. It can relay manifest, ceremony, open, ballot,
 close and tally packets; it does not generate protocol signatures or choose trustee/coordinator quorums.
 A returned receipt means server acceptance, not independent receipt or result verification. Retain returned
@@ -63,8 +63,7 @@ failure during a mutation also exit 1 and explicitly report an unknown outcome; 
 Commands never retry a mutation automatically. Downloads use mode 0600, never overwrite an existing path,
 and are labelled `verified: false` until checked separately.
 
-Remaining workflow gaps: organization account enrollment, registration (owner-held B3-01), integrated generation
-of coordinator lifecycle packets, automatic receipt-proof checks, and
+Remaining workflow gaps: organization account enrollment, registration (owner-held B3-01), automatic construction of lifecycle bodies and independent tally-draft checking, automatic receipt-proof checks, and
 backup/restore commands. This command group supplies transport adapters; it does not resolve those gaps.
 
 The online integration test exports an actual successful three-voter election and runs both the TypeScript CLI
@@ -110,3 +109,58 @@ qv online admin-status --server https://vote.example \
 The server requires an instance-admin key. The `gossip` member reports durable contact timestamps,
 consecutive failures, stale peers and scheduler health using hashed peer identifiers. These operational
 indicators are not election-integrity or witness-independence verdicts.
+
+## Coordinator signatures and voter packet files
+
+These commands reuse protocol record signatures and board entry framing. Obtain the manifest hash and election
+origin independently. Review the lifecycle body before signing; these adapters do not decide ceremony markers,
+roll commitments, open references or election state for the operator. Body schemas and signature framing are
+checked locally; server admission and independent verification remain separate checks.
+
+```sh
+# Each coordinator signs on their own machine with their own key. Transfer public record files only.
+qv election sign-record --manifest manifest.json --manifest-hash ANNOUNCED_HASH \
+  --body marker-body.json --key coordinator1.key --passphrase-file passphrase.txt --out first.json
+qv election sign-record --manifest manifest.json --manifest-hash ANNOUNCED_HASH \
+  --record first.json --key coordinator2.key --passphrase-file passphrase.txt --out quorum.json
+qv election export-entry --origin quietvote/v1/INSTANCE_ELECTION_ORIGIN --type ceremony_start \
+  --file quorum.json --key coordinator1.key --passphrase-file passphrase.txt --out packet.json
+qv online election-submit --server https://vote.example --id ELECTION_ID --file packet.json
+
+# ballot encrypt already signs the protocol envelope; add the voter's outer board signature for relay.
+qv election export-entry --origin quietvote/v1/INSTANCE_ELECTION_ORIGIN --type ballot \
+  --file encrypted-ballot.json --key voter.key --passphrase-file passphrase.txt --out ballot-packet.json
+
+# Download the existing server proposal, then sign and wrap it. The proposal is not independently checked here.
+qv online election-tally-draft --server https://vote.example --id ELECTION_ID \
+  --decrypters 1,2 --out tally-body.json
+qv election sign-record --manifest manifest.json --manifest-hash ANNOUNCED_HASH \
+  --body tally-body.json --election public-election.json --key coordinator1.key \
+  --passphrase-file passphrase.txt --out signed-tally.json
+qv election export-entry --origin quietvote/v1/INSTANCE_ELECTION_ORIGIN --type tally_result \
+  --file signed-tally.json --key coordinator1.key --passphrase-file passphrase.txt --out tally-packet.json
+```
+
+`sign-record` accepts a raw manifest or manifest record, and requires the external manifest pin. Supported bodies
+are `manifest`, `marker`, `roll-commit`, existing server `control` actions and `tally`. Manifest, ceremony marker and roll signatures use the manifest
+hash, as do control actions. Open/close markers and tally signatures use the context derived from `--election` after the existing manifest
+and DKG checks pass. A tally has one coordinator signature as required by existing server policy; other supported
+records accumulate distinct authorized coordinator signatures through `--record`. Exit 0 means the signature file
+was written; `quorum: false` explicitly means more signers are needed. Prior signatures must all verify. Signers may
+use different passphrases because each invocation unlocks only one key.
+
+`export-entry` accepts an existing board entry type and a JSON record, canonicalizes the body and creates the
+`{header, body}` base64url packet accepted by `online election-submit`. It checks framing and per-type size limits;
+it does not validate the inner record, authorize its outer author or assert an election transition. For manifest
+publication the outer key is the organizer, even when coordinator keys signed the inner record. For tally publication
+the existing server policy requires the outer coordinator to match the tally signer. No organizer authority is added
+to the trustee verifier. All new outputs are exclusive mode-0600 files. Manifest, body, record and entry inputs are regular files capped
+at 1 MiB. The public `--election` context bundle is a regular-file snapshot capped at 64 MiB; FIFOs and devices
+are refused before reading. Bundle loading used by ballot, audit and election inspection commands shares this cap.
+
+The executable CLI acceptance test provisions protected keys with production KDF settings, drives coordinator
+signature accumulation, distinct-organizer manifest publication, ceremony markers, roll commitment, open/close,
+three voter encryptions, tally proposal download/signing and final pinned verification through child processes and
+the real HTTP server. Operator enrollment, registration under the held B3-01 contract and trustee cryptography remain
+fixture setup. This is complementary to the trustee executable test; it does not claim a complete all-client
+registration journey or remove independent review gates.

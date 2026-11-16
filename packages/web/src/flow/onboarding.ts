@@ -31,6 +31,15 @@ export class PassphrasePolicyError extends Error {
   }
 }
 
+export class KeySlotOccupiedError extends Error {}
+
+async function saveKey(storage: DeviceStorage, slot: string, container: QvKey1, onlyIfAbsent = false, canInstall?: () => boolean): Promise<void> {
+  if (!onlyIfAbsent) return storage.putKey(slot, container);
+  // No read-then-upsert fallback: hosts without atomic installation must fail closed.
+  if (!storage.installKeyIfAbsent) throw new Error('atomic key installation unavailable');
+  if (!await storage.installKeyIfAbsent(slot, container, canInstall)) throw new KeySlotOccupiedError('key slot already occupied');
+}
+
 export async function createKey(a: {
   storage: DeviceStorage;
   slot: string;
@@ -38,6 +47,8 @@ export async function createKey(a: {
   rng?: Rng;
   deps?: KeystoreDeps;
   params?: KdfParams;
+  onlyIfAbsent?: boolean;
+  canInstall?: () => boolean;
   onProgress?: (f: number) => void;
 }): Promise<CreatedKey> {
   if (!checkPassphrase(a.passphrase).ok) throw new PassphrasePolicyError();
@@ -50,19 +61,19 @@ export async function createKey(a: {
   }
 }
 
-async function storeSeed(seed: Uint8Array, a: { storage: DeviceStorage; slot: string; passphrase: string; deps?: KeystoreDeps | undefined; params?: KdfParams | undefined; onProgress?: ((f: number) => void) | undefined }): Promise<CreatedKey> {
+async function storeSeed(seed: Uint8Array, a: { storage: DeviceStorage; slot: string; passphrase: string; deps?: KeystoreDeps | undefined; params?: KdfParams | undefined; onlyIfAbsent?: boolean | undefined; canInstall?: (() => boolean) | undefined; onProgress?: ((f: number) => void) | undefined }): Promise<CreatedKey> {
   const publicKey = ed25519Keypair(seed).publicKey;
   const w = await wrapSeed(seed, a.passphrase, a.deps ?? defaultDeps(), a.params ?? DEFAULT_PARAMS, a.onProgress);
-  await a.storage.putKey(a.slot, w.container);
+  await saveKey(a.storage, a.slot, w.container, a.onlyIfAbsent, a.canInstall);
   return { container: w.container, publicKey, fingerprint: fingerprintWords(sha256(publicKey)), atFloor: w.atFloor, keyFileText: serializeContainer(w.container) };
 }
 
 /** Imports a `.qvkey` file: validates it, proves the passphrase unlocks it, then stores it unchanged. */
-export async function importKeyFile(a: { storage: DeviceStorage; slot: string; text: string; passphrase: string; deps?: KeystoreDeps }): Promise<{ publicKey: Uint8Array; fingerprint: string[] }> {
+export async function importKeyFile(a: { storage: DeviceStorage; slot: string; text: string; passphrase: string; deps?: KeystoreDeps; onlyIfAbsent?: boolean; canInstall?: () => boolean }): Promise<{ publicKey: Uint8Array; fingerprint: string[] }> {
   const container = parseContainer(a.text, a.deps?.floor);
   const u = await unwrapSeed(container, a.passphrase, a.deps ?? defaultDeps());
   wipe(u.seed);
-  await a.storage.putKey(a.slot, container);
+  await saveKey(a.storage, a.slot, container, a.onlyIfAbsent, a.canInstall);
   return { publicKey: u.publicKey, fingerprint: fingerprintWords(sha256(u.publicKey)) };
 }
 
@@ -95,7 +106,7 @@ export interface Unlocked {
   atFloor: boolean;
 }
 
-export async function unlockKey(a: { storage: DeviceStorage; slot: string; passphrase: string; deps?: KeystoreDeps; now?: () => number; onProgress?: (f: number) => void }): Promise<Unlocked> {
+export async function unlockKey(a: { storage: DeviceStorage; slot: string; passphrase: string; deps?: KeystoreDeps; rewrap?: boolean; now?: () => number; onProgress?: (f: number) => void }): Promise<Unlocked> {
   const container = await a.storage.getKey(a.slot);
   if (container === undefined) throw new KeyError('E_KEY_FORMAT', 'no key on this device');
   const deps = a.deps ?? defaultDeps();
@@ -105,7 +116,7 @@ export async function unlockKey(a: { storage: DeviceStorage; slot: string; passp
     let atFloor = container.m <= deps.floor.m;
     const adapt = adaptParams({ m: container.m, t: container.t, p: container.p }, u.elapsedMs, deps.floor);
     atFloor = adapt.atFloor;
-    if (needsRewrap(container) && u.elapsedMs < 3000) {
+    if (a.rewrap !== false && needsRewrap(container) && u.elapsedMs < 3000) {
       // Stronger parameters are affordable on this device: transparent re-wrap at unlock.
       const w = await wrapSeed(u.seed, a.passphrase, deps, { m: Math.max(container.m, Math.min(DEFAULT_PARAMS.m, container.m * 2)), t: Math.max(container.t, DEFAULT_PARAMS.t), p: container.p }, a.onProgress);
       await a.storage.putKey(a.slot, w.container);

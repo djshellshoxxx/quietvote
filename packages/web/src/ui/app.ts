@@ -4,6 +4,7 @@ import { NO_SUPERSEDES, ballotCode, castDigest, verifyElectionText } from '@quie
 import { ed25519Verify } from '@quietvote/crypto';
 import { ApiClient } from '../api/client.ts';
 import { ApiError, uxPresentation, type PhaseTimes } from '../api/errors.ts';
+import { recoverCast } from '../flow/cast-recovery.ts';
 import { BallotController, lastOwnBallotCode } from '../flow/ballot-controller.ts';
 import { canAudit, canCast, canNewSeal } from '../flow/ballot-machine.ts';
 import { bindServerLog, checkRoll, deriveElectionContext, type ElectionContext } from '../flow/election.ts';
@@ -11,9 +12,13 @@ import { entryRecord } from '../flow/entries.ts';
 import { parseFragment } from '../flow/invite.ts';
 import { ORGANIZER_SLOT, createKey, importKeyFile, keySlot, recoveryCodeFor, registrationBody, restoreFromRecovery, unlockKey } from '../flow/onboarding.ts';
 import { buildManifest, isoUtc, parseRoll, TEMPLATES, type Template } from '../flow/organizer.ts';
+import { enrollOrganization } from '../flow/publish-ui.ts';
+import { organizerKeyPanel } from './organizer-key.ts';
 import { runPublish, type PublishOutcome } from '../flow/publish-ui.ts';
 import type { PublishForm, PublishState } from '../flow/publish.ts';
-import { BoardIntegrityError, checkInclusion, MAX_RECEIPT_FILE_BYTES, parseReceiptFile } from '../flow/receipt.ts';
+import { BoardIntegrityError, MAX_RECEIPT_FILE_BYTES, parseReceiptFile } from '../flow/receipt.ts';
+import { checkBallotCodeEntry, lookupBallotCode } from '../flow/receipt-code.ts';
+import { ReceiptCheckGate } from '../flow/receipt-check-gate.ts';
 import { LiveElection } from '../flow/live.ts';
 import { BallotIndex } from '../flow/supersede.ts';
 import type { ConnStatus } from '../net/sse.ts';
@@ -139,13 +144,14 @@ export function startApp(env: AppEnv): void {
       document.body.append(dialog); (dialog as HTMLDialogElement).showModal();
     });
     if (!confirmed) return false;
+    // Invalidate pending key work before the clear transaction can run.
+    lockAll();
     try {
       await env.storage.clearAll();
     } catch {
       say.say(t('qv.err.E-KEY-STORAGE.title'), true);
       return false;
     }
-    lockAll();
     say.say(t('qv.device.cleared'));
     void route();
     return true;
@@ -441,7 +447,7 @@ export function startApp(env: AppEnv): void {
     }
     if (sub === 'rules') return render(t('qv.nav.rules'), ...head, stepper(1), heading(t('qv.nav.rules')), h('p', {}, t('qv.vote.privacyNote')), more(guaranteePanel(L)), link(electionPath(r.id, 'key') + location.hash, t('qv.shell.continue'), 'btn primary'));
     if (sub === 'key') return keyView(L, ctx, head, frag.token);
-    if (sub === 'vote') return voteView(L, ctx, head);
+    if (sub === 'vote') return await voteView(L, ctx, head);
     if (sub === 'receipt') return await receiptView(L, ctx, head, epoch);
     if (sub === 'results') return await resultsView(L, ctx, head, epoch);
     if (sub === 'spoils') return render(t('qv.spoil.title'), ...head, spoilSharesPanel({ tr, say, api: L.api, apiId: L.apiId, ctx, records: () => L.records, roll: () => fullRoll(L), current: () => currentRoute(epoch) }));
@@ -553,8 +559,35 @@ export function startApp(env: AppEnv): void {
     void ctx;
   }
 
-  function voteView(L: Loaded, ctx: ElectionContext, head: Child[]): void {
+  async function voteView(L: Loaded, ctx: ElectionContext, head: Child[]): Promise<void> {
     const epoch = routeEpoch;
+    let pending;
+    try { pending = await env.storage.getPendingCast(L.origin, L.apiId); }
+    catch { if (currentRoute(epoch)) render(t('qv.nav.vote'), ...head, errorBox('E-KEY-STORAGE')); return; }
+    if (!currentRoute(epoch)) return;
+    if (pending) {
+      const marker = pending;
+      const out = h('div', {});
+      const check = btn(t('qv.receipt.checkNow'), async () => {
+        (check as HTMLButtonElement).disabled = true;
+        try {
+          const result = await recoverCast({ pending: marker, origin: L.origin, electionId: L.apiId,
+            manifestHash: ctx.manifestHashHex, api: L.api, logPk: L.logPk, storage: env.storage });
+          if (!currentRoute(epoch)) return;
+          clear(out);
+          say.say(t(result.state === 'included' ? 'qv.receipt.consistent' : 'qv.receipt.notFound'));
+          if (result.state === 'included') {
+            out.append(h('p', {}, t('qv.receipt.included', { seq: result.seq, size: result.treeSize })),
+              btn(t('qv.shell.continue'), () => location.reload()));
+          } else out.append(h('p', {}, t('qv.receipt.notFound')), h('p', {}, t('qv.receipt.pendingBody')));
+        } catch (e) {
+          if (currentRoute(epoch)) { clear(out); out.append(e instanceof BoardIntegrityError ? errorBox(e.code) : errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close })); }
+        } finally { (check as HTMLButtonElement).disabled = false; }
+      });
+      return render(t('qv.nav.vote'), ...head, heading(t('qv.receipt.pendingTitle')),
+        h('p', {}, t('qv.receipt.pendingBody')), codeEl(/^[0-9a-f]{64}$/.test(marker.code) ? ballotCodeDisplay(hexToBytes(marker.code, 32)) : t('qv.receipt.pendingTitle')),
+        check, btn(t('qv.receipt.clearDevice'), () => { void clearDevice(); }), out);
+    }
     const signer = signers.get(L.apiId);
     if (!signer) return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), h('p', {}, t('qv.key.locked')), link(electionPath(L.apiId, 'key') + location.hash, t('qv.key.unlock'), 'btn primary'));
     if (ctx.phase !== 'open') return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, ctx.phase === 'ready' ? 'E-VOT-NOTOPEN' : 'E-VOT-CLOSED'));
@@ -598,7 +631,7 @@ export function startApp(env: AppEnv): void {
         const disp = ctl.codeDisplay ?? '';
         const castB = btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true, disabled: !canCast(s), id: 'cast-btn' });
         const testB = btn(t('qv.ballot.test'), async () => { const p = ctl.audit({ post: (document.getElementById('post-chk') as HTMLInputElement | null)?.checked ?? true, publishReveal: (document.getElementById('rev-chk') as HTMLInputElement | null)?.checked ?? false }); draw(); await p; draw(); }, { primary: true, disabled: !canAudit(s), id: 'test-btn' });
-        add(area, [h('p', {}, t('qv.ballot.codeHelp')), h('p', {}, t('qv.ballot.code'), ': ', codeEl(disp), ' ', copyBtn(disp)),
+        add(area, [h('p', {}, t('qv.ballot.recoveryStorage')), h('p', {}, t('qv.ballot.codeHelp')), h('p', {}, t('qv.ballot.code'), ': ', codeEl(disp), ' ', copyBtn(disp)),
           h('details', {}, h('summary', {}, t('qv.ballot.readSlowly')), h('p', {}, spokenForm(disp))),
           h('h2', {}, t('qv.ballot.choose')), h('p', {}, t('qv.vote.codeWhat')),
           h('div', { class: 'row equal' }, h('div', {}, castB, h('p', { class: 'hint' }, t('qv.ballot.castHelp'))), h('div', {}, testB, h('p', { class: 'hint' }, t('qv.ballot.testHelp')))),
@@ -631,7 +664,7 @@ export function startApp(env: AppEnv): void {
       } else {
         // A failed CAST keeps the receipt when the board accepted the ballot. "Seal a new ballot" appears only where NEW_SEAL is accepted.
         const rep = ctl.lastCast?.codeHex === s.sealed?.code ? ctl.lastCast : undefined;
-        add(area, [s.retryCast ? h('p', {}, t('qv.receipt.pendingBody')) : null, errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, s.error.startsWith('E-') ? s.error : 'E-GEN-UNKNOWN'),
+        add(area, [s.retryCast ? h('p', {}, t('qv.receipt.pendingBody')) : null, link(electionPath(L.apiId, 'vote'), t('qv.receipt.checkNow')), errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, s.error.startsWith('E-') ? s.error : 'E-GEN-UNKNOWN'),
           rep?.receipt ? btn(t('qv.receipt.save'), () => download(`qv-receipt-${L.apiId.slice(0, 6)}.json`, JSON.stringify(rep.receipt, null, 2))) : null,
           s.retryCast ? btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true }) : canNewSeal(s) ? btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); }) : null]);
       }
@@ -646,36 +679,86 @@ export function startApp(env: AppEnv): void {
     const stored = await env.storage.getReceipts(L.apiId);
     if (!currentRoute(epoch)) return;
     const out = h('div', {});
-    const check = async (seq: number, leafB64u: string): Promise<void> => {
-      try {
-        const leaf = b64uDecode(leafB64u);
-        if (!leaf) throw new Error('bad receipt');
-        const r = await checkInclusion({ api: L.api, apiElectionId: L.apiId, logPk: L.logPk, leafHash: leaf, seq, pinned: await env.storage.getHead(L.apiId), expectedOrigin: L.origin });
-        clear(out);
-        if (r.state === 'included') { await env.storage.putHead({ ...r.head, electionId: L.apiId }); out.append(h('p', {}, t('qv.receipt.included', { seq: r.seq, size: r.treeSize })), h('p', {}, t('qv.receipt.consistent'))); } else out.append(h('p', {}, t('qv.receipt.notFound')));
-      } catch (e) {
-        clear(out);
-        out.append(e instanceof BoardIntegrityError ? errorBox(e.code) : errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }));
-        say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
-      }
+    const checks = new ReceiptCheckGate();
+    const checkButtons: HTMLButtonElement[] = [];
+    const invalidate = (): void => { checks.invalidate(); clear(out); };
+    const runCheck = async (operation: (current: () => boolean) => Promise<void>): Promise<void> => {
+      invalidate();
+      await checks.run(async (valid) => {
+        codeInput.disabled = true;
+        (file as HTMLInputElement).disabled = true;
+        for (const button of checkButtons) button.disabled = true;
+        try { await operation(() => currentRoute(epoch) && valid()); }
+        finally {
+          codeInput.disabled = false;
+          (file as HTMLInputElement).disabled = false;
+          for (const button of checkButtons) button.disabled = false;
+        }
+      });
     };
-    const binding = { election: L.apiId, manifestHash: ctx.manifestHashHex };
-    const file = h('input', { type: 'file', accept: 'application/json', onchange: async (e: Event) => {
-      const f = (e.target as HTMLInputElement).files?.[0];
-      if (!f) return;
+    const codeInput = h('input', { type: 'text', autocomplete: 'off', spellcheck: false, maxlength: 256, oninput: invalidate }) as HTMLInputElement;
+    const checkCode = btn(t('qv.receipt.checkCode'), () => runCheck(async (current) => {
+      const input = codeInput.value;
       try {
-        if (f.size > MAX_RECEIPT_FILE_BYTES) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is too large');
-        const p = parseReceiptFile(await f.text(), binding);
-        if (!currentRoute(epoch)) return;
-        if (!p) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is malformed or belongs to another election');
-        await check(p.seq, p.leaf_hash);
-        if (currentRoute(epoch)) addStanding(p.seq, p.ballot_code);
+        const result = await lookupBallotCode({ input, api: L.api, apiElectionId: L.apiId,
+          ctx: ctx.params.ctx, logPk: L.logPk, expectedOrigin: L.origin, pinned: await env.storage.getHead(L.apiId) });
+        if (!current()) return;
+        clear(out);
+        if (result.state === 'included') {
+          await env.storage.putHead({ ...result.head, electionId: L.apiId });
+          if (!current()) return;
+          out.append(codeEl(ballotCodeDisplay(hexToBytes(result.code, 32), true)), h('p', {}, t('qv.receipt.included', { seq: result.seq, size: result.treeSize })), h('p', {}, t('qv.receipt.consistent')));
+        } else out.append(h('p', {}, t(result.state === 'invalid-code' ? 'qv.receipt.invalidCode' : result.state === 'ambiguous' ? 'qv.receipt.ambiguousCode' : 'qv.receipt.notFound')));
       } catch (error) {
-        if (!currentRoute(epoch)) return;
+        if (!current()) return;
         clear(out);
         out.append(error instanceof BoardIntegrityError ? errorBox(error.code) : errorFor(error));
         say.say(t('qv.err.E-BOARD-INCL-FAIL.title'), true);
       }
+    }));
+    checkButtons.push(checkCode as HTMLButtonElement);
+    const check = async (seq: number, leafB64u: string, code: string, current: () => boolean): Promise<boolean> => {
+      try {
+        const leaf = b64uDecode(leafB64u);
+        if (!leaf) throw new Error('bad receipt');
+        const r = await checkBallotCodeEntry({ api: L.api, apiElectionId: L.apiId, ctx: ctx.params.ctx, logPk: L.logPk, expectedLeaf: leaf, seq, code, pinned: await env.storage.getHead(L.apiId), expectedOrigin: L.origin });
+        if (!current()) return false;
+        clear(out);
+        if (r.state === 'included') {
+          await env.storage.putHead({ ...r.head, electionId: L.apiId });
+          if (!current()) return false;
+          out.append(codeEl(ballotCodeDisplay(hexToBytes(code, 32), true)), h('p', {}, t('qv.receipt.included', { seq: r.seq, size: r.treeSize })), h('p', {}, t('qv.receipt.consistent')));
+          return true;
+        }
+        out.append(h('p', {}, t('qv.receipt.notFound')));
+      } catch (e) {
+        if (!current()) return false;
+        clear(out);
+        out.append(e instanceof BoardIntegrityError ? errorBox(e.code) : errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }));
+        say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
+      }
+      return false;
+    };
+    const binding = { election: L.apiId, manifestHash: ctx.manifestHashHex };
+    const file = h('input', { type: 'file', accept: 'application/json', onchange: async (e: Event) => {
+      const f = (e.target as HTMLInputElement).files?.[0];
+      invalidate();
+      if (!f) return;
+      await runCheck(async (current) => {
+        try {
+          if (f.size > MAX_RECEIPT_FILE_BYTES) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is too large');
+          const p = parseReceiptFile(await f.text(), binding);
+          if (!current()) return;
+          if (!p) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is malformed or belongs to another election');
+          const included = await check(p.seq, p.leaf_hash, p.ballot_code, current);
+          if (included && current()) addStanding(p.seq, p.ballot_code);
+        } catch (error) {
+          if (!current()) return;
+          clear(out);
+          out.append(error instanceof BoardIntegrityError ? errorBox(error.code) : errorFor(error));
+          say.say(t('qv.err.E-BOARD-INCL-FAIL.title'), true);
+        }
+      });
     } });
     // Standing: is this receipt still the voter's newest ballot? Derived from the public log we hold; refreshed in place on live updates.
     const standings: { seq: number; code: string; el: HTMLElement }[] = [];
@@ -710,10 +793,13 @@ export function startApp(env: AppEnv): void {
       const f = parseReceiptFile(s.json, binding);
       const el = h('span', {});
       if (f) standings.push({ seq: f.seq, code: s.code, el });
-      return h('li', {}, codeEl(ballotCodeDisplay(hexToBytes(s.code, 32), true)), ' ', btn(t('qv.receipt.check'), () => { if (f) void check(f.seq, f.leaf_hash); }), h('div', {}, el));
+      const button = btn(t('qv.receipt.check'), () => runCheck(async (current) => { if (f) await check(f.seq, f.leaf_hash, f.ballot_code, current); }));
+      checkButtons.push(button as HTMLButtonElement);
+      return h('li', {}, codeEl(ballotCodeDisplay(hexToBytes(s.code, 32), true)), ' ', button, h('div', {}, el));
     });
     for (const x of standings) paintStanding(x);
-    render(t('qv.nav.receipt'), ...head, heading(t('qv.receipt.checkTitle')), h('p', {}, t('qv.receipt.proves')), field(t('qv.receipt.orFile'), file), standingBox,
+    render(t('qv.nav.receipt'), ...head, heading(t('qv.receipt.checkTitle')), h('p', {}, t('qv.receipt.proves')),
+      field(t('qv.receipt.enterCode'), codeInput), h('p', { class: 'hint' }, t('qv.receipt.codeHelp')), checkCode, field(t('qv.receipt.orFile'), file), standingBox,
       h('h2', {}, t('qv.receipt.stored')), stored.length === 0 ? h('p', {}, t('qv.receipt.none')) : h('ul', {}, ...items), out);
     repaint = () => { for (const x of standings) paintStanding(x); };
     void ctx;
@@ -826,11 +912,18 @@ export function startApp(env: AppEnv): void {
     const rollT = h('textarea', { rows: 6, spellcheck: false }) as HTMLTextAreaElement;
     const trustees = h('textarea', { rows: 3, spellcheck: false }) as HTMLTextAreaElement;
     const tt = h('input', { type: 'number', min: 1, value: 2 }) as HTMLInputElement;
-    const logPk = h('input', { type: 'text', spellcheck: false }) as HTMLInputElement;
+    const k = h('input', { type: 'number', min: 1, step: 1, value: 1 }) as HTMLInputElement;
+    const maxBallots = h('input', { type: 'number', min: 1, max: 20, step: 1, value: 8 }) as HTMLInputElement;
+    const quorum = h('input', { type: 'number', min: 0, step: 1, value: 0 }) as HTMLInputElement;
     const opens = h('input', { type: 'datetime-local' }) as HTMLInputElement;
     const closes = h('input', { type: 'datetime-local' }) as HTMLInputElement;
     const org = await env.storage.getKey(ORGANIZER_SLOT);
     if (!currentRoute(epoch)) return;
+    let organizerPk: string | undefined;
+    const keys = organizerKeyPanel({ tr, storage: env.storage, deps: keyDeps, hasKey: org !== undefined, current: () => currentRoute(epoch),
+      ready: (pk) => { organizerPk = pk; }, error: (e) => errorFor(e), download: (text) => download('organizer.qvkey', text) });
+    let lockPublication = (): void => {};
+    keyLock = (): void => { keys.lock(); lockPublication(); };
     // Set by a successful preview; the publish section uses it. The state of a failed publish is kept here, in memory only.
     let prepared: { form: PublishForm; rollHex: string[] } | undefined;
     let pubState: PublishState | undefined;
@@ -839,16 +932,44 @@ export function startApp(env: AppEnv): void {
       const orgIn = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
       const pw = h('input', { type: 'password', autocomplete: 'current-password', spellcheck: false, autocapitalize: 'off', autocorrect: 'off' }) as HTMLInputElement;
       const pubOut = h('div', {});
+      const orgName = h('input', { type: 'text', maxlength: 120 }) as HTMLInputElement;
+      const orgToken = h('input', { type: 'password', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
+      lockPublication = (): void => { pw.value = ''; orgToken.value = ''; };
+      let enrollment: { name: string; token: string; key: string } | undefined;
+      let enrolling = false;
+      const orgBtn = btn(t('qv.org.enroll'), async () => {
+        if (enrolling || !currentRoute(epoch)) return;
+        if (!enrollment && orgName.value.trim() === '') { clear(pubOut); pubOut.append(h('p', {}, t('qv.org.nameRequired'))); return; }
+        enrolling = true;
+        (orgBtn as HTMLButtonElement).disabled = true;
+        (pubBtn as HTMLButtonElement).disabled = true;
+        orgName.disabled = true; orgToken.disabled = true;
+        enrollment ??= { name: orgName.value, token: orgToken.value, key: b64uEncode(systemRng.bytes(16)) };
+        clear(pubOut); pubOut.append(h('p', {}, t('qv.org.enrolling')));
+        const passphrase = pw.value; pw.value = '';
+        try {
+          const id = await enrollOrganization({ name: enrollment.name, token: enrollment.token, idempotencyKey: enrollment.key, passphrase,
+            storage: env.storage, apiBase: env.apiBase ?? '', origin: location.origin, deps: keyDeps() });
+          if (!currentRoute(epoch)) return;
+          orgIn.value = id; enrollment.token = ''; orgToken.value = '';
+          clear(pubOut); pubOut.append(h('p', {}, t('qv.org.enrolled', { id })));
+          say.say(t('qv.org.enrolled', { id }));
+        } catch (e) {
+          if (currentRoute(epoch)) { clear(pubOut); pubOut.append(errorFor(e), h('p', {}, t('qv.org.enrollRetry'))); (orgBtn as HTMLButtonElement).disabled = false; }
+        } finally { pw.value = ''; enrolling = false; if (currentRoute(epoch)) (pubBtn as HTMLButtonElement).disabled = false; }
+      });
       const pubBtn = btn(t('qv.org.publish'), async () => {
         const prep = prepared;
-        if (!prep) return;
+        if (!prep || enrolling) return;
         const button = pubBtn as HTMLButtonElement;
         clear(pubOut);
         button.disabled = true;
+        (orgBtn as HTMLButtonElement).disabled = true;
         add(pubOut, [h('p', {}, t('qv.org.publishing'))]);
         let o: PublishOutcome;
+        const passphrase = pw.value; pw.value = '';
         try {
-          o = await runPublish({ orgId: orgIn.value, passphrase: pw.value, form: prep.form, rollHex: prep.rollHex, prior: pubState, storage: env.storage, apiBase: env.apiBase ?? '', origin: location.origin, deps: keyDeps() });
+          o = await runPublish({ orgId: orgIn.value, passphrase, form: prep.form, rollHex: prep.rollHex, prior: pubState, storage: env.storage, apiBase: env.apiBase ?? '', origin: location.origin, deps: keyDeps() });
         } finally {
           pw.value = '';
         }
@@ -861,6 +982,7 @@ export function startApp(env: AppEnv): void {
           return;
         }
         button.disabled = false;
+        if (enrollment === undefined) (orgBtn as HTMLButtonElement).disabled = false;
         if (o.kind === 'noOrg') return void add(pubOut, [h('p', { class: 'error' }, t('qv.org.orgRequired'))]);
         if (o.kind === 'noKey') return void add(pubOut, [h('p', { class: 'error' }, t('qv.org.publishNoKey'))]);
         if (o.kind === 'locked') return void add(pubOut, [errorBox(o.ux)]);
@@ -871,27 +993,29 @@ export function startApp(env: AppEnv): void {
         }
       }, { primary: true });
       return h('section', { 'aria-labelledby': 'pub-h' }, h('h2', { id: 'pub-h' }, t('qv.org.publish')), h('p', {}, t('qv.org.publishHelp')),
+        h('p', {}, t('qv.org.enrollHelp')), field(t('qv.org.organizationName'), orgName), field(t('qv.org.registrationToken'), orgToken), orgBtn,
         field(t('qv.org.orgId'), orgIn, t('qv.org.orgIdHint')), field(t('qv.key.passphrase'), pw), pubBtn, pubOut);
     };
-    render(t('qv.nav.create'), heading(t('qv.org.title')), h('p', {}, t('qv.org.keyHelp')), org ? null : h('p', {}, t('qv.org.keyTitle')),
-      field(t('qv.org.name'), title), field(t('qv.org.template'), tpl), field(t('qv.org.question'), q), field(t('qv.org.options'), opts),
+    render(t('qv.nav.create'), heading(t('qv.org.title')), keys.element,
+      field(t('qv.org.name'), title), field(t('qv.org.template'), tpl), field(t('qv.org.question'), q), field(t('qv.org.options'), opts), field(t('qv.org.k'), k), field(t('qv.org.maxBallots'), maxBallots), field(t('qv.org.quorum'), quorum),
       field(t('qv.org.opens'), opens), field(t('qv.org.closes'), closes), field(t('qv.org.roll'), rollT, t('qv.org.rollHelp')),
-      field(t('qv.org.trustees'), trustees, t('qv.org.trusteeFormat')), field(t('qv.org.threshold'), tt), field(t('qv.org.logPublicKeyLabel'), logPk),
+      field(t('qv.org.trustees'), trustees, t('qv.org.trusteeFormat')), field(t('qv.org.threshold'), tt),
       h('p', {}, t('qv.org.translateWarn')), h('p', {}, t('qv.org.freeze')),
       btn(t('qv.org.freezeConfirm'), () => {
         clear(out);
         clear(publishBox);
         prepared = undefined;
         pubState = undefined;
+        if (organizerPk === undefined) return void add(out, [h('p', {}, t('qv.org.unlockFirst'))]);
         const roll = parseRoll(rollT.value);
         if (roll.errors.length) return void add(out, [h('ul', {}, ...roll.errors.map((e) => h('li', {}, t('qv.org.rollRow', { row: e.row, problem: t(e.problem === 'dup' ? 'qv.org.rollDup' : e.problem === 'badHex' ? 'qv.org.rollBadHex' : 'qv.org.rollBadKey') }))))]);
         const tl = trustees.value.split(/\r?\n/).filter(Boolean).map((l) => { const [n, k] = l.split(','); return { name: (n ?? '').trim(), signPkHex: (k ?? '').trim().toLowerCase() }; });
         const opensIso = isoUtc(opens.value);
         const closesIso = isoUtc(closes.value);
         if (opensIso === undefined || closesIso === undefined) return void add(out, [errorBox('E-ORG-MANIFEST', { detail: t('qv.org.invalidDate') })]);
-        const form: PublishForm = { title: title.value, contests: [{ template: tpl.value as Template, question: q.value, options: opts.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean), k: 1 }],
-          opensIso: opensIso, closesIso: closesIso, maxBallots: 8, quorumCount: 0, trustees: tl, t: Number(tt.value) };
-        const res = buildManifest({ ...form, coordinatorPkHex: '00'.repeat(32), logPkHex: logPk.value.trim(), origin: location.origin, rollHex: roll.keys, electionIdHex: bytesToHex(systemRng.bytes(16)) });
+        const form: PublishForm = { title: title.value, contests: [{ template: tpl.value as Template, question: q.value, options: opts.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean), k: Number(k.value) }],
+          opensIso: opensIso, closesIso: closesIso, maxBallots: Number(maxBallots.value), quorumCount: Number(quorum.value), trustees: tl, t: Number(tt.value) };
+        const res = buildManifest({ ...form, coordinatorPkHex: organizerPk, logPkHex: organizerPk, origin: location.origin, rollHex: roll.keys, electionIdHex: bytesToHex(systemRng.bytes(16)) });
         if (!res.ok) return void add(out, [errorBox(res.code, { detail: res.detail })]);
         prepared = { form, rollHex: roll.keys };
         add(publishBox, [publishSection()]);

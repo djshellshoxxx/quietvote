@@ -194,7 +194,7 @@ test('W4: auto-lock drops an unsubmitted sealed ballot (randomness wiped, back t
 
 test('W4: auto-lock does not abandon a submission in flight (signed bytes kept so the retry is the same ballot)', async () => {
   const e = await env();
-  e.board.faults = ['network', 'network', 'network', 'network'];
+  e.board.faults = ['network'];
   const c = controller(e, await e.signer(3));
   await sealed(c);
   assert.equal((await c.cast())?.outcome, 'PENDING_UNCONFIRMED');

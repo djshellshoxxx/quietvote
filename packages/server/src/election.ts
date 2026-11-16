@@ -694,10 +694,12 @@ export class ElectionRuntime {
     if (h.type === 'audit_close') this.finalizeArchive();
     this.syncState();
     try {
+      const supplemental: EventRow[] = [];
       this.edb.tx(() => {
-        if (this.st.state !== from) this.record(evs, 'phase', seq, { from, to: this.st.state, seq });
-        this.quarantineAlert(evs);
+        if (this.st.state !== from) this.record(supplemental, 'phase', seq, { from, to: this.st.state, seq });
+        this.quarantineAlert(supplemental);
       });
+      evs.push(...supplemental); // Never publish rows whose transaction rolled back (their IDs can be reused).
     } catch {
       /* the append is durable; a lost phase event is recoverable from the log */
     }

@@ -23,6 +23,8 @@ test('receipt file round trip is structurally checked and bound to the selected 
   assert.deepEqual(parseReceiptFile(text, expected), file);
   assert.equal(parseReceiptFile(text, { ...expected, election: 'b'.repeat(26) }), undefined);
   assert.equal(parseReceiptFile(text, { ...expected, manifestHash: '56'.repeat(32) }), undefined);
+  const realApiFile = { ...file, election: '0123456789abcdef'.repeat(2) };
+  assert.deepEqual(parseReceiptFile(receiptFileText(realApiFile), { ...expected, election: realApiFile.election }), realApiFile);
 });
 
 test('receipt file rejects malformed metadata and contradictory nested receipt', () => {

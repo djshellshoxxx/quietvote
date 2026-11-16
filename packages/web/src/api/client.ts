@@ -209,6 +209,10 @@ export class ApiClient {
   }
 
   // ---- organizer
+  /** Explicit self-signed enrollment; no automatic mutation retry. */
+  async createOrganization(name: string, ownerPk: string, idempotencyKey: string, registrationToken?: string): Promise<{ org_id: string; name: string }> {
+    return this.json(await this.req('POST', `${API}/orgs`, { body: { name, owner_key: { pk: ownerPk, alg: 'ed25519' }, ...(registrationToken ? { registration_token: registrationToken } : {}) }, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
+  }
   async createElection(orgId: string, title: string, idempotencyKey: string): Promise<ElectionSummary> {
     return this.json(await this.req('POST', `${API}/orgs/${enc(orgId)}/elections`, { body: { title }, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
   }

@@ -135,7 +135,7 @@ export function parseReceiptFile(text: string, expected?: { election: string; ma
   try {
     if (text.length > MAX_RECEIPT_FILE_BYTES || new TextEncoder().encode(text).length > MAX_RECEIPT_FILE_BYTES) return undefined;
     const v = JSON.parse(text) as Partial<ReceiptFile>;
-    if (v.format !== 'qv-receipt/1' || typeof v.election !== 'string' || !/^[a-z2-7]{26}$/.test(v.election)
+    if (v.format !== 'qv-receipt/1' || typeof v.election !== 'string' || !/^(?:[0-9a-f]{32}|[a-z2-7]{26})$/.test(v.election)
       || typeof v.manifest_hash !== 'string' || !/^[0-9a-f]{64}$/.test(v.manifest_hash)
       || typeof v.ballot_code !== 'string' || !/^[0-9a-f]{64}$/.test(v.ballot_code)
       || !Number.isSafeInteger(v.seq) || v.seq! < 0 || typeof v.leaf_hash !== 'string'

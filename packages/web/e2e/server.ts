@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Production web assets and real HTTP server; no route interception or FakeBoard.
+// Production web assets and real HTTP server; no fake API responses.
 // Uses the existing World ceremony/registration fixture without changing protocol bytes.
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -7,10 +7,15 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ed25519Sign, streamRng } from '@quietvote/crypto';
+import { ballotCode } from '@quietvote/protocol';
 import { World } from '../../server/test/helpers/world.ts';
 import { ApiClient } from '../src/api/client.ts';
 import { buildSite } from '../src/build/site.ts';
+import { lookupBallotCode } from '../src/flow/receipt-code.ts';
+import { bindServerLog, deriveElectionContext } from '../src/flow/election.ts';
+import { entryRecord } from '../src/flow/entries.ts';
 import { defaultDeps, FLOOR_PARAMS, serializeContainer, wrapSeed } from '../src/key/keystore.ts';
+import { ballotCodeDisplay } from '../src/util/crockford.ts';
 import { browserTools, launchBrowser } from './browser.ts';
 
 test('signed client adapter authenticates real HTTP management requests', { timeout: 30_000 }, async () => {
@@ -37,9 +42,48 @@ test('signed client adapter authenticates real HTTP management requests', { time
   }
 });
 
-test('production browser imports an enrolled key, casts and verifies a real server receipt', { timeout: 180_000 }, async () => {
-  // The helper exits on explicitly permitted tooling skips; resolve before creating resources.
-  browserTools();
+test('receipt code lookup authenticates a real server cast and its inclusion proof', { timeout: 120_000 }, async () => {
+  const world = new World({ seed: 'receipt-code-server', n: 3, t: 2, voters: 3 });
+  let started = false;
+  try {
+    await world.start();
+    started = true;
+    await world.setupOrgAndElection();
+    await world.registerVoters();
+    assert.equal((await world.publishManifest()).status, 201);
+    await world.ceremony();
+    assert.equal((await world.open()).status, 201);
+    assert.equal((await world.cast(0, { budget: ['yes'], chair: ['ann'] })).status, 201);
+    const api = new ApiClient({ baseUrl: world.base });
+    const entries = await api.allEntries(world.electionId);
+    const context = await deriveElectionContext(entries.entries.map((entry) => ({ seq: entry.seq, record: entryRecord(entry) })));
+    assert.ok(context.ok, context.ok ? '' : context.detail);
+    const election = await api.election(world.electionId);
+    const bound = bindServerLog(context.value.manifest, { logPkB64u: election.log_pk, origin: election.origin });
+    assert.ok(bound.ok, bound.ok ? '' : bound.detail);
+    const cast = (await world.fetchLog('ballot')).at(-1)!;
+    const result = await lookupBallotCode({ input: ballotCodeDisplay(ballotCode(world.params.ctx, cast.rec.body), true),
+      api, apiElectionId: world.electionId, ctx: context.value.params.ctx,
+      logPk: bound.logPk, expectedOrigin: bound.origin, pinned: undefined });
+    assert.equal(result.state, 'included');
+    if (result.state === 'included') assert.equal(result.seq, cast.seq);
+  } finally {
+    if (started) await world.stop();
+    else rmSync(world.dir, { recursive: true, force: true });
+  }
+});
+
+test('production browser imports an enrolled key, casts and verifies a real server receipt', { timeout: 180_000 }, async (t) => {
+  // A permitted tooling skip must not process.exit(0) and erase earlier HTTP-test failures.
+  try {
+    browserTools({ required: true });
+  } catch (error) {
+    if (process.env.QV_REQUIRE_BROWSER !== '1' && error instanceof Error && error.message.startsWith('Browser checks unavailable:')) {
+      t.skip(error.message);
+      return;
+    }
+    throw error;
+  }
   const dist = mkdtempSync(join(tmpdir(), 'qv-browser-server-'));
   const world = new World({ seed: 'browser-server', n: 3, t: 2, voters: 3, server: { staticDir: dist } });
   let browser: Awaited<ReturnType<typeof launchBrowser>> | undefined;
@@ -104,6 +148,38 @@ test('production browser imports an enrolled key, casts and verifies a real serv
     await page.getByText(`Included in the public record at entry #${after.at(-1)!.seq}`, { exact: false }).waitFor();
     await page.getByText('The record is consistent with the version you saw before.', { exact: true }).waitFor();
     assert.ok(responses.some((r) => r.path.endsWith('/log/proof/inclusion') && r.status === 200));
+    // A separate browser has no voting key or saved receipts: a typed public code is sufficient.
+    const publicPage = await (await browser.newContext()).newPage();
+    publicPage.setDefaultTimeout(30_000);
+    await publicPage.goto(`${base}/receipt`);
+    await publicPage.getByText('No receipts are saved on this device.', { exact: true }).waitFor();
+    const typedCode = ballotCodeDisplay(ballotCode(world.params.ctx, after.at(-1)!.rec.body), true);
+    let release!: () => void;
+    const paused = new Promise<void>((resolve) => { release = resolve; });
+    let reached!: () => void;
+    const checkpointReached = new Promise<void>((resolve) => { reached = resolve; });
+    await publicPage.route('**/log/checkpoint', async (route) => {
+      const response = await route.fetch(); // Keep the real server's signed response unchanged.
+      reached();
+      await paused;
+      await route.fulfill({ response });
+    }, { times: 1 });
+    await publicPage.getByLabel('Ballot code', { exact: true }).fill(typedCode);
+    await publicPage.getByRole('button', { name: 'Check ballot code', exact: true }).click();
+    await checkpointReached;
+    assert.equal(await publicPage.getByLabel('Ballot code', { exact: true }).isDisabled(), true);
+    // Even a synthetic edit delivered while controls are disabled invalidates the pending result.
+    await publicPage.getByLabel('Ballot code', { exact: true }).evaluate((input) => {
+      (input as HTMLInputElement).value = '00'.repeat(32);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    release();
+    await publicPage.waitForFunction(() => Array.from(document.querySelectorAll('button')).some((button) => button.textContent === 'Check ballot code' && !button.disabled));
+    assert.equal(await publicPage.getByText('Included in the public record', { exact: false }).count(), 0);
+    await publicPage.getByLabel('Ballot code', { exact: true }).fill(typedCode);
+    await publicPage.getByRole('button', { name: 'Check ballot code', exact: true }).click();
+    await publicPage.getByText(`Included in the public record at entry #${after.at(-1)!.seq}`, { exact: false }).waitFor();
+    await publicPage.getByText('The record is consistent with the version you saw before.', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
     assert.deepEqual(external, []);
   } finally {

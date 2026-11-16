@@ -77,8 +77,10 @@ export async function backupWork(env: Env, pool: ElectionPool, jobId: string, sc
     await backup(db, dest);
     chmodSync(dest, 0o600);
     // the copy must open and pass a structural check before it is reported
-    const t = new DatabaseSync(dest, { readOnly: true });
+    const t = new DatabaseSync(dest);
     try {
+      // Finalize a self-contained snapshot: no unmanifested WAL/SHM sidecars are needed for restore.
+      t.exec('PRAGMA journal_mode=DELETE');
       const r = t.prepare('PRAGMA quick_check').get() as { quick_check?: string } | undefined;
       if (r?.quick_check !== 'ok') throw new JobError('BACKUP_VERIFY', `backup of ${name} failed its integrity check`);
     } finally {
@@ -93,19 +95,19 @@ export async function backupWork(env: Env, pool: ElectionPool, jobId: string, sc
       targets.push(electionId);
     } else {
       await done(env.control.db, 'control.sqlite');
-      let after: string | undefined;
-      for (;;) {
-        const rows = env.control.listAllElections(undefined, after, 200);
-        if (rows.length === 0) break;
-        for (const r of rows) targets.push(r.election_id);
-        after = rows.at(-1)!.election_id;
-      }
+      // Capture membership from the control snapshot, never from a later live registry view.
+      const snapshot = new DatabaseSync(join(dir, 'control.sqlite'), { readOnly: true });
+      try {
+        for (const row of snapshot.prepare("SELECT election_id FROM election_registry WHERE state<>'DELETED' ORDER BY election_id").iterate()) {
+          targets.push(row['election_id'] as string);
+        }
+      } finally { snapshot.close(); }
     }
     let i = 0;
     for (const id of targets) {
       await ctl.tick();
       const rt = await pool.get(id);
-      if (!rt) continue;
+      if (!rt) throw new JobError('BACKUP_CHANGED', 'an election in the control snapshot is no longer available; retry the backup');
       rt.inUse++;
       try {
         await done(rt.edb.db, `elections/${id}.sqlite`.replace('/', '-'));

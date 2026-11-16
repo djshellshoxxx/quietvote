@@ -19,6 +19,21 @@ export class ElectionPool {
   private stopping = false;
   constructor(env: Env) {
     this.env = env;
+    // No election handles exist yet; finish crypto-erased files before accepting any work.
+    this.resumeDeletions();
+  }
+
+  private cleanupDeleted(id: string, path: string): void {
+    if (!/^[0-9a-f]{32}$/.test(id) || path !== join('elections', id.slice(0, 2), `${id}.sqlite`)) {
+      throw new Error('invalid election cleanup path; refusing file removal');
+    }
+    const base = join(this.env.cfg.dataDir, path);
+    for (const suffix of ['', '-wal', '-shm']) rmSync(base + suffix, { force: true });
+    this.env.control.finishElectionCleanup(id);
+  }
+
+  private resumeDeletions(): void {
+    for (const row of this.env.control.pendingElectionCleanup()) this.cleanupDeleted(row.election_id, row.db_path);
   }
 
   openCount(): number {
@@ -118,7 +133,14 @@ export class ElectionPool {
   async remove(id: string): Promise<void> {
     this.ensureRunning();
     const reg = this.env.control.election(id);
-    if (!reg) return;
+    if (!reg) {
+      const pending = this.env.control.pendingElectionCleanup().find((row) => row.election_id === id);
+      if (pending) {
+        await this.evict(id);
+        this.cleanupDeleted(id, pending.db_path);
+      }
+      return;
+    }
     const deletable = (s: string): boolean => ['DRAFT', 'ARCHIVED', 'CANCELLED', 'ABORTED', 'IMPORTED'].includes(s);
     if (!deletable(reg.state)) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
     // The registry may lag the log after a crash: the election's own replayed state is authoritative (opening it also heals the registry).
@@ -126,9 +148,7 @@ export class ElectionPool {
     if (rt && !deletable(rt.logState)) throw conflict(`election in state ${rt.logState} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
     this.env.control.markDeleted(id); // wraps DEK away first
     await this.evict(id);
-    const base = join(this.env.cfg.dataDir, reg.db_path);
-    for (const suffix of ['', '-wal', '-shm']) rmSync(base + suffix, { force: true });
-    this.env.control.audit('system', 'election.delete', id);
+    this.cleanupDeleted(id, reg.db_path);
   }
 
   /** Drain and evict cached runtimes, permitting later replay. Acquisition is refused during the drain. */

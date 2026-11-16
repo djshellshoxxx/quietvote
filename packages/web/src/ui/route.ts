@@ -7,7 +7,8 @@ export type Route =
   | { name: 'election'; id: string; view: 'overview' | 'rules' | 'key' | 'vote' | 'receipt' | 'results' | 'spoils' | 'admin' }
   | { name: 'notfound' };
 
-const ID = /^[a-z2-7]{26}$/;
+// Current server API identifiers are 16-byte hex; retain existing base32 links/fixtures.
+const ID = /^(?:[0-9a-f]{32}|[a-z2-7]{26})$/;
 export function parseRoute(path: string): Route {
   const p = path.replace(/\/+$/, '') || '/';
   if (p === '/') return { name: 'home' };
