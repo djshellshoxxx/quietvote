@@ -6,7 +6,7 @@ import test from 'node:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ed25519Sign, streamRng } from '@quietvote/crypto';
+import { bytesToHex, ed25519Sign, streamRng } from '@quietvote/crypto';
 import { ballotCode } from '@quietvote/protocol';
 import { World } from '../../server/test/helpers/world.ts';
 import { ApiClient } from '../src/api/client.ts';
@@ -186,6 +186,66 @@ test('production browser imports an enrolled key, casts and verifies a real serv
     await browser?.close();
     if (started) await world.stop();
     else rmSync(world.dir, { recursive: true, force: true });
+    rmSync(dist, { recursive: true, force: true });
+  }
+});
+
+test('production organizer reviews and sends ceremony packets to the real server', { timeout: 180_000 }, async (t) => {
+  try { browserTools({ required: true }); }
+  catch (error) {
+    if (process.env.QV_REQUIRE_BROWSER !== '1' && error instanceof Error && error.message.startsWith('Browser checks unavailable:')) {
+      t.skip(error.message); return;
+    }
+    throw error;
+  }
+  const dist = mkdtempSync(join(tmpdir(), 'qv-organizer-browser-'));
+  const world = new World({ seed: 'organizer-browser-server', n: 3, t: 2, voters: 0, witnessQuorum: 0, server: { staticDir: dist } });
+  let browser: Awaited<ReturnType<typeof launchBrowser>> | undefined;
+  let started = false;
+  try {
+    browser = await launchBrowser();
+    await buildSite(dist); await world.start(); started = true;
+    await world.setupOrgAndElection(); assert.equal((await world.publishManifest()).status, 201);
+    const passphrase = 'correct horse battery staple';
+    const keyFile = join(world.dir, 'coordinator.qvkey');
+    const wrapped = await wrapSeed(world.coord[0]!.secretKey.slice(), passphrase,
+      { ...defaultDeps(), rng: streamRng('organizer-browser-key') }, FLOOR_PARAMS);
+    writeFileSync(keyFile, serializeContainer(wrapped.container));
+    assert.equal((await world.get('/coordinator.qvkey')).status, 404);
+    const page = await (await browser.newContext({ viewport: { width: 375, height: 812 } })).newPage();
+    page.setDefaultTimeout(30_000); await page.clock.install({ time: world.clock });
+    const errors: string[] = [], external: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => { if (/Content Security|Trusted Type/i.test(m.text())) errors.push(m.text()); });
+    page.on('request', (r) => { if (!r.url().startsWith(world.base) && !/^(data|blob):/.test(r.url())) external.push(r.url()); });
+    await page.goto(`${world.base}/new`);
+    await page.getByLabel('Organizer key file', { exact: true }).setInputFiles(keyFile);
+    await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
+    await page.getByRole('button', { name: 'Import organizer key', exact: true }).click();
+    await page.getByText('Organizer public key (hex)', { exact: true }).waitFor();
+    await page.goto(`${world.base}/e/${world.electionId}/admin`);
+    await page.getByLabel('Saved manifest hash (64 hexadecimal characters)', { exact: true }).fill(bytesToHex(world.mh));
+    for (const [action, entryType] of [['dkg-open', 'ceremony_start'], ['dkg-r1-open', 'notice']] as const) {
+      const before = (await world.fetchLog(entryType)).length;
+      await page.getByLabel('Organizer action', { exact: true }).selectOption(action);
+      await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
+      await page.getByRole('button', { name: 'Prepare signed packet', exact: true }).click();
+      await page.waitForFunction(() => (document.querySelector('.admin-packet')?.textContent?.length ?? 0) > 0);
+      assert.equal((await world.fetchLog(entryType)).length, before, 'preparation does not submit');
+      assert.equal(await page.getByLabel('Passphrase', { exact: true }).inputValue(), '');
+      const shown = JSON.parse((await page.locator('.admin-packet').textContent())!);
+      assert.equal(shown.body.name, action);
+      const accepted = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().endsWith('/log/entries'));
+      await page.getByRole('button', { name: 'Send reviewed packet', exact: true }).click();
+      assert.equal((await accepted).status(), 201);
+      await page.waitForFunction(() => document.querySelector('.admin-packet')?.textContent === '');
+      assert.equal((await world.fetchLog(entryType)).length, before + 1);
+      assert.equal(await page.getByRole('button', { name: 'Send reviewed packet', exact: true }).isDisabled(), true);
+    }
+    assert.deepEqual(errors, []); assert.deepEqual(external, []);
+  } finally {
+    await browser?.close();
+    if (started) await world.stop(); else rmSync(world.dir, { recursive: true, force: true });
     rmSync(dist, { recursive: true, force: true });
   }
 });
