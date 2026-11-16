@@ -1,0 +1,9 @@
+{
+  "dataDir": "/var/lib/quietvote",
+  "publicUrl": "https://vote.example.org",
+  "host": "127.0.0.1",
+  "port": 8080,
+  "registrationMode": "closed",
+  "adminKeys": [],
+  "allowedOrigins": []
+}
