@@ -1,5 +1,5 @@
 // Thin HTTP adapters: the server remains authoritative for validation, authorization and lifecycle transitions.
-import { closeSync, constants, existsSync, fstatSync, openSync, readSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, existsSync, fstatSync, fsyncSync, ftruncateSync, openSync, readSync, writeFileSync, writeSync } from 'node:fs';
 import { authorKeyId, b64u, unb64u, signRequest } from '@quietvote/board';
 import { ed25519Sign, parseQvJson, sha256, wipe } from '@quietvote/crypto';
 import { logOrigin, registrationMessage } from '@quietvote/protocol';
@@ -58,7 +58,7 @@ function inputJson(path: string, limit: number): unknown {
   try { return parseQvJson(bytes); } catch { throw new InputError('input is not valid QV-JSON'); }
 }
 
-async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false): Promise<Uint8Array> {
+async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE): Promise<Uint8Array> {
   const base = serverUrl(p);
   const timeout = p.get('timeout-ms') ?? '20000';
   if (!/^\d+$/.test(timeout) || !Number.isSafeInteger(Number(timeout)) || Number(timeout) < 1 || Number(timeout) > 120000) throw new UsageError('--timeout-ms must be an integer from 1 to 120000');
@@ -98,7 +98,7 @@ async function request(p: Parsed, io: Io, method: string, path: string, body?: u
           const { done, value } = await reader.read();
           if (done) break;
           size += value.length;
-          if (size > MAX_RESPONSE) { await reader.cancel(); throw new FailError(method === 'GET' ? 'server response exceeds the 64 MiB limit' : 'server response exceeds the limit; submission may have been accepted; inspect server state'); }
+          if (size > responseLimit) { await reader.cancel(); throw new FailError(method === 'GET' ? (responseLimit === MAX_RESPONSE ? 'server response exceeds the 64 MiB limit' : 'server response exceeds the configured limit') : 'server response exceeds the limit; submission may have been accepted; inspect server state'); }
           chunks.push(value);
         }
       } finally { reader.releaseLock(); }
@@ -182,6 +182,71 @@ export async function cmdOnlineEnroll(argv: string[], io: Io): Promise<number> {
 export async function cmdOnlineRegistrationPreview(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { id: 'value', ...AUTH });
   return jsonRequest(p, io, 'GET', `${electionPath(p)}/registration-migration`, undefined, true);
+}
+
+/** One explicit count-only issuance. A reserved private file is the only destination
+ * for bearer codes. Keep any received successful bytes even when their schema is
+ * invalid; a redacted replay cannot recover those credentials after a response loss. */
+export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<number> {
+  const p = args(argv, { ...AUTH, id: 'value', count: 'value', out: 'value', 'idempotency-key': 'value', 'read-key-file': 'value' });
+  const path = electionPath(p), id = needFlag(p, 'id'), out = needFlag(p, 'out');
+  const countText = needFlag(p, 'count'), idem = needFlag(p, 'idempotency-key');
+  if (!/^[1-9][0-9]{0,3}$/.test(countText) || Number(countText) > 1000) throw new UsageError('--count must be an integer from 1 to 1000');
+  if (!/^[\x21-\x7e]{8,128}$/.test(idem)) throw new UsageError('--idempotency-key must be 8..128 printable non-space characters');
+  if (existsSync(out)) throw new InputError('invitation output exists; existing files are never overwritten');
+  const count = Number(countText);
+  let election: Record<string, unknown>;
+  try { election = parseQvJson(await request(p, io, 'GET', path, undefined, false, 262144)) as Record<string, unknown>; }
+  catch (e) { if (e instanceof FailError) throw e; throw new FailError('invalid election metadata'); }
+  if (!election || election['election_id'] !== id || election['origin'] !== logOrigin({ election_id: id }) || election['registration_scheme'] !== 'hashed-pop-v1') {
+    throw new FailError('election does not support hashed-pop-v1 invitation issuance; inspect registration migration status');
+  }
+  let fd: number;
+  try { fd = openSync(out, 'wx', 0o600); }
+  catch { throw new InputError('cannot reserve invitation output; no invitations were requested'); }
+  const save = (bytes: Uint8Array): void => {
+    let offset = 0;
+    while (offset < bytes.length) {
+      const wrote = writeSync(fd, bytes, offset, bytes.length - offset, offset);
+      if (wrote === 0) throw new Error('short write');
+      offset += wrote;
+    }
+    ftruncateSync(fd, bytes.length); fsyncSync(fd);
+  };
+  try {
+    try { save(new TextEncoder().encode(JSON.stringify({ format: 'qv-invite-issuance/pending', election_id: id, idempotency_key: idem, count }) + '\n')); }
+    catch { throw new InputError('cannot initialize invitation output; no invitations were requested'); }
+    let response: Uint8Array;
+    try { response = await request(p, io, 'POST', `${path}/invites`, { count }, true, 262144); }
+    catch (e) {
+      // Server error bodies are untrusted and could echo a newly issued bearer
+      // even in an error-code field. Never copy those fields to terminal output.
+      if (e instanceof FailError) throw new FailError('invitation issuance was not confirmed; keep the reserved output and inspect server state before any retry');
+      throw e;
+    }
+    try { save(response); }
+    catch { wipe(response); throw new FailError('invitation issuance may have succeeded but its response could not be fully saved; inspect the reserved private file and server state; do not blindly retry'); }
+    let ids: string[];
+    try {
+      const result = parseQvJson(response) as { invites?: unknown };
+      if (result === null || typeof result !== 'object' || Array.isArray(result) || Object.keys(result).join(',') !== 'invites' || !Array.isArray(result.invites) || result.invites.length !== count) throw new Error('shape');
+      const codes = new Set<string>(); ids = [];
+      for (const row of result.invites) {
+        if (row === null || typeof row !== 'object' || Array.isArray(row) || Object.keys(row).sort().join(',') !== 'code,invite_id') throw new Error('row');
+        const invite = row as { invite_id: unknown; code: unknown };
+        if (typeof invite.invite_id !== 'string' || !/^[a-z2-7]{26}$/.test(invite.invite_id) || ids.includes(invite.invite_id) || typeof invite.code !== 'string') throw new Error('identity');
+        const token = unb64u(invite.code);
+        const valid = token !== undefined && token.length === 16 && b64u(token) === invite.code && !codes.has(invite.code);
+        if (token) wipe(token);
+        if (!valid) throw new Error('token');
+        ids.push(invite.invite_id); codes.add(invite.code);
+      }
+    } catch {
+      throw new FailError('invitation issuance returned an invalid or redacted response; its bytes are saved only in the private output file; inspect server state before retrying');
+    } finally { wipe(response); }
+    printJson(io, { file: out, election_id: id, count, invite_ids: ids });
+    return EXIT.ok;
+  } finally { closeSync(fd); }
 }
 export async function cmdOnlineElectionCreate(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { ...AUTH, org: 'value', title: 'value', access: 'value', 'idempotency-key': 'value' });

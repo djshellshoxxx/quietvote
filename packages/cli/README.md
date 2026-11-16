@@ -208,3 +208,33 @@ qv online registration-preview --server https://board.example --id <32-hex-api-i
 `invite.txt` is a bounded regular UTF-8 file containing one canonical issued 16-byte base64url token. Tokens and passphrases are not accepted in command arguments. Enrollment checks the requested election ID/origin and `hashed-pop-v1` scheme before reading the token or private key, signs the invite/election/key binding, and reports success only for the expected voter identity. Unknown/legacy schemes refuse; network ambiguity is not automatically retried. The preview is read-only and cannot revoke or migrate old invitations.
 
 The shipped executable enrollment test covers a real server before manifest publication. It does not resolve D99 pinned-roll membership, group labels, or the deliberately absent invite-to-voter linkage.
+
+Issue count-only invitations through the same signed management endpoint used by
+the web organizer:
+
+```sh
+qv online invites-create --server https://board.example --id <32-hex-api-id> --count 3 --out private-invites.json --key organizer.qvkey --passphrase-file pass.txt --audience qv:INSTANCE_ID@https://board.example --idempotency-key issue-batch-0001 --json
+```
+
+The command checks the election ID, origin and modern registration scheme, then
+reserves a new output with mode `0600` before making one POST. Existing files,
+directories and symlinks are never overwritten. The initial file contains a
+pending-operation marker. A successful HTTP response, bounded to 256 KiB, is
+saved and flushed to that private descriptor before validation. Success requires
+the requested count of distinct IDs and canonical 16-byte bearer codes. Only
+the file path, election ID, count and invitation IDs reach stdout; tokens stay
+in the private JSON file. The file is a secret-bearing artifact for the organizer
+to distribute through their chosen channel, not a public election export.
+
+A network failure, oversized response or HTTP rejection leaves the pending
+marker. Malformed or redacted successful responses remain in the private file
+and return failure instead of pretending the codes were recovered. Inspect the
+file and server state before retrying: the server deliberately omits codes from
+idempotent replay, and a new idempotency key can issue another batch. No retry is
+automatic. Reservation and `fsync` reduce avoidable local loss; storage failures,
+power loss and loss of the one response cannot guarantee recovery of raw codes.
+
+The combined executable election now invokes both `invites-create` and `enroll`
+for all voters. Organization bootstrap and public manifest choices remain its
+fixtures. This does not implement legacy invitation conversion, delivery services,
+pinned-roll admission or group/label membership policy.

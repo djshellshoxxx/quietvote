@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// One real-process election. The fixture supplies only public manifest choices, organization
-// enrollment and the held raw-invite registration contract, never DKG, ballot or tally artifacts.
+// One real-process election. Fixtures supply public manifest choices and organization
+// bootstrap; invitation issuance and voter enrollment use shipped CLI commands.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
@@ -10,7 +10,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
-import { b64u } from '@quietvote/board';
+import { authorKeyId, b64u } from '@quietvote/board';
 import { bytesToHex, hexToBytes, type Ed25519Keypair } from '@quietvote/crypto';
 import { expectedLogId, manifestHash } from '@quietvote/protocol';
 import { World } from '../../server/test/helpers/world.ts';
@@ -71,7 +71,7 @@ test('all shipped executables complete one real-clock election with exact totals
     await online('election-export', ['--format', format, '--out', out]);
     return out;
   };
-  // Fixture-only raw registration uses current wall-clock request timestamps, just as the shipped clients do.
+  // Fixture-only organization bootstrap uses current wall-clock request timestamps.
   const fixtureRequest = w.req.bind(w);
   w.req = (...args) => { w.clock = Date.now(); return fixtureRequest(...args); };
   try {
@@ -111,7 +111,18 @@ test('all shipped executables complete one real-clock election with exact totals
     const created = await online('election-create', ['--org', w.orgId, '--title', 'Combined-client election', '--access', 'public',
       '--audience', w.audience, '--idempotency-key', 'combined-client-create', ...keyArgs(w.owner)]);
     w.electionId = created['election_id']; w.origin = created['origin']; w.logPkHex = created['log_pk_hex'];
-    await w.registerVoters(); // B3-01/D-99: fixture invokes existing raw-invite protocol; no browser registration claim.
+    const invitations = path('issued-invitations.json');
+    const issuance = await online('invites-create', ['--count', String(w.voters.length), '--out', invitations,
+      '--audience', w.audience, '--idempotency-key', 'combined-client-invites', ...keyArgs(w.owner)]);
+    assert.equal(issuance['count'], w.voters.length);
+    const issued = JSON.parse(readFileSync(invitations, 'utf8')).invites as { invite_id: string; code: string }[];
+    for (const [i, voter] of w.voters.entries()) {
+      const tokenFile = path('invite.txt'); writeFileSync(tokenFile, issued[i]!.code + '\n', { mode: 0o600 });
+      assert.equal(JSON.stringify(issuance).includes(issued[i]!.code), false, 'issuer stdout contains no bearer');
+      const enrolled = await online('enroll', ['--invite-file', tokenFile, ...keyArgs(voter)]);
+      assert.equal(enrolled['status'], 'approved');
+      assert.equal(enrolled['voter_kid'], b64u(authorKeyId('ed25519', voter.publicKey)));
+    }
     w.manifest = w.buildManifest();
     const ts = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
     const started = Date.now();
