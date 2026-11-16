@@ -8,6 +8,7 @@ export * from './dkg.ts';
 export * from './ballot.ts';
 export * from './ballotlog.ts';
 export * from './rules.ts';
+export * from './group-policy-draft.ts';
 export * from './tally.ts';
 export * from './spoilshare.ts';
 export * from './verify.ts';

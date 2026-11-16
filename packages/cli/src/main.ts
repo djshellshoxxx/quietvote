@@ -10,6 +10,7 @@ import { cmdElectionSpoilCollect } from './cmd-spoil.ts';
 import { cmdKeygen } from './cmd-keygen.ts';
 import { cmdSelftest, cmdVerify } from './cmd-verify.ts';
 import { cmdVectorsCheck } from './cmd-vectors.ts';
+import { cmdPolicyDraftTemplate, cmdPolicyDraftValidate } from './cmd-policy-draft.ts';
 import { EXIT, type Io } from './io.ts';
 import { cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 
@@ -70,6 +71,10 @@ usage:
                                    all online commands accept --timeout-ms (1..120000, default 20000);
                                    server responses and downloaded bundles are not independently verified
   qv vectors check [dir] [--strict] [--json]
+  qv policy-draft template foundation|association|collective --out <draft.json> [--json]
+  qv policy-draft validate <draft.json> [--json]
+                                   unsigned policy planning only; no signatures, group authority or election binding;
+                                   collective preserves a source duration conflict and returns exit 1 with a draft to review
 
 exit codes: 0 ok / PASS, 1 verification or conformance failure, 2 usage error, 3 INCOMPLETE or PARTIAL (nothing failed,
 but something could not be checked: that is not a pass), 4 unreadable or malformed input, 70 internal error.
@@ -86,6 +91,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   election: { 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
   online: { enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
+  'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },
 };
 
 export async function run(argv: string[], io: Io): Promise<number> {
