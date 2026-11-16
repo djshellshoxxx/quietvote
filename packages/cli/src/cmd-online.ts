@@ -1,5 +1,5 @@
 // Thin HTTP adapters: the server remains authoritative for validation, authorization and lifecycle transitions.
-import { closeSync, constants, existsSync, fstatSync, fsyncSync, ftruncateSync, openSync, readSync, writeFileSync, writeSync } from 'node:fs';
+import { closeSync, constants, existsSync, fstatSync, fsyncSync, ftruncateSync, lstatSync, openSync, readSync, writeFileSync, writeSync } from 'node:fs';
 import { authorKeyId, b64u, unb64u, signRequest } from '@quietvote/board';
 import { ed25519Sign, parseQvJson, sha256, wipe } from '@quietvote/crypto';
 import { logOrigin, registrationMessage } from '@quietvote/protocol';
@@ -58,7 +58,7 @@ function inputJson(path: string, limit: number): unknown {
   try { return parseQvJson(bytes); } catch { throw new InputError('input is not valid QV-JSON'); }
 }
 
-async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE): Promise<Uint8Array> {
+async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void): Promise<Uint8Array> {
   const base = serverUrl(p);
   const timeout = p.get('timeout-ms') ?? '20000';
   if (!/^\d+$/.test(timeout) || !Number.isSafeInteger(Number(timeout)) || Number(timeout) < 1 || Number(timeout) > 120000) throw new UsageError('--timeout-ms must be an integer from 1 to 120000');
@@ -84,6 +84,9 @@ async function request(p: Parsed, io: Io, method: string, path: string, body?: u
       headers['authorization'] = signRequest(key.seed, key.publicKey, method, path, audience, bytes, Math.floor(Date.now() / 1000), io.rng.bytes(16));
     } finally { wipe(key.seed); }
   }
+  // A mutation's local reservation can change while credentials are unlocked.
+  // Run the caller's check after every await above and before sending any bytes.
+  beforeSend?.();
   try {
     const response = await fetch(new URL(path, base), {
       method, headers, redirect: 'error', signal: AbortSignal.timeout(Number(timeout)),
@@ -204,7 +207,20 @@ export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<nu
   let fd: number;
   try { fd = openSync(out, 'wx', 0o600); }
   catch { throw new InputError('cannot reserve invitation output; no invitations were requested'); }
+  const privateOutput = (): boolean => {
+    try {
+      const held = fstatSync(fd, { bigint: true });
+      return held.isFile() && held.nlink === 1n && (process.platform === 'win32' || (held.mode & 0o077n) === 0n);
+    } catch { return false; }
+  };
+  const boundOutput = (): boolean => {
+    try {
+      const held = fstatSync(fd, { bigint: true }), named = lstatSync(out, { bigint: true });
+      return privateOutput() && named.isFile() && named.dev === held.dev && named.ino === held.ino;
+    } catch { return false; }
+  };
   const save = (bytes: Uint8Array): void => {
+    if (!privateOutput()) throw new Error('private output lost');
     let offset = 0;
     while (offset < bytes.length) {
       const wrote = writeSync(fd, bytes, offset, bytes.length - offset, offset);
@@ -217,7 +233,9 @@ export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<nu
     try { save(new TextEncoder().encode(JSON.stringify({ format: 'qv-invite-issuance/pending', election_id: id, idempotency_key: idem, count }) + '\n')); }
     catch { throw new InputError('cannot initialize invitation output; no invitations were requested'); }
     let response: Uint8Array;
-    try { response = await request(p, io, 'POST', `${path}/invites`, { count }, true, 262144); }
+    try { response = await request(p, io, 'POST', `${path}/invites`, { count }, true, 262144, () => {
+      if (!boundOutput()) throw new InputError('reserved invitation output changed; no invitations were requested');
+    }); }
     catch (e) {
       // Server error bodies are untrusted and could echo a newly issued bearer
       // even in an error-code field. Never copy those fields to terminal output.
@@ -226,6 +244,10 @@ export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<nu
     }
     try { save(response); }
     catch { wipe(response); throw new FailError('invitation issuance may have succeeded but its response could not be fully saved; inspect the reserved private file and server state; do not blindly retry'); }
+    if (!boundOutput()) {
+      wipe(response);
+      throw new FailError('invitation output binding lost after issuance; do not trust the requested pathname or blindly retry; inspect the original private file and server state');
+    }
     let ids: string[];
     try {
       const result = parseQvJson(response) as { invites?: unknown };
@@ -244,6 +266,7 @@ export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<nu
     } catch {
       throw new FailError('invitation issuance returned an invalid or redacted response; its bytes are saved only in the private output file; inspect server state before retrying');
     } finally { wipe(response); }
+    if (!boundOutput()) throw new FailError('invitation output binding lost after issuance; inspect server state and do not blindly retry');
     printJson(io, { file: out, election_id: id, count, invite_ids: ids });
     return EXIT.ok;
   } finally { closeSync(fd); }
