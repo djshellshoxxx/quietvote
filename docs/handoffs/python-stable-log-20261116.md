@@ -173,3 +173,13 @@ schema gaps and non-ballot receipt ownership claims; these were tightened before
 freezing, with the focused integration rerun recorded in the final completion note.
 The new metadata validation parses the self-attested policy copy's data shape only;
 it never trusts its quorum, keys or algorithm for cryptographic authorization.
+
+Final source freeze: signed commit `964287d` (preceded by signed primitive/review
+commits `08d81d3`, `ffb2708`, `94a25da`, `b98d837`). The post-tightening focused suite
+`python3 -I -m unittest discover -s verifier-py/tests -t verifier-py -p test_logcheck.py`
+completed **14 tests, OK** in 50.5 seconds, including all 35 stable vectors and the
+explicit 13-input unsupported inventory. A separate fresh reviewer is qualifying
+this exact source in another worktree. The parent subsequently identified existing
+ADR027 approvals relevant to the three report differences and notice/control
+semantics; those are being handled in separate follow-on milestones. This snapshot
+makes no claim that the implementation holds require a new user approval.
