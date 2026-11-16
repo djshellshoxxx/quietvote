@@ -1,0 +1,156 @@
+{
+  "code_commit": "ce6b177f32cf04dae0f520a25206c06514f8910c",
+  "source_tree": "65da724eeba6fa92d48f0981bab5f92ebf5b5ed2",
+  "runtime": {
+    "node": "24.22.1",
+    "python": "3.12.14",
+    "platform": "Linux"
+  },
+  "serial_package_runs": [
+    {
+      "package": "board",
+      "exit": 0,
+      "seconds": 58.8
+    },
+    {
+      "package": "cli",
+      "exit": 0,
+      "seconds": 136.5
+    },
+    {
+      "package": "crypto",
+      "exit": 0,
+      "seconds": 10.3
+    },
+    {
+      "package": "protocol",
+      "exit": 0,
+      "seconds": 241.5
+    },
+    {
+      "package": "server",
+      "exit": 0,
+      "seconds": 156.8
+    },
+    {
+      "package": "trustee",
+      "exit": 0,
+      "seconds": 417.6
+    },
+    {
+      "package": "verifier",
+      "exit": 0,
+      "seconds": 39.6
+    },
+    {
+      "package": "web",
+      "exit": 0,
+      "seconds": 62.0
+    }
+  ],
+  "serial_package_counts": [
+    {
+      "package": "board",
+      "tests": 76,
+      "pass": 76,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "cli",
+      "tests": 57,
+      "pass": 57,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "crypto",
+      "tests": 89,
+      "pass": 89,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "protocol",
+      "tests": 215,
+      "pass": 215,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "server",
+      "tests": 206,
+      "pass": 206,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "trustee",
+      "tests": 113,
+      "pass": 113,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "verifier",
+      "tests": 25,
+      "pass": 25,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "package": "web",
+      "tests": 245,
+      "pass": 245,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  ],
+  "additional_admin_cli_tests": 1,
+  "unique_workspace_tests": 1027,
+  "failures": 0,
+  "skipped": 0,
+  "python_units": 58,
+  "tooling_tests": 55,
+  "typescript_vectors": {
+    "pass": 412,
+    "fail": 0,
+    "unsupported_files": 1
+  },
+  "python_vectors": {
+    "pass": 229,
+    "fail": 0,
+    "not_implemented": 53
+  },
+  "strict_comparison": {
+    "verdicts_agree": 27,
+    "total": 27,
+    "reports_agree": 24,
+    "reports_disagree": 3,
+    "exit": 1
+  },
+  "claims_lint": {
+    "findings": 8,
+    "unchanged_files": 2,
+    "exit": 1
+  },
+  "hosted_ci": {
+    "run_id": 43922590428,
+    "passed_jobs": 10,
+    "failed_jobs": 1,
+    "failure": "Compare verifiers within shared capabilities",
+    "browser_csp_a11y": "pass",
+    "workspace_matrix": "Node 22 and Node 24 pass"
+  },
+  "actual_schema_4_to_5_smoke": "pass",
+  "dependency_audit_vulnerabilities": 0,
+  "project_complete": false
+}

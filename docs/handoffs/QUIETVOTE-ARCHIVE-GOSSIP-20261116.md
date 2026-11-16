@@ -54,32 +54,64 @@ admin CLI test checks both authorized and refused signed requests.
 
 ## Validation
 
-Validation results are recorded below after command completion. No all-green
-CI or project-completion claim is made by this handoff.
+Published code snapshot: `ce6b177f32cf04dae0f520a25206c06514f8910c`, source tree
+`65da724eeba6fa92d48f0981bab5f92ebf5b5ed2`, equal to local implementation
+`04ff2bf5a454678453532dd723d5d0d85d7f3e80`. [PR #50](https://github.com/djshellshoxxx/quietvote/pull/50)
+stacks on PR #49. Later evidence updates are documentation only.
 
-Known fresh evidence before broad-suite completion:
+Linux, Node 24.22.1 and Python 3.12.14: all eight package suites pass in a serial
+run. The added admin CLI authorization test also passes separately; it was added
+after the serial runner selected CLI files. There are **1027 distinct workspace
+tests**, zero failing or skipped. Overlapping focused tests are not added to the
+count. This was a serial package runner, not an invocation of `npm run check`.
 
-- Typecheck passes with a 512 MiB V8 heap cap. An earlier uncapped typecheck was
-  killed by the host; it is not counted as a pass.
-- The archive/real-process/import run passes 18 tests, zero failures/skips. This
-  includes the actual trustee ceremony/tally, exact plaintext totals and the
-  existing Python shared-report comparison (241.7 seconds for the live test).
-- Focused server gossip/admin suites pass 19 tests. The later scheduler-budget
-  assertion passes in its own targeted run; overlapping runs are not added.
-- Tooling tests pass 55 tests. Lockfile, dependency boundaries (existing D-97
-  retained), links, trace links, production web build and i18n pass. The browser
-  bundle is 199.0 kB gzip, within its existing budget.
-- Python units pass 58 tests using the CI command from `verifier-py`. An initial
-  discovery command from the repository root produced six import errors; the
-  corrected command, not that attempt, supplies the passing evidence.
-- TypeScript vectors: 412 pass, zero fail, one unsupported file. Python vectors:
-  229 pass, zero fail, 53 not implemented. Unsupported capabilities are not passes.
-- Strict TS/Python comparison still fails: 27/27 verdicts agree, 24/27 detailed
-  reports agree, three disagree. Its gate was neither changed nor suppressed.
-- Claims lint still exits 1 with eight historical findings in two unchanged
-  audit files. No new finding was introduced.
-- Browser journeys could not launch Chromium on this host: `socket() failed:
-  Operation not permitted (1)`. No browser-journey pass is claimed.
+| Package in serial run | Passed | Failed | Skipped |
+|---|---:|---:|---:|
+| board | 76 | 0 | 0 |
+| cli | 57 | 0 | 0 |
+| crypto | 89 | 0 | 0 |
+| protocol | 215 | 0 | 0 |
+| server | 206 | 0 | 0 |
+| trustee | 113 | 0 | 0 |
+| verifier | 25 | 0 | 0 |
+| web | 245 | 0 | 0 |
+| Additional admin CLI test | 1 | 0 | 0 |
+
+The real trustee executable test passed both in the initial 18-test
+archive/import/process run and in the full trustee suite. It uses shipped
+preparation commands through the actual ceremony and tally, verifies exact
+plaintext totals and runs the existing Python shared-report comparison.
+
+Typecheck (512 MiB V8 heap cap), 55 tooling tests, 58 Python units, dependency
+boundaries (existing D-97 retained), lockfile, links, trace, production build and
+i18n pass. Dependency audit reports zero vulnerabilities. The production browser
+bundle is 199.0 kB gzip, within its existing budget. An actual database created
+by the base schema-4 code upgrades to schema 5, retains instance metadata, and
+supports peer-state persistence/pruning in a separate smoke check.
+
+TypeScript vectors: 412 pass, zero fail, one unsupported file. Python vectors:
+229 pass, zero fail, 53 not implemented. Unsupported capabilities are not passes.
+The strict comparison still exits 1: 27/27 verdicts agree, 24/27 detailed reports
+agree and three disagree. Its gate was neither changed nor suppressed. Claims
+lint still exits 1 with eight historical findings in two unchanged audit files.
+
+On the published code, [hosted CI](https://github.com/djshellshoxxx/quietvote/actions/runs/43922590428)
+completed with **10 successful jobs and one failed job**. All eight workspace
+jobs pass on Ubuntu with Node 22 and Node 24. Typecheck/supply-chain and production
+browser/CSP/automated-accessibility jobs pass. Python units, both vector sweeps,
+production build, i18n and licence steps pass; the sole failed step is the retained
+strict verifier comparison. Pseudo-locale visual checks pass. The claims workflow
+returns success because it is nonblocking; that does not mean finding-free.
+Windows/macOS and independent professional review remain unqualified.
+
+Local browser journeys could not launch Chromium (`socket() failed: Operation
+not permitted (1)`); the hosted browser job provides the successful browser
+qualification. An earlier uncapped typecheck was killed by the host. An initial
+Python discovery command from the repository root produced six import errors;
+the corrected CI command from `verifier-py` supplies the 58 passing unit tests.
+Neither failed setup attempt is counted as a pass.
+
+Machine-readable results: `docs/reports/archive-gossip-20261116-validation.json`.
 
 ## Remaining project work
 
