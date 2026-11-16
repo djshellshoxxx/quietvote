@@ -96,29 +96,38 @@ export async function openWithPassphrase(
   const hdr = file.subarray(0, o);
   const extra = opts.aad ?? new Uint8Array(0);
   const pw = utf8(passphrase.normalize('NFKC'));
-  const wrapKey = await kdf(pw, salt, logN);
-  let fileKey: Uint8Array;
+  let wrapKey: Uint8Array | undefined;
+  let fileKey: Uint8Array | undefined;
+  let pk: Uint8Array | undefined;
   try {
-    fileKey = new Uint8Array(
-      await globalThis.crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(wrapNonce), additionalData: new Uint8Array(concatBytes(head, extra)), tagLength: 128 }, await aesKey(wrapKey, 'decrypt'), new Uint8Array(wrapped)),
-    );
-  } catch {
-    throw new QvCryptoError('E_AEAD', 'wrong passphrase or corrupted bundle');
+    try {
+      wrapKey = await kdf(pw, salt, logN);
+      try {
+        fileKey = new Uint8Array(
+          await globalThis.crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(wrapNonce), additionalData: new Uint8Array(concatBytes(head, extra)), tagLength: 128 }, await aesKey(wrapKey, 'decrypt'), new Uint8Array(wrapped)),
+        );
+      } catch {
+        throw new QvCryptoError('E_AEAD', 'wrong passphrase or corrupted bundle');
+      }
+    } finally {
+      if (wrapKey !== undefined) wipe(wrapKey);
+      wipe(pw);
+    }
+    pk = payloadKey(fileKey, payloadNonce);
+    try {
+      return new Uint8Array(
+        await globalThis.crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: new Uint8Array(12), additionalData: new Uint8Array(concatBytes(hdr, extra)), tagLength: 128 },
+          await aesKey(pk, 'decrypt'),
+          new Uint8Array(file.subarray(o)),
+        ),
+      );
+    } catch {
+      throw new QvCryptoError('E_AEAD', 'bundle payload authentication failed');
+    }
   } finally {
-    wipe(wrapKey); wipe(pw);
-  }
-  const pk = payloadKey(fileKey, payloadNonce);
-  try {
-    return new Uint8Array(
-      await globalThis.crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: new Uint8Array(12), additionalData: new Uint8Array(concatBytes(hdr, extra)), tagLength: 128 },
-        await aesKey(pk, 'decrypt'),
-        new Uint8Array(file.subarray(o)),
-      ),
-    );
-  } catch {
-    throw new QvCryptoError('E_AEAD', 'bundle payload authentication failed');
-  } finally {
-    wipe(fileKey); wipe(pk);
+    // Cover KDF and payload-key derivation exceptions as well as AEAD errors.
+    if (fileKey !== undefined) wipe(fileKey);
+    if (pk !== undefined) wipe(pk);
   }
 }
