@@ -1,7 +1,7 @@
 import { gossipHealthStatus } from './gossip-health.ts';
 // Instance administration (QV-09 §10 `/admin/*`): status, listing, backups, self-audit, quarantine clearing, deletion.
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdirSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, createReadStream, mkdirSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { backup, DatabaseSync } from 'node:sqlite';
 import { MerkleTree, bodyDigest, decodeHeader, hashLeaf, parseCheckpoint, verifyLogSignature, witnessStatus } from '@quietvote/board';
@@ -65,7 +65,13 @@ export function adminStatus(env: Env, pool: ElectionPool): Record<string, unknow
 
 // ------------------------------------------------------------------------------------------------------------ backup
 
-const sha256File = (p: string): string => createHash('sha256').update(readFileSync(p)).digest('hex');
+async function sha256File(path: string): Promise<string> {
+  const hash = createHash('sha256');
+  // Snapshot size must not determine the process's Buffer allocation. Iteration also
+  // yields between chunks, and destroys/closes the stream if a read fails.
+  for await (const chunk of createReadStream(path, { highWaterMark: 64 * 1024 })) hash.update(chunk);
+  return hash.digest('hex');
+}
 
 /** Consistent online snapshot of control.sqlite and the election databases (node:sqlite `backup`, QV-28 §12). Never contains the KEK. */
 export async function backupWork(env: Env, pool: ElectionPool, jobId: string, scope: 'all' | 'election', electionId: string | undefined, ctl: JobCtl): Promise<JobOutcome> {
@@ -86,7 +92,7 @@ export async function backupWork(env: Env, pool: ElectionPool, jobId: string, sc
     } finally {
       t.close();
     }
-    files.push({ name, bytes: statSync(dest).size, sha256: sha256File(dest) });
+    files.push({ name, bytes: statSync(dest).size, sha256: await sha256File(dest) });
   };
   try {
     const targets: string[] = [];
