@@ -39,7 +39,9 @@ Each vector is reported `PASS`, `FAIL` or `NOT-IMPLEMENTED`. The exit status is 
 vector FAILs**, 0 otherwise (NOT-IMPLEMENTED does not fail the run), and 2 on usage errors.
 
 `verify` writes the full JSON report to stdout: exit 0 for verdict PASS, 1 for FAIL,
-2 for input/usage errors. Exit 3 remains reserved for an unsupported capability;
+2 for input/usage errors, and 3 for INCOMPLETE (no fatal finding but tally
+decryption has not run). A missing tally produces no result; a rejected or
+conflicting tally retains its failure. Exit 3 also denotes an explicitly unsupported capability;
 the shipped 48 log-evidence cases, including legacy controls, are implemented.
 Receipt samples are an array of `{receipt, voter?, code?}`; observed checkpoints are
 an array of signed-note strings. The API is `verify_bundle(bundle, log={"board": board,

@@ -1118,7 +1118,7 @@ Verifier: `a_b = [s_b] − [c_b]α_y`, `b_b = [s_b]K − [c_b]β_b` (with `β_1 
 
 ## Appendix C — Full verifier algorithm (check list)
 
-Inputs: the election record (§5.19.2) and the out-of-band `manifest_hash`. Output: PASS or FAIL with located error codes; non-zero exit on FAIL.
+Inputs: the election record (§5.19.2) and the out-of-band `manifest_hash`. Output: PASS, FAIL or INCOMPLETE with located error codes. CLI exits are 0 for PASS, 1 for FAIL and 3 for INCOMPLETE (QV-ADR-027, PY-02).
 
 **C1. Manifest and parameters**
 1. Parse record with QV-JSON; reject on `E_PARSE/E_SCHEMA/E_VERSION`.
@@ -1156,4 +1156,4 @@ Inputs: the election record (§5.19.2) and the out-of-band `manifest_hash`. Outp
 21. Evaluate quorum, threshold/winner and tie-break with exact integers; compare with published `results`.
 
 **C8. Verdict**
-22. Report PASS only if no `F`-class error occurred. Always list: number of cast, spoiled, counted, ignored ballots by error code; unwitnessed-time caveat; `ctx` prefix; verifier version and hash. Also emit machine-readable report (QV-JSON).
+22. An `F`-class error yields FAIL. Otherwise, if `chk.tally.decrypt` is `not_run`, report INCOMPLETE; otherwise report PASS. An absent tally leaves aggregate, decryption and rule checks `not_run` and emits no results. A malformed, rejected or conflicting tally retains its applicable errors and must not be treated as absent. Preserve counts and the context prefix only to the extent their prerequisite evidence was verified. Also list ignored ballots by error code, the unwitnessed-time caveat, verifier version and hash, and emit a machine-readable report (QV-JSON). This implements QV-ADR-027's PY-02 decision; the distinct P1/TSV-05 missing-log default and caller opt-out remain a separate interface migration.

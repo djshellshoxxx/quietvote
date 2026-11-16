@@ -58,5 +58,5 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({'status': 'ERROR', 'error': getattr(exc, 'code', 'E_PARSE'), 'detail': str(exc)}), file=sys.stderr)
             return 2
         print(json.dumps(report, indent=2))
-        return 1 if report['verdict'] == 'FAIL' else 0
+        return {'PASS': 0, 'FAIL': 1, 'INCOMPLETE': 3}[report['verdict']]
     return 2

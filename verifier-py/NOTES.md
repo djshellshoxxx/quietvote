@@ -60,8 +60,9 @@ handoff for execution receipts and independent-review status.
 * **PY-01/D-88/D-95:** trustee-mode spoil decryption is unsupported; manifests carrying `spoil_trustee_decrypt` are rejected.
   QV-16 §5.12.2 says a zero-digest spoil is "valid only if the manifest enables it", but no spec gives the code, check or
   class for the invalid case, so it is not implemented here (TS does not enforce it at the ballot level either). See D-95.
-  **PY-02/D-96:** verdicts remain PASS/FAIL. QV-16 App. C defines only "PASS or FAIL", so INCOMPLETE waits for D-96 (with
-  P1/TSV-05). The stable QV-18 board/witness/receipt subset is now implemented below; no adapter protocol was added.
+  **PY-02/D-96:** the approved no-tally INCOMPLETE behavior is implemented below. The broader
+  P1/TSV-05 missing-log default/caller opt-out is a separate interface migration. The stable QV-18
+  board/witness/receipt subset is implemented below; no adapter protocol was added.
 * Shipped unsupported vectors stay explicit: 13 notice/control `log.verify_election` cases. Their absence is not a pass
   or a claim of cross-verifier conformance. The corpus is unsigned; constant-time, large-scale and external-audit gates remain open.
 
@@ -134,3 +135,19 @@ not accepted as an extra member of the current legacy body. See
 Final continuation validation: **128 Python tests, OK**; **282/282 vectors PASS**;
 **27/27 strict comparator cases agree with zero differences**. Corpus/comparator
 bytes remain unchanged. The separate fresh review qualifies the signed source.
+
+## Approved incomplete tally verdict — 2026-11-16
+
+QV-ADR-027 adopted PY-02's INCOMPLETE state. QV-16 Appendix C and QV-34 now state
+its existing TypeScript precedence: any fatal finding yields FAIL; otherwise a
+`not_run` tally-decryption check yields INCOMPLETE, otherwise PASS. Python retains
+verified counts/context and other completed checks when no tally is supplied,
+leaves aggregate/decrypt/rules `not_run`, and emits no outcome. Rejected or
+conflicting tallies keep their errors; a malformed board or invalid manifest
+still yields FAIL. Actual `verify` CLI exits are PASS=0, FAIL=1, INCOMPLETE=3.
+
+This closes the narrow PY-02 report-enum gap without modifying the vector corpus,
+its expected reports, the strict comparator, or absent-log policy. It does not
+implement the separate P1/TSV-05 full-verifier default/caller opt-out migration.
+Regression evidence: `tests/test_incomplete_verdict.py`; final receipts and
+review status are in the corresponding milestone handoff.

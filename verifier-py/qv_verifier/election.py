@@ -228,7 +228,10 @@ def verify_bundle(bundle: dict, *, log: dict | None = None) -> dict:
         else:
             checks[c] = "pass"
     out["checks"] = checks
-    out["verdict"] = "FAIL" if any(f.fatal for f in st.findings) else "PASS"
+    # QV-ADR-027 / PY-02: an unfinished tally is neither a verified outcome nor
+    # a fatal election failure. Fatal evidence always takes precedence.
+    out["verdict"] = ("FAIL" if any(f.fatal for f in st.findings) else
+                      "INCOMPLETE" if checks["chk.tally.decrypt"] == "not_run" else "PASS")
     out["codes"] = sorted({f.code for f in st.findings})
     out["findings"] = [f.__dict__ for f in st.findings]
     out["notes"] = st.notes
@@ -584,6 +587,10 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     if not tally_recs and rejected_tally:
         # The only tally record was rejected above (fatal E_SCHEMA/E_VERSION on chk.encoding.canonical);
         # there is no admissible tally to aggregate, decrypt or evaluate.
+        _stop(st, "chk.tally.aggregate", "chk.tally.decrypt", "chk.result.rules")
+    if not tally_recs:
+        # No candidate tally was supplied. Retain the completed evidence, but
+        # do not fabricate an aggregate error or report a result (PY-02).
         _stop(st, "chk.tally.aggregate", "chk.tally.decrypt", "chk.result.rules")
     if len(tally_recs) != 1:
         st.add("chk.tally.aggregate", "E_SCHEMA", True, f"{len(tally_recs)} tally records")
