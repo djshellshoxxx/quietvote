@@ -30,7 +30,8 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   keygen --bundle F [--generate-passphrase]       new identity; prints public key
   join --bundle F --manifest F --manifest-hash HEX [--ceremony-id ID]
   import --bundle F --log F.qvl
-  commit|reveal|shares|verify|finalize|drill --bundle F [--out F.qvp]
+  commit|reveal|shares|verify|drill --bundle F [--out F.qvp]
+  finalize --bundle F
   confirm --bundle F --compared-with 2,3 [--words "w1 .. w6"] [--out F]
   tally-release --bundle F --election F.json [--claimed F] [--override-unwitnessed PHRASE] [--out F]   (election.json carries log_evidence)
   spoil-release --bundle F --election F.json --codes HEX[,HEX...] [--override-unwitnessed PHRASE] [--out F]
@@ -42,31 +43,50 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
 Passphrase: --passphrase-file F (or QV_TRUSTEE_PASSPHRASE_FILE), otherwise a hidden prompt. Never on the command line.
 Options: --json   Exit codes: 0 ok, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
 
-/** Every option any command reads (value options and boolean flags). Anything else is a usage error, never silently ignored. */
-const OPTIONS = new Set([
-  'bundle', 'manifest', 'manifest-hash', 'ceremony-id', 'log', 'out', 'compared-with', 'words', 'claimed', 'election',
-  'override-unwitnessed', 'codes', 'reason', 'to', 'backup-passphrase-file', 'passphrase-file', 'ledger', 'override-no-ledger',
-  'from', 'confirm', 'audit-close', 'severity', 'mode', 'in', 'witness-key', 'json', 'generate-passphrase',
+/** Only options consumed by that command are accepted; validation precedes prompts and file access. */
+const COMMAND_OPTIONS = new Map<string, readonly string[]>([
+  ['keygen', ['bundle', 'passphrase-file', 'generate-passphrase']],
+  ['join', ['bundle', 'passphrase-file', 'manifest', 'manifest-hash', 'ceremony-id']],
+  ['import', ['bundle', 'passphrase-file', 'log']],
+  ...['commit', 'reveal', 'shares', 'verify', 'drill'].map((cmd): [string, string[]] => [cmd, ['bundle', 'passphrase-file', 'out']]),
+  ['finalize', ['bundle', 'passphrase-file']],
+  ['confirm', ['bundle', 'passphrase-file', 'compared-with', 'words', 'out']],
+  ['tally-release', ['bundle', 'passphrase-file', 'election', 'claimed', 'override-unwitnessed', 'out']],
+  ['spoil-release', ['bundle', 'passphrase-file', 'election', 'codes', 'override-unwitnessed', 'out']],
+  ['status', ['bundle', 'passphrase-file']],
+  ['abort', ['bundle', 'passphrase-file', 'reason']],
+  ['restart', ['bundle', 'passphrase-file']],
+  ['backup', ['bundle', 'passphrase-file', 'to', 'backup-passphrase-file']],
+  ['restore', ['from', 'bundle', 'passphrase-file', 'backup-passphrase-file', 'ledger', 'override-no-ledger']],
+  ['destroy', ['bundle', 'passphrase-file', 'audit-close', 'confirm']],
+  ['report-compromise', ['bundle', 'passphrase-file', 'severity', 'out']],
+  ['export-transcript', ['bundle', 'passphrase-file', 'out', 'mode']],
+  ['cosign-transcript', ['bundle', 'passphrase-file', 'in', 'out']],
+  ['verify-transcript', ['in', 'witness-key']],
 ]);
+const OPTIONS = new Set(['json', ...[...COMMAND_OPTIONS.values()].flat()]);
 
 function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags: Set<string> } {
   const [cmd = '', ...rest] = argv;
   const o = new Map<string, string>();
   const flags = new Set<string>();
   const bool = new Set(['json', 'generate-passphrase']);
+  const supported = new Set(['json', ...(COMMAND_OPTIONS.get(cmd) ?? [])]);
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i]!;
-    if (!a.startsWith('--')) throw new TrusteeError('USAGE', 'USAGE', `unexpected argument ${a}`);
+    if (!a.startsWith('--')) throw new TrusteeError('USAGE', 'USAGE', 'unexpected positional argument (value withheld)');
     const k = a.slice(2);
     // Checked before any value is consumed, and the value is never echoed. The name is echoed only when it is a plain option-shaped word.
     if (!OPTIONS.has(k)) {
       const shown = /^[a-z][a-z0-9-]{0,39}$/.test(k) ? `--${k}` : '(name withheld)';
       throw new TrusteeError('USAGE', 'USAGE', `unknown option ${shown}; run with no arguments for usage`);
     }
+    if (!supported.has(k)) throw new TrusteeError('USAGE', 'USAGE', `--${k} is not supported by this command`);
+    if (o.has(k) || flags.has(k)) throw new TrusteeError('USAGE', 'USAGE', `duplicate option --${k}`);
     if (bool.has(k)) flags.add(k);
     else {
       const v = rest[++i];
-      if (v === undefined) throw new TrusteeError('USAGE', 'USAGE', `--${k} needs a value`);
+      if (v === undefined || v.startsWith('--')) throw new TrusteeError('USAGE', 'USAGE', `--${k} needs a value`);
       o.set(k, v);
     }
   }

@@ -48,19 +48,34 @@ test('CLI: an unknown option never echoes its value (passphrase, key or share ma
   }
 });
 
-test('CLI: every option a command reads is still accepted by the parser', async () => {
+test('CLI: documented options are accepted on the commands that consume them', async () => {
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'qvcli-known-')));
   try {
-    const known = [
-      'bundle', 'manifest', 'manifest-hash', 'ceremony-id', 'log', 'out', 'compared-with', 'words', 'claimed', 'election',
-      'override-unwitnessed', 'codes', 'reason', 'to', 'backup-passphrase-file', 'passphrase-file', 'ledger',
-      'override-no-ledger', 'from', 'confirm', 'audit-close', 'severity', 'mode', 'in', 'witness-key', 'json', 'generate-passphrase',
+    const workflows: [string, string[]][] = [
+      ['keygen', ['--generate-passphrase']],
+      ['join', ['--manifest', 'm.json', '--manifest-hash', '00'.repeat(32), '--ceremony-id', 'c1']],
+      ['import', ['--log', 'log.qvl']],
+      ...['commit', 'reveal', 'shares', 'verify', 'drill'].map((cmd): [string, string[]] => [cmd, ['--out', 'packet.qvp']]),
+      ['finalize', []],
+      ['confirm', ['--compared-with', '2,3', '--words', 'one two three four five six', '--out', 'packet.qvp']],
+      ['tally-release', ['--election', 'e.json', '--claimed', 'claims.json', '--override-unwitnessed', 'phrase', '--out', 'packet.qvp']],
+      ['spoil-release', ['--election', 'e.json', '--codes', '00'.repeat(32), '--override-unwitnessed', 'phrase', '--out', 'packet.qvp']],
+      ['status', ['--bundle', join(dir, 'missing.qvtb'), '--passphrase-file', join(dir, 'missing.pass')]],
+      ['abort', ['--reason', 'operator_abort']],
+      ['restart', []],
+      ['backup', ['--to', 'backup.qvtb', '--backup-passphrase-file', 'backup.pass']],
+      ['restore', ['--from', 'backup.qvtb', '--backup-passphrase-file', 'backup.pass', '--ledger', 'ledger', '--override-no-ledger', 'phrase']],
+      ['destroy', ['--audit-close', 'close.json', '--confirm', 'Election title']],
+      ['report-compromise', ['--severity', 'suspected', '--out', 'packet.qvp']],
+      ['export-transcript', ['--out', 'transcript.json', '--mode', 'airgap-dkg']],
+      ['cosign-transcript', ['--in', 'transcript.json', '--out', 'signed.json']],
+      ['verify-transcript', ['--in', join(dir, 'missing.json'), '--witness-key', `w=${'11'.repeat(32)}`]],
     ];
-    for (const name of known) {
+    for (const [cmd, args] of workflows) {
       const { err, io } = newIo();
-      // the command itself may fail for other reasons (missing bundle); only the parser's verdict is checked
-      await trusteeMain(['status', '--bundle', join(dir, 'missing.qvtb'), `--${name}`, 'v'], io, mkDeps(`known-${name}`), {});
-      assert.equal(err.some((line) => /unknown option/.test(line)), false, `--${name} must be a known option`);
+      // Missing inputs may fail; supported options must reach the command's own validation.
+      await trusteeMain([cmd, ...args, '--json'], io, mkDeps(`known-${cmd}`), {});
+      assert.equal(err.some((line) => /unknown option|not supported|duplicate option/.test(line)), false, `${cmd} options must be accepted`);
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });

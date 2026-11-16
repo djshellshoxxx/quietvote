@@ -203,5 +203,9 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
   option the commands read; an unknown option is a USAGE error (exit 2) before any value is consumed and before any state changes.
 * The error names the option only when it is a plain lowercase word (at most 40 characters); otherwise it prints
   `(name withheld)`. The option's value is never echoed. Known options and their behaviour are unchanged.
-* Allowlist is global, not per command: `status --out F` is still accepted and ignored. Per-command validation is a possible follow-up.
-* Regression tests: `test/cli-unknown-options.test.ts`.
+* Follow-up: each command now accepts only the options it consumes. For example, `status --out F` and `status --generate-passphrase`
+  fail before any passphrase prompt or file access. Duplicate value options and flags are refused instead of silently using the
+  last value. `--witness-key` remains a single option; repeated keys are refused rather than dropping earlier values.
+* Unexpected positional arguments are rejected without echoing their contents. A following `--option` cannot be consumed as a
+  missing value. `finalize` does not emit a packet and therefore rejects `--out`; help now lists it separately.
+* Regression tests: `test/cli-unknown-options.test.ts`, `test/cli-argument-safety.test.ts` (including spawned CLI secret canaries).
