@@ -1,6 +1,5 @@
 // Application assembly: services + route table (QV-09 §6-§10 subset; see NOTES.md for what is not implemented).
 import { createHash, randomBytes } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
 import {
   MerkleTree as _M, authorKeyId, b64, b64u, parseCheckpoint, toHex, unb64u, witnessStatus, ENTRY_TYPES,
   type EntryHeader, type Receipt, type WitnessPolicy,
@@ -10,6 +9,7 @@ import { PROTO_ID } from '@quietvote/protocol';
 import { audienceOf, authenticate, keyIdOf } from './auth.ts';
 import { resolveConfig, type ServerConfig, type ServerOptions } from './config.ts';
 import { ControlDb } from './controldb.ts';
+import { lockDataDirectory } from './data-lock.ts';
 import { SERVER_VERSION, type ElectionRuntime } from './election.ts';
 import type { Env } from './env.ts';
 import { electionBundle, qvb } from './export.ts';
@@ -58,9 +58,22 @@ function receiptView(r: Receipt): Record<string, unknown> {
 
 export function buildServer(opts: ServerOptions): QuietVoteServer {
   const cfg: ServerConfig = resolveConfig(opts);
-  mkdirSync(cfg.dataDir, { recursive: true, mode: 0o700 });
+  const lock = lockDataDirectory(cfg.dataDir);
+  cfg.dataDir = lock.dataDir;
+  let control: ControlDb | undefined;
+  const cleanup: (() => void)[] = [];
+  try {
+    control = new ControlDb(cfg.dataDir, cfg.now, SERVER_VERSION);
+    return assembleServer(cfg, control, lock.release, cleanup);
+  } catch (error) {
+    for (const stop of cleanup.reverse()) stop();
+    try { control?.close(); } finally { lock.release(); }
+    throw error;
+  }
+}
+
+function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () => void, cleanup: (() => void)[]): QuietVoteServer {
   const nowMs = cfg.now;
-  const control = new ControlDb(cfg.dataDir, nowMs, SERVER_VERSION);
   const witnesses = cfg.witnesses.map((w) => ({ name: w.name, alg: 'ed25519' as const, publicKey: hexToBytes(w.publicKey, 32) }));
   const env: Env = {
     cfg, control, kek: loadOrCreateKek(cfg.dataDir), limiter: new RateLimiter(nowMs), failures: new FailureCounter(nowMs),
@@ -73,8 +86,10 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const pool = new ElectionPool(env);
   const sse = new SseHub(env);
   const webhooks = new WebhookService(env);
+  cleanup.push(() => webhooks.stop());
   const jobs = new JobRunner(env);
   const gossip = new GossipService(env, pool);
+  cleanup.push(() => gossip.stop());
   const retention = new RetentionSweeper(env);
   env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
   const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
@@ -910,14 +925,9 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   registerExtRoutes({ env, pool, jobs, add, idem, readable, intQ });
 
   const http = createHttpApp(env, R, statics);
-  return {
-    http, env, pool, sse, webhooks, jobs, gossip, retention,
-    async start() {
-      retention.start();
-      const a = await http.listen();
-      return { ...a, url: `http://${a.host}:${a.port}` };
-    },
-    async stop() {
+  let stopped: Promise<void> | undefined;
+  const stop = (): Promise<void> => {
+    stopped ??= (async () => {
       sse.closeAll();
       webhooks.stop();
       gossip.stop();
@@ -926,6 +936,23 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       await http.close();
       await pool.closeAll();
       control.close();
+      releaseLock();
+    })();
+    return stopped;
+  };
+  return {
+    http, env, pool, sse, webhooks, jobs, gossip, retention,
+    async start() {
+      if (stopped) throw new Error('server has stopped; build a new instance to restart');
+      try {
+        const a = await http.listen();
+        retention.start();
+        return { ...a, url: `http://${a.host}:${a.port}` };
+      } catch (error) {
+        await stop();
+        throw error;
+      }
     },
+    stop,
   };
 }
