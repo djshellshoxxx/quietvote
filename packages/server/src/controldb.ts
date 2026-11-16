@@ -325,10 +325,12 @@ export class ControlDb {
   }
   setState(id: string, state: ElectionStateName, title?: string): void {
     const t = this.now();
-    run(this.db, 'UPDATE election_registry SET state=? WHERE election_id=?', state, id);
-    if (title !== undefined) run(this.db, 'UPDATE election_registry SET title=? WHERE election_id=?', title, id);
-    const col = state === 'OPEN' ? 'opened_at' : state === 'CLOSED' ? 'closed_at' : state === 'ARCHIVED' ? 'archived_at' : undefined;
-    if (col) run(this.db, `UPDATE election_registry SET ${col}=? WHERE election_id=? AND ${col} IS NULL`, t, id);
+    this.tx(() => {
+      run(this.db, 'UPDATE election_registry SET state=? WHERE election_id=?', state, id);
+      if (title !== undefined) run(this.db, 'UPDATE election_registry SET title=? WHERE election_id=?', title, id);
+      const col = state === 'OPEN' ? 'opened_at' : state === 'CLOSED' ? 'closed_at' : state === 'ARCHIVED' ? 'archived_at' : undefined;
+      if (col) run(this.db, `UPDATE election_registry SET ${col}=? WHERE election_id=? AND ${col} IS NULL`, t, id);
+    });
   }
   setBytes(id: string, bytes: number): void {
     run(this.db, 'UPDATE election_registry SET bytes_used=? WHERE election_id=?', bytes, id);

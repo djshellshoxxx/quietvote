@@ -207,13 +207,13 @@ export class ElectionRuntime {
   }
 
   /** Resolve one durable append intent with the projection at exactly that sequence. */
-  private completeAppendEvents(seq: number, from: ElectionStateName): EventRow[] {
+  private completeAppendEvents(seq: number, from: ElectionStateName, to = this.st.state): EventRow[] {
     const at = this.edb.appendCompletion(seq);
     if (at === undefined) return [];
     const out: EventRow[] = [];
     let alerted = false;
     this.edb.tx(() => {
-      if (this.st.state !== from) out.push(this.edb.insertEvent(at, 'phase', seq, JSON.stringify({ from, to: this.st.state, seq })));
+      if (to !== from) out.push(this.edb.insertEvent(at, 'phase', seq, JSON.stringify({ from, to, seq })));
       alerted = this.quarantineAlert(out, at);
       this.edb.finishAppendCompletion(seq);
     });
@@ -359,6 +359,7 @@ export class ElectionRuntime {
   // ------------------------------------------------------------------ replay (projection rebuild from the stored log)
 
   private async replay(): Promise<void> {
+    const completions: { seq: number; from: ElectionStateName; to: ElectionStateName }[] = [];
     let from = 0;
     for (;;) {
       const page = this.edb.entries(from, 500);
@@ -376,15 +377,18 @@ export class ElectionRuntime {
         await this.apply(r.seq, h.value.type, rec, r.sequencedAt);
         // Finish archive key destruction before deleting the intent that causes startup to reopen this election.
         if (h.value.type === 'audit_close') this.finalizeArchive();
-        // A crash can leave a durable entry without its supplemental event. Only explicit intents permit recovery.
-        // The pool forwards committed rows after replay; no historical event is emitted to live subscribers here.
-        this.completeAppendEvents(r.seq, fromState);
+        // Preserve each sequence's transition, but retain its intent until the final projections are durable.
+        // Syncing historical intermediate states would rewind registry lifecycle fields during replay.
+        if (this.edb.appendCompletion(r.seq) !== undefined) completions.push({ seq: r.seq, from: fromState, to: this.st.state });
       }
       if (!page.more) break;
       from = (page.rows.at(-1)?.seq ?? from) + 1;
     }
     this.syncQuarantineFlags();
     this.syncState();
+    // Only explicit intents permit recovery. A second crash cannot strand stale projections without an intent.
+    // Each event/intent transaction remains atomic; already completed or pruned events are never regenerated.
+    for (const completion of completions) this.completeAppendEvents(completion.seq, completion.from, completion.to);
   }
 
   private syncState(): void {
