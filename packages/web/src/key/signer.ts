@@ -18,15 +18,15 @@ export interface Signer {
 const PKCS8_PREFIX = Uint8Array.of(0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04, 0x20);
 
 async function tryWebCrypto(seed: Uint8Array, subtle: SubtleCrypto): Promise<CryptoKey | undefined> {
+  const pkcs8 = new Uint8Array(48);
   try {
-    const pkcs8 = new Uint8Array(48);
     pkcs8.set(PKCS8_PREFIX, 0);
     pkcs8.set(seed, 16);
-    const key = await subtle.importKey('pkcs8', pkcs8 as BufferSource, { name: 'Ed25519' }, false, ['sign']);
-    wipe(pkcs8);
-    return key;
+    return await subtle.importKey('pkcs8', pkcs8 as BufferSource, { name: 'Ed25519' }, false, ['sign']);
   } catch {
     return undefined;
+  } finally {
+    wipe(pkcs8);
   }
 }
 
