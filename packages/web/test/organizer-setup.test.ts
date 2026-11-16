@@ -84,15 +84,34 @@ test('organizer unlock refuses wrong password, preserves the saved key and suppr
   release(); await action; assert.deepEqual(late.ready, []);
 });
 
-test('organizer import bounds files before reading and never overwrites a key installed by another panel', async () => {
+test('organizer import bounds files before reading', async () => {
   const p = panel(); let reads = 0;
   p.file.files = [{ size: 65537, text: async () => { reads++; return '{}'; } }];
   p.input.value = password; await p.button('qv.org.importKey').click();
   assert.equal(reads, 0); assert.equal(await p.storage.getKey(ORGANIZER_SLOT), undefined);
-  const other = panel(p.storage); other.input.value = password; await other.button('qv.key.create').click();
-  p.input.value = password; await p.button('qv.key.create').click();
-  assert.equal(p.state.derivations, 0); assert.deepEqual(p.ready, []);
 });
+
+for (const action of ['qv.key.create', 'qv.org.importKey'] as const) {
+  test(`stale organizer panel reports a locked key when ${action} starts after another panel installs`, async () => {
+    const p = panel();
+    const other = panel(p.storage); other.input.value = password; await other.button('qv.key.create').click();
+    const saved = serializeContainer((await p.storage.getKey(ORGANIZER_SLOT))!);
+    let reads = 0;
+    p.file.files = [{ size: saved.length, text: async () => { reads++; return saved; } }];
+    p.input.value = password; await p.button(action).click();
+    assert.equal(p.state.derivations, 0); assert.equal(reads, 0); assert.deepEqual(p.ready, []);
+    assert.ok(p.root.textContent.includes(tr.t('qv.key.locked')), 'occupied preflight must report the same locked state as atomic installation');
+    assert.equal(p.root.attrs.get('aria-busy'), 'false');
+    assert.equal(p.input.value, ''); assert.equal(p.file.value, '');
+    assert.equal(p.button('qv.key.create').disabled, true);
+    assert.equal(p.button('qv.org.importKey').disabled, true);
+    assert.equal(p.button('qv.key.unlock').disabled, false);
+    assert.equal(serializeContainer((await p.storage.getKey(ORGANIZER_SLOT))!), saved);
+    p.input.value = password; await p.button('qv.key.unlock').click();
+    assert.deepEqual(p.ready, other.ready);
+    assert.equal(serializeContainer((await p.storage.getKey(ORGANIZER_SLOT))!), saved);
+  });
+}
 
 test('organization enrollment sends the existing self-signed contract, one request per explicit attempt and locks on success or refusal', async () => {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -153,6 +172,42 @@ test('concurrent organizer creation in two panels installs exactly one key witho
   loser.input.value = password; await loser.button('qv.key.unlock').click();
   assert.deepEqual(loser.ready, winner.ready, 'losing panel unlocks the winning key');
   assert.equal(serializeContainer((await storage.getKey(ORGANIZER_SLOT))!), saved);
+});
+
+test('concurrent imports of different organizer backups install exactly one and the loser unlocks the winner', async () => {
+  const sources = [panel(), panel()];
+  for (const source of sources) { source.input.value = password; await source.button('qv.key.create').click(); }
+  assert.notEqual(sources[0]!.ready[0], sources[1]!.ready[0]);
+  const backups = await Promise.all(sources.map(async (source) => serializeContainer((await source.storage.getKey(ORGANIZER_SLOT))!)));
+  let release!: () => void, both!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  const started = new Promise<void>((r) => { both = r; });
+  let entered = 0;
+  const derive = async () => { if (++entered === 2) both(); await gate; };
+  const storage = new MemoryStorage();
+  const panels = [panel(storage, false, derive), panel(storage, false, derive)];
+  const operations = panels.map((p, i) => {
+    p.input.value = password;
+    p.file.files = [{ size: backups[i]!.length, text: async () => backups[i]! }];
+    return p.button('qv.org.importKey').click();
+  });
+  await started; release(); await Promise.all(operations);
+  assert.equal(panels[0]!.ready.length + panels[1]!.ready.length, 1);
+  const winnerIndex = panels[0]!.ready.length ? 0 : 1;
+  const winner = panels[winnerIndex]!, loser = panels[1 - winnerIndex]!;
+  assert.deepEqual(winner.ready, sources[winnerIndex]!.ready);
+  assert.equal(serializeContainer((await storage.getKey(ORGANIZER_SLOT))!), backups[winnerIndex]);
+  assert.ok(loser.root.textContent.includes(tr.t('qv.key.locked')));
+  for (const p of panels) {
+    assert.equal(p.input.value, '');
+    assert.equal(p.root.attrs.get('aria-busy'), 'false');
+    assert.equal(p.button('qv.key.create').disabled, true);
+    assert.equal(p.button('qv.org.importKey').disabled, true);
+    assert.equal(p.button('qv.key.unlock').disabled, false);
+  }
+  loser.input.value = password; await loser.button('qv.key.unlock').click();
+  assert.deepEqual(loser.ready, winner.ready);
+  assert.equal(serializeContainer((await storage.getKey(ORGANIZER_SLOT))!), backups[winnerIndex]);
 });
 
 test('organizer creation fails closed when an embedding lacks atomic installation', async () => {

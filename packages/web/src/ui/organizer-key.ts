@@ -60,8 +60,9 @@ export function organizerKeyPanel(d: {
         }
         // Recheck storage after entering the single-flight section: never overwrite a saved key.
         if (kind !== 'unlock' && await d.storage.getKey(ORGANIZER_SLOT) !== undefined) {
-          exists = true;
-          throw new Error('organizer key already exists');
+          // A different tab may finish before this preflight or during derivation.
+          // Both paths must offer read-only unlock of the installed key.
+          throw new KeySlotOccupiedError('organizer key already exists');
         }
         let publicKey: Uint8Array;
         let fingerprint: string[];

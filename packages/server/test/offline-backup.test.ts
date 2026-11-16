@@ -5,8 +5,9 @@ import assert from 'node:assert/strict';
 import { createHash, randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { bytesToHex } from '@quietvote/crypto';
 import { decodeHeader, encodeHeader, hashLeaf } from '@quietvote/board';
@@ -16,6 +17,9 @@ import { verifyBackup, restoreBackup, BackupError, backupMain } from '../src/off
 import { World } from './helpers/world.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'qv-drill-'));
+const unrelatedCwd = join(root, 'unrelated working directory');
+mkdirSync(unrelatedCwd);
+const backupExecutable = fileURLToPath(new URL('../bin/qv-backup.ts', import.meta.url));
 const key = join(root, 'independent-kek.bin');
 let w: World;
 let old: string;
@@ -61,39 +65,46 @@ test('offline verify uses disposable copies, authenticates separately supplied K
   assert.deepEqual(readdirSync(dir).map((p) => [p, createHash('sha256').update(readFileSync(join(dir, p))).digest('hex')]), before);
 });
 
-test('real executable restore drill: independent KEK, preserved tree/checkpoint, restart and append, restore audit', { timeout: 60000 }, async () => {
-  const destination = join(root, 'restored');
-  const cli = spawnSync(process.execPath, [resolve('packages/server/bin/qv-backup.ts'), 'restore', '--backup', current, '--kek-file', key,
-    '--minimum-backup', old, '--destination', destination], { encoding: 'utf8' });
-  assert.equal(cli.status, 0, cli.stderr);
-  assert.equal(JSON.parse(cli.stdout).elections[0].tree_size, 2);
-  if (process.platform !== 'win32') {
-    assert.equal(statSync(destination).mode & 0o777, 0o700);
-    assert.equal(statSync(join(destination, 'kek', 'kek.bin')).mode & 0o777, 0o600);
-  }
-  const restored = buildServer({ dataDir: destination, minFreeBytes: 0, registrationMode: 'closed', now: () => w.clock, logSink: () => {} });
-  try {
-    const rt = (await restored.pool.get(w.electionId))!;
-    const original = (await w.server.pool.get(w.electionId))!;
-    assert.equal(bytesToHex(rt.log.root()), bytesToHex(original.log.root()));
-    assert.deepEqual(rt.edb.store.listCheckpoints(), original.edb.store.listCheckpoints());
-    assert.equal(rt.edb.row().state, 'CEREMONY');
-    assert.ok(restored.env.control.auditRows().some((r) => r.action === 'restore'));
-    const at = await restored.start();
-    const response = await fetch(`${at.url}/api/v1/elections/${w.electionId}/state`);
-    assert.equal(response.status, 200); assert.equal((await response.json() as { tree_size: number }).tree_size, 2);
-    const base = w.base;
+const launchDirectories = [
+  ['repository', fileURLToPath(new URL('../../../', import.meta.url))],
+  ['workspace', fileURLToPath(new URL('../', import.meta.url))],
+  ['unrelated directory with spaces', unrelatedCwd],
+] as const;
+for (const [location, cwd] of launchDirectories) {
+  test(`real executable restore drill from ${location}: independent KEK, preserved tree/checkpoint, restart and append, restore audit`, { timeout: 60000 }, async () => {
+    const destination = join(root, `restored-${location}`);
+    const cli = spawnSync(process.execPath, [backupExecutable, 'restore', '--backup', current, '--kek-file', key,
+      '--minimum-backup', old, '--destination', destination], { cwd, encoding: 'utf8', timeout: 30000 });
+    assert.equal(cli.status, 0, cli.stderr);
+    assert.equal(JSON.parse(cli.stdout).elections[0].tree_size, 2);
+    if (process.platform !== 'win32') {
+      assert.equal(statSync(destination).mode & 0o777, 0o700);
+      assert.equal(statSync(join(destination, 'kek', 'kek.bin')).mode & 0o777, 0o600);
+    }
+    const restored = buildServer({ dataDir: destination, minFreeBytes: 0, registrationMode: 'closed', now: () => w.clock, logSink: () => {} });
     try {
-      w.base = at.url;
-      await w.ok('notice', w.coord[0]!, w.marker('dkg-r1-open', w.mh));
-      assert.equal(rt.log.size, 3);
-    } finally { w.base = base; }
-  } finally { await restored.stop(); }
-  // Missing KEK after a restore remains a hard startup failure; it is never silently regenerated.
-  rmSync(join(destination, 'kek', 'kek.bin'));
-  assert.throws(() => buildServer({ dataDir: destination, logSink: () => {} }), /KEK file missing/);
-  assert.equal(existsSync(join(destination, 'kek', 'kek.bin')), false);
-});
+      const rt = (await restored.pool.get(w.electionId))!;
+      const original = (await w.server.pool.get(w.electionId))!;
+      assert.equal(bytesToHex(rt.log.root()), bytesToHex(original.log.root()));
+      assert.deepEqual(rt.edb.store.listCheckpoints(), original.edb.store.listCheckpoints());
+      assert.equal(rt.edb.row().state, 'CEREMONY');
+      assert.ok(restored.env.control.auditRows().some((r) => r.action === 'restore'));
+      const at = await restored.start();
+      const response = await fetch(`${at.url}/api/v1/elections/${w.electionId}/state`);
+      assert.equal(response.status, 200); assert.equal((await response.json() as { tree_size: number }).tree_size, 2);
+      const base = w.base;
+      try {
+        w.base = at.url;
+        await w.ok('notice', w.coord[0]!, w.marker('dkg-r1-open', w.mh));
+        assert.equal(rt.log.size, 3);
+      } finally { w.base = base; }
+    } finally { await restored.stop(); }
+    // Missing KEK after a restore remains a hard startup failure; it is never silently regenerated.
+    rmSync(join(destination, 'kek', 'kek.bin'));
+    assert.throws(() => buildServer({ dataDir: destination, logSink: () => {} }), /KEK file missing/);
+    assert.equal(existsSync(join(destination, 'kek', 'kek.bin')), false);
+  });
+}
 
 test('restore refuses older history, missing elections and conflicting prefix floors before creating destination', async () => {
   const destination = join(root, 'stale-refused');

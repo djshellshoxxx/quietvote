@@ -8,7 +8,7 @@ import { extname, join } from 'node:path';
 import { bytesToHex, streamRng } from '@quietvote/crypto';
 import { ballotCode, type CastEnvelope } from '@quietvote/protocol';
 import { buildSite, csp } from '../src/build/site.ts';
-import { defaultDeps, serializeContainer, wrapSeed, FLOOR_PARAMS } from '../src/key/keystore.ts';
+import { defaultDeps, parseContainer, serializeContainer, unwrapSeed, wrapSeed, FLOOR_PARAMS } from '../src/key/keystore.ts';
 import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
 import { launchBrowser } from './browser.ts';
 
@@ -43,6 +43,9 @@ const PASS = 'correct horse battery staple';
 const keyFile = join(dist, 'voter.qvkey');
 const w = await wrapSeed(sim.voters[0]!.secretKey.slice(), PASS, { ...defaultDeps(), rng: streamRng('e2e') }, FLOOR_PARAMS);
 writeFileSync(keyFile, serializeContainer(w.container));
+const rivalKeyFile = join(dist, 'rival-organizer.qvkey');
+const rivalKey = await wrapSeed(sim.voters[1]!.secretKey.slice(), PASS, { ...defaultDeps(), rng: streamRng('e2e-rival') }, FLOOR_PARAMS);
+writeFileSync(rivalKeyFile, serializeContainer(rivalKey.container));
 
 const browser = await launchBrowser();
 let failed = 0;
@@ -79,26 +82,58 @@ try {
     const context = await browser.newContext();
     let p = await context.newPage();
     const rival = await context.newPage();
+    const late = await context.newPage();
     try {
-      // Two tabs share the same IndexedDB database but start with empty organizer slots.
-      for (const tab of [p, rival]) {
+      // All tabs observe an empty slot. Distinct backups expose any overwrite.
+      for (const [tab, file] of [[p, keyFile], [rival, rivalKeyFile], [late, rivalKeyFile]] as const) {
         await tab.goto(origin + '/new');
-        await tab.getByLabel('Organizer key file', { exact: true }).setInputFiles(keyFile);
+        await tab.getByLabel('Organizer key file', { exact: true }).setInputFiles(file);
         await tab.getByLabel('Passphrase', { exact: true }).fill(PASS);
       }
       await Promise.all([p, rival].map((tab) => tab.getByRole('button', { name: 'Import organizer key', exact: true }).click()));
-      await Promise.all([p, rival].map((tab) => tab.waitForFunction(() => [...document.querySelectorAll('p')].some((el) =>
-        el.textContent === 'Organizer public key (hex)' || el.textContent === 'Your key is locked.'), undefined, { timeout: 30000 })));
+      // Wait for completion, then assert the result separately: an unexpected error
+      // should fail with its UI state instead of hanging on success-only text.
+      const idle = (tab: typeof p) => tab.locator('section[aria-busy="false"]').waitFor({ timeout: 30000 });
+      await Promise.all([p, rival].map(idle));
       const winners = await Promise.all([p, rival].map((tab) => tab.getByText('Organizer public key (hex)', { exact: true }).count()));
       if (winners[0]! + winners[1]! !== 1) throw new Error('concurrent organizer imports did not select exactly one winner');
+      const loser = winners[0] ? rival : p;
+      if (await loser.getByText('Your key is locked.', { exact: true }).count() !== 1) throw new Error('losing organizer import did not report the locked key');
+      const winnerIndex = winners[0] ? 0 : 1;
+      const expectedPk = bytesToHex(sim.voters[winnerIndex]!.publicKey);
+      const expectedBackup = serializeContainer(winnerIndex === 0 ? w.container : rivalKey.container);
       if (winners[1]) p = rival;
-      await p.getByText('Organizer public key (hex)', { exact: true }).waitFor({ timeout: 30000 });
-      if (await p.locator('code').textContent() !== bytesToHex(sim.voters[0]!.publicKey)) throw new Error('organizer key mismatch');
-      if (await p.getByLabel('Passphrase', { exact: true }).inputValue() !== '') throw new Error('organizer passphrase retained');
-      if (await p.getByRole('button', { name: 'Create key', exact: true }).isEnabled()) throw new Error('existing organizer could be replaced');
+      if (await p.locator('code').textContent() !== expectedPk) throw new Error('organizer key mismatch');
+      // Force the preflight collision as well as the concurrent installation race.
+      await late.getByRole('button', { name: 'Import organizer key', exact: true }).click();
+      await idle(late);
+      if (await late.getByText('Your key is locked.', { exact: true }).count() !== 1) throw new Error('late organizer import did not report the locked key');
+      for (const tab of [p, loser, late]) {
+        if (await tab.getByLabel('Passphrase', { exact: true }).inputValue() !== '') throw new Error('organizer passphrase retained');
+        if (await tab.getByLabel('Organizer key file', { exact: true }).inputValue() !== '') throw new Error('organizer file selection retained');
+        for (const name of ['Create key', 'Import organizer key']) {
+          if (await tab.getByRole('button', { name, exact: true }).isEnabled()) throw new Error('existing organizer could be replaced');
+        }
+      }
+      // A losing tab must read the winner, never restore its own imported key.
+      for (const tab of [loser, late]) {
+        await tab.getByLabel('Passphrase', { exact: true }).fill(PASS);
+        await tab.getByRole('button', { name: 'Unlock key', exact: true }).click();
+        await idle(tab);
+        if (await tab.locator('code').textContent() !== expectedPk) throw new Error('losing tab did not unlock the installed organizer');
+      }
       const download = p.waitForEvent('download');
       await p.getByRole('button', { name: 'Download key file', exact: true }).click();
-      if ((await download).suggestedFilename() !== 'organizer.qvkey') throw new Error('organizer backup name mismatch');
+      const backup = await download;
+      if (backup.suggestedFilename() !== 'organizer.qvkey') throw new Error('organizer backup name mismatch');
+      const backupPath = await backup.path();
+      if (!backupPath) throw new Error('organizer backup download missing');
+      const backupText = readFileSync(backupPath, 'utf8');
+      if (backupText !== expectedBackup) throw new Error('organizer backup changed after competing imports or unlock');
+      const restored = await unwrapSeed(parseContainer(backupText), PASS);
+      try {
+        if (bytesToHex(restored.publicKey) !== expectedPk) throw new Error('organizer backup does not authenticate the installed key');
+      } finally { restored.seed.fill(0); }
       await p.getByLabel('Name of decision', { exact: true }).fill('Council');
       await p.getByLabel('Voting method', { exact: true }).selectOption('k-of-n');
       await p.getByLabel('Question', { exact: true }).fill('Choose the council');
