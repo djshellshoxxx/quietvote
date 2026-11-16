@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { decodeHeader, toHex, type BoardStore, type StoredCheckpoint, type StoredEntry } from '@quietvote/board';
 import { all, closeDb, get, openDb, run, tx, type Migration } from './db.ts';
 import { b64u } from '@quietvote/board';
+import type { OperationReceipt } from './operation-receipts.ts';
 
 const MIGRATIONS: Migration[] = [
   {
@@ -143,6 +144,21 @@ INSERT INTO meta(key,value) VALUES ('webhook_bridge_floor', CAST(COALESCE((SELEC
 CREATE TABLE append_completion (
   seq INTEGER PRIMARY KEY REFERENCES log_entry(seq),
   ts INTEGER NOT NULL
+) STRICT;
+`,
+  },
+
+  {
+    version: 8,
+    name: 'management_operation_receipt',
+    // Replay-safe responses commit beside election-owned effects; never retain one-time secrets here.
+    sql: `
+CREATE TABLE operation_receipt (
+  principal TEXT NOT NULL, idem_key TEXT NOT NULL, method TEXT NOT NULL, path TEXT NOT NULL,
+  req_sha256 BLOB NOT NULL CHECK (length(req_sha256)=32), expires_at INTEGER NOT NULL,
+  status INTEGER NOT NULL CHECK (status BETWEEN 200 AND 299), response TEXT,
+  audit_action TEXT CHECK (audit_action IN ('election.create','quarantine.clear')), audit_detail TEXT,
+  PRIMARY KEY(principal,idem_key)
 ) STRICT;
 `,
   },
@@ -426,6 +442,20 @@ export class ElectionDb {
   }
   redactions(): { seq: number; redactedAt: number; reason: string }[] {
     return all<{ seq: number; redacted_at: number; reason: string }>(this.db, 'SELECT seq,redacted_at,reason FROM redaction ORDER BY seq').map((r) => ({ seq: r.seq, redactedAt: r.redacted_at, reason: r.reason }));
+  }
+
+  // ---- committed management responses (redacted before storage)
+  storeOperationReceipt(r: OperationReceipt): void {
+    // Receipts use the original control-marker expiry as their generation. Expired keys may be reused.
+    run(this.db, 'INSERT OR REPLACE INTO operation_receipt(principal,idem_key,method,path,req_sha256,expires_at,status,response,audit_action,audit_detail) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      r.principal, r.idem_key, r.method, r.path, r.req_sha256, r.expires_at, r.status, r.response, r.audit_action, r.audit_detail);
+  }
+  operationReceipt(principal: string, key: string): OperationReceipt | undefined {
+    return get<OperationReceipt>(this.db, 'SELECT * FROM operation_receipt WHERE principal=? AND idem_key=?', principal, key);
+  }
+  operationReceipts(now: number): OperationReceipt[] {
+    run(this.db, 'DELETE FROM operation_receipt WHERE expires_at<=?', now);
+    return all<OperationReceipt>(this.db, 'SELECT * FROM operation_receipt ORDER BY principal,idem_key');
   }
 
   // ---- invites

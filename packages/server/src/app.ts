@@ -21,6 +21,7 @@ import { createHttpApp, type Ctx, type HttpApp, type Reply, type Route } from '.
 import { loadOrCreateKek, seal, open as unsealBytes } from './kek.ts';
 import { Logger } from './logger.ts';
 import { ElectionPool } from './pool.ts';
+import type { OperationJournal } from './operation-receipts.ts';
 import { ApiError, conflict, forbidden, notFound } from './problem.ts';
 import { FailureCounter, RateLimiter } from './ratelimit.ts';
 import { SseHub } from './sse.ts';
@@ -134,11 +135,15 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     if (!control.getOrg(o)) throw notFound('organization');
     return o;
   };
-  const idem = async (c: Ctx, principal: string, fn: (save: (reply: Reply) => void) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply> => {
+  const idem = async (c: Ctx, principal: string, fn: (save: (reply: Reply) => void, journal: OperationJournal) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply> => {
     const key = c.header('idempotency-key');
     if (key === undefined || key.length < 8 || key.length > 128 || !/^[\x21-\x7e]+$/.test(key)) throw new ApiError(400, 'BAD_REQUEST', 'Idempotency-Key header (8-128 printable chars) is required');
     const h = new Uint8Array(createHash('sha256').update(`${c.method}\n${c.target}\n`).update(c.body).digest());
-    const prev = control.idem(principal, key);
+    let prev = control.idem(principal, key);
+    if (prev?.status === -1 && prev.expires_at > nowMs()) {
+      pool.recoverResponse(principal, key);
+      prev = control.idem(principal, key);
+    }
     if (prev && prev.expires_at > nowMs()) {
       if (Buffer.compare(Buffer.from(prev.req_sha256), Buffer.from(h)) !== 0) throw new ApiError(422, 'IDEMPOTENCY_MISMATCH', 'Idempotency-Key was used with a different request');
       if (prev.status === -1) throw new ApiError(409, 'STATE_CONFLICT', 'this request outcome was not recorded; inspect the resource or job before submitting another request', { reason: 'IDEMPOTENCY_INTERRUPTED', retryable: false });
@@ -148,6 +153,15 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     control.storeIdem(principal, key, c.method, c.path, h, 0, null);
     let completed = false;
     let recorded = false;
+    let journaled = false;
+    const expiresAt = control.idem(principal, key)!.expires_at;
+    const journal: OperationJournal = (db, reply, audit) => {
+      const stored = redact ? redact(reply) : reply;
+      db.storeOperationReceipt({ principal, idem_key: key, method: c.method, path: c.path, req_sha256: h, expires_at: expiresAt,
+        status: reply.status, response: stored.json === undefined ? null : JSON.stringify(stored.json),
+        audit_action: audit?.action ?? null, audit_detail: audit ? JSON.stringify(audit.detail ?? {}) : null });
+      journaled = true;
+    };
     // Control-only mutations call save inside their own transaction so no committed resource can lose its replay receipt.
     const save = (r: Reply): void => {
       const stored = redact ? redact(r) : r;
@@ -155,14 +169,14 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       recorded = true;
     };
     try {
-      const r = await fn(save);
+      const r = await fn(save, journal);
       completed = true;
       if (!recorded) save(r);
       return r;
     } catch (e) {
       // Only a known refusal can release the binding. Internal errors (including response-cache writes after successful work)
       // can follow committed mutations. Retain them for reconciliation rather than repeat the operation.
-      if (!completed && e instanceof ApiError && e.status < 500) control.dropIdemInProgress(principal, key);
+      if (!completed && !journaled && e instanceof ApiError && e.status < 500) control.dropIdemInProgress(principal, key);
       else {
         try { control.interruptIdem(principal, key); } catch { /* an unavailable store leaves status=0 for startup recovery */ }
       }
@@ -339,13 +353,15 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     handler: (c) => {
       const org = orgOf(c);
       const b = c.parse(fObj({ title: req(fStr({ min: 1, max: 200 })), access: opt(fEnum('public', 'link')) }));
-      return idem(c, c.auth!.keyId, async () => {
-        const r = await pool.create(org, b.title, b.access ?? 'public');
-        control.audit(c.auth!.keyId, 'election.create', r.id);
-        return {
+      return idem(c, c.auth!.keyId, async (save, journal) => {
+        const view = (r: Awaited<ReturnType<ElectionPool['create']>>): Reply => ({
           status: 201,
           json: { election_id: r.id, origin: r.origin, log_pk: b64u(r.logPk), log_pk_hex: bytesToHex(r.logPk), state: 'DRAFT', ...(r.readKey ? { read_key: r.readKey } : {}) },
-        };
+        });
+        const r = await pool.create(org, b.title, b.access ?? 'public', (db, made) => journal(db, view(made), { action: 'election.create' }));
+        const reply = view(r);
+        control.tx(() => { control.audit(c.auth!.keyId, 'election.create', r.id); save(reply); });
+        return reply;
       }, (r) => {
         const j = { ...(r.json as Record<string, unknown>) };
         delete j['read_key'];
@@ -525,19 +541,19 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       }));
       if ((b.count === undefined) === (b.items === undefined)) throw new ApiError(400, 'BAD_REQUEST', 'exactly one of count or items is required');
       if (b.deliver) throw new ApiError(422, 'VALIDATION_FAILED', 'server-side delivery is not configured');
-      if (['READY', 'OPEN'].includes(rt.state) || rt.terminal) throw new ApiError(403, 'REGISTRATION_CLOSED', 'roll is committed');
       let exp: number | null = null;
       if (b.expires_at !== undefined) {
         exp = Date.parse(b.expires_at);
         if (Number.isNaN(exp)) throw new ApiError(400, 'BAD_REQUEST', 'bad expires_at');
       }
-      const dek = unlockDek(rt);
       const n = b.count ?? b.items!.length;
-      return idem(c, c.auth!.keyId, async () => {
+      return idem(c, c.auth!.keyId, async (_save, journal) => {
+        if (['READY', 'OPEN'].includes(rt.state) || rt.terminal) throw new ApiError(403, 'REGISTRATION_CLOSED', 'roll is committed');
+        const dek = unlockDek(rt);
         purgeInvites(rt);
         if (rt.edb.inviteCount() + n > cfg.maxVotersPerElection * 2) throw new ApiError(429, 'RATE_LIMITED', 'too many invites', { retryable: false });
         const out: { invite_id: string; code: string; label?: string }[] = [];
-        const rows = [];
+        const rows: Parameters<ElectionRuntime['edb']['addInvites']>[0] = [];
         for (let i = 0; i < n; i++) {
           const code = randomBytes(16).toString('base64url');
           const id = b64u(randomBytes(16)).slice(0, 26).toLowerCase().replace(/[^a-z2-7]/g, 'a').padEnd(26, 'a');
@@ -548,8 +564,9 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
           });
           out.push({ invite_id: id, code, ...(it?.label ? { label: it.label } : {}) });
         }
-        rt.edb.addInvites(rows);
-        return { status: 201, json: { invites: out } };
+        const reply = { status: 201, json: { invites: out } };
+        rt.edb.tx(() => { rt.edb.addInvites(rows); journal(rt.edb, reply); });
+        return reply;
       }, (r) => ({ ...r, json: { invites: (r.json as { invites: { invite_id: string }[] }).invites.map((i) => ({ invite_id: i.invite_id, code_withheld: true })) } }));
     },
   });
@@ -983,7 +1000,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
         let after: string | undefined;
         for (;;) {
           const page = control.listAllElections(undefined, after, 100);
-          for (const row of page) webhooks.recoverStored(row);
+          for (const row of page) { await pool.recoverStored(row); webhooks.recoverStored(row); }
           if (page.length < 100) break;
           after = page.at(-1)!.election_id;
         }

@@ -17,7 +17,7 @@ import type { Env } from './env.ts';
 import { open as unseal } from './kek.ts';
 import { Logger } from './logger.ts';
 import { FailureCounter, RateLimiter } from './ratelimit.ts';
-import { controlSecurityFloor, inviteSecurityFloor, preservesSecurityFloor, type BackupSecurityFloor } from './backup-security-floor.ts';
+import { controlSecurityFloor, inviteSecurityFloor, operationReceiptSecurityFloor, preservesSecurityFloor, type BackupSecurityFloor } from './backup-security-floor.ts';
 
 export class BackupError extends Error {
   readonly code: string;
@@ -203,6 +203,7 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: Verifie
       const rt = await ElectionRuntime.open(env, reg);
       try {
         security?.invites.set(reg.election_id, inviteSecurityFloor(rt.edb.db));
+        security?.operationReceipts.set(reg.election_id, operationReceiptSecurityFloor(rt.edb.db));
         const row = rt.edb.row();
         checkAuthors(rt);
         if (row.org_id !== reg.org_id || row.imported !== reg.imported || rt.quarantineReason() !== undefined || rt.edb.hasKeyEvidence() ||

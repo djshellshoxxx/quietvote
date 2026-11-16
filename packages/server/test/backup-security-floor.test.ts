@@ -121,3 +121,32 @@ test('minimum snapshot retains the durable event forwarding cursor', async () =>
   await refuses(missing, floor); await refuses(older, floor);
   await restoreBackup(floor, key, join(root, 'event-cursor-preserved'), floor);
 });
+
+test('minimum snapshot retains unexpired election receipts or their equivalent completed control response', async () => {
+  const expiry = Date.now() + 86400000;
+  const body = JSON.stringify({ invites: [{ invite_id: 'committed-canary', code_withheld: true }] });
+  const requestHash = sha256(utf8('operation-request-canary'));
+  const pending = changed('control', (db) => db.prepare('INSERT INTO idempotency(principal,idem_key,method,path,req_sha256,status,response,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?)')
+    .run('operation-principal', 'operation-key', 'POST', '/invites', requestHash, -1, null, 1, expiry));
+  const floor = changed('election', (db) => db.prepare('INSERT INTO operation_receipt(principal,idem_key,method,path,req_sha256,expires_at,status,response,audit_action,audit_detail) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .run('operation-principal', 'operation-key', 'POST', '/invites', requestHash, expiry, 201, body, null, null), pending);
+  const missing = changed('election', (db) => db.exec('DELETE FROM operation_receipt'), floor);
+  await refuses(missing, floor);
+  const altered = changed('election', (db) => db.exec("UPDATE operation_receipt SET response='{}' WHERE principal='operation-principal'"), floor);
+  await refuses(altered, floor);
+  const changedGeneration = changed('control', (db) => db.exec("UPDATE idempotency SET expires_at=expires_at+1 WHERE principal='operation-principal'"), floor);
+  await refuses(changedGeneration, floor);
+  const wrongCompleted = changed('control', (db) => db.exec("UPDATE idempotency SET status=201,response=X'7B7D' WHERE principal='operation-principal'"), floor);
+  await refuses(wrongCompleted, floor);
+  const promoted = changed('control', (db) => db.prepare("UPDATE idempotency SET status=201,response=? WHERE principal='operation-principal'").run(utf8(body)), missing);
+  await restoreBackup(promoted, key, join(root, 'receipt-promoted'), floor);
+  const delayed = changed('control', (db) => db.prepare("UPDATE idempotency SET status=201,response=?,expires_at=expires_at+60000 WHERE principal='operation-principal'").run(utf8(body)), floor);
+  const redundantRemoved = changed('election', (db) => db.exec("DELETE FROM operation_receipt WHERE principal='operation-principal'"), delayed);
+  await restoreBackup(redundantRemoved, key, join(root, 'receipt-delayed-promoted'), floor);
+  await restoreBackup(redundantRemoved, key, join(root, 'receipt-completed-redundant'), delayed);
+  const wrong = changed('control', (db) => db.exec("UPDATE idempotency SET response=X'7B7D' WHERE principal='operation-principal'"), promoted);
+  await refuses(wrong, floor);
+  const expired = changed('election', (db) => db.exec('UPDATE operation_receipt SET expires_at=1'), floor);
+  await restoreBackup(missing, key, join(root, 'receipt-expired'), expired);
+  assert.equal(JSON.stringify(await verifyBackup(floor, key)).includes('committed-canary'), false);
+});

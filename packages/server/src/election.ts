@@ -427,11 +427,21 @@ export class ElectionRuntime {
   }
 
   /** Lifts a forced quarantine (admin endpoint only). */
-  clearForcedQuarantine(): void {
+  clearForcedQuarantine(committed?: () => void): void {
+    const out: EventRow[] = [];
+    try {
+      this.edb.tx(() => {
+        this.edb.setQuarantine(null);
+        this.record(out, 'alert', null, { kind: 'quarantine_cleared', detail_code: 'ADMIN_CLEARED' });
+        committed?.();
+      });
+    } catch (error) {
+      this.poisoned = true; // Reopen from durable state even when completion failed after COMMIT.
+      throw error;
+    }
     this.forcedQuarantine = undefined;
-    this.edb.setQuarantine(null);
     this.env.control.setQuarantineFlag(this.id, null);
-    this.emitNow((out) => this.record(out, 'alert', null, { kind: 'quarantine_cleared', detail_code: 'ADMIN_CLEARED' }));
+    this.publish(out);
   }
 
   private fire(e: LifecycleEvent['t'], seq: number, at: number): void {

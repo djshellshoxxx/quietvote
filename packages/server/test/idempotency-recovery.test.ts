@@ -5,7 +5,7 @@ import { World } from './helpers/world.ts';
 
 const makeWorld = (): World => new World({ seed: 'idempotency-recovery', n: 3, t: 2, voters: 2 });
 
-test('committed work with a lost idempotency response stays reserved and becomes a nonretryable conflict after restart', async () => {
+test('committed election with a lost response stays reserved while storage fails and recovers after restart', async () => {
   const w = makeWorld();
   await w.start();
   try {
@@ -30,11 +30,9 @@ test('committed work with a lost idempotency response stays reserved and becomes
     await w.server.stop();
     await w.start();
     const interrupted = await w.signed('POST', path, body, w.owner, headers);
-    assert.equal(interrupted.status, 409, interrupted.text);
-    assert.equal(interrupted.json.code, 'STATE_CONFLICT');
-    assert.equal(interrupted.json.reason, 'IDEMPOTENCY_INTERRUPTED');
-    assert.equal(interrupted.json.retryable, false);
-    assert.equal(interrupted.headers.get('retry-after'), null);
+    assert.equal(interrupted.status, 201, interrupted.text);
+    assert.equal(interrupted.headers.get('idempotent-replay'), 'true');
+    assert.equal(interrupted.json.election_id, w.server.env.control.listElections(w.orgId, undefined, undefined, 10).find((r) => r.title === body.title)!.election_id);
     assert.equal(w.server.env.control.countElections(w.orgId), 2);
     const mismatch = await w.signed('POST', path, { title: 'Different request' }, w.owner, headers);
     assert.equal(mismatch.status, 422, mismatch.text);

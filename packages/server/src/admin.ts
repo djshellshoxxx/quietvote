@@ -10,6 +10,7 @@ import { utf8 } from '@quietvote/crypto';
 import type { AuthInfo } from './auth.ts';
 import type { Ctx } from './http.ts';
 import type { ElectionRuntime } from './election.ts';
+import type { ElectionDb } from './electiondb.ts';
 import type { Env } from './env.ts';
 import { JobError, type JobCtl, type JobOutcome } from './jobs.ts';
 import type { ElectionPool } from './pool.ts';
@@ -233,7 +234,7 @@ export async function selfAuditWork(env: Env, rt: ElectionRuntime, ctl: JobCtl):
 
 // ------------------------------------------------------------------------------------------------------------ quarantine clear
 
-export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, ack: string, verifiedAgainst: string[], actor: string): Promise<Record<string, unknown>> {
+export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, ack: string, verifiedAgainst: string[], actor: string, committed?: (db: ElectionDb, result: Record<string, unknown>, detail: Record<string, string>) => void): Promise<Record<string, unknown>> {
   const rt0 = await pool.get(id);
   if (!rt0) throw new ApiError(404, 'NOT_FOUND', 'no such election');
   const forced = rt0.forcedQuarantine === undefined ? undefined : (JSON.parse(rt0.forcedQuarantine) as { code: string; incident: string; min_size: number });
@@ -283,7 +284,9 @@ export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, 
     const sz = best.get(w);
     if (sz === undefined || sz < minSize || sz === 0) throw new ApiError(409, 'STATE_CONFLICT', `witness ${w} has not cosigned a stored checkpoint of size >= ${Math.max(1, minSize)}`);
   }
-  rt.clearForcedQuarantine();
-  env.control.audit(actor, 'quarantine.clear', id, { incident, witnesses: [...names].join(',') });
-  return { election_id: id, quarantined: false, incident, verified_against: [...names].map((n) => `witness:${n}`) };
+  const result = { election_id: id, quarantined: false, incident, verified_against: [...names].map((n) => `witness:${n}`) };
+  const detail = { incident, witnesses: [...names].join(',') };
+  rt.clearForcedQuarantine(() => committed?.(rt.edb, result, detail));
+  if (!committed) env.control.audit(actor, 'quarantine.clear', id, detail);
+  return result;
 }

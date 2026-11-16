@@ -11,6 +11,7 @@ import type { Ctx, Reply, Route } from './http.ts';
 import { commitImport, verifyBundle } from './imports.ts';
 import { JobError, jobView, type JobRunner } from './jobs.ts';
 import type { ElectionPool } from './pool.ts';
+import type { OperationJournal } from './operation-receipts.ts';
 import { ApiError, conflict, notFound } from './problem.ts';
 import { ELECTION_ID_RE, ORG_ID_RE, fArr, fEnum, fObj, fStr, opt, req, toIso, unbase32 } from './util.ts';
 
@@ -19,7 +20,7 @@ export interface ExtDeps {
   pool: ElectionPool;
   jobs: JobRunner;
   add(r: Route): void;
-  idem(c: Ctx, principal: string, fn: (save: (reply: Reply) => void) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply>;
+  idem(c: Ctx, principal: string, fn: (save: (reply: Reply) => void, journal: OperationJournal) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply>;
   readable(c: Ctx): Promise<ElectionRuntime>;
   intQ(c: Ctx, n: string, def: number, max: number): number;
 }
@@ -184,9 +185,16 @@ export function registerExtRoutes(d: ExtDeps): void {
       const a = authorizeAdmin(c);
       const id = c.params['id']!;
       const b = c.parse(fObj({ ack: req(fStr({ min: 4, max: 64, re: /^[A-Za-z0-9_-]+$/ })), verified_against: req(fArr(fStr({ min: 9, max: 80 }), 16)) }));
-      return d.idem(c, a.keyId, async () => {
+      return d.idem(c, a.keyId, async (save, journal) => {
         if (!control.election(id)) throw notFound('election');
-        return { status: 200, json: await clearQuarantine(env, pool, id, b.ack, b.verified_against, a.keyId) };
+        const json = await clearQuarantine(env, pool, id, b.ack, b.verified_against, a.keyId,
+          (db, result, detail) => journal(db, { status: 200, json: result }, { action: 'quarantine.clear', detail }));
+        const reply = { status: 200, json };
+        control.tx(() => {
+          control.audit(a.keyId, 'quarantine.clear', id, { incident: String(json.incident), witnesses: b.verified_against.map((name) => name.slice(8)).filter((name, i, names) => names.indexOf(name) === i).join(',') });
+          save(reply);
+        });
+        return reply;
       });
     },
   });

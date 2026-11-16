@@ -1,6 +1,6 @@
 // LRU pool of open election runtimes (QV-28 §7: bounded pool, one DB file per election, never a cross-election query).
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, rmSync } from 'node:fs';
+import { lstatSync, mkdirSync, realpathSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ed25519Keypair } from '@quietvote/crypto';
 import { ElectionDb } from './electiondb.ts';
@@ -10,6 +10,10 @@ import { seal } from './kek.ts';
 import { originOf } from './util.ts';
 import { sha256 } from '@quietvote/crypto';
 import { ApiError, conflict } from './problem.ts';
+import type { RegistryRow } from './controldb.ts';
+import { bridgeOperationReceipt } from './operation-receipts.ts';
+
+export interface CreatedElection { id: string; origin: string; logPk: Uint8Array; readKey?: string }
 
 export class ElectionPool {
   private readonly env: Env;
@@ -95,7 +99,7 @@ export class ElectionPool {
     }
   }
 
-  async create(orgId: string, title: string, access: 'public' | 'link'): Promise<{ id: string; origin: string; logPk: Uint8Array; readKey?: string }> {
+  async create(orgId: string, title: string, access: 'public' | 'link', committed?: (db: ElectionDb, result: CreatedElection) => void): Promise<CreatedElection> {
     this.ensureRunning();
     const { control, kek, cfg } = this.env;
     if (control.countElections(orgId) >= cfg.maxElectionsPerOrg) throw new ApiError(429, 'RATE_LIMITED', 'election quota reached for this organization', { retryable: false });
@@ -113,22 +117,71 @@ export class ElectionPool {
       readKeyHash = sha256(new TextEncoder().encode(`QV-READKEY-v1\0${readKey}`));
     }
     control.insertElection({ election_id: id, org_id: orgId, db_path: rel, access, title, dek_wrapped: seal(kek, dek, `dek:${id}`) });
+    const result: CreatedElection = { id, origin, logPk: logKp.publicKey, ...(readKey === undefined ? {} : { readKey }) };
+    let edb: ElectionDb | undefined;
     try {
-      const edb = new ElectionDb(join(cfg.dataDir, rel), SERVER_VERSION);
-      try {
-        edb.init({
+      edb = new ElectionDb(join(cfg.dataDir, rel), SERVER_VERSION);
+      const db = edb;
+      db.tx(() => {
+        db.init({
           election_id: id, origin, state: 'DRAFT', log_pk: logKp.publicKey, log_sk_enc: seal(dek, logKp.secretKey, 'log_sk'),
           srv_pk: srvKp.publicKey, srv_sk_enc: seal(dek, srvKp.secretKey, 'srv_sk'), access, read_key_hash: readKeyHash, title, org_id: orgId,
           created_at: this.env.nowMs(),
         });
-      } finally {
-        edb.close();
-      }
+        committed?.(db, result);
+      });
     } catch (e) {
-      control.markDeleted(id);
+      // A completion failure can occur after the election transaction committed. Only a proven absent
+      // election may be erased; an unreadable/uncertain database retains its registry binding.
+      try { if (edb && !edb.db.prepare('SELECT 1 FROM election LIMIT 1').get()) control.markDeleted(id); } catch { /* retain uncertain work */ }
       throw e;
+    } finally { edb?.close(); }
+    return result;
+  }
+
+  /** Inspect only canonical existing storage, without opening keys or replaying lifecycle state. */
+  private stored(reg: RegistryRow, visit: (db: ElectionDb) => void): boolean {
+    let db: ElectionDb | undefined;
+    try {
+      if (!/^[0-9a-f]{32}$/.test(reg.election_id) || reg.db_path !== join('elections', reg.election_id.slice(0, 2), `${reg.election_id}.sqlite`)) throw new Error('invalid election path');
+      const path = join(this.env.cfg.dataDir, reg.db_path);
+      if (!lstatSync(path).isFile() || realpathSync.native(path) !== path) throw new Error('election path must be a canonical regular file');
+      db = new ElectionDb(path, SERVER_VERSION);
+      const row = db.row();
+      if (row.election_id !== reg.election_id || row.org_id !== reg.org_id) throw new Error('election registry mismatch');
+      visit(db);
+      return true;
+    } catch {
+      this.env.logger.event('operation_recovery', { outcome: 'error', note: 'election_recovery_pending' });
+      return false;
+    } finally { db?.close(); }
+  }
+
+  /** Startup bridges committed responses and replays only elections with explicit unfinished append intents. */
+  async recoverStored(reg: RegistryRow): Promise<void> {
+    let pending = false;
+    this.stored(reg, (db) => {
+      pending = db.hasAppendCompletions();
+      for (const receipt of db.operationReceipts(this.env.nowMs())) bridgeOperationReceipt(this.env, db, receipt);
+    });
+    if (pending) {
+      try { await this.get(reg.election_id); }
+      catch { this.env.logger.event('append_recovery', { outcome: 'error', note: 'election_recovery_pending' }); }
     }
-    return readKey === undefined ? { id, origin, logPk: logKp.publicKey } : { id, origin, logPk: logKp.publicKey, readKey };
+  }
+
+  /** A retry may reconcile a durable response; it never repeats the side effect or opens a runtime. */
+  recoverResponse(principal: string, key: string): void {
+    let after: string | undefined;
+    for (;;) {
+      const page = this.env.control.listAllElections(undefined, after, 100);
+      for (const reg of page) this.stored(reg, (db) => {
+        const receipt = db.operationReceipt(principal, key);
+        if (receipt) bridgeOperationReceipt(this.env, db, receipt);
+      });
+      if (page.length < 100) break;
+      after = page.at(-1)!.election_id;
+    }
   }
 
   /** QV-28 §11.2: crypto-erase first, then close and unlink. */

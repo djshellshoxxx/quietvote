@@ -127,3 +127,54 @@ That is **7 distinct supplemental tests** exercised across those two runs, not a
 The archive regressions assert both stored signing-key blobs become NULL, the store remains read-only,
 checkpoint signing is refused, and the recovered ARCHIVED phase does not duplicate on another restart.
 Final server package typecheck and `git diff --check` pass.
+
+## Milestone 4: election-owned operation response recovery
+
+Lane: `codex/response-next`. Includes supplemental base `44e27f7` and archive-finalization follow-up
+`aae6196` (cherry-picked here as `e7380e3`). No remote write or held protocol-policy change.
+
+Election schema 8 adds `operation_receipt`. Creation, invitation batches and quarantine clear persist a
+redacted response in the same election transaction as their effects. Receipts bind principal, idempotency
+key, method, path, request hash and the original control-marker expiry. Recovery promotes only the exact
+live interrupted generation, atomically storing required operator audit and the control response cache.
+Creation retains registry/DEK ownership after uncertain post-COMMIT failure; proven rolled-back empty
+initialization is marked deleted. Invitation codes, link read keys, labels and contacts never enter receipts.
+
+Startup scans existing canonical regular election paths and verifies election/org identity before reading
+receipts. It opens full runtimes only for explicit v7 append-completion intents; ordinary receipt recovery
+does not decrypt keys or heal lifecycle state. Same-process retries can reconcile committed responses
+after transient storage failure. Missing, symlinked or mismatched storage leaves the interrupted marker
+intact with a static diagnostic; correction permits later recovery. Unknown outcomes without a receipt
+still return the existing nonretryable interrupted conflict. Normal first responses retain their one-time
+secrets, while replay returns only the redacted original identifiers.
+
+The private backup security floor now preserves unexpired receipts and their exact pending generation,
+or an equivalent completed control result. Fresh review found and corrected two edge cases: retaining a
+receipt with a changed pending expiry made it unrecoverable, and legitimate delayed cache completion
+extends expiry so redundant receipt removal must accept that equivalent completed result. Conflicting
+completed bodies are refused even when the old receipt remains. Receipt contents never enter public
+backup reports. The existing admin status assertion was updated to control schema 7.
+
+Executed on Linux / Node 24.22.1, single test concurrency:
+
+- Final operation-response recovery + backup security floor: **16 pass, 0 fail/skip**.
+- Final admin + idempotency + webhook bridge + events + deletion + shutdown + outbox rollback:
+  **50 pass, 0 fail/skip**.
+- Expanded management/offline-backup/stale-registry/supplemental run: **49 pass, 1 fail**, solely the
+  stale admin schema assertion above; that file passed in the final 50-test run after correction.
+- Earlier core operation/bridge/supplemental/floor run: **27 pass, 0 fail/skip**. Counts overlap.
+- Final server package typecheck and `git diff --check`: pass.
+- Fresh reviewer independently reproduced the three receipt-floor edge cases, then verified all three
+  pass against the corrected implementation. This is AI review, not external security acceptance.
+
+Regression coverage includes real child exits after each election-owned commit and before response-cache
+commit; delayed startup recovery before any election request; audit deduplication; receipt rollback;
+post-COMMIT initialization error and same-process retry; all request-binding dimensions; expiry/reuse;
+raw-storage missing/symlink/identity refusal; and startup supplemental completion before pool access.
+
+Integration hold: fresh review independently confirmed a separate v7 replay second-crash gap. Replay
+can commit supplemental event/intent deletion before final election/registry projections synchronize;
+a second exit then leaves no intent to trigger the next startup replay. The reviewer owns a separate fix
+and two-crash regressions on its isolated branch. Integrate that fix before claiming complete startup
+projection recovery. This response milestone does not claim that gap fixed, whole-server qualification,
+or external crash/power-loss/platform acceptance.

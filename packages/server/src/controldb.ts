@@ -502,8 +502,8 @@ export class ControlDb {
     run(this.db, 'UPDATE idempotency SET status=-1 WHERE status=0');
   }
 
-  idem(principal: string, key: string): { req_sha256: Uint8Array; status: number; response: Uint8Array | null; expires_at: number } | undefined {
-    return get(this.db, 'SELECT req_sha256,status,response,expires_at FROM idempotency WHERE principal=? AND idem_key=?', principal, key) as never;
+  idem(principal: string, key: string): { method: string; path: string; req_sha256: Uint8Array; status: number; response: Uint8Array | null; expires_at: number } | undefined {
+    return get(this.db, 'SELECT method,path,req_sha256,status,response,expires_at FROM idempotency WHERE principal=? AND idem_key=?', principal, key) as never;
   }
   storeIdem(principal: string, key: string, method: string, path: string, reqHash: Uint8Array, status: number, response: Uint8Array | null): void {
     const t = this.now();
