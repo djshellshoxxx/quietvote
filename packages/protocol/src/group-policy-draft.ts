@@ -50,9 +50,12 @@ const SAFE = Number.MAX_SAFE_INTEGER;
 const CLASSES = ['ordinary', 'bylaw', 'rules', 'entrenched'] as const;
 const GROUNDS = ['G1_MISSING_BALLOT', 'G2_VERIFY_FAIL', 'G3_ROLL_ERROR', 'G4_PROCEDURE', 'G5_CONFLICT', 'G6_OTHER'];
 const EXCLUSIONS = ['stewards', 'trustees', 'proposers', 'challengers'];
-const thresholdSchema = obj({ num: int(0, SAFE), den: int(1, SAFE), cmp: oneOf('gt', 'gte'), base: oneOf('yes_no', 'all_cast', 'eligible') });
-const classSchema = obj({ quorum_bp: int(0, 10000), threshold: thresholdSchema, min_review_hours: int(24, 2160), min_voting_hours: int(24, 2160) });
-const draftSchema = obj({
+// Construct only when draft validation is used. Protocol's public barrel also
+// serves browser cryptography workers, where offline planning code must tree-shake.
+function makeDraftSchema(): Schema {
+  const thresholdSchema = obj({ num: int(0, SAFE), den: int(1, SAFE), cmp: oneOf('gt', 'gte'), base: oneOf('yes_no', 'all_cast', 'eligible') });
+  const classSchema = obj({ quorum_bp: int(0, 10000), threshold: thresholdSchema, min_review_hours: int(24, 2160), min_voting_hours: int(24, 2160) });
+  return obj({
   format: lit(GROUP_POLICY_DRAFT_FORMAT),
   policy: obj({
     stewards: obj({ approval: obj({ k: int(1, 15), n: int(1, 15) }), term_days: int(0, SAFE), max_consecutive_terms: int(0, SAFE) }),
@@ -71,7 +74,8 @@ const draftSchema = obj({
     retention_profile: lit('default-v1'),
   }),
   suggested_election: obj({ decision_class: oneOf(...CLASSES), voting_hours: int(24, 2160) }),
-});
+  });
+}
 
 const pointer = (path: string, key: string | number) => `${path}/${String(key).replaceAll('~', '~0').replaceAll('/', '~1')}`;
 
@@ -104,7 +108,7 @@ export function validateGroupPolicyDraft(input: unknown): GroupPolicyDraftReport
       if (failure !== null) add(schema.t === 'int' && typeof value === 'number' && Number.isSafeInteger(value) ? 'E_RULES_BOUND' : 'E_RULES_SCHEMA', path, failure.slice(2));
     }
   }
-  shape(draftSchema, input, '');
+  shape(makeDraftSchema(), input, '');
   const report: GroupPolicyDraftReport = { scope: 'unsigned-policy-draft', valid: false, errors, truncated: total > 10, warnings: [], required_configuration: ['group identity', 'steward public keys', 'signed rule chain', 'versioned election binding'] };
   if (errors.length) return report;
   const draft = input as GroupPolicyDraft, p = draft.policy;
@@ -124,6 +128,7 @@ export function validateGroupPolicyDraft(input: unknown): GroupPolicyDraftReport
     bound(c.min_voting_hours <= p.elections.max_voting_hours, `/policy/decision_classes/${name}/min_voting_hours`, 'class minimum exceeds the maximum voting duration');
   }
   const entrenched = p.decision_classes.entrenched.threshold;
+  bound(p.decision_classes.entrenched.quorum_bp >= 6000, '/policy/decision_classes/entrenched/quorum_bp', 'entrenched quorum must be at least 60 percent (QV-03 AC4)');
   bound(entrenched.cmp === 'gte' && 4n * BigInt(entrenched.num) >= 3n * BigInt(entrenched.den), '/policy/decision_classes/entrenched/threshold', 'entrenched threshold must be at least 3/4 with gte');
   const requested = draft.suggested_election;
   const minimum = Math.max(p.elections.min_voting_hours, p.decision_classes[requested.decision_class].min_voting_hours);

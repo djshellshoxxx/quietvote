@@ -28,8 +28,12 @@ function show(io: Io, json: boolean, input: unknown): number {
   const report = validateGroupPolicyDraft(input);
   if (json) printJson(io, report);
   else {
+    // Unknown object keys become diagnostic pointers. Render their controls and
+    // bidi/format marks visibly instead of letting untrusted drafts alter a TTY.
+    const terminal = (value: string) => value.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu,
+      (character) => `\\u{${character.codePointAt(0)!.toString(16)}}`);
     io.out(`${report.valid ? 'Valid' : 'Invalid'} unsigned policy draft; no signed rules or election authority verified.\n`);
-    for (const e of report.errors) io.out(`${e.code} ${e.path || '/'}: ${e.message}\n`);
+    for (const e of report.errors) io.out(`${e.code} ${terminal(e.path || '/')}: ${terminal(e.message)}\n`);
     for (const w of report.warnings) io.out(`${w.code} ${w.path}: ${w.message}\n`);
     if (report.effective_min_review_hours !== undefined) io.out(`Selected class minimums: review ${report.effective_min_review_hours} hours; voting ${report.effective_min_voting_hours} hours.\n`);
     io.out(`Still required: ${report.required_configuration.join('; ')}.\n`);
