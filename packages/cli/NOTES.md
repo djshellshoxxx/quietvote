@@ -156,3 +156,29 @@ board package; server import reuses them without changing its protocol verificat
 The separate-organizer refusal is retained and regression-tested. Preparation is not a full protocol,
 witness, receipt or freshness verdict. The existing executable election test now uses this command for
 both ceremony log and tally release inputs, replacing its manual archive unpacking.
+
+## Coordinator lifecycle proposals — 2026-11-16 parallel continuation
+
+`qv election draft-record` creates unsigned bodies for the nine existing ceremony,
+roll commitment and election open/close transitions from a pinned authenticated
+`.qvb` archive. Archive parsing/authentication is the same function used by
+`prepare`; no package boundary, dependency, cryptographic primitive, server
+admission rule or protocol schema changed. Every generation is explicit and
+writes a new private file. Existing coordinator signing and outer framing remain
+separate operations.
+
+The adapter checks the existing record schemas/signatures, ordered phase markers,
+roll pins/commitments and terminal controls. It calls `adjudicateDkg` and
+`verifyKeyconf` for final/keyed phases; it does not implement another DKG.
+Context-bound open/close signatures and their referenced history are checked
+before deriving the next body. The current protocol's `t` confirmation threshold
+is retained; contradictory draft specification statements are not settled here.
+
+Lifecycle tests exercise all nine generated bodies through the real command
+entrypoint against an actual server, reject early/repeated transitions, missing
+pins, damaged archives and insufficient confirmations, and rebuild authentic
+outer boards around invalid trustee signatures/proofs to check inner rejection.
+No time or witness guard is bypassed: the summary explicitly leaves witness and
+freshness verification false and the server remains responsible for admission.
+An unpinned roll is labeled `uncommitted-proposal`; its membership still needs
+operator review. Separate-organizer archive refusal and B3-01/D-99 are unchanged.
