@@ -81,3 +81,14 @@ The browser journey is required by CI but was not run locally because Chromium
 launch is host-blocked. The integrator must record the hosted result and qualify
 the combined key-policy/organizer/registration source. Independent external
 security/protocol and human/platform release gates remain separate.
+
+## Integrator review of refusal/expiry follow-up
+
+The integrator independently reviewed `894a94d` after the original lane freeze:
+unknown/revoked/consumed invitation failures now share the same public problem
+body and voter lookup shape, and redemption refuses at `now >= expires_at`.
+The existing registered-key retry and deliberately absent invite-to-voter
+linkage remain unchanged. This does not assert constant-time HTTP behavior.
+On integrated implementation `ff2f9a5`, both registration test files passed
+14/14, no failures/skips, in 6.613 seconds, including the eight independent
+review probes and both new refusal/expiry regressions. No scoped blocker found.
