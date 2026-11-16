@@ -219,7 +219,10 @@ qv online invites-create --server https://board.example --id <32-hex-api-id> --c
 The command checks the election ID, origin and modern registration scheme, then
 reserves a new output with mode `0600` before making one POST. Existing files,
 directories and symlinks are never overwritten. The initial file contains a
-pending-operation marker. A successful HTTP response, bounded to 256 KiB, is
+pending-operation marker. The file's identity and private, single-link descriptor
+are checked after key unlock immediately before sending, and again before success
+is reported. A replaced pathname is never overwritten or reported as the output.
+A successful HTTP response, bounded to 256 KiB, is
 saved and flushed to that private descriptor before validation. Success requires
 the requested count of distinct IDs and canonical 16-byte bearer codes. Only
 the file path, election ID, count and invitation IDs reach stdout; tokens stay
@@ -233,6 +236,10 @@ file and server state before retrying: the server deliberately omits codes from
 idempotent replay, and a new idempotency key can issue another batch. No retry is
 automatic. Reservation and `fsync` reduce avoidable local loss; storage failures,
 power loss and loss of the one response cannot guarantee recovery of raw codes.
+If the reservation becomes unlinked, multiply linked or publicly readable before
+the response is saved, bearer bytes are not written there. If a still-private
+reserved file was renamed, it retains the response but the command reports the
+lost pathname binding instead of a misleading success.
 
 The combined executable election now invokes both `invites-create` and `enroll`
 for all voters. Organization bootstrap and public manifest choices remain its

@@ -64,6 +64,23 @@ the integrator's final hosted CLI suite must execute its updated issuance and
 enrollment segment together with the independently changing verification tail.
 Fresh review was requested from `cli_invitation_review`; its receipt is separate.
 
+### Fresh review correction
+
+The reviewer reproduced a replaced-path race and repaired it in `7092ddb`.
+Descriptor checks require a regular, single-link, privately permissioned file;
+`lstat` and `fstat` identity checks bind the requested path to that descriptor.
+The last pre-send check runs after asynchronous key unlock and immediately before
+fetch, returning a known not-sent refusal if the reservation changed. Checks also
+run before secret writes and before reporting success. A renamed but still-private
+original receives the response; its replacement is untouched and no success is
+claimed. Unlinked or newly public descriptors receive no bearer bytes.
+
+The implementation author independently reviewed that repair and ran all four
+new review regressions on its local cherry-pick `dc41c01`: 4 passed, 0 failed or
+skipped, 0.669 seconds. No further scoped blocker was found. Integrate `7092ddb`
+once; `dc41c01` is its alias, not another fix. The reviewer's separate receipt also
+records 12 passing invitation/enrollment/review tests and typecheck.
+
 ## Integration and remaining boundaries
 
 Cherry-pick the implementation once, then this documentation commit. Preserve
