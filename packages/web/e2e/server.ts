@@ -199,13 +199,14 @@ test('production organizer reviews and sends ceremony packets to the real server
     throw error;
   }
   const dist = mkdtempSync(join(tmpdir(), 'qv-organizer-browser-'));
-  const world = new World({ seed: 'organizer-browser-server', n: 3, t: 2, voters: 0, witnessQuorum: 0, server: { staticDir: dist } });
+  const world = new World({ seed: 'organizer-browser-server', n: 3, t: 2, voters: 3, witnessQuorum: 0, server: { staticDir: dist } });
   let browser: Awaited<ReturnType<typeof launchBrowser>> | undefined;
   let started = false;
   try {
     browser = await launchBrowser();
     await buildSite(dist); await world.start(); started = true;
-    await world.setupOrgAndElection(); assert.equal((await world.publishManifest()).status, 201);
+    await world.setupOrgAndElection(); await world.registerVoters();
+    assert.equal((await world.publishManifest()).status, 201);
     const passphrase = 'correct horse battery staple';
     const keyFile = join(world.dir, 'coordinator.qvkey');
     const wrapped = await wrapSeed(world.coord[0]!.secretKey.slice(), passphrase,
