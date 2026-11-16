@@ -135,6 +135,17 @@ UPDATE voter_invite SET closed_at = COALESCE(registered_at, created_at) WHERE st
 INSERT INTO meta(key,value) VALUES ('webhook_bridge_floor', CAST(COALESCE((SELECT seq FROM sqlite_sequence WHERE name='event'),0) AS TEXT));
 `,
   },
+  {
+    version: 7,
+    name: 'append_event_completion',
+    // Only post-upgrade appends create intents. Historical/pruned events must never be regenerated.
+    sql: `
+CREATE TABLE append_completion (
+  seq INTEGER PRIMARY KEY REFERENCES log_entry(seq),
+  ts INTEGER NOT NULL
+) STRICT;
+`,
+  },
 ];
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
@@ -355,6 +366,18 @@ export class ElectionDb {
     run(this.db, 'UPDATE election SET quarantine=?', reason);
   }
   // ---- event outbox
+  queueAppendCompletion(seq: number, ts: number): void {
+    run(this.db, 'INSERT INTO append_completion(seq,ts) VALUES (?,?)', seq, ts);
+  }
+  appendCompletion(seq: number): number | undefined {
+    return get<{ ts: number }>(this.db, 'SELECT ts FROM append_completion WHERE seq=?', seq)?.ts;
+  }
+  hasAppendCompletions(): boolean {
+    return get(this.db, 'SELECT 1 FROM append_completion LIMIT 1') !== undefined;
+  }
+  finishAppendCompletion(seq: number): void {
+    run(this.db, 'DELETE FROM append_completion WHERE seq=?', seq);
+  }
   webhookBridgeFloor(): number {
     return Number(get<{ value: string }>(this.db, "SELECT value FROM meta WHERE key='webhook_bridge_floor'")!.value);
   }

@@ -199,11 +199,26 @@ export class ElectionRuntime {
     return { tree_size: this.log.size, root: b64(this.log.root()), witnessed: w.witnessed, cosigners: w.cosigners, issued_at: toIso(this.env.nowSec()) };
   }
 
-  private quarantineAlert(out: EventRow[]): void {
+  private quarantineAlert(out: EventRow[], at: number): boolean {
     const q = this.quarantineReason();
-    if (q === undefined || this.alertedQuarantine) return;
-    this.alertedQuarantine = true;
-    this.record(out, 'alert', null, { kind: 'quarantine', detail_code: 'LOG_QUARANTINED' });
+    if (q === undefined || this.alertedQuarantine) return false;
+    out.push(this.edb.insertEvent(at, 'alert', null, JSON.stringify({ kind: 'quarantine', detail_code: 'LOG_QUARANTINED' })));
+    return true;
+  }
+
+  /** Resolve one durable append intent with the projection at exactly that sequence. */
+  private completeAppendEvents(seq: number, from: ElectionStateName): EventRow[] {
+    const at = this.edb.appendCompletion(seq);
+    if (at === undefined) return [];
+    const out: EventRow[] = [];
+    let alerted = false;
+    this.edb.tx(() => {
+      if (this.st.state !== from) out.push(this.edb.insertEvent(at, 'phase', seq, JSON.stringify({ from, to: this.st.state, seq })));
+      alerted = this.quarantineAlert(out, at);
+      this.edb.finishAppendCompletion(seq);
+    });
+    if (alerted) this.alertedQuarantine = true;
+    return out;
   }
 
   /** Hands committed rows to live streams and to the webhook dispatcher. Never throws. */
@@ -356,7 +371,11 @@ export class ElectionRuntime {
         }
         const h = decodeHeader(r.headerBytes);
         if (!h.ok) throw new Error(`stored entry ${r.seq} has a bad header`);
+        const fromState = this.st.state;
         await this.apply(r.seq, h.value.type, rec, r.sequencedAt);
+        // A crash can leave a durable entry without its supplemental event. Only explicit intents permit recovery.
+        // The pool forwards committed rows after replay; no historical event is emitted to live subscribers here.
+        this.completeAppendEvents(r.seq, fromState);
       }
       if (!page.more) break;
       from = (page.rows.at(-1)?.seq ?? from) + 1;
@@ -696,6 +715,7 @@ export class ElectionRuntime {
         // entry events carry no bodies (QV-09 §9); written atomically with the append
         this.record(evs, 'entry', seq, { seq, type: h.type, author: b64u(h.author), leaf_hash: b64u(r.value.receipt.leafHash) });
         this.record(evs, 'checkpoint', seq, this.checkpointData());
+        this.edb.queueAppendCompletion(seq, this.env.nowMs());
       });
     } catch (e) {
       if (this.log.size !== this.edb.store.size()) this.poisoned = true; // in-memory tree ran ahead of the rolled-back DB
@@ -706,14 +726,9 @@ export class ElectionRuntime {
     if (h.type === 'audit_close') this.finalizeArchive();
     this.syncState();
     try {
-      const supplemental: EventRow[] = [];
-      this.edb.tx(() => {
-        if (this.st.state !== from) this.record(supplemental, 'phase', seq, { from, to: this.st.state, seq });
-        this.quarantineAlert(supplemental);
-      });
-      evs.push(...supplemental); // Never publish rows whose transaction rolled back (their IDs can be reused).
+      evs.push(...this.completeAppendEvents(seq, from)); // Never publish rows whose transaction rolled back (their IDs can be reused).
     } catch {
-      /* the append is durable; a lost phase event is recoverable from the log */
+      this.env.logger.event('append_events', { outcome: 'error', note: 'completion_pending' });
     }
     this.publish(evs);
     this.env.stats.appended++;
@@ -1171,26 +1186,25 @@ export class ElectionRuntime {
       }
       const beforeNames = witnessStatus(cp.value, policy).valid;
       const had = new Set(this.witnessInfo().cosigners);
-      const r = this.log.attachCosignatures(size, valid, policy);
-      if (!r.ok) throw this.mapBoardErr(r.error.code, r.error.message);
-      const after = parseCheckpoint(r.value.note);
-      const accepted = after.ok ? [...witnessStatus(after.value, policy).valid.keys()].filter((n) => !beforeNames.has(n)) : [];
-      try {
+      const events: EventRow[] = [];
+      const result = this.edb.tx(() => {
+        const r = this.log.attachCosignatures(size, valid, policy);
+        if (!r.ok) throw this.mapBoardErr(r.error.code, r.error.message);
+        const after = parseCheckpoint(r.value.note);
+        const accepted = after.ok ? [...witnessStatus(after.value, policy).valid.keys()].filter((n) => !beforeNames.has(n)) : [];
         const info = this.witnessInfo();
         const fresh = info.cosigners.filter((x) => !had.has(x));
         if (fresh.length > 0) {
           const e = this.edb.store.getEntry(Math.max(0, size - 1));
           const lag = e ? Math.max(0, this.env.nowSec() - e.sequencedAt) : 0;
-          this.emitNow((out) => {
-            for (const wname of fresh) this.record(out, 'witness', null, { witness: wname, lag_seconds: lag, quorum_met: r.value.witnessed });
-            if (info.size === size) this.record(out, 'checkpoint', null, this.checkpointData());
-          });
+          for (const wname of fresh) this.record(events, 'witness', null, { witness: wname, lag_seconds: lag, quorum_met: r.value.witnessed });
+          if (info.size === size) this.record(events, 'checkpoint', null, this.checkpointData());
         }
-      } catch {
-        /* events are best effort relative to the cosignature itself */
-      }
+        return { accepted, rejected, witnessed: r.value.witnessed };
+      });
+      this.publish(events);
       await this.maybeAggregateLocked();
-      return { accepted, rejected, witnessed: r.value.witnessed };
+      return result;
     });
   }
 

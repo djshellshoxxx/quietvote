@@ -82,3 +82,33 @@ Fresh agent `fresh_server_review` independently reviewed the current changes and
 management-response recovery: **10 pass, 0 fail/skip**. It found no unresolved blocker in this slice.
 This remains AI review, not external security acceptance. The first full run still has the superseded
 startup failure and must not be described as final-candidate green.
+
+## Milestone 3: supplemental event completion after process exit
+
+Election schema 7 adds `append_completion(seq, ts)`. Every new append saves its sequence-bound intent
+with its log/checkpoint/entry events. Projection completion saves phase/alert rows and deletes that intent
+in one transaction. Runtime replay resolves only retained intents at the corresponding log sequence,
+using the original append timestamp; completed, pruned and pre-upgrade history is never regenerated.
+The in-memory quarantine alert marker advances only after durable event commit.
+
+Witness cosignature changes and their witness/checkpoint event rows now share one election transaction.
+Event insertion failure rolls back the signature too, and publication occurs only after commit. A process
+exit after that commit leaves complete event rows for the existing webhook bridge.
+
+Executed on Node 24.22.1, single test concurrency:
+
+- Supplemental recovery + existing outbox rollback: **6 pass, 0 fail/skip**.
+- Existing events + webhook bridge migration/retry/recovery: **30 pass, 0 fail/skip**.
+- Server package typecheck: pass. `git diff --check`: pass.
+
+The supplemental regressions include child processes exiting immediately after SQLite append/cosignature
+commit, then opening the same persisted databases in a new process. The test removes the stale directory
+lock only after its sole owning child has exited. Additional faults cover phase insert/intent deletion
+rollback, cosignature/event rollback, replay deduplication, historical pruning, and schema upgrade.
+
+Coordination: the response-recovery lane owns startup integration. It must scan canonical existing election
+DBs with matching registry/election/org identifiers and reopen **only** those with `hasAppendCompletions()`.
+This milestone itself reconstructs on runtime replay; it does not claim startup reconstruction without that
+integration. It deliberately avoids reopening every election or healing unrelated lifecycle projections.
+The v8 operation-receipt migration belongs to that separate lane. Existing bridge migration regressions
+now drop schema-v7 objects when simulating the pre-v6 database; future schema fixtures must do likewise.
