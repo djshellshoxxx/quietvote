@@ -48,24 +48,34 @@ export async function sealWithPassphrase(plaintext: Uint8Array, passphrase: stri
   const wrapNonce = rng.bytes(12);
   const payloadNonce = rng.bytes(12);
   const fileKey = rng.bytes(32);
-  const pw = utf8(passphrase.normalize('NFKC'));
-  const wrapKey = await kdf(pw, salt, logN);
-  const head = concatBytes(MAGIC, u8(logN), salt, wrapNonce);
-  const aad = concatBytes(head, opts.aad ?? new Uint8Array(0));
-  const wrapped = new Uint8Array(
-    await globalThis.crypto.subtle.encrypt({ name: 'AES-GCM', iv: new Uint8Array(wrapNonce), additionalData: new Uint8Array(aad), tagLength: 128 }, await aesKey(wrapKey, 'encrypt'), new Uint8Array(fileKey)),
-  );
-  const hdr = concatBytes(head, wrapped, payloadNonce);
-  const pk = payloadKey(fileKey, payloadNonce);
-  const body = new Uint8Array(
-    await globalThis.crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: new Uint8Array(12), additionalData: new Uint8Array(concatBytes(hdr, opts.aad ?? new Uint8Array(0))), tagLength: 128 },
-      await aesKey(pk, 'encrypt'),
-      new Uint8Array(plaintext),
-    ),
-  );
-  wipe(fileKey); wipe(wrapKey); wipe(pw); wipe(pk);
-  return concatBytes(hdr, body);
+  let pw: Uint8Array | undefined;
+  let wrapKey: Uint8Array | undefined;
+  let pk: Uint8Array | undefined;
+  try {
+    pw = utf8(passphrase.normalize('NFKC'));
+    wrapKey = await kdf(pw, salt, logN);
+    const head = concatBytes(MAGIC, u8(logN), salt, wrapNonce);
+    const aad = concatBytes(head, opts.aad ?? new Uint8Array(0));
+    const wrapped = new Uint8Array(
+      await globalThis.crypto.subtle.encrypt({ name: 'AES-GCM', iv: new Uint8Array(wrapNonce), additionalData: new Uint8Array(aad), tagLength: 128 }, await aesKey(wrapKey, 'encrypt'), new Uint8Array(fileKey)),
+    );
+    const hdr = concatBytes(head, wrapped, payloadNonce);
+    pk = payloadKey(fileKey, payloadNonce);
+    const body = new Uint8Array(
+      await globalThis.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: new Uint8Array(12), additionalData: new Uint8Array(concatBytes(hdr, opts.aad ?? new Uint8Array(0))), tagLength: 128 },
+        await aesKey(pk, 'encrypt'),
+        new Uint8Array(plaintext),
+      ),
+    );
+    return concatBytes(hdr, body);
+  } finally {
+    // Best-effort cleanup also covers KDF, key-import and AEAD failures (QV-30 S3).
+    wipe(fileKey);
+    if (pw !== undefined) wipe(pw);
+    if (wrapKey !== undefined) wipe(wrapKey);
+    if (pk !== undefined) wipe(pk);
+  }
 }
 
 /** Throws E_AEAD on a wrong passphrase or any tampering, E_PARSE on a malformed container. */
