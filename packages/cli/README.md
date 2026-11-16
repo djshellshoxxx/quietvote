@@ -51,7 +51,8 @@ creation; changing the body requires a new key. A successful link-access creatio
 protect the command output. Read commands accept `--read-key-file` for that key instead of placing it in arguments.
 
 `election-submit` relays a JSON object containing only `header` and `body`, each base64url-encoded board-entry
-bytes. It is for packets already signed with the existing trustee/coordinator/ballot tools. The server checks
+bytes. `qv-trustee export-entry` now creates this format for persisted trustee ceremony outputs and gated tally
+shares; coordinator and voter envelope preparation still requires separate tooling. The server checks
 signatures, protocol validity and allowed state transitions. It can relay manifest, ceremony, open, ballot,
 close and tally packets; it does not generate protocol signatures or choose trustee/coordinator quorums.
 A returned receipt means server acceptance, not independent receipt or result verification. Retain returned
@@ -63,12 +64,14 @@ Commands never retry a mutation automatically. Downloads use mode 0600, never ov
 and are labelled `verified: false` until checked separately.
 
 Remaining workflow gaps: organization account enrollment, registration (owner-held B3-01), integrated generation
-of coordinator lifecycle packets and trustee ceremony/tally packets, automatic receipt-proof checks, and
+of coordinator lifecycle packets, ceremony-log and trustee evidence-file preparation, automatic receipt-proof checks, and
 backup/restore commands. This command group supplies transport adapters; it does not resolve those gaps.
 
 The online integration test exports an actual successful three-voter election and runs both the TypeScript CLI
 and Python's existing `vectors` CLI on it, comparing all shared report fields. Python currently has no direct
 `verify <bundle>` CLI or caller-supplied manifest-pin option, and does not implement board append-only,
 witness or receipt-sample checks. The JSON export has no board evidence; those checks remain `not_run`, and
-matching reports do not establish board/witness assurance. The test uses the server `World` harness for actual
-trustee cryptography; acceptance through the actual `qv-trustee` executable remains incomplete.
+matching reports do not establish board/witness assurance. That test uses the server `World` harness for
+trustee cryptography. A separate trustee executable test now drives production `qv-trustee` commands through
+the real HTTP server and `qv online` relay, keeping trustee secrets out of the parent harness. See the
+[trustee README](../trustee/README.md) for the remaining preparation and all-client acceptance boundaries.

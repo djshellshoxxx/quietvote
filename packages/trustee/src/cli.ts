@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
-import { parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, utf8, type Rng } from '@quietvote/crypto';
+import { jcs, parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, utf8, type Rng } from '@quietvote/crypto';
 import type { Aggregate, Manifest, MultiSignedRecord } from '@quietvote/protocol';
 import { TrusteeError } from './errors.ts';
 import { assertPassphraseStrength, generatePassphrase } from './passphrase.ts';
@@ -32,6 +32,9 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   import --bundle F --log F.qvl
   commit|reveal|shares|verify|drill --bundle F [--out F.qvp]
   finalize --bundle F
+  export-entry --bundle F --round ROUND [--index N] --out F.json
+      ROUND: r1-commit|r1-dealing|r2-shares|r3-complaints|r4-keyconf|tally-share
+      exports one persisted output for qv online election-submit; no network access
   confirm --bundle F --compared-with 2,3 [--words "w1 .. w6"] [--out F]
   tally-release --bundle F --election F.json [--claimed F] [--override-unwitnessed PHRASE] [--out F]   (election.json carries log_evidence)
   spoil-release --bundle F --election F.json --codes HEX[,HEX...] [--override-unwitnessed PHRASE] [--out F]
@@ -51,6 +54,7 @@ const COMMAND_OPTIONS = new Map<string, readonly string[]>([
   ['import', ['bundle', 'passphrase-file', 'log']],
   ...['commit', 'reveal', 'shares', 'verify', 'drill'].map((cmd): [string, string[]] => [cmd, ['bundle', 'passphrase-file', 'out']]),
   ['finalize', ['bundle', 'passphrase-file']],
+  ['export-entry', ['bundle', 'passphrase-file', 'round', 'index', 'out']],
   ['confirm', ['bundle', 'passphrase-file', 'compared-with', 'words', 'out']],
   ['tally-release', ['bundle', 'passphrase-file', 'election', 'claimed', 'override-unwitnessed', 'out']],
   ['spoil-release', ['bundle', 'passphrase-file', 'election', 'codes', 'override-unwitnessed', 'out']],
@@ -110,6 +114,15 @@ function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags
   }
   if (o.has('mode')) transcriptMode(o.get('mode'));
   if (o.has('witness-key')) witnessKeys(o.get('witness-key'));
+  if (cmd === 'export-entry') {
+    if (!['r1-commit', 'r1-dealing', 'r2-shares', 'r3-complaints', 'r4-keyconf', 'tally-share'].includes(o.get('round') ?? '') || !o.has('out')) {
+      throw new TrusteeError('USAGE', 'USAGE', 'export-entry requires a supported --round and --out');
+    }
+    const index = o.get('index') ?? '0';
+    if (!/^(0|[1-9][0-9]*)$/.test(index) || !Number.isSafeInteger(Number(index))) {
+      throw new TrusteeError('USAGE', 'USAGE', '--index must be a nonnegative safe integer');
+    }
+  }
   return { cmd, o, flags };
 }
 
@@ -230,6 +243,14 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
         const t = await open();
         const r = await t.finalize();
         report({ state: t.state, check_words: r.fingerprint.words.join(' '), check_hex: r.fingerprint.hex, qualified: r.qualified, events: r.events });
+        return 0;
+      }
+      case 'export-entry': {
+        const t = await open();
+        const entry = await t.exportBoardEntry(need('round'), Number(o.get('index') ?? '0'));
+        try { await atomicWrite(need('out'), jcs(entry), 0o644, { exclusive: true }); }
+        catch { throw new TrusteeError('REFUSED', 'OUT_WRITE_FAILED', 'cannot create entry output; existing files are never overwritten'); }
+        report({ out: need('out'), round: need('round'), index: Number(o.get('index') ?? '0') });
         return 0;
       }
       case 'confirm': {

@@ -218,3 +218,18 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
   keys and extra fields fail before the transcript is read; diagnostics withhold the value. A name such as `__proto__` is stored as
   an own data property rather than interpreted as a prototype setter. The CLI still accepts one witness key per invocation.
 * Regression tests: `test/cli-transcript-options.test.ts`.
+
+## Offline board-entry export (2026-11-16)
+
+* Added `export-entry` to bridge persisted trustee outputs to the existing `qv online election-submit` transport.
+  The command wraps saved DKG outputs in signed board envelopes with the manifest-derived origin. A saved, gated
+  tally release is re-signed in the server's existing `dec-shares` format with exactly the saved proof fields.
+  It accepts no arbitrary payload, origin, private key or ciphertext and never invokes decryption itself.
+* A bundle lock and sealed-file comparison reject stale instances. Failed-save invalidation, destruction and
+  abort gates remain effective. Output publication is exclusive; protected paths and existing files are refused.
+* `test/board-export.test.ts` covers envelope signatures/origin, canonical record/proof preservation, missing
+  outputs, missing tally evidence, stale/aborted bundles, unchanged release ledgers and CLI argument/path checks.
+  `test/online-executable.test.ts` exercises actual trustee executables with production RNG/default KDF against
+  the real server, then verifies the final export with the TypeScript and Python tools.
+* This does not finish all-client acceptance: registration, coordinator/voter setup and public-file conversion
+  remain test-harness operations. No protocol vectors, primitives, admission rules or verifier policies change.
