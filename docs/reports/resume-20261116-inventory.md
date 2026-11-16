@@ -151,7 +151,7 @@ Observed branch tips: **51** (symbolic `origin/HEAD` excluded). Branch membershi
 | Commit | Unique work | Present in selected source? | Disposition / acceptance needed |
 |---|---|---|---|
 | `13b86c2` | Board rollback anchor, no zero-seed receipts, control reason enum | Missing corresponding complete behavior; zero-seed fallback and free-text reason remain | BLOCKED: authority/crash-order/schema choices; do not silently merge. Add keyless-receipt, rollback-crash and reason-catalog tests after ruling. |
-| `07fd61c` | Invite expiry, signed-only auth, /56 buckets, export acknowledgement | PARTIAL: signed-only client cleanup exists; default /64, missing full export-ack lifecycle | Port only independently reviewed approved slices; B3-01 and authority-sensitive policy remain held; add bounded expiry/bucket/export-delete tests. |
+| `07fd61c` | Invite expiry, signed-only auth, /56 buckets, export acknowledgement | PARTIAL: signed-only client cleanup exists; default /64, missing full export-ack lifecycle | Port only approved slices after a separate review; B3-01 and authority-sensitive policy remain held; add bounded expiry/bucket/export-delete tests. |
 | `b2f043e` | Integrity-pinned lazy preloads and CLI-only trustee scope | CLI trustee custody already intended; complete lazy preload browser acceptance absent | PARTIAL/BLOCKED: establish authority and real tampered-chunk test before feature port. |
 | `80c3a17` | Traceability, claims markers, governance and scope notes | PARTIAL: trace tooling/governance arrived through PR42; text/markers differ | Compare individual paragraphs against current code; do not use historical markers to erase current claims failures. |
 | `2aaf0a0` | Pause handoff plus rejected web-ballot WIP patch | Historical evidence only | DEFERRED as implementation: preserve patch unapplied; its unbound-body mutation and stale PAUSED display failed review. Current assignment resumes work but does not approve that patch. |
@@ -171,3 +171,22 @@ Observed branch tips: **51** (symbolic `origin/HEAD` excluded). Branch membershi
 This report changes no runtime, policy, test vector, wire format or verdict. It does not run a new full test suite and does not transfer historical results to this snapshot. Narrow test evidence from the author lanes: static boundary 7/7; opener cleanup 6/6 and crypto package 88/88. The opener lane's first broad typecheck was killed (137) during shared-host memory contention; its retry was deliberately interrupted (130) so the lead could run serialized checks. These are lane receipts, not final integrated qualification.
 
 The lead should append the final candidate SHA/tree, actual check results, remaining findings and concrete next actions to the versioned handoff after integrating this report. No worker persistence after the session is implied.
+
+
+## Integrated CLI follow-up
+
+After the inventory snapshot, the continuation added `qv online instance`,
+`election-create`, `election-inspect`, `election-draft`, `election-submit` and
+`election-export` (`packages/cli/src/cmd-online.ts`). The server remains the
+validation/authorization authority. Request signing moved without byte changes
+to `packages/board/src/request-auth.ts`; server exports remain compatible and no
+new package dependency or dependency-policy exception was added.
+
+`packages/cli/test/online.test.ts` exercises the actual HTTP server, actual qv
+command runner, real cryptography/board/ceremony packets and both verifier paths.
+The shared World test helper still generates trustee cryptography; it does not
+run the qv-trustee executable. Python checks shared supported protocol behavior;
+board/witness/receipt capability and manifest-pin CLI parity remain incomplete.
+CLI-01 and LIFE-01/07/08 now have a tested management/relay/export slice but remain
+PARTIAL for complete command parity and real shipped-client acceptance. See the
+latest handoff for final source, test and publication evidence.

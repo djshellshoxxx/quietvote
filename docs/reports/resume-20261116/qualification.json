@@ -1,0 +1,124 @@
+{
+  "published_code_sha": "1c3845d193285c9ab2b19bbb7898b0de430d83c3",
+  "local_code_sha": "c79d8760eb46be51c161e44a4ff46ce6157faa4e",
+  "code_snapshot_tree": "9af86333339b2d9fb396f825603f98f34cb623ee",
+  "runtime": {
+    "node": "24.22.1",
+    "python": "3.12.14",
+    "os": "Linux"
+  },
+  "workspace_check": {
+    "command": "npm run check",
+    "exit_code": 0,
+    "typecheck": "pass",
+    "packages": {
+      "board": {
+        "tests": 76,
+        "pass": 76,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "cli": {
+        "tests": 54,
+        "pass": 54,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "crypto": {
+        "tests": 88,
+        "pass": 88,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "protocol": {
+        "tests": 215,
+        "pass": 215,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "server": {
+        "tests": 205,
+        "pass": 205,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "trustee": {
+        "tests": 105,
+        "pass": 105,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "verifier": {
+        "tests": 25,
+        "pass": 25,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "web": {
+        "tests": 245,
+        "pass": 245,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    },
+    "passed": 1013,
+    "failed": 0,
+    "skipped": 0
+  },
+  "tooling_tests": {
+    "command": "node --test .github/scripts/*.test.mjs scripts/*.test.mjs",
+    "exit_code": 0,
+    "passed": 74
+  },
+  "python_units": {
+    "command": "(cd verifier-py && python3 -I -m unittest)",
+    "exit_code": 0,
+    "passed": 58
+  },
+  "ts_vectors": {
+    "passed": 412,
+    "failed": 0,
+    "unsupported_files": 1
+  },
+  "python_vectors": {
+    "passed": 229,
+    "failed": 0,
+    "not_implemented": 53
+  },
+  "strict_comparison": {
+    "exit_code": 1,
+    "verdict_agreements": 27,
+    "detailed_report_mismatches": 3,
+    "field_differences": 17,
+    "held_decisions": [
+      "D-92",
+      "D-93",
+      "D-94"
+    ]
+  },
+  "other_checks": {
+    "lockfile": "pass",
+    "dependency_boundaries": "pass; 2 known D-97 deviations retained",
+    "links": "pass",
+    "trace_check": "pass; link presence is not implementation acceptance",
+    "npm_audit_high": "pass; 0 vulnerabilities",
+    "range_whitespace": "pass",
+    "claims_lint": "exit 1; 8 findings in 2 historical audit documents"
+  },
+  "regression_attempt": {
+    "initial_final_run": "3 failures in reusable pool eviction callers; not accepted",
+    "fixed_by_local": "c79d8760eb46be51c161e44a4ff46ce6157faa4e",
+    "postfix_affected_existing_suites": "27/27 pass; assertions unchanged",
+    "final_workspace_result": "pass"
+  },
+  "browser_and_ci": "See hosted-ci.json: exact published code passed required browser journeys/CSP/automated a11y and all Node22/24 workspace jobs; strict comparator remains failed. Local Chromium launch was blocked by socket EPERM.",
+  "qualification_boundary": "Documentation-only follow-ups record evidence after the code snapshot; no subsequent production-source change. Actual qv-trustee executable acceptance, Docker/systemd, Windows/macOS, external review and owner decisions remain incomplete."
+}
