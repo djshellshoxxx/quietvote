@@ -1,7 +1,9 @@
+import { parseQvJson } from '@quietvote/crypto';
+import { b64uDecode } from '../util/hex.ts';
 // The console prepares public packets for explicit review and sends only exact
 // reviewed bytes. No trustee secrets, retained organizer unlock or automatic retries.
 import type { ApiClient } from '../api/client.ts';
-import { ADMIN_ACTIONS, AdminError, MAX_ADMIN_BYTES, adminSnapshot, prepareAdminAction, submitAdminPacket, trusteePacket, type AdminAction, type AdminPacket, type AdminSnapshot } from '../flow/admin.ts';
+import { ADMIN_ACTIONS, AdminError, MAX_ADMIN_BYTES, adminSnapshot, coSignAdminPacket, prepareAdminAction, reviewSavedAdminPacket, submitAdminPacket, trusteePacket, type AdminAction, type AdminPacket, type AdminSnapshot } from '../flow/admin.ts';
 import { ORGANIZER_SLOT, unlockKey } from '../flow/onboarding.ts';
 import type { KeystoreDeps } from '../key/keystore.ts';
 import type { DeviceStorage } from '../key/storage.ts';
@@ -30,12 +32,12 @@ export function adminPanel(d: AdminViewDeps): { element: HTMLElement; invalidate
   const action = h('select', {}, ...ADMIN_ACTIONS.map((a) => h('option', { value: a }, t(ACTION_KEYS[a])))) as HTMLSelectElement;
   const file = h('input', { type: 'file', accept: '.json,application/json' }) as HTMLInputElement;
   const field = (key: MessageKey, input: HTMLElement): HTMLElement => { const id = nextId('admin'); input.id = id; return h('div', { class: 'field' }, h('label', { for: id }, t(key)), input); };
-  let revision = 0, busy = false, packet: AdminPacket | undefined, snapshot: AdminSnapshot | undefined, attempted = false;
+  let revision = 0, busy = false, packet: AdminPacket | undefined, snapshot: AdminSnapshot | undefined, attempted = false, quorum = false;
   const update = (): void => {
-    for (const control of [pin, action, file, prepare, relay, refresh]) {
+    for (const control of [pin, action, file, prepare, relay, cosign, restore, refresh]) {
       if (busy || packet) control.setAttribute('disabled', ''); else control.removeAttribute('disabled');
     }
-    if (busy || !packet) send.setAttribute('disabled', ''); else send.removeAttribute('disabled');
+    if (busy || !packet || !quorum) send.setAttribute('disabled', ''); else send.removeAttribute('disabled');
     if (busy || !packet) save.setAttribute('disabled', ''); else save.removeAttribute('disabled');
     if (busy || attempted) discard.setAttribute('disabled', ''); else discard.removeAttribute('disabled');
     root.setAttribute('aria-busy', String(busy));
@@ -55,7 +57,7 @@ export function adminPanel(d: AdminViewDeps): { element: HTMLElement; invalidate
     catch (e) { if (current()) { clear(result); if (e instanceof AdminError) status('qv.admin.refused', true); else { result.append(d.error(e)); } } }
     finally { busy = false; update(); }
   };
-  const setPacket = (p: AdminPacket, record: unknown): void => { packet = p; attempted = false; preview.textContent = JSON.stringify(record, null, 2); status('qv.admin.review'); };
+  const setPacket = (p: AdminPacket, record: unknown, ready = true): void => { packet = p; attempted = false; quorum = ready; preview.textContent = JSON.stringify(record, null, 2); status(ready ? 'qv.admin.review' : 'qv.admin.partial'); };
   const refresh = h('button', { type: 'button', class: 'btn', onclick: () => { void run(async (current) => {
     if (packet) return;
     const s = await load(); if (!current()) return; snapshot = s;
@@ -77,7 +79,7 @@ export function adminPanel(d: AdminViewDeps): { element: HTMLElement; invalidate
     try {
       if (!current()) return;
       const prepared = await prepareAdminAction({ snapshot: s, action: a, signer, tally, current });
-      if (current()) setPacket(prepared.packet, prepared.record);
+      if (current()) setPacket(prepared.packet, prepared.record, prepared.quorum);
     } finally { signer.lock(); }
   }); } }, t('qv.admin.prepare'));
   const relay = h('button', { type: 'button', class: 'btn', onclick: () => { void run(async (current) => {
@@ -85,15 +87,36 @@ export function adminPanel(d: AdminViewDeps): { element: HTMLElement; invalidate
     const chosen = file.files?.[0]; if (!chosen || chosen.size > MAX_ADMIN_BYTES) throw new AdminError('input');
     const text = await chosen.text(); if (!current()) return;
     const s = await load(); if (!current()) return; snapshot = s;
-    setPacket(trusteePacket(text, s), JSON.parse(text));
+    const p = trusteePacket(text, s); setPacket(p, parseQvJson(b64uDecode(p.body)!));
   }); } }, t('qv.admin.relay'));
+  const cosign = h('button', { type: 'button', class: 'btn', onclick: () => { void run(async (current) => {
+    if (packet) return;
+    const phrase = pass.value; pass.value = '';
+    const chosen = file.files?.[0]; if (!chosen || chosen.size > MAX_ADMIN_BYTES) throw new AdminError('input');
+    const text = await chosen.text(); if (!current()) return;
+    const s = await load(); if (!current()) return; snapshot = s;
+    const signer = await (d.unlock ? d.unlock(phrase) : unlockKey({ storage: d.storage, slot: ORGANIZER_SLOT, passphrase: phrase, rewrap: false, deps: d.keyDeps() }).then((k) => k.signer));
+    try {
+      if (!current()) return;
+      const signed = await coSignAdminPacket({ snapshot: s, text, signer, current });
+      if (current()) setPacket(signed.packet, signed.record, signed.quorum);
+    } finally { signer.lock(); }
+  }); } }, t('qv.admin.cosign'));
+  const restore = h('button', { type: 'button', class: 'btn', onclick: () => { void run(async (current) => {
+    if (packet) return;
+    const chosen = file.files?.[0]; if (!chosen || chosen.size > MAX_ADMIN_BYTES) throw new AdminError('input');
+    const text = await chosen.text(); if (!current()) return;
+    const s = await load(); if (!current()) return; snapshot = s;
+    const saved = await reviewSavedAdminPacket(text, s);
+    if (current()) setPacket(saved.packet, saved.record, saved.quorum);
+  }); } }, t('qv.admin.restore'));
   const send = h('button', { type: 'button', class: 'btn primary', disabled: true, onclick: () => { void run(async (current) => {
-    if (!packet || !snapshot) return;
+    if (!packet || !snapshot || !quorum) return;
     // Downloadable packet remains intact until an accepted response, including
     // network ambiguity and explicit retry. Preparing replacement bytes is blocked.
     attempted = true;
     try {
-      await submitAdminPacket(d.api, d.apiId, packet);
+      await submitAdminPacket(d.api, d.apiId, packet, snapshot);
       if (!current()) return;
       packet = undefined; attempted = false; preview.textContent = ''; status('qv.admin.accepted');
     } catch { if (current()) status('qv.admin.uncertain', true); }
@@ -102,7 +125,7 @@ export function adminPanel(d: AdminViewDeps): { element: HTMLElement; invalidate
   const discard = h('button', { type: 'button', class: 'btn', onclick: () => { if (busy || attempted) return; packet = undefined; preview.textContent = ''; invalidate(); update(); } }, t('qv.key.cancel'));
   add(root, [h('h1', { tabindex: -1, class: 'step-heading' }, t('qv.nav.admin')), h('p', {}, t('qv.admin.help')),
     field('qv.admin.pin', pin), refresh, field('qv.admin.action', action), field('qv.key.passphrase', pass), prepare,
-    field('qv.admin.file', file), relay, preview, h('div', { class: 'row' }, save, send, discard), result]);
+    field('qv.admin.file', file), relay, cosign, restore, preview, h('div', { class: 'row' }, save, send, discard), result]);
   update();
   return { element: root, invalidate };
 }

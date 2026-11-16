@@ -293,8 +293,19 @@ checks do not establish board freshness or witness qualification. The server
 remains authoritative for admission. Content verification uses the existing
 verifier behavior without changing policy or report expectations.
 
-This console supports the one-coordinator setup produced by `/new`; multi-signature
-coordination continues through the CLI. Registration decisions remain held.
-Uncertain packets are retained in this page only and can be downloaded; reloading
-requires the saved packet and existing CLI relay rather than silently recreating
-an action. Native locale review remains outstanding; new translations are drafts.
+Coordinator records can accumulate distinct authorized signatures through public
+packet or record files. Every existing signature and the current action body is
+checked before adding a signature; Send stays disabled until the manifest quorum
+is met. Saved coordinator packets can also be restored without unlocking or
+changing their signed bytes, including after an uncertain POST and page reload.
+Only a receipt authenticated to the pinned log, origin and packet leaf clears a
+pending packet. Malformed, forged or mismatched acknowledgments retain it for retry.
+
+Signing rejects malformed, forged, duplicate or misordered lifecycle markers,
+incorrect opening references, incomplete key confirmations and roll data that
+conflicts with the pinned manifest. Sequence references remain within the wire
+schema's uint32 range. The final focused run passed 23 tests, including ten fresh
+review regressions and all ten coordinator stages over actual HTTP. Build and
+typecheck passed; this does not establish browser acceptance. Registration
+decisions remain held. Native locale review remains outstanding; translations
+are drafts.

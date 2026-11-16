@@ -118,6 +118,44 @@ test('console POST makes one attempt and tally draft uses the existing read endp
     return new Response(JSON.stringify({ body: { type: 'tally' } }));
   } });
   assert.deepEqual(await api.tallyDraft('one'), { type: 'tally' });
-  await assert.rejects(submitAdminPacket(api, 'one', { header: 'same', body: 'same' }));
-  assert.deepEqual(calls, [{ url: '/api/v1/elections/one/tally/draft', method: 'GET' }, { url: '/api/v1/elections/one/log/entries', method: 'POST' }]);
+  await assert.rejects(submitAdminPacket(api, sim.manifest.election_id, { header: 'same', body: 'same' }, snapshot(original)));
+  assert.deepEqual(calls, [{ url: '/api/v1/elections/one/tally/draft', method: 'GET' }, { url: `/api/v1/elections/${sim.manifest.election_id}/log/entries`, method: 'POST' }]);
+});
+
+test('multiple coordinators accumulate valid distinct signatures without changing the reviewed body', async () => {
+  const { ed25519Keypair } = await import('@quietvote/crypto');
+  const { manifestHash, signRecordRaw } = await import('@quietvote/protocol');
+  const { coSignAdminPacket } = await import('../src/flow/admin.ts');
+  const second = ed25519Keypair(new Uint8Array(32).fill(91));
+  const third = ed25519Keypair(new Uint8Array(32).fill(92));
+  const e = at('dkg-open'); e.manifest.body.coordinator = { m: 2, keys: [sim.coord[0]!, second, third].map((k) => bytesToHex(k.publicKey)) };
+  const mh = manifestHash(e.manifest.body); e.manifest_hash = bytesToHex(mh);
+  e.manifest.sigs = [sim.coord[0]!, second].map((k) => signRecordRaw(k.secretKey, k.publicKey, mh, 'manifest', e.manifest.body));
+  const s = adminSnapshot(e, e.manifest_hash, e.manifest.body.election_id);
+  const firstSigner = await createSigner(sim.coord[0]!.secretKey.slice()), nextSigner = await createSigner(second.secretKey.slice());
+  try {
+    const first = await prepareAdminAction({ snapshot: s, action: 'dkg-open', signer: firstSigner });
+    assert.equal(first.quorum, false);
+    const record = first.record as MultiSignedRecord<MarkerBody>;
+    assert.equal(record.sigs.length, 1);
+    const combined = await coSignAdminPacket({ snapshot: s, text: JSON.stringify(first.packet), signer: nextSigner });
+    assert.equal(combined.quorum, true);
+    const signed = combined.record as MultiSignedRecord<MarkerBody>;
+    assert.equal(bytesToHex(jcs(signed.body)), bytesToHex(jcs(record.body))); assert.equal(bytesToHex(jcs(signed.sigs[0])), bytesToHex(jcs(record.sigs[0])));
+    assert.ok(verifyMultiSig(mh, signed, s.manifest.coordinator.keys, 2));
+    assert.notEqual(combined.packet.header, first.packet.header, 'new outer framing belongs to the submitting coordinator');
+    const rawCombined = await coSignAdminPacket({ snapshot: s, text: JSON.stringify(first.record), signer: nextSigner });
+    assert.ok(verifyMultiSig(mh, rawCombined.record as MultiSignedRecord<MarkerBody>, s.manifest.coordinator.keys, 2));
+    let signs = 0;
+    const spy = { ...nextSigner, sign: async (m: Uint8Array) => { signs++; return nextSigner.sign(m); } };
+    await assert.rejects(coSignAdminPacket({ snapshot: s, text: JSON.stringify(combined.packet), signer: spy }), AdminError);
+    const duplicate = clone(record); duplicate.sigs.push(duplicate.sigs[0]!);
+    await assert.rejects(coSignAdminPacket({ snapshot: s, text: JSON.stringify(duplicate), signer: spy }), AdminError);
+    const forged = clone(record); forged.sigs[0]!.sig = '00'.repeat(64);
+    await assert.rejects(coSignAdminPacket({ snapshot: s, text: JSON.stringify(forged), signer: spy }), AdminError);
+    await assert.rejects(coSignAdminPacket({ snapshot: snapshot(at('dkg-open')), text: JSON.stringify(first.record), signer: spy }), AdminError);
+    const changedScope = clone(record); changedScope.body.name = 'election-close';
+    await assert.rejects(coSignAdminPacket({ snapshot: s, text: JSON.stringify(changedScope), signer: spy }), AdminError);
+    assert.equal(signs, 0, 'invalid, duplicate and foreign inputs are refused before adding a signature');
+  } finally { firstSigner.lock(); nextSigner.lock(); }
 });
