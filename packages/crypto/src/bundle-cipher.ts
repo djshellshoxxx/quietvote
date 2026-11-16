@@ -84,6 +84,7 @@ export async function openWithPassphrase(
   passphrase: string,
   opts: Pick<SealOpts, 'aad' | 'allowWeak'> & { /** Lower cap for the header work factor, e.g. the value the caller seals with. */ maxLogN?: number } = {},
 ): Promise<Uint8Array> {
+  if (opts.maxLogN !== undefined && (!Number.isInteger(opts.maxLogN) || opts.maxLogN < (opts.allowWeak === true ? 4 : BUNDLE_MIN_LOGN) || opts.maxLogN > BUNDLE_MAX_LOGN)) throw new QvCryptoError('E_ARG', 'scrypt work factor cap out of range');
   if (file.length < HDR + 16 || !ctEqual(file.subarray(0, MAGIC.length), MAGIC)) throw new QvCryptoError('E_PARSE', 'not a QV bundle');
   const logN = file[MAGIC.length]!;
   if (logN > Math.min(BUNDLE_MAX_LOGN, opts.maxLogN ?? BUNDLE_MAX_LOGN) || logN < (opts.allowWeak === true ? 4 : BUNDLE_MIN_LOGN)) throw new QvCryptoError('E_PARSE', 'unacceptable scrypt work factor');

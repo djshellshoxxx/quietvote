@@ -67,3 +67,9 @@ test('C10: openWithPassphrase refuses a header work factor above the cap before 
   await assert.rejects(openWithPassphrase(forged, 'pw', { allowWeak: true, maxLogN: 11 }), { code: 'E_PARSE' });
   assert.deepEqual(await openWithPassphrase(f, 'pw', { allowWeak: true, maxLogN: 10 }), utf8('x'));
 });
+
+test('BT-14: invalid caller KDF caps are argument errors before processing input', async () => {
+  for (const maxLogN of [NaN, Infinity, -Infinity, 3, 21, 18.5]) {
+    await assert.rejects(openWithPassphrase(new Uint8Array(), 'pw', { allowWeak: true, maxLogN }), { code: 'E_ARG' });
+  }
+});

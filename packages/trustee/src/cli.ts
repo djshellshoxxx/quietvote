@@ -45,7 +45,7 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   export-transcript --bundle F --out F [--mode online-dkg|airgap-dkg|airgap-dealer]
   cosign-transcript --bundle F --in F --out F | verify-transcript --in F [--witness-key NAME=HEX]
 Passphrase: --passphrase-file F (or QV_TRUSTEE_PASSPHRASE_FILE), otherwise a hidden prompt. Never on the command line.
-Options: --json   Exit codes: 0 ok, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
+Options: --max-kdf-logn 18|19|20 (default 18; opening budget only; 19/20 allow roughly 512 MiB/1 GiB per open). --json   Exit codes: 0 ok, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
 
 /** Only options consumed by that command are accepted; validation precedes prompts and file access. */
 const COMMAND_OPTIONS = new Map<string, readonly string[]>([
@@ -69,6 +69,9 @@ const COMMAND_OPTIONS = new Map<string, readonly string[]>([
   ['cosign-transcript', ['bundle', 'passphrase-file', 'in', 'out']],
   ['verify-transcript', ['in', 'witness-key']],
 ]);
+for (const [command, options] of COMMAND_OPTIONS) {
+  if (command !== 'verify-transcript' && command !== 'keygen') COMMAND_OPTIONS.set(command, [...options, 'max-kdf-logn']);
+}
 const OPTIONS = new Set(['json', ...[...COMMAND_OPTIONS.values()].flat()]);
 
 function transcriptMode(value: string | undefined): CeremonyMode {
@@ -112,6 +115,7 @@ function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags
       o.set(k, v);
     }
   }
+  if (o.has('max-kdf-logn') && !/^(18|19|20)$/.test(o.get('max-kdf-logn')!)) throw new TrusteeError('USAGE', 'USAGE', '--max-kdf-logn must be 18, 19 or 20');
   if (o.has('mode')) transcriptMode(o.get('mode'));
   if (o.has('witness-key')) witnessKeys(o.get('witness-key'));
   if (cmd === 'export-entry') {
@@ -171,7 +175,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       if (v === undefined) throw new TrusteeError('USAGE', 'USAGE', `--${k} is required`);
       return v;
     };
-    const vd: VaultDeps = { rng: deps.rng, now: deps.now, ...(deps.logN !== undefined ? { logN: deps.logN } : {}), ...(deps.allowWeak === true ? { allowWeak: true } : {}) };
+    const vd: VaultDeps = { maxLogN: Number(o.get('max-kdf-logn') ?? '18'), rng: deps.rng, now: deps.now, ...(deps.logN !== undefined ? { logN: deps.logN } : {}), ...(deps.allowWeak === true ? { allowWeak: true } : {}) };
     const pass = async (fileOpt: string, envKey: string, q: string): Promise<string> => {
       const f = o.get(fileOpt) ?? env[envKey];
       if (f === undefined) return io.promptSecret(q);

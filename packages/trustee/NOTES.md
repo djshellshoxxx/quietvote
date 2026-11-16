@@ -236,3 +236,21 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
   the real server, then verifies the final export with the TypeScript and Python tools.
 * This does not finish all-client acceptance: registration, coordinator/voter setup and public-file conversion
   remain test-harness operations. No protocol vectors, primitives, admission rules or verifier policies change.
+
+## BT-14 opening budget — 2026-11-16
+
+All vault opens, including restore, now pass a caller budget to the crypto
+container opener: default `maxLogN=18`, matching production sealing. The CLI
+accepts `--max-kdf-logn 18|19|20` on bundle commands. Use a higher limit only
+when intentionally opening an existing higher-cost bundle; 19 and 20 permit
+roughly 512 MiB and 1 GiB of scrypt working memory per open. The option never
+reduces sealing strength or authenticates a header. API callers can set
+`VaultDeps.maxLogN`; test-only weak KDF support remains explicit.
+
+The crypto opener rejects noninteger, nonfinite and out-of-range caps with
+`E_ARG` before reading the header. This prevents NaN from disabling the cap.
+The production library maximum remains 20; the container format is unchanged.
+This bounds one open; concurrent processes still require an operator memory
+budget. No host memory benchmark or global process admission limit is claimed.
+Regression coverage is in `test/kdf-budget.test.ts` and crypto second-wave tests.
+Refs: QV-17-REQ-021.
