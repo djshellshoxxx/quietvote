@@ -1,5 +1,6 @@
 import { FailError, InputError, UsageError } from './args.ts';
 import { cmdBallotAudit, cmdBallotEncrypt } from './cmd-ballot.ts';
+import { cmdVerifyReceipt } from './cmd-receipt.ts';
 import { cmdBoardVerify } from './cmd-board.ts';
 import { cmdElectionInspect } from './cmd-election.ts';
 import { cmdElectionSpoilCollect } from './cmd-spoil.ts';
@@ -17,6 +18,8 @@ usage:
   qv --version                     print the version
   qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>]
                                    verify an election bundle (V1..V14); runs the canary self-test first
+  qv verify-receipt <receipt.json> --log-key <hex> --origin <origin> --leaf-hash <hex> [--json]
+                                   verify signed promise and inclusion against external anchors (no witness/freshness verdict)
   qv selftest [--json]             run only the canary self-test
   qv keygen --out <file> [--seed-file <f> | --seed-stdin] [--passphrase-file <f> | --passphrase-stdin]
             [--no-passphrase] [--kdf-memory-kib <n>] [--kdf-iterations <n>] [--force] [--json]
@@ -55,6 +58,7 @@ but something could not be checked: that is not a pass), 4 unreadable or malform
 type Cmd = (argv: string[], io: Io) => Promise<number>;
 const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   verify: cmdVerify,
+  'verify-receipt': cmdVerifyReceipt,
   selftest: cmdSelftest,
   keygen: cmdKeygen,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },

@@ -132,3 +132,16 @@ Server admission remains authoritative; signed packet relay introduces no new pr
 responses are not verifier verdicts. No automatic mutation retries; unknown network outcomes are explicit.
 Real-server integration tests cover signed organizer management, wrong audience, strict options, real DKG/open,
 cast and close, early-close refusal, tally publication, no-overwrite export, and strict comparison of the exported supported election through the real TypeScript and Python CLIs. Registration and protocol-policy holds remain open.
+
+## Independent receipt command — 2026-11-16
+
+`qv verify-receipt receipt.json --log-key HEX --origin ORIGIN --leaf-hash HEX`
+checks the existing board receipt signature and inclusion algorithm offline.
+All three anchors are required and must come from the caller's verified election
+and saved submission. A signed promise without inclusion exits 3 (INCOMPLETE),
+a verified inclusion exits 0, mismatches or invalid proofs exit 1, malformed
+input exits 4 and malformed options exit 2. `--json` reports the limited scope.
+This proves inclusion of the expected leaf in the signed checkpoint; it does
+not establish witness quorum, checkpoint freshness, election integrity or that
+a ballot was counted. It makes no network request and changes no board rules.
+Refs: QV-18-REQ-013.
