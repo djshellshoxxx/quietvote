@@ -85,10 +85,12 @@ export async function checkInclusion(a: {
   leafHash: Uint8Array;
   seq: number;
   pinned: PinnedHead | undefined;
+  expectedOrigin?: string;
 }): Promise<InclusionState> {
   const note = await a.api.checkpointNote(a.apiElectionId);
   const cp = parseCheckpoint(note);
   if (!cp.ok || !verifyLogSignature(cp.value, a.logPk)) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'checkpoint is malformed or not signed by the log key');
+  if (a.expectedOrigin !== undefined && cp.value.origin !== a.expectedOrigin) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'checkpoint is for another log');
   const pinnedCp = a.pinned ? parseCheckpoint(a.pinned.note) : undefined;
   const pin = pinnedCp?.ok ? pinnedCp.value : undefined;
   let proof: Uint8Array[] | undefined;
@@ -126,10 +128,23 @@ export interface ReceiptFile {
 export function receiptFileText(f: ReceiptFile): string {
   return JSON.stringify(f, null, 2);
 }
-export function parseReceiptFile(text: string): ReceiptFile | undefined {
+export const MAX_RECEIPT_FILE_BYTES = 64 * 1024;
+
+/** Parse public receipt metadata. Signature/inclusion verification remains a separate step. */
+export function parseReceiptFile(text: string, expected?: { election: string; manifestHash: string }): ReceiptFile | undefined {
   try {
+    if (text.length > MAX_RECEIPT_FILE_BYTES || new TextEncoder().encode(text).length > MAX_RECEIPT_FILE_BYTES) return undefined;
     const v = JSON.parse(text) as Partial<ReceiptFile>;
-    if (v.format !== 'qv-receipt/1' || typeof v.ballot_code !== 'string' || typeof v.seq !== 'number' || typeof v.leaf_hash !== 'string') return undefined;
+    if (v.format !== 'qv-receipt/1' || typeof v.election !== 'string' || !/^[a-z2-7]{26}$/.test(v.election)
+      || typeof v.manifest_hash !== 'string' || !/^[0-9a-f]{64}$/.test(v.manifest_hash)
+      || typeof v.ballot_code !== 'string' || !/^[0-9a-f]{64}$/.test(v.ballot_code)
+      || !Number.isSafeInteger(v.seq) || v.seq! < 0 || typeof v.leaf_hash !== 'string'
+      || typeof v.client_build !== 'string' || v.client_build.length > 1024 || !v.receipt) return undefined;
+    const leaf = b64uDecode(v.leaf_hash);
+    if (!leaf || leaf.length !== 32 || b64uEncode(leaf) !== v.leaf_hash
+      || v.receipt.seq !== v.seq || v.receipt.leaf_hash !== v.leaf_hash) return undefined;
+    if (!toBoardReceipt(v.receipt).ok) return undefined;
+    if (expected && (v.election !== expected.election || v.manifest_hash !== expected.manifestHash)) return undefined;
     return v as ReceiptFile;
   } catch {
     return undefined;

@@ -13,7 +13,7 @@ import { ORGANIZER_SLOT, createKey, importKeyFile, keySlot, recoveryCodeFor, reg
 import { buildManifest, isoUtc, parseRoll, TEMPLATES, type Template } from '../flow/organizer.ts';
 import { runPublish, type PublishOutcome } from '../flow/publish-ui.ts';
 import type { PublishForm, PublishState } from '../flow/publish.ts';
-import { BoardIntegrityError, checkInclusion, parseReceiptFile } from '../flow/receipt.ts';
+import { BoardIntegrityError, checkInclusion, MAX_RECEIPT_FILE_BYTES, parseReceiptFile } from '../flow/receipt.ts';
 import { LiveElection } from '../flow/live.ts';
 import { BallotIndex } from '../flow/supersede.ts';
 import type { ConnStatus } from '../net/sse.ts';
@@ -650,7 +650,7 @@ export function startApp(env: AppEnv): void {
       try {
         const leaf = b64uDecode(leafB64u);
         if (!leaf) throw new Error('bad receipt');
-        const r = await checkInclusion({ api: L.api, apiElectionId: L.apiId, logPk: L.logPk, leafHash: leaf, seq, pinned: await env.storage.getHead(L.apiId) });
+        const r = await checkInclusion({ api: L.api, apiElectionId: L.apiId, logPk: L.logPk, leafHash: leaf, seq, pinned: await env.storage.getHead(L.apiId), expectedOrigin: L.origin });
         clear(out);
         if (r.state === 'included') { await env.storage.putHead({ ...r.head, electionId: L.apiId }); out.append(h('p', {}, t('qv.receipt.included', { seq: r.seq, size: r.treeSize })), h('p', {}, t('qv.receipt.consistent'))); } else out.append(h('p', {}, t('qv.receipt.notFound')));
       } catch (e) {
@@ -659,7 +659,24 @@ export function startApp(env: AppEnv): void {
         say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
       }
     };
-    const file = h('input', { type: 'file', accept: 'application/json', onchange: async (e: Event) => { const f = (e.target as HTMLInputElement).files?.[0]; const p = f ? parseReceiptFile(await f.text()) : undefined; if (p) { await check(p.seq, p.leaf_hash); addStanding(p.seq, p.ballot_code); } } });
+    const binding = { election: L.apiId, manifestHash: ctx.manifestHashHex };
+    const file = h('input', { type: 'file', accept: 'application/json', onchange: async (e: Event) => {
+      const f = (e.target as HTMLInputElement).files?.[0];
+      if (!f) return;
+      try {
+        if (f.size > MAX_RECEIPT_FILE_BYTES) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is too large');
+        const p = parseReceiptFile(await f.text(), binding);
+        if (!currentRoute(epoch)) return;
+        if (!p) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is malformed or belongs to another election');
+        await check(p.seq, p.leaf_hash);
+        if (currentRoute(epoch)) addStanding(p.seq, p.ballot_code);
+      } catch (error) {
+        if (!currentRoute(epoch)) return;
+        clear(out);
+        out.append(error instanceof BoardIntegrityError ? errorBox(error.code) : errorFor(error));
+        say.say(t('qv.err.E-BOARD-INCL-FAIL.title'), true);
+      }
+    } });
     // Standing: is this receipt still the voter's newest ballot? Derived from the public log we hold; refreshed in place on live updates.
     const standings: { seq: number; code: string; el: HTMLElement }[] = [];
     const standingText = (seq: number, code: string): { text: string; kind: string; note?: string } => {
@@ -690,7 +707,7 @@ export function startApp(env: AppEnv): void {
     };
     const standingBox = h('div', {});
     const items = stored.map((s) => {
-      const f = parseReceiptFile(s.json);
+      const f = parseReceiptFile(s.json, binding);
       const el = h('span', {});
       if (f) standings.push({ seq: f.seq, code: s.code, el });
       return h('li', {}, codeEl(ballotCodeDisplay(hexToBytes(s.code, 32), true)), ' ', btn(t('qv.receipt.check'), () => { if (f) void check(f.seq, f.leaf_hash); }), h('div', {}, el));
