@@ -13,6 +13,7 @@ from . import ballot, dkg, ed25519, manifest, merkle, proofs, qvjson, rules
 from .errors import QVError
 from .framed_hash import LABELS, frame, hs_nz_full, u32
 from .ristretto import base_mul, decode_hex, scalar_decode, scalar_decode_hex, sc
+from .recordfields import hex_field
 from .edwards import L as ELL
 
 
@@ -185,6 +186,22 @@ def op_benaloh(i: dict) -> dict:
     return {"reproduced": True}
 
 
+def op_private_audit(i: dict) -> dict:
+    ballot._require_keys(i, {"params", "roll", "envelope", "reveal"}, what="private audit input")
+    p = i["params"]
+    ballot._require_keys(p, {"manifest", "K_hex", "ctx_hex"}, what="private audit params")
+    if not all(hex_field(p[k], 32) for k in ("K_hex", "ctx_hex")):
+        raise QVError("E_SCHEMA", "private audit K/ctx must be 32 bytes of lower-case hex")
+    if not isinstance(i["roll"], list) or not all(hex_field(pk, 32) for pk in i["roll"]):
+        raise QVError("E_SCHEMA", "private audit roll must contain 32-byte lower-case keys")
+    manifest.validate(p["manifest"], len(i["roll"]))
+    code = ballot.verify_private_audit(
+        p["manifest"], decode_hex(p["K_hex"], non_identity=True), bytes.fromhex(p["ctx_hex"]),
+        {bytes.fromhex(pk) for pk in i["roll"]}, i["envelope"], i["reveal"],
+    )
+    return {"audited": True, "ballot_code_hex": code.hex()}
+
+
 def op_rules(i: dict) -> dict:
     return {"result": rules.evaluate(i["manifest_quorum"], i["contest"], i["counts"], i["participation"], i["roll_size"])}
 
@@ -217,6 +234,7 @@ OPS: dict[str, Callable[[dict], dict]] = {
     "ballot.encrypt": op_ballot_encrypt,
     "ballot.verify": op_ballot_verify,
     "benaloh.verify_spoiled": op_benaloh,
+    "benaloh.private_audit": op_private_audit,
     "rules.evaluate": op_rules,
     "dkg.adjudicate": op_dkg,
 }

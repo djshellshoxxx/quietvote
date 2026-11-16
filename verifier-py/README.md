@@ -62,7 +62,7 @@ cd verifier-py && python3 -I -m unittest
 | HKDF, AES-256-GCM | `aead.py` | for public adjudication of DKG complaints |
 | DKG adjudication | `dkg.py` | R1, R2, complaints → Q, K, Y_j, transcript hash, ctx |
 | Manifest | `manifest.py` | closed schema + semantic rules + privacy floor; manifest hash |
-| Ballots | `ballot.py` | deterministic encryption from ξ, §5.14.4 checks 1–9, Benaloh reveal reproduction |
+| Ballots | `ballot.py` | deterministic encryption from ξ, §5.14.4 checks 1–9, public and private Benaloh audits with signed reveal-digest binding and exact body reproduction |
 | Rules | `rules.py` | quorum, threshold, tie-breaks, multi-winner (exact integers) |
 | Full election (Appendix C) | `election.py` | the 14 QV-34 §9.1 checks (board/witness/receipts → `not_run`), counts, ctx prefix, results |
 | Runner / CLI | `runner.py`, `cli.py`, `__main__.py` | QV-34 §10.3 comparison, applied strictly |

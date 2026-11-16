@@ -49,5 +49,21 @@ results are recorded in the integration validation report; historical README num
   class for the invalid case, so it is not implemented here (TS does not enforce it at the ballot level either). See D-95.
   **PY-02/D-96:** verdicts remain PASS/FAIL. QV-16 App. C defines only "PASS or FAIL", so INCOMPLETE waits for D-96 (with
   P1/TSV-05). No QV-18 board/witness/receipt verification or adapter protocol was added.
-* Shipped unsupported vectors stay explicit: 48 `log.verify_election` and 5 `benaloh.private_audit` cases. Their absence is not a pass
+* Shipped unsupported vectors stay explicit: 48 `log.verify_election` cases. Their absence is not a pass
   or a claim of cross-verifier conformance. The corpus is unsigned; constant-time, large-scale and external-audit gates remain open.
+
+## Private Benaloh audit — 2026-11-16
+
+`benaloh.private_audit` now verifies the strict spoil envelope, roll membership, signature over the
+reveal digest, QV-JSON reveal schema, exact signed digest, and deterministic JCS equality of the full
+ballot body (ciphertexts **and proofs**). Published and out-of-band reveals must also agree. The
+operation returns the authenticated ballot code; it does not claim board inclusion or tally validity.
+Zero-digest trustee-mode spoils cannot authenticate a private reveal; election-level enablement,
+error class and verdict decisions D-95/D-96 remain unchanged.
+
+Validation: `python3 -I -m unittest` ran **71 tests, OK**. Thirteen private-audit tests include replay
+under another context, voter or key, re-signed false reveal commitments, malformed reveals, and valid
+but independently re-randomized CDS/limit proofs that pass envelope verification but fail exact
+reproduction. `python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet` reports **282 total,
+234 PASS, 0 FAIL, 48 NOT-IMPLEMENTED**; all five formerly unsupported private-audit cases pass and all
+79 manifest-listed file hashes match. No vector, shared comparator or D-92 through D-96 behavior changed.
