@@ -106,7 +106,14 @@ class TestRejectedTallyIsNotExamined(unittest.TestCase):
         b = json.loads(BASE.read_text(encoding="utf-8"))
         tally = next(e for e in b["log"] if e["entry"].get("body", {}).get("type") == "tally")
         tally["entry"]["body"]["proto"] = "qv2-unknown"
-        self._assert_rejected(verify_bundle(b), "E_VERSION")
+        r = verify_bundle(b)
+        self.assertEqual(r["verdict"], "INCOMPLETE")
+        self.assertEqual(r["checks"]["chk.encoding.canonical"], "fail")
+        self.assertIn("E_VERSION", r["codes"])
+        self.assertFalse(any(f["fatal"] for f in r["findings"]))
+        for c in ("chk.tally.aggregate", "chk.tally.decrypt", "chk.result.rules"):
+            self.assertEqual(r["checks"][c], "not_run")
+        self.assertNotIn("results", r)
 
     def test_honest_bundle_control(self):
         r = verify_bundle(json.loads(BASE.read_text(encoding="utf-8")), allow_no_log=True)

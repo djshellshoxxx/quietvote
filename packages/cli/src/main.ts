@@ -11,6 +11,7 @@ import { cmdKeygen } from './cmd-keygen.ts';
 import { cmdSelftest, cmdVerify } from './cmd-verify.ts';
 import { cmdVectorsCheck } from './cmd-vectors.ts';
 import { cmdPolicyDraftTemplate, cmdPolicyDraftValidate } from './cmd-policy-draft.ts';
+import { cmdGovernanceExport, cmdGovernancePrepare, cmdGovernanceSign, cmdGovernanceVerify } from './cmd-governance.ts';
 import { EXIT, type Io } from './io.ts';
 import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 
@@ -20,8 +21,9 @@ export const HELP = `qv ${VERSION}: QuietVote command line (offline verification
 
 usage:
   qv --version                     print the version
-  qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only]
+  qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only] [--extra-author-key <hex>]...
                                    verify an election bundle (V1..V14); runs the canary self-test first
+                                   extra author keys: at most 32 independently obtained public signing keys
   qv verify-receipt <receipt.json> --log-key <hex> --origin <origin> --leaf-hash <hex> [--json]
                                    verify signed promise and inclusion against external anchors (no witness/freshness verdict)
   qv selftest [--json]             run only the canary self-test
@@ -78,6 +80,15 @@ usage:
   qv policy-draft validate <draft.json> [--json]
                                    unsigned policy planning only; no signatures, group authority or election binding;
                                    collective preserves a source duration conflict and returns exit 1 with a draft to review
+  qv governance prepare genesis --policy <draft.json> --identity-key <hex> --steward-key <hex>... --out <body.json>
+  qv governance prepare amendment --policy <draft.json> --identity-key <hex> --genesis-hash <hex>
+                    --history <history.json> --decision-class rules|entrenched [--steward-key <hex>]... --out <body.json>
+  qv governance sign --body <body.json> | --record <partial.json> --identity-key <hex> --genesis-hash <hex>
+                    --rules-hash <hex> [--history <history.json>] --key <keyfile> --out <signed.json> [passphrase options]
+  qv governance export --record <signed.json>... [--history <history.json>] --identity-key <hex> --genesis-hash <hex> --out <history.json>
+  qv governance verify <history.json> --identity-key <hex> --genesis-hash <hex> [--json]
+                                   experimental signed-rule history only; all outputs are JSON, never election authorization;
+                                   independent pins required; unratified amendments remain INCOMPLETE (exit 3)
 
 exit codes: 0 ok / PASS, 1 verification or conformance failure, 2 usage error, 3 INCOMPLETE or PARTIAL (nothing failed,
 but something could not be checked: that is not a pass), 4 unreadable or malformed input, 70 internal error.
@@ -95,6 +106,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   online: { 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
   'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },
+  governance: { prepare: cmdGovernancePrepare, sign: cmdGovernanceSign, export: cmdGovernanceExport, verify: cmdGovernanceVerify },
 };
 
 export async function run(argv: string[], io: Io): Promise<number> {

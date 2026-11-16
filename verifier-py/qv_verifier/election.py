@@ -67,7 +67,9 @@ _RECORD_KEYS = {
 
 @dataclass
 class Finding:
-    check: str
+    # None denotes a finding that does not change a named check, e.g. an
+    # ignored bad-signature duplicate or a conflict between valid tally bodies.
+    check: str | None
     code: str
     fatal: bool
     detail: str = ""
@@ -80,7 +82,7 @@ class State:
     completed: set[str] = field(default_factory=set)
     notes: list[str] = field(default_factory=list)
 
-    def add(self, check: str, code: str, fatal: bool, detail: str = "") -> None:
+    def add(self, check: str | None, code: str, fatal: bool, detail: str = "") -> None:
         self.findings.append(Finding(check, code, fatal, detail))
 
     def skip(self, *checks: str) -> None:
@@ -370,7 +372,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     for e in log:
         en = e.get("entry") if isinstance(e, dict) else None
         if not isinstance(en, dict):
-            st.add("chk.encoding.canonical", "E_SCHEMA", True, f"seq {e.get('seq') if isinstance(e, dict) else '?'}")
+            st.add("chk.encoding.canonical", "E_SCHEMA", False, f"seq {e.get('seq') if isinstance(e, dict) else '?'}")
             continue
         if "intent" in en:
             envelopes.append((e["seq"], en))
@@ -379,10 +381,16 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         try:
             qvjson.check_value(en)
         except QVError as ex:
-            st.add("chk.encoding.canonical", ex.code, True, f"seq {e['seq']}: {ex.detail}")
+            st.add("chk.encoding.canonical", ex.code, is_tally, f"seq {e['seq']}: {ex.detail}")
             rejected_tally |= is_tally
             continue
         body_type = en.get('body', {}).get('type') if isinstance(en.get('body'), dict) else None
+        if isinstance(body_type, str) and en["body"].get("proto") != PROTO:
+            # ADR-027 B1-02: unknown versions are rejected as log noise, including
+            # a versioned tally which this verifier must not attempt to examine.
+            st.add("chk.encoding.canonical", "E_VERSION", False, f"seq {e['seq']}: proto")
+            rejected_tally |= is_tally
+            continue
         if isinstance(body_type, str) and body_type not in _RECORD_KEYS:
             # ADR-027 / B1-02 option A: an unrecognised non-ballot record is
             # rejected from protocol computation as class L, not an election
@@ -394,11 +402,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
             # QV-16 §5.5 item 7 (closed schemas, "eliminating malleability through junk fields"), App. C step 1
             # ("reject on E_PARSE/E_SCHEMA/E_VERSION") and §5.20 (E_SCHEMA is R/L: not counted): the record is
             # rejected. A rejected tally is not examined, so its aggregate/decrypt/rules checks are not_run.
-            st.add("chk.encoding.canonical", "E_SCHEMA", True, f"seq {e['seq']}: record schema")
-            rejected_tally |= is_tally
-            continue
-        if en["body"].get("proto") != PROTO:
-            st.add("chk.encoding.canonical", "E_VERSION", True, f"seq {e['seq']}: proto")
+            st.add("chk.encoding.canonical", "E_SCHEMA", is_tally, f"seq {e['seq']}: record schema")
             rejected_tally |= is_tally
             continue
         records.append((e["seq"], en))
@@ -422,9 +426,12 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
             name = b.get("name")
             if isinstance(name, str) and name.startswith("dkg-"):
                 if _coordinator_ok(mh, b, en.get("sigs"), coord):
-                    markers.setdefault(name, (seq, b))
+                    if name in markers:
+                        st.add(None, "E_MARKERS", False, f"seq {seq}: duplicate marker {name}")
+                    else:
+                        markers[name] = (seq, b)
                 else:
-                    st.add("chk.keys.trustees", "E_SIG", True, f"seq {seq}: marker {name} signature")
+                    st.add(None, "E_SIG", False, f"seq {seq}: marker {name} signature")
             else:
                 later_markers.append((seq, en))
         elif ty in kind:
@@ -433,12 +440,12 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
             if idx in trustee_pk and _sig_valid(mh, b, en.get("sig", {}), trustee_pk[idx]):
                 pre[lst].append({"seq": seq, "body": b})
             else:
-                st.add("chk.keys.trustees", "E_SIG", False, f"seq {seq}: {ty} not signed by trustee {idx}")
+                st.add(None, "E_SIG", False, f"seq {seq}: {ty} not signed by trustee {idx}")
         elif ty == "roll-commit":
             if _coordinator_ok(mh, b, en.get("sigs"), coord):
                 roll_commits.append((seq, b))
             else:
-                st.add("chk.keys.trustees", "E_SIG", True, f"seq {seq}: roll-commit signature")
+                st.add(None, "E_SIG", False, f"seq {seq}: roll-commit signature")
         elif ty == "dkg-keyconf":
             keyconfs.append((seq, en))
         elif ty == "tally":
@@ -477,18 +484,31 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     st.complete("chk.keys.trustees")  # App. C steps 5-10 are done
 
     # ------------------------------------------------ C3 window markers
-    opens = [(s, en) for s, en in later_markers if en["body"].get("name") == "election-open"]
-    closes = [(s, en) for s, en in later_markers if en["body"].get("name") == "election-close"]
-    for s, en in opens[:1] + closes[:1]:
+    # Only authenticated markers can occupy a phase. Earlier junk and later
+    # duplicates remain visible without replacing the first valid signature set.
+    window_markers: dict[str, tuple[int, dict]] = {}
+    for seq, en in later_markers:
+        name = en["body"].get("name")
+        if name not in ("election-open", "election-close"):
+            continue
         if not _coordinator_ok(ctx, en["body"], en.get("sigs"), coord):
-            st.add("chk.time.window", "E_SIG", True, f"seq {s}: window marker signature")
+            st.add(None, "E_SIG", False, f"seq {seq}: window marker signature")
+        elif name in window_markers:
+            st.add(None, "E_MARKERS", False, f"seq {seq}: duplicate marker {name}")
+        else:
+            window_markers[name] = (seq, en)
+    opens = [window_markers["election-open"]] if "election-open" in window_markers else []
+    closes = [window_markers["election-close"]] if "election-close" in window_markers else []
     if opens:
         bind_err = _open_binding_error(opens[0][0], opens[0][1]["body"], mh, mk, dict(records), roll_root_hex, len(roll_hex), coord)
         if bind_err is not None:
             st.add("chk.time.window", "E_MARKERS", True, bind_err)
-    if not opens or not closes or not opens[0][0] < closes[0][0]:
-        st.add("chk.time.window", "E_TIME_WINDOW", True, "open/close markers missing or misordered")
-        open_seq, close_seq = 0, -1
+    if not opens or not closes:
+        st.add(None, "E_MARKERS", False, "authenticated open/close markers missing")
+        _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
+    if not opens[0][0] < closes[0][0]:
+        st.add(None, "E_MARKERS", True, "open/close markers misordered")
+        _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
     else:
         open_seq, close_seq = opens[0][0], closes[0][0]
         # QV-ADR-015 / X-40: election-open binds (manifest_hash, joint_key_seq, roll_commit_seq); fail closed.
@@ -572,9 +592,13 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         elif en["reveal_digest"] == ZERO32:
             st.notes.append(f"seq {seq}: trustee-decryption spoil mode not supported by this skeleton")
 
+    # ADR-027 / QV-ERR-PY-010: only accepted, non-spoiled casts advance
+    # supersedes, the per-voter limit and the counted ballot. An excluded later
+    # cast cannot erase an earlier accepted vote or occupy another voter's code.
     prev: dict[str, str] = {}
     nadm: dict[str, int] = {}
-    admissible: list[tuple[int, dict, bytes]] = []
+    code_owner: dict[bytes, str] = {}
+    counted: dict[str, tuple[dict, bytes]] = {}
     maxpv = m["ballots"]["max_per_voter"]
     for seq, en, code in casts:
         v = en["body"]["voter"]
@@ -584,44 +608,37 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         if nadm.get(v, 0) + 1 > maxpv:
             st.add("chk.ballots.latest", "E_REVOTE_LIMIT", False, f"seq {seq}")
             continue
-        prev[v] = code.hex()
-        nadm[v] = nadm.get(v, 0) + 1
-        admissible.append((seq, en, code))
-    voters_by_code: dict[bytes, set[str]] = {}
-    for seq, en, code in admissible:
-        voters_by_code.setdefault(code, set()).add(en["body"]["voter"])
-    last: dict[str, tuple[int, dict, bytes]] = {}
-    for seq, en, code in admissible:
-        last[en["body"]["voter"]] = (seq, en, code)
-    counted: dict[str, tuple[dict, bytes]] = {}
-    for v, (seq, en, code) in last.items():
-        if len(voters_by_code[code]) > 1:
-            st.add("chk.ballots.valid", "E_DUP_CODE", False, f"seq {seq}")
+        if code in code_owner and code_owner[code] != v:
+            st.add(None, "E_DUP_CODE", False, f"seq {seq}")
             continue
         if code in spoiled_codes:
             st.add("chk.benaloh.spoiled", "E_SPOILED_CODE_CAST", False, f"seq {seq}")
             continue
+        code_owner[code] = v
+        prev[v] = code.hex()
+        nadm[v] = nadm.get(v, 0) + 1
         counted[v] = (en["body"], code)
-    for seq, en, code in admissible:
-        if code in spoiled_codes and last[en["body"]["voter"]][0] != seq:
-            st.add("chk.benaloh.spoiled", "E_SPOILED_CODE_CAST", False, f"seq {seq} (superseded)")
     V = len(counted)
     out["counts"]["counted"] = V
 
     # ------------------------------------------------ C6 tally
     if not tally_recs and rejected_tally:
-        # The only tally record was rejected above (fatal E_SCHEMA/E_VERSION on chk.encoding.canonical);
-        # there is no admissible tally to aggregate, decrypt or evaluate.
+        # No admissible current-suite tally survived parsing: malformed tally
+        # schema is fatal; unknown protocol versions are class L. Neither is
+        # examined for aggregation, decryption or outcome computation.
         _stop(st, "chk.tally.aggregate", "chk.tally.decrypt", "chk.result.rules")
     if not tally_recs:
         # No candidate tally was supplied. Retain the completed evidence, but
         # do not fabricate an aggregate error or report a result (PY-02).
         _stop(st, "chk.tally.aggregate", "chk.tally.decrypt", "chk.result.rules")
-    if len(tally_recs) != 1:
-        st.add("chk.tally.aggregate", "E_SCHEMA", True, f"{len(tally_recs)} tally records")
-        _stop(st, "chk.tally.decrypt", "chk.result.rules")
     tseq, ten = tally_recs[0]
     tb = ten["body"]
+    first_body = qvjson.jcs(tb)
+    for seq, other in tally_recs[1:]:
+        if qvjson.jcs(other["body"]) == first_body:
+            st.add(None, "E_SCHEMA", False, f"seq {seq}: duplicate tally; only the first is examined")
+        else:
+            st.add(None, "E_RESULT", True, f"seq {seq}: conflicting tally body")
     if not _coordinator_ok(ctx, tb, [ten["sig"]] if "sig" in ten else ten.get("sigs"), {**coord, "m": 1}):
         st.notes.append("tally convenience signature does not verify (record is verified, not trusted)")
     try:

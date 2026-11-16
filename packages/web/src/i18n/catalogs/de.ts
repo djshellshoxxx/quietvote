@@ -294,6 +294,8 @@ export const DE = {
   'qv.verify.sourceServer': 'Dieser Server',
   'qv.verify.file': 'Wahldatenpaket (JSON)',
   'qv.verify.anchor': 'Wahl-ID, die Ihnen genannt wurde (von Ihrem Organisator, nicht von dieser Seite)',
+  'qv.verify.authorKeys': "Zusätzliche öffentliche Signaturschlüssel (optional)",
+  'qv.verify.authorKeysHint': "Verwende separat von einer vertrauenswürdigen Quelle erhaltene Schlüssel. Gib bis zu 32 Schlüssel ein, einen pro Zeile, mit je 64 hexadezimalen Kleinbuchstaben und Ziffern.",
   'qv.verify.anchorHint': 'Optional, aber dringend empfohlen. Ohne sie würde auch eine Kopie einer anderen Wahl bestehen.',
   'qv.verify.run': 'Prüfungen starten',
   'qv.verify.running': 'Prüfungen laufen…',

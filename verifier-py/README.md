@@ -33,6 +33,7 @@ python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet    # only non
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --report out.json
 python3 -I verifier-py/qv_verifier verify election.json --board board.json
 python3 -I verifier-py/qv_verifier verify election.json --board board.json --receipts receipts.json --observed observed.json
+python3 -I verifier-py/qv_verifier adapter --tree test-vectors/v1
 ```
 
 Each vector is reported `PASS`, `FAIL` or `NOT-IMPLEMENTED`. The exit status is **1 only if a
@@ -72,6 +73,53 @@ when the package is importable, for example after installation. From a checkout,
 form above: it runs `qv_verifier/__main__.py`, which puts the package's parent directory on
 `sys.path`. The `-m` form was tested and fails from `verifier-py/` with "No module named qv_verifier".
 
+### JSON Lines conformance adapter
+
+`adapter --tree DIR` implements QV-34 §10.2. Send the handshake first:
+
+```json
+{"hello":"qv-conformance","format_version":1,"protocol_version":"qv1"}
+{"id":"abc","op":"hash.sha256","input":{"msg_hex":"616263"}}
+{"id":"election","op":"verify.election","input":{"path":"elections/tiny-yesno-3v/bundle.json"}}
+```
+
+There is one flushed JSON response per input line; diagnostics use stderr. The
+handshake identifies the implementation and version but advertises `profiles: []`:
+transport support is not a claim that all operations in a P0/P1 profile exist.
+All operations in `qv_verifier.ops.OPS`, plus `verify.election` and
+`log.verify_election`, use the independent Python implementation. Unknown operations
+return `ERR_UNSUPPORTED_OP` with the request ID. Known protocol rejections retain
+their `E_*` code; malformed transport/envelopes return `E_PARSE`/`E_SCHEMA`.
+
+`verify.election` reads exactly `{path}` and returns the report's verdict, exact
+check map, counts, context prefix and available results in `output`; the complete
+report is in informational `details`. A fatal report returns `ok:false`, its first
+emitted code, `failed_checks`, and `details`. `log.verify_election` uses the corpus's
+`{bundle:{path},board:{path,replace?},receipts?,observed?,witnesses?,extraAuthorKeys?}`
+input; positive output is exactly `{verdict,checks}`. Any emitted log finding uses
+`ok:false` and its first code; `details` retains **all** codes and the independent
+verdict, including nonfatal receipt findings. No expected-output file is consulted.
+
+`ok:true` means the operation completed; inspect `output.verdict`, which can still
+be `INCOMPLETE`. Default election verification requires log evidence. To compare
+the corpus's explicitly content-only election reports, launch with
+`--content-only`; requests and artifact fields cannot enable that option.
+Supplied bad evidence and required witness policy still cannot be bypassed.
+
+Input lines are limited to 1 MiB including newline, artifact files to 64 MiB, and
+responses to 4 MiB. Oversized framing returns `ERR_REQUEST_TOO_LARGE` and ends the
+session with exit 2; oversized responses return `ERR_RESPONSE_TOO_LARGE`. A bad
+handshake also ends with exit 2. Validly framed request errors do not desynchronize
+the next request; clean EOF after handshake exits 0 regardless of individual
+operation outcomes. IDs are nonempty strings up to 256 characters.
+
+File reads use a pinned directory descriptor, require regular files, reject
+absolute/parent paths and symlinks, and never use the process working directory.
+On platforms without directory-relative `open` and no-follow directory handles,
+file operations explicitly return `ERR_UNSUPPORTED_OP`; primitive operations
+remain available. This protects confinement without claiming untested Windows
+file support. Inputs must be local; the adapter never fetches network resources.
+
 Unit tests (unittest discovery adds the start directory to `sys.path` itself, so `-I` works):
 
 ```sh
@@ -96,7 +144,7 @@ cd verifier-py && python3 -I -m unittest
 | Rules | `rules.py` | quorum, threshold, tie-breaks, multi-winner (exact integers) |
 | Full election (Appendix C) | `election.py` | the 14 QV-34 §9.1 checks, optional log evidence, counts, ctx prefix, results |
 | Stable QV-18 log evidence | `logwire.py`, `logcheck.py`, `logio.py` | authenticated entry/record binding, checkpoints/prefix consistency, witness gates/times, fork/rollback and receipt samples |
-| Runner / CLI | `runner.py`, `cli.py`, `__main__.py` | QV-34 §10.3 comparison, applied strictly |
+| Runner / CLI / JSONL adapter | `runner.py`, `cli.py`, `adapter.py`, `__main__.py` | QV-34 §10.2 bounded adapter and §10.3 comparison, applied strictly |
 
 All 48 shipped `log.verify_election` cases are implemented. With no log evidence,
 `chk.board.*` and `chk.receipts.sample` remain `not_run`. The **13 notice/control vectors are
@@ -106,8 +154,44 @@ header authority and body binding. Notices never waive manifest witness or time 
 See [the control milestone handoff](../docs/handoffs/python-controls-20261116.md) for the precise
 scope and validation. Full V13 control effects and the future signed `control_seq` wire transition
 are separate work. Also not implemented: trustee-decryption spoil mode
-(§5.13.4), the ristretto255 one-way map / hash-to-group, the QV-34 §10.2 stdin/stdout adapter
-protocol, scale vectors, and anything from Phase 2 or 3.
+(§5.13.4), the ristretto255 one-way map / hash-to-group, scale vectors, and anything
+from Phase 2 or 3. The QV-34 §10.2 stdin/stdout adapter is implemented above.
+
+## Experimental signed governance history
+
+The independent Python verifier also implements the isolated
+[`qv-governance/1` contract](../docs/GOVERNANCE-CORE.md). It verifies strict policy
+bounds, the group-identity digest, founding identity and steward signatures,
+old-authority amendments, consecutive hashes, replay/fork behavior and externally
+pinned identity/genesis hashes. This is a separate format from a suite-v1 election.
+
+```sh
+python3 -I verifier-py/qv_verifier governance verify rules.json \
+  --identity-key <64-lowercase-hex-public-key> \
+  --genesis-hash <64-lowercase-hex-founding-rules-hash>
+```
+
+The JSON report has scope `signed-group-rules`: exit 0 `VERIFIED`, exit 3
+`INCOMPLETE`, exit 1 `INVALID`; usage or unreadable input exits 2. A valid genesis
+can verify. Signed amendments remain incomplete in the CLI because an unsigned
+ratification-manifest reference is not evidence of a passed, final election.
+There is no CLI override for this requirement. Public-file input is limited to
+4 MiB and a regular, non-symlink file; platforms without nonblocking/no-follow
+file primitives refuse the file operation. The pure Python APIs remain usable.
+
+Library callers use `verify_group_rules_export(document, identity_key=...,
+genesis_rules_hash=..., verify_ratification=...)` or the bounded wire parser
+`verify_group_rules_json`. The optional callback is trusted application code
+that independently verifies the exact referenced final governed election. It
+receives a read-only request and must return literal `True`; asynchronous or
+truthy answers do not grant authority. All signatures and links are checked
+before any callback. Unratified predecessors prevent later activation. The
+governed-election profile itself, proposals, membership transitions, review time
+and disputes are not implemented by this rule-history verifier.
+
+The new conformance cases live in `conformance/governance/v1`, separately from
+the unchanged suite-v1 corpus. Focused tests include independent Python signing,
+published digest constants and actual CLI failure/success paths.
 
 ## Results (only runs actually performed)
 

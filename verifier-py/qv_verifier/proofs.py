@@ -59,6 +59,12 @@ def pok_share_check(ctx: bytes, j: int, Y: RPoint, c: int, s: int) -> bool:
 
 
 def dh_check(mh: bytes, i: int, j: int, E: RPoint, R: RPoint, S: RPoint, c: int, s: int) -> bool:
+    # A DH-reveal statement requires nonzero encryption/ephemeral keys and
+    # their nonzero shared point. Identity statements can satisfy the equations
+    # without proving the required secret relation. This also protects complaint
+    # adjudication of published packages already excluded from round 2.
+    if E.is_identity() or R.is_identity() or S.is_identity():
+        return False
     a1 = G.mul(s) - E.mul(c)
     a2 = R.mul(s) - S.mul(c)
     return c == hs(

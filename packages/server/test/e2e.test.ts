@@ -1,5 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { MerkleTree, bundleFromJson, unb64, unb64u, verifyConsistency, verifyInclusion, verifyLog, authorKeyId, b64u, toHex, type WitnessPolicy } from '@quietvote/board';
 import { bytesToHex, jcs } from '@quietvote/crypto';
@@ -123,6 +127,14 @@ test('full election over HTTP: 3-of-5 trustees, 22 voters, revotes, spoils, clos
     // This HTTP fixture deliberately uses quorum zero: valid append evidence alone is incomplete.
     assert.equal(witnessed.verdict, 'INCOMPLETE');
     assert.equal((await verifyElection(content, { log: trustedLog, allowNoLog: true })).verdict, 'PASS');
+    // Exercise the public executable interface against the actual server export and a fixture-owned pin.
+    const publicExport = join(w.dir, 'with-board.json'); writeFileSync(publicExport, logged.text);
+    const verifyBin = fileURLToPath(new URL('../../verifier/src/bin.ts', import.meta.url));
+    for (const [extra, expected] of [[[], 1], [['--extra-author-key', serverKey], 3], [['--extra-author-key', serverKey, '--content-only'], 0]] as [string[], number][]) {
+      const result = spawnSync(process.execPath, [verifyBin, publicExport, '--skip-selftest', '--json', ...extra], { encoding: 'utf8', timeout: 90000 });
+      assert.equal(result.status, expected, result.stderr + result.stdout);
+    }
+
     assert.equal(rep.counts.counted, final.size);
     assert.equal(rep.counts.spoiled, 2);
     assert.deepEqual(Object.values(rep.checks).filter((c) => c === 'fail'), []);

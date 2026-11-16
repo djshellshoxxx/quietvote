@@ -5,6 +5,13 @@ accepted ADRs supply the behavior below. Proposed encodings and reconciliations
 are identified explicitly. This document does not change suite-v1 acceptance,
 the label registry, current board types, or any signed election bytes.
 
+The isolated signed GroupRules history slice is now implemented under the precise
+[experimental core contract](../GOVERNANCE-CORE.md). Its ratification pointer is
+outside the signed body hash, so a candidate can be hashed before its ratifying
+manifest exists. This does not implement the rest of this RFC or activate governed
+elections; the [milestone handoff](../handoffs/QUIETVOTE-GOVERNANCE-CORE-20261116.md)
+records the tested boundary and fresh-team continuation.
+
 The [remaining-contracts handoff](../handoffs/QUIETVOTE-REMAINING-CONTRACTS-20261116.md)
 distinguishes already accepted implementation decisions from actual contract gaps.
 The new offline policy-draft tools implement only the unsigned configuration

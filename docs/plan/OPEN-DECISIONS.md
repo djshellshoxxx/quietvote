@@ -7,19 +7,23 @@
 
 ### Consolidation holds — 2026-10-30
 
-- **Registration (B3-01): blocked pending protocol review, explicitly retained by
-  the owner on 2026-10-30.** QV-09 §3.3 / schema sends raw `invite_code` and signs
-  `(election_id, pk)`; QV-19 §6.1 hashes the token before sending and signs
-  `(ID, SHA-256(TOKEN), pubkey)`, while QV-04-REQ-005 also mentions a label. No
-  acceptance-set or authority-rule change is approved. Specify the exact wire
-  bytes, storage hash, signature framing and label treatment before unblocking.
+- **Registration (B3-01): implemented 2026-11-16 under QV-ADR-028.** The
+  2026-11-04 accepted decision supersedes the earlier hold. New elections use
+  hashed invite-bound proof, a separate at-rest bearer verifier and the exact
+  documented framing. Legacy elections retain their recorded scheme. Real
+  web/API/CLI enrollment and the required hosted browser journey pass at
+  `d2ffcc02ed4f00564e2d6295d37f7d192b3f7d17`. Group-label semantics and D-99's
+  pinned membership/absent-member contract remain separate unfinished work.
 - **Passphrase portability (B3-25): implemented 2026-11-16 under QV-ADR-027.**
   The approved shared canonical form and distinct legacy NFKC unlock fallback
   preserve version-1 containers. Immutable CLI/web fixtures cover the compatibility
   boundary; older CLI files still require their original spelling. This supersedes
   this item's earlier consolidation hold, not independent security-review gates.
-- Existing cryptographic/verifier errata, D-84/D-87 and review gates remain open;
-  a passing subset of tests does not resolve them.
+- Already-approved verifier defaults are implementation work, not renewed
+  approval gates. The current [continuation handoff](../handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md)
+  records implemented report/control/key/verdict compatibility and remaining
+  rows. External protocol/security review is separate from implementation
+  authorization; a passing subset of tests does not establish release readiness.
 
 | ID | Decision | Source | Recommended default | Deadline |
 |---|---|---|---|---|

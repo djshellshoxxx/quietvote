@@ -294,6 +294,8 @@ export const FR = {
   'qv.verify.sourceServer': 'Ce serveur',
   'qv.verify.file': 'Fichier de l’ensemble du scrutin (JSON)',
   'qv.verify.anchor': 'Identifiant du scrutin qui vous a été communiqué (par votre organisateur, pas par cette page)',
+  'qv.verify.authorKeys': "Clés publiques de signature supplémentaires (facultatif)",
+  'qv.verify.authorKeysHint': "Utilisez des clés obtenues séparément auprès d’une source fiable. Saisissez au plus 32 clés, une par ligne, de 64 chiffres hexadécimaux minuscules.",
   'qv.verify.anchorHint': 'Facultatif mais fortement recommandé. Sans lui, une copie d’un autre scrutin passerait aussi.',
   'qv.verify.run': 'Lancer les contrôles',
   'qv.verify.running': 'Contrôles en cours…',

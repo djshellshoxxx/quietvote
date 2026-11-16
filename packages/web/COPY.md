@@ -586,3 +586,11 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.a11y.checkNotRun`: {name}: not run
 - `qv.a11y.table`: Showing {from}–{to} of {total}
 - `qv.a11y.working`: Working
+
+The upload verifier, offline verifier, and live results page accept optional
+additional public signing keys obtained separately from a trusted source. Enter
+one 64-character lower-case hexadecimal key per line, up to 32 keys, then choose
+**Run checks**. Editing the keys clears the previous result and invalidates pending
+work. Live refreshes and route changes do not carry pins into a new automatic
+verification. Server metadata and bundle fields never populate this input; keys
+are not persisted. Witness and record-author role requirements still apply.

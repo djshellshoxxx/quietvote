@@ -294,6 +294,8 @@ export const PT_BR = {
   'qv.verify.sourceServer': 'Este servidor',
   'qv.verify.file': 'Arquivo do pacote da eleição (JSON)',
   'qv.verify.anchor': 'ID da eleição que foi informado a você (pelo seu organizador, não por esta página)',
+  'qv.verify.authorKeys': "Chaves públicas de assinatura adicionais (opcional)",
+  'qv.verify.authorKeysHint': "Use chaves obtidas separadamente de uma fonte confiável. Insira até 32 chaves, uma por linha, com 64 dígitos hexadecimais minúsculos cada.",
   'qv.verify.anchorHint': 'Opcional, mas muito recomendado. Sem ele, uma cópia de outra eleição também passaria.',
   'qv.verify.run': 'Executar verificações',
   'qv.verify.running': 'Executando verificações…',

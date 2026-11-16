@@ -294,6 +294,8 @@ export const ES = {
   'qv.verify.sourceServer': 'Este servidor',
   'qv.verify.file': 'Archivo del paquete de la elección (JSON)',
   'qv.verify.anchor': 'ID de la elección que le indicaron (de su organizador, no de esta página)',
+  'qv.verify.authorKeys': "Claves públicas de firma adicionales (opcional)",
+  'qv.verify.authorKeysHint': "Usa claves obtenidas por separado de una fuente de confianza. Introduce hasta 32 claves, una por línea, de 64 dígitos hexadecimales en minúsculas.",
   'qv.verify.anchorHint': 'Opcional, pero muy recomendable. Sin él, una copia de otra elección también pasaría.',
   'qv.verify.run': 'Ejecutar comprobaciones',
   'qv.verify.running': 'Ejecutando comprobaciones…',

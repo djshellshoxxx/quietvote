@@ -3,6 +3,12 @@
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
 Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-inspect|election-draft|election-submit|election-tally-draft|election-export`.
 
+Experimental signed-rule workflows are available as `governance prepare`,
+`governance sign`, `governance export` and `governance verify`. They require
+independent identity/genesis/candidate pins, preserve partial co-signing, and
+leave unratified amendments INCOMPLETE. They do not authorize existing elections.
+See the [offline governance guide](../../docs/GOVERNANCE-CLI.md).
+
 Default verification requires both `chk.board.append_only` and
 `chk.board.witness` to pass. Missing or unverified log evidence yields
 `INCOMPLETE` (CLI exit 3); fatal evidence still yields `FAIL` (exit 1).
@@ -17,6 +23,16 @@ allows absent evidence, or a verified append-only log whose signed manifest
 explicitly requires zero witnesses. Supplied malformed, failed, skipped,
 interrupted or otherwise unverified append evidence never qualifies; required
 witnesses cannot be bypassed. Missing tallies remain incomplete in either mode.
+
+For supplemental log authors, both `qv verify` and `qv-verify` accept repeated
+`--extra-author-key <hex>` options (up to 32 public keys, each exactly 64 lower-case
+hexadecimal digits). Obtain these keys separately from a trusted source. Keys
+inside bundle metadata or unsigned server responses do not establish trust.
+For example: `qv verify with-board.json --extra-author-key PUBLIC_KEY_HEX --json`.
+A pin allows matching supplemental author signatures to be checked; it does not
+grant coordinator, trustee, voter, or control authority and does not replace
+witness evidence. `verifyWithSelfTest` accepts the same keys as its trusted caller
+option `extraAuthorKeys`.
 
 Exit codes: 0 ok, 1 failure, 2 usage, 3 incomplete/partial, 4 bad input, 70 internal. Design notes: `packages/verifier/NOTES.md`.
 

@@ -52,11 +52,10 @@ handoff for execution receipts and independent-review status.
 
 ## Remaining capabilities and owner gates
 
-* **B1-02/SG7:** malformed/unknown non-ballot records, bad earlier markers and duplicate tally finding classes still differ from TS.
-  This is deliberately recorded as an unresolved verifier-parity gap; no classes or governance semantics were silently rewritten.
-* **B1-05/SG8:** implemented under ADR-027: U+061C is accepted, matching TS; the other 11 rejected marks remain rejected. **B1-07:** yes/no ties, count-quorum field name,
-  winner order, DKG duplicate/early/equivocating records/complaints and latest-excluded-ballot rules remain owner decisions.
-* **B1-08:** exact numeric limits, full witness-schema closure and method-specific tie-break restrictions remain unresolved.
+* **B1-02/SG7:** implemented under ADR-027: malformed non-tally records and unsupported record versions are class-L noise; bad signatures cannot occupy marker phases; the first authenticated marker wins. Identical tally bodies are log-only duplicates; conflicting bodies remain fatal. Malformed current-suite tally bodies remain fatal and unexamined.
+* **B1-05/SG8:** implemented under ADR-027: U+061C is accepted, matching TS; the other 11 rejected marks remain rejected.
+* **B1-07:** implemented distinguishing cases for QV-ERR-PY-003/009/010 under ADR-027: canonical count-quorum `value`, strict-threshold equality ties, deterministic winner ordering, DKG equivocation/timeliness/complaints and excluded-cast chain behavior. See the exact per-row errata addendum and paired tests; no blanket claim of every possible schema/report behavior.
+* **B1-08:** the explicit QV-16 suite-v1 roll bound `2^20` is enforced. Other numeric limits, witness-name/schema constraints and method-specific restrictions remain to be reconciled individually against the spec; ADR-027 already permits limits actually derived from the spec. The explicit spec `basis:roll` versus TS schema rejection is not silently resolved by copying TS.
 * **PY-01/D-88:** implemented under ADR-027: Boolean `spoil_trustee_decrypt=false` is accepted; Boolean `true` is a named `E_UNSUPPORTED` refusal. Other types are schema failures. Trustee-mode spoil cryptography remains unsupported. **D-95:**
   QV-16 §5.12.2 says a zero-digest spoil is "valid only if the manifest enables it", but no spec gives the code, check or
   class for the invalid case, so it is not implemented here (TS does not enforce it at the ballot level either). See D-95.
@@ -165,3 +164,15 @@ The CLI accepts embedded `board` evidence or explicit `--board`; bundle option
 fields never grant authority. Existing conformance callers opt out explicitly,
 without changing vector bytes or expected reports. See the
 [P1 milestone handoff](../docs/handoffs/P1-LOG-REQUIRED-20261116.md).
+
+## QV-34 JSON Lines adapter — 2026-11-16
+
+The earlier adapter omission is superseded by `adapter --tree DIR`. It serves
+the specified handshake and known independent operations with bounded JSON Lines,
+explicit unsupported responses and descriptor-confined local artifact reads.
+File operations remain unsupported on platforms without the required no-follow,
+directory-relative primitives; no complete conformance profile is advertised.
+Default evidence policy is preserved, with an explicit caller `--content-only`
+option for the corpus's scoped election reports. See the
+[adapter milestone handoff](../docs/handoffs/QUIETVOTE-PYTHON-ADAPTER-20261116.md)
+for exact-source validation and fresh continuation.

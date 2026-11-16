@@ -1,3 +1,4 @@
+import { supplementalAuthorFixture } from './helpers/supplemental-author.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { signRecord } from '@quietvote/protocol';
@@ -34,4 +35,17 @@ test('B3-02: genuine proof-verified tally displays; coordinator-signed forged co
   const bad = await verifyLoadedElection(records, ctx.value, b.roll);
   assert.equal(bad.verdict, 'FAIL'); assert.equal(canShowResults(bad), false);
   assert.equal(canShowResults(await verifyLoadedElection(records, ctx.value, b.roll.slice(1))), false);
+});
+
+
+test('public upload and live helpers use explicit author pins, with no witness override', async () => {
+  for (const quorum of [2, 0]) {
+    const f = await supplementalAuthorFixture(quorum);
+    const records = [{ seq: 0, record: f.bundle.manifest }, ...f.bundle.log.map((r) => ({ seq: r.seq, record: r.entry }))];
+    const ctx = await deriveElectionContext(records); assert.ok(ctx.ok);
+    assert.equal((await verifyPublicBundleText(f.untrustedText)).verdict, 'FAIL');
+    assert.equal((await verifyPublicBundleText(f.untrustedText, { extraAuthorKeys: ['ab'.repeat(32)] })).verdict, 'FAIL');
+    assert.equal((await verifyPublicBundleText(f.untrustedText, { extraAuthorKeys: [f.key] })).verdict, quorum ? 'PASS' : 'INCOMPLETE');
+    assert.equal((await verifyLoadedElection(records, ctx.value, f.bundle.roll, f.board, [f.key])).verdict, quorum ? 'PASS' : 'INCOMPLETE');
+  }
 });
