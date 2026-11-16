@@ -3,6 +3,7 @@ import {
   IDENTITY,
   ORDER,
   baseMul,
+  isIdentity,
   pointAdd,
   pointMul,
   pointSub,
@@ -21,6 +22,21 @@ export function elgamalEncrypt(K: Point, m: bigint | number, r: Scalar): Ciphert
   // C4: r must be a canonical non-zero scalar; r = l (or any multiple) would reduce to 0 and give A = O.
   if (typeof r !== 'bigint' || r <= 0n || r >= ORDER) throw new Error('ElGamal randomness must be in [1, l)');
   return { A: baseMul(r), B: pointAdd(baseMul(BigInt(m)), pointMul(K, r)) };
+}
+
+/**
+ * Add an encryption of zero using fresh caller-supplied randomness in [1, ORDER).
+ * The result encrypts the same plaintext with randomness old_r + r (mod ORDER).
+ * Refuse cancellation to the identity A, which would reveal the plaintext point;
+ * the caller must draw fresh randomness and retry. K must be non-identity.
+ * This transforms ciphertexts only: existing proofs and signatures are invalidated
+ * and must not be reused. It does not authorize modifying a submitted ballot.
+ */
+export function elgamalRerandomize(K: Point, ct: Ciphertext, r: Scalar): Ciphertext {
+  if (isIdentity(K)) throw new Error('ElGamal key must not be identity');
+  const result = ctAdd(ct, elgamalEncrypt(K, 0, r));
+  if (isIdentity(result.A)) throw new Error('ElGamal randomness cancels to identity');
+  return result;
 }
 
 export function ctAdd(x: Ciphertext, y: Ciphertext): Ciphertext {
