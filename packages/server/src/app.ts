@@ -61,18 +61,22 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   const lock = lockDataDirectory(cfg.dataDir);
   cfg.dataDir = lock.dataDir;
   let control: ControlDb | undefined;
-  const cleanup: (() => void)[] = [];
+  const cleanup: (() => void | Promise<void>)[] = [];
   try {
     control = new ControlDb(cfg.dataDir, cfg.now, SERVER_VERSION);
     return assembleServer(cfg, control, lock.release, cleanup);
   } catch (error) {
-    for (const stop of cleanup.reverse()) stop();
-    try { control?.close(); } finally { lock.release(); }
+    const finish = (): void => { try { control?.close(); } finally { lock.release(); } };
+    if (cleanup.length === 0) finish();
+    else {
+      // Construction can restore an outbox before a later initializer fails. Hold ownership until those callbacks drain.
+      void Promise.all(cleanup.reverse().map((stop) => stop())).then(finish).catch(() => undefined);
+    }
     throw error;
   }
 }
 
-function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () => void, cleanup: (() => void)[]): QuietVoteServer {
+function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () => void, cleanup: (() => void | Promise<void>)[]): QuietVoteServer {
   const nowMs = cfg.now;
   const witnesses = cfg.witnesses.map((w) => ({ name: w.name, alg: 'ed25519' as const, publicKey: hexToBytes(w.publicKey, 32) }));
   const env: Env = {
@@ -83,17 +87,17 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   };
   for (const k of cfg.adminKeys) control.seedAdmin(keyIdOf(hexToBytes(k, 32)), hexToBytes(k, 32));
   control.revokeRemovedAdmins(new Set(cfg.adminKeys.map((k) => keyIdOf(hexToBytes(k, 32)))));
+  const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
+  const releaseKey = cfg.releaseSeedHex ? ed25519Keypair(hexToBytes(cfg.releaseSeedHex, 32)) : undefined;
   const pool = new ElectionPool(env);
   const sse = new SseHub(env);
   const webhooks = new WebhookService(env);
-  cleanup.push(() => webhooks.stop());
+  cleanup.push(() => { webhooks.stop(); return webhooks.idle(); });
   const jobs = new JobRunner(env);
   const gossip = new GossipService(env, pool);
   cleanup.push(() => gossip.stop());
   const retention = new RetentionSweeper(env);
   env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
-  const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
-  const releaseKey = cfg.releaseSeedHex ? ed25519Keypair(hexToBytes(cfg.releaseSeedHex, 32)) : undefined;
 
   // ---------------------------------------------------------------- helpers
   const rtOf = async (c: Ctx): Promise<ElectionRuntime> => {
@@ -930,10 +934,12 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     stopped ??= (async () => {
       sse.closeAll();
       webhooks.stop();
-      gossip.stop();
-      await retention.stop();
-      await jobs.stop();
-      await http.close();
+      // Signal every producer before awaiting any of them; no live task may write after the directory lock is released.
+      const gossipStopped = gossip.stop();
+      const retentionStopped = retention.stop();
+      const jobsStopped = jobs.stop();
+      const httpStopped = http.close();
+      await Promise.all([gossipStopped, retentionStopped, jobsStopped, httpStopped, webhooks.idle()]);
       await pool.closeAll();
       control.close();
       releaseLock();

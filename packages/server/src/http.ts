@@ -457,11 +457,20 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
     }
   }
 
+  const pending = new Set<Promise<void>>();
+  let closing: Promise<void> | undefined;
   server.on('request', (req, res) => {
-    void handle(req, res).catch(() => {
+    if (closing) {
+      res.writeHead(503, { Connection: 'close' });
+      res.end();
+      return;
+    }
+    const task = handle(req, res).catch(() => {
       if (!res.headersSent) res.writeHead(500);
       res.end();
     });
+    pending.add(task);
+    void task.finally(() => pending.delete(task)).catch(() => undefined);
   });
 
   return {
@@ -469,16 +478,23 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
     routes,
     listen: () =>
       new Promise((resolve, reject) => {
+        if (closing) { reject(new Error('HTTP server has stopped')); return; }
         server.once('error', reject);
         server.listen(cfg.port, cfg.host, () => {
           const a = server.address();
           resolve({ port: typeof a === 'object' && a ? a.port : cfg.port, host: cfg.host });
         });
       }),
-    close: () =>
-      new Promise((resolve) => {
-        server.close(() => resolve());
-        server.closeAllConnections();
-      }),
+    close: () => {
+      closing ??= (async () => {
+        await new Promise<void>((resolve) => {
+          server.close(() => resolve());
+          server.closeAllConnections();
+        });
+        // A disconnected socket does not cancel its async route handler. Keep databases/keys owned until it finishes.
+        while (pending.size > 0) await Promise.allSettled([...pending]);
+      })();
+      return closing;
+    },
   };
 }

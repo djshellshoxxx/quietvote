@@ -15,6 +15,8 @@ export class ElectionPool {
   private readonly env: Env;
   private readonly open = new Map<string, ElectionRuntime>();
   private readonly opening = new Map<string, Promise<ElectionRuntime | undefined>>();
+  private closing: Promise<void> | undefined;
+  private stopping = false;
   constructor(env: Env) {
     this.env = env;
   }
@@ -23,7 +25,12 @@ export class ElectionPool {
     return this.open.size;
   }
 
+  private ensureRunning(): void {
+    if (this.stopping) throw new ApiError(503, 'MAINTENANCE', 'server is shutting down');
+  }
+
   async get(id: string): Promise<ElectionRuntime | undefined> {
+    this.ensureRunning();
     const hit = this.open.get(id);
     if (hit && !hit.poisoned) {
       this.open.delete(id);
@@ -31,12 +38,15 @@ export class ElectionPool {
       return hit;
     }
     if (hit?.poisoned) await this.evict(id);
+    this.ensureRunning();
     let p = this.opening.get(id);
     if (!p) {
       p = this.load(id).finally(() => this.opening.delete(id));
       this.opening.set(id, p);
     }
-    return p;
+    const rt = await p;
+    this.ensureRunning();
+    return rt;
   }
 
   private async load(id: string): Promise<ElectionRuntime | undefined> {
@@ -69,6 +79,7 @@ export class ElectionPool {
   }
 
   async create(orgId: string, title: string, access: 'public' | 'link'): Promise<{ id: string; origin: string; logPk: Uint8Array; readKey?: string }> {
+    this.ensureRunning();
     const { control, kek, cfg } = this.env;
     if (control.countElections(orgId) >= cfg.maxElectionsPerOrg) throw new ApiError(429, 'RATE_LIMITED', 'election quota reached for this organization', { retryable: false });
     const id = randomBytes(16).toString('hex');
@@ -105,6 +116,7 @@ export class ElectionPool {
 
   /** QV-28 §11.2: crypto-erase first, then close and unlink. */
   async remove(id: string): Promise<void> {
+    this.ensureRunning();
     const reg = this.env.control.election(id);
     if (!reg) return;
     const deletable = (s: string): boolean => ['DRAFT', 'ARCHIVED', 'CANCELLED', 'ABORTED', 'IMPORTED'].includes(s);
@@ -119,7 +131,12 @@ export class ElectionPool {
     this.env.control.audit('system', 'election.delete', id);
   }
 
-  async closeAll(): Promise<void> {
-    for (const id of [...this.open.keys()]) await this.evict(id);
+  closeAll(): Promise<void> {
+    this.stopping = true; // no new acquisitions can enter while the existing opens drain
+    this.closing ??= (async () => {
+      await Promise.allSettled([...this.opening.values()]);
+      for (const id of [...this.open.keys()]) await this.evict(id);
+    })();
+    return this.closing;
   }
 }

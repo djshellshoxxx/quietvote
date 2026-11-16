@@ -127,7 +127,7 @@ export class JobRunner {
       }
     }
     const cur = this.current;
-    if (cur?.group === 'import') await cur.done;
-    else if (cur) await Promise.race([cur.done, new Promise<void>((r) => setTimeout(r, 5000).unref())]);
+    // Every job may still write persistent state. A timeout must not transfer directory ownership to another process.
+    if (cur) await cur.done;
   }
 }

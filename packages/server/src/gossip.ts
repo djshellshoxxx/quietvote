@@ -169,6 +169,7 @@ export class GossipService {
   private readonly transport: WebhookTransport;
   private timer: NodeJS.Timeout | undefined;
   private running = false;
+  private current: Promise<GossipStats> | undefined;
   private stopped = false;
 
   constructor(env: Env, pool: ElectionPool) {
@@ -192,15 +193,23 @@ export class GossipService {
     }
   }
 
-  stop(): void {
+  stop(): Promise<void> {
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
+    return this.current?.then(() => undefined, () => undefined) ?? Promise.resolve();
   }
 
   /** One round over all public, non-draft elections. Re-entrant calls return immediately. */
-  async runOnce(): Promise<GossipStats> {
-    if (this.running || this.stopped || this.peers.length === 0) return this.stats;
+  runOnce(): Promise<GossipStats> {
+    if (this.running || this.stopped || this.peers.length === 0) return Promise.resolve(this.stats);
+    const work = this.sweep();
+    this.current = work;
+    void work.finally(() => { if (this.current === work) this.current = undefined; }).catch(() => undefined);
+    return work;
+  }
+
+  private async sweep(): Promise<GossipStats> {
     this.running = true;
     this.stats.runs++;
     try {
