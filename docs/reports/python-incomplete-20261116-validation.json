@@ -1,0 +1,51 @@
+{
+  "source": "0a73091ab73532b17dcabbcde15a1830a1bbd1fa",
+  "tree": "a950d0e075b3ee76692dfe361d28194895116d13",
+  "checks": {
+    "units": {
+      "exit": 0,
+      "seconds": 111.01,
+      "tests": 140
+    },
+    "vectors": {
+      "exit": 0,
+      "seconds": 55.58,
+      "total": 282,
+      "passed": 282,
+      "failed": 0,
+      "not_implemented": 0
+    },
+    "compare": {
+      "exit": 0,
+      "seconds": 22.38,
+      "reports_agree": 27,
+      "reports_total": 27,
+      "verdicts_agree": 27,
+      "disagreements": 0
+    },
+    "links": {
+      "exit": 0,
+      "seconds": 0.45
+    }
+  },
+  "scope": "Narrow approved PY-02 no-tally INCOMPLETE; missing-log default unchanged.",
+  "commands": {
+    "units": "cd verifier-py && python3 -I -m unittest",
+    "vectors": "python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet",
+    "compare": "npm run verifiers:compare",
+    "links": "npm run links:check"
+  },
+  "focused": {
+    "tests": 6,
+    "passed": 6,
+    "seconds": 3.815,
+    "baseline_failure_count": 2
+  },
+  "independent_review": {
+    "commit": "1add533382707ca7c904f99e2e471033dab95c6c",
+    "new_tests_passed": 4,
+    "seconds": 3.944,
+    "owned_tests_rerun_passed": 6,
+    "production_repair": false
+  }
+}
