@@ -208,40 +208,59 @@ test('production organizer reviews and sends ceremony packets to the real server
     await world.setupOrgAndElection(); await world.registerVoters();
     assert.equal((await world.publishManifest()).status, 201);
     const passphrase = 'correct horse battery staple';
-    const keyFile = join(world.dir, 'coordinator.qvkey');
-    const wrapped = await wrapSeed(world.coord[0]!.secretKey.slice(), passphrase,
-      { ...defaultDeps(), rng: streamRng('organizer-browser-key') }, FLOOR_PARAMS);
-    writeFileSync(keyFile, serializeContainer(wrapped.container));
     assert.equal((await world.get('/coordinator.qvkey')).status, 404);
-    const page = await (await browser.newContext({ viewport: { width: 375, height: 812 } })).newPage();
-    page.setDefaultTimeout(30_000); await page.clock.install({ time: world.clock });
     const errors: string[] = [], external: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => { if (/Content Security|Trusted Type/i.test(m.text())) errors.push(m.text()); });
-    page.on('request', (r) => { if (!r.url().startsWith(world.base) && !/^(data|blob):/.test(r.url())) external.push(r.url()); });
-    await page.goto(`${world.base}/new`);
-    await page.getByLabel('Organizer key file', { exact: true }).setInputFiles(keyFile);
-    await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
-    await page.getByRole('button', { name: 'Import organizer key', exact: true }).click();
-    await page.getByText('Organizer public key (hex)', { exact: true }).waitFor();
-    await page.goto(`${world.base}/e/${world.electionId}/admin`);
-    await page.getByLabel('Saved manifest hash (64 hexadecimal characters)', { exact: true }).fill(bytesToHex(world.mh));
+    // Each coordinator has a distinct device store; the fixture requires 2-of-3.
+    const pages = [];
+    for (const index of [0, 1]) {
+      const keyFile = join(world.dir, `coordinator-${index}.qvkey`);
+      const wrapped = await wrapSeed(world.coord[index]!.secretKey.slice(), passphrase,
+        { ...defaultDeps(), rng: streamRng(`organizer-browser-key-${index}`) }, FLOOR_PARAMS);
+      writeFileSync(keyFile, serializeContainer(wrapped.container));
+      const page = await (await browser.newContext({ viewport: { width: 375, height: 812 } })).newPage();
+      page.setDefaultTimeout(30_000); await page.clock.install({ time: world.clock });
+      page.on('pageerror', (e) => errors.push(e.message));
+      page.on('console', (m) => { if (/Content Security|Trusted Type/i.test(m.text())) errors.push(m.text()); });
+      page.on('request', (r) => { if (!r.url().startsWith(world.base) && !/^(data|blob):/.test(r.url())) external.push(r.url()); });
+      await page.goto(`${world.base}/new`);
+      await page.getByLabel('Organizer key file', { exact: true }).setInputFiles(keyFile);
+      await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
+      await page.getByRole('button', { name: 'Import organizer key', exact: true }).click();
+      await page.getByText('Organizer public key (hex)', { exact: true }).waitFor();
+      await page.goto(`${world.base}/e/${world.electionId}/admin`);
+      await page.getByLabel('Saved manifest hash (64 hexadecimal characters)', { exact: true }).fill(bytesToHex(world.mh));
+      pages.push(page);
+    }
+    const [proposer, page] = pages as [typeof pages[number], typeof pages[number]];
     for (const [action, entryType] of [['dkg-open', 'ceremony_start'], ['dkg-r1-open', 'notice']] as const) {
       const before = (await world.fetchLog(entryType)).length;
-      await page.getByLabel('Organizer action', { exact: true }).selectOption(action);
+      await proposer.getByLabel('Organizer action', { exact: true }).selectOption(action);
+      await proposer.getByLabel('Passphrase', { exact: true }).fill(passphrase);
+      await proposer.getByRole('button', { name: 'Prepare signed packet', exact: true }).click();
+      await proposer.waitForFunction(() => (document.querySelector('.admin-packet')?.textContent?.length ?? 0) > 0);
+      const partial = JSON.parse((await proposer.locator('.admin-packet').textContent())!);
+      assert.equal(partial.sigs.length, 1);
+      assert.equal(await proposer.getByRole('button', { name: 'Send reviewed packet', exact: true }).isDisabled(), true);
+      assert.equal(await proposer.getByLabel('Passphrase', { exact: true }).inputValue(), '');
+      await page.locator('input[type=file]').setInputFiles({ name: 'coordinator-record.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(partial)) });
       await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
-      await page.getByRole('button', { name: 'Prepare signed packet', exact: true }).click();
+      await page.getByRole('button', { name: 'Add coordinator signature', exact: true }).click();
       await page.waitForFunction(() => (document.querySelector('.admin-packet')?.textContent?.length ?? 0) > 0);
       assert.equal((await world.fetchLog(entryType)).length, before, 'preparation does not submit');
       assert.equal(await page.getByLabel('Passphrase', { exact: true }).inputValue(), '');
       const shown = JSON.parse((await page.locator('.admin-packet').textContent())!);
       assert.equal(shown.body.name, action);
-      const accepted = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().endsWith('/log/entries'));
-      await page.getByRole('button', { name: 'Send reviewed packet', exact: true }).click();
-      assert.equal((await accepted).status(), 201);
+      assert.equal(shown.sigs.length, 2);
+      assert.equal(await page.getByRole('button', { name: 'Send reviewed packet', exact: true }).isDisabled(), false);
+      const [accepted] = await Promise.all([
+        page.waitForResponse((r) => r.request().method() === 'POST' && r.url().endsWith('/log/entries')),
+        page.getByRole('button', { name: 'Send reviewed packet', exact: true }).click(),
+      ]);
+      assert.equal(accepted.status(), 201);
       await page.waitForFunction(() => document.querySelector('.admin-packet')?.textContent === '');
       assert.equal((await world.fetchLog(entryType)).length, before + 1);
       assert.equal(await page.getByRole('button', { name: 'Send reviewed packet', exact: true }).isDisabled(), true);
+      await proposer.getByRole('button', { name: 'Cancel', exact: true }).click();
     }
     assert.deepEqual(errors, []); assert.deepEqual(external, []);
   } finally {
