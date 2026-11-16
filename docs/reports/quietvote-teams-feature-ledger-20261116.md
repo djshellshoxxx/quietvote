@@ -29,11 +29,17 @@ stacked on PR #51. It is not a completed-project or release declaration.
 | Private restore and backup hashing | Streamed checksums; revoked/deleted/suspended security-state floors, invitation terminal state, event cursors and operation-receipt generation/response checks. | Local adversarial snapshots and crash tests; no claim of independent witness/WAL freshness, offsite custody or live disaster-recovery qualification. |
 | ElGamal rerandomization | Explicit-randomness additive library operation; identity/zero/cancellation rejection and plaintext-preservation coverage. | Crypto suite 93/93 plus independent review probes; required external crypto/protocol review is not replaced by agent review. |
 | Python private audit | Signed-envelope and reveal-commitment validation plus exact ciphertext/proof regeneration. | Python lane 71/71 and five additional supported corpus cases; log-completion evidence is recorded separately after integration. |
+| Python board and report completion | Independent Merkle/header/checkpoint/witness/receipt checks, all 13 legacy control cases, approved report dependencies and no-tally `INCOMPLETE`/exit 3. | All 282 unchanged corpus cases pass; strict shared-report comparator 27/27. Independent review receipts separate implementation evidence from unimplemented V13 authority/window effects. |
+| CLI/web key portability | Shared QVKEY1 canonicalization, at most two KDF attempts with distinct legacy spelling, immutable legacy fixtures and signer temporary-buffer cleanup. | B3-25 follows existing ADR-027 approval; old CLI files may still require their original spelling. Trustee QVTB is a different format. |
+| Modern enrollment | First-voter enrollment before DKG through real web/API/CLI paths, exact invite-bound proof, protected stored bearer verifier, persistent scheme discriminator and non-destructive migration preview. | Fresh elections use the modern scheme; legacy rows retain their original format/expiry. D99 pinned membership, group labels and historical invite/voter linkage remain distinct gaps. |
+| Unsigned governance planning | Bounded policy/template validator and actual `qv policy-draft` CLI, with source conflicts exposed as diagnostics. | The T3 duration conflict remains visible. This does not implement signed GroupRules, ratification, proposal history, membership or dispute authority. |
 
 The source-specific validation receipts, fresh review findings and remaining
 contract work are tracked in the [continuation handoff](../handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md).
 The core contract gaps below remain material; implementation counts do not measure
-their completion.
+their completion. The [versioned governance proposal](../rfcs/governance-v1-contract.md)
+specifies concrete envelopes, bindings, migration and unresolved time/authority
+choices instead of carrying forward blanket approval holds.
 
 ## Core workflow inventory
 

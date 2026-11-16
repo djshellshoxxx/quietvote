@@ -28,6 +28,17 @@ AI review does not replace the required independent protocol/security reviews.
   [fresh trust-boundary review](../reports/python-stable-log-fresh-review-20261116.md).
 - [Approved Python report parity](QUIETVOTE-PYTHON-REPORT-PARITY-20261116.md).
 - [Reconciled decision and contract inventory](QUIETVOTE-REMAINING-CONTRACTS-20261116.md).
+- [Legacy Python control evidence](python-controls-20261116.md) and
+  [fresh control/report review](../reports/python-controls-parity-fresh-review-20261116.md).
+- [No-tally INCOMPLETE](QUIETVOTE-PYTHON-INCOMPLETE-20261116.md).
+- [Key compatibility](QUIETVOTE-PASSPHRASE-COMPATIBILITY-20261116.md) and
+  [fresh key review](../reports/key-compatibility-fresh-review-20261116.md).
+- [Modern enrollment](QUIETVOTE-REGISTRATION-20261116.md) and
+  [fresh enrollment review](../reports/registration-fresh-review-20261116.md).
+- [Private invitation output and executable enrollment](QUIETVOTE-CLI-INVITATIONS-20261116.md).
+- [Unsigned policy drafting](QUIETVOTE-POLICY-DRAFT-20261116.md),
+  [fresh review](../reports/policy-draft-fresh-review-20261116.md), and
+  [versioned governance contract proposal](../rfcs/governance-v1-contract.md).
 
 ## Source accounting
 
@@ -50,8 +61,8 @@ holds forward despite explicit owner approval in ADR-027/028. Those older notes
 are historical evidence, not the authority for this continuation. The approved
 B3-25 passphrase policy and the three report-dependency choices are implemented;
 the unchanged strict comparator now agrees on 27/27 detailed reports in its lane.
-Existing log notice/control compatibility and modern registration are being
-completed against their already accepted contracts. External review before
+Existing log notice/control compatibility and modern registration are implemented
+against their already accepted contracts. External review before
 release is distinct from authorization to implement these decisions.
 
 Missing signed GroupRules,
@@ -76,4 +87,10 @@ before the approved parity fix was added. Expectations and comparator gates were
 not changed. The new organizer browser fixture initially tried to send only one
 signature under its 2-of-3 coordinator policy; the application correctly kept
 Send disabled. The corrected journey prepares a partial signature on one device,
-co-signs on a second device and then explicitly sends. Its hosted rerun is pending.
+co-signs on a second device and then explicitly sends. Its hosted rerun passed at
+`fb5934cc954796a0d5bb98fe1c5cb3a2729868d7` in
+[run 43964742293](https://github.com/djshellshoxxx/quietvote/actions/runs/43964742293).
+All workspace shards on Node 22 and 24, browser journeys, conformance/typecheck,
+claims links and pseudo-locale jobs passed at that checkpoint. It predates modern
+enrollment, policy drafting, no-tally verdicts and subsequent combined changes;
+its success is not a final-candidate receipt.
