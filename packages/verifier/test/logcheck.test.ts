@@ -214,7 +214,7 @@ test('receipts and observed heads without a board export are reported as not che
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'test-vectors', 'v1');
   const tiny = JSON.parse(readFileSync(join(root, 'elections', 'tiny-yesno-3v', 'bundle.json'), 'utf8')) as object;
   const r = await verifyBundle(tiny, { receipts: [{ receipt: {}, voter: '00'.repeat(32) }], observedCheckpoints: ['x'] });
-  assert.equal(r.verdict, 'PASS', JSON.stringify(r.findings));
+  assert.equal(r.verdict, 'INCOMPLETE', JSON.stringify(r.findings));
   assert.equal(r.log, undefined);
   assert.equal(r.checks.V4.status, 'not_run');
   assert.ok(r.caveats.some((c) => c.includes('not checked: the bundle carries no board log export')));

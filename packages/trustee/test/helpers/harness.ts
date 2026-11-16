@@ -450,5 +450,5 @@ export function finishTally(c: Ceremony, outcome: DkgOutcome, records: unknown[]
   return { counts: t.value.counts, rejected, valid: dec.value.validSet };
 }
 export async function verifyAll(c: Ceremony): Promise<VerificationReport> {
-  return verifyElection(c.bundle());
+  return verifyElection(c.bundle(), { allowNoLog: true }); // Core trustee/tally fixture; release log gates are tested separately.
 }

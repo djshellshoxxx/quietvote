@@ -1,3 +1,4 @@
+// Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
 // QV-34 log-layer vectors (QV-18 §7-§9, QV-16 §5.14.3 / App. C step 11, logcheck.ts X-21..X-34): checkpoint consistency,
 // witness cosignature thresholds, receipt inclusion, equivocation / split view, and notice handling. Operation
 // `log.verify_election`: the full verifier with QV-18 log evidence. File-based inputs (QV-34 §10.2) keep the corpus small:
@@ -126,7 +127,7 @@ export async function generateLogLayer(
   const H0 = scenario('', honest.bundle, honest.sim);
   const A0 = scenario('adv-', adv.bundle, adv.sim);
   // elections/<name>/ convention (bundle.json + expected-report.json): the honest bundle without log evidence.
-  const plain = await verifyElection(JSON.parse(JSON.stringify(honest.bundle)));
+  const plain = await verifyElection(JSON.parse(JSON.stringify(honest.bundle)), { allowNoLog: true });
   assert(plain.verdict === 'PASS', 'log-layer honest bundle must pass without log evidence');
   put(`${LOG_DIR}/expected-report.json`, expectedOf(plain));
   const hv = H0.view;
@@ -285,7 +286,7 @@ export async function generateLogLayer(
     assert(!ids.has(s.id), `log vector id ${s.id} duplicated`);
     ids.add(s.id);
     const { bundle, log } = resolveLogVector(s.input, read);
-    const r = await verifyElection(bundle, { log });
+    const r = await verifyElection(bundle, { log, allowNoLog: true });
     const failed = failedChecks(r);
     assert(r.verdict === s.verdict, `log vector ${s.id}: verdict ${r.verdict} (${JSON.stringify(r.findings.map((f) => `${f.code}/${f.cls}`))})`);
     for (const c of s.surfaces ?? []) assert(r.caveats.some((x) => x.includes(c)), `log vector ${s.id}: caveat '${c}' missing (${JSON.stringify(r.caveats)})`);

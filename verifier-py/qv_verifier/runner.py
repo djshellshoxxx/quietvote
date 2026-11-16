@@ -11,6 +11,8 @@ mutants with their ``expect`` block (see _run_mutation).
 
 from __future__ import annotations
 
+# Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
+
 import hashlib
 import json
 import sys
@@ -67,7 +69,7 @@ def _compare(expect: dict, actual: dict) -> tuple[bool, str]:
 
 def _run_log_vector(root: Path, v: dict) -> tuple[bool, str]:
     bundle, evidence = vector_input(root, v['input'])
-    got = verify_bundle(bundle, log=evidence)
+    got = verify_bundle(bundle, log=evidence, allow_no_log=True)
     exp = v['expect']
     problems = []
     if exp.get('ok') is True:
@@ -141,7 +143,7 @@ def _run_election(path: Path, rel: str, bundle: dict) -> Result:
         return Result(NI, rel, vid, "verify.election", "no expected-report.json next to bundle")
     expected = json.loads(exp_path.read_text(encoding="utf-8"))
     try:
-        got = verify_bundle(bundle)
+        got = verify_bundle(bundle, allow_no_log=True)
     except Exception as exc:
         return Result(FAIL, rel, vid, "verify.election", f"exception: {exc!r}")
     diffs = [k for k in ("verdict", "checks", "counts", "ctx_prefix", "results")
@@ -164,7 +166,7 @@ def _run_mutation(rel: str, doc: dict) -> Result:
     vid = str(doc.get("id", rel))
     exp = doc["expect"]
     try:
-        got = verify_bundle(doc["bundle"])
+        got = verify_bundle(doc["bundle"], allow_no_log=True)
     except Exception as exc:
         return Result(FAIL, rel, vid, "verify.mutation", f"exception: {exc!r}")
     failed = sorted(c for c, s in got["checks"].items() if s == "fail")

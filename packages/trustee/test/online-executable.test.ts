@@ -160,7 +160,7 @@ test('shipped trustee executable completes 2-of-3 DKG and tally over HTTP withou
     const result = w.entry('tally_result', coordinator, signRecord(coordinator.secretKey, coordinator.publicKey, w.params.ctx, tally.json.body));
     await online('election-submit', ['--file', write('tally-entry.json', { header: b64u(result.headerBytes), body: b64u(result.body) })]);
     const final = await download();
-    const report = await run(qvBin, ['verify', final, '--manifest-hash', bytesToHex(w.mh)]);
+    const report = await run(qvBin, ['verify', final, '--manifest-hash', bytesToHex(w.mh), '--content-only']);
     assert.equal(report['verdict'], 'PASS');
     assert.equal(report['counts'].cast, 3);
     assert.equal(report['counts'].counted, 3);

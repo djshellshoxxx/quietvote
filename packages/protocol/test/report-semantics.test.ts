@@ -32,7 +32,7 @@ test('report semantics: a record encoding failure found before the stop is still
 });
 
 test('report semantics: chk.encoding.canonical is pass once every object was examined (honest bundle control)', async () => {
-  const r = await verifyElection(vec('elections/tiny-yesno-3v/bundle.json'));
+  const r = await verifyElection(vec('elections/tiny-yesno-3v/bundle.json'), { allowNoLog: true }); // Core report control.
   assert.equal(r.verdict, 'PASS');
   assert.equal(r.checks['chk.encoding.canonical'], 'pass');
 });

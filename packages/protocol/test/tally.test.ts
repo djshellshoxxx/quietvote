@@ -96,7 +96,7 @@ test('trustee-mode spoil decryption (manifest-enabled) verifies end to end', asy
   spoilBallot(sim, 3, { board: ['r'] }, 'trustees');
   closeElection(sim);
   publishTally(sim, [2, 3], { spoilTrustees: true });
-  const rep = await verifyElection(bundleOf(sim));
+  const rep = await verifyElection(bundleOf(sim), { allowNoLog: true }); // Tally-content control.
   assert.equal(rep.verdict, 'PASS', JSON.stringify(rep.findings));
   assert.equal(rep.checks['chk.benaloh.spoiled'], 'pass');
 });

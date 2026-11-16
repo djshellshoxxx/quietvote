@@ -299,7 +299,7 @@ export const FR = {
   'qv.verify.running': 'Contrôles en cours…',
   'qv.verify.verdict.PASS': 'Tous les contrôles ont réussi',
   'qv.verify.verdict.FAIL': 'Un contrôle a échoué',
-  'qv.verify.verdict.INCOMPLETE': 'Incomplet : aucun résultat n’a encore été publié',
+  'qv.verify.verdict.INCOMPLETE': 'Incomplet : des preuves supplémentaires sont nécessaires',
   'qv.verify.status.pass': 'réussi',
   'qv.verify.status.fail': 'échoué',
   'qv.verify.status.not_run': 'non exécuté',

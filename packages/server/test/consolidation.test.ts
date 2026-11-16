@@ -85,7 +85,7 @@ test('real server: actual web registration, voting, stored-aggregate draft after
     assert.equal((await w.post('audit_close', c, w.control('audit-close'))).status, 201);
     const exported = await w.get(`/api/v1/elections/${w.electionId}/export.json`);
     const report = await verifyElectionText(exported.text);
-    assert.equal(report.verdict, 'PASS', JSON.stringify(report.findings));
+    assert.equal(report.verdict, 'INCOMPLETE', JSON.stringify(report.findings));
     assert.equal(report.counts.counted, 3);
     assert.equal(report.counts.spoiled, 1);
     const bundle = await exportQvb(w);

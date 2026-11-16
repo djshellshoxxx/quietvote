@@ -237,7 +237,10 @@ test('quorum 0: chk.board.witness not_run with NOT WITNESSED caveat; structure s
   const w = await election({ revote: false, tally: true, witnessQuorum: 0, listWitnesses: false });
   const v = buildBoard(w.sim, w.bundle, [{ size: w.bundle.log.at(-1)!.seq + 1 }], { logKey: kp(SEED, 'log') });
   const r = await verify(w.bundle, { board: v.json });
-  assert.equal(r.verdict, 'PASS', JSON.stringify(r.findings));
+  assert.equal(r.verdict, 'INCOMPLETE', JSON.stringify(r.findings));
+  const scoped = await verifyElection(w.bundle, { log: { board: v.json }, allowNoLog: true });
+  assert.equal(scoped.verdict, 'PASS');
+  assert.ok(scoped.caveats.some((c) => c.startsWith('CONTENT-ONLY')));
   assert.equal(r.checks['chk.board.append_only'], 'pass');
   assert.equal(r.checks['chk.board.witness'], 'not_run');
   assert.ok(r.caveats.some((c) => c.startsWith('NOT WITNESSED')));
@@ -509,7 +512,7 @@ test('vectors: log.verify_election (QV-34 log-layer set) reproduces verdicts, fa
   assert.ok(file.vectors.length >= 40);
   for (const v of file.vectors) {
     const { bundle, log } = resolveLogVector(v.input, read);
-    const r = await verifyElection(bundle, { log });
+    const r = await verifyElection(bundle, { log, allowNoLog: true }); // Explicit content-only corpus contract.
     if (v.expect.ok) {
       assert.equal(r.verdict, v.expect.output.verdict, v.id);
       assert.deepEqual(r.checks, v.expect.output.checks, v.id);

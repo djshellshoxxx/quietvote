@@ -1,7 +1,7 @@
 // Application assembly: services + route table (QV-09 §6-§10 subset; see NOTES.md for what is not implemented).
 import { createHash, randomBytes } from 'node:crypto';
 import {
-  MerkleTree as _M, authorKeyId, b64, b64u, parseCheckpoint, toHex, unb64u, witnessStatus, ENTRY_TYPES,
+  MerkleTree as _M, authorKeyId, b64, b64u, bundleToJson, parseCheckpoint, toHex, unb64u, witnessStatus, ENTRY_TYPES,
   type EntryHeader, type Receipt, type WitnessPolicy,
 } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, ed25519Keypair, ed25519Sign, ed25519Verify, hexToBytes, jcs, sha256, utf8 } from '@quietvote/crypto';
@@ -12,7 +12,7 @@ import { ControlDb } from './controldb.ts';
 import { lockDataDirectory } from './data-lock.ts';
 import { SERVER_VERSION, type ElectionRuntime } from './election.ts';
 import type { Env } from './env.ts';
-import { electionBundle, qvb } from './export.ts';
+import { electionBundle, logBundle, qvb } from './export.ts';
 import { registerExtRoutes } from './ext-routes.ts';
 import { GossipService } from './gossip.ts';
 import { RetentionSweeper } from './retention.ts';
@@ -983,6 +983,11 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     handler: async (c) => {
       const rt = await readable(c);
       if (!rt.st.manifest) throw new ApiError(409, 'WRONG_PHASE', 'nothing to export before the manifest');
+      if (c.query.get('board') === '1') {
+        // One synchronous snapshot, same read/access/export guards. Do not reuse
+        // the content-only ETag: witness cosignatures may change at the same size.
+        return { status: 200, json: { ...electionBundle(rt), board: bundleToJson(logBundle(rt)) }, cache: 'no-store' };
+      }
       if (c.header('if-none-match') === exportEtag(rt)) return { status: 304, etag: exportEtag(rt), cache: 'public, max-age=600' };
       const b = cachedExport(rt, 'json');
       return { status: 200, bytes: b.bytes, ranges: true, contentType: 'application/json; charset=utf-8', cache: 'public, max-age=600', etag: b.etag };

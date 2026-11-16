@@ -307,6 +307,13 @@ Fatal findings take precedence; without a fatal finding, a `not_run`
 whereas a rejected or conflicting tally retains its applicable failure. CLI
 verification returns 0, 1 or 3 respectively. This report-enum clarification does
 not modify the existing complete-election vector corpus or its expected reports.
+Under ADR-027 P1/TSV-05, the default API/CLI additionally requires append-only and
+witness checks to pass. The existing cryptographic content corpus is evaluated
+by trusted conformance callers with explicit `allowNoLog: true` /
+`allow_no_log=True`; neither fixture bytes nor expected reports request or grant
+this scope. Supplied log evidence is still checked, and only verified append-only
+evidence with an explicitly zero-witness signed policy can use the exception.
+Unverified or interrupted supplied evidence stays INCOMPLETE; fatal failures win.
 
 | # | Check ID | Meaning |
 |---|---|---|

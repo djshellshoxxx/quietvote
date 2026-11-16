@@ -300,7 +300,7 @@ export const AR = {
   'qv.verify.running': 'جارٍ تشغيل الفحوصات…',
   'qv.verify.verdict.PASS': 'نجحت جميع الفحوصات',
   'qv.verify.verdict.FAIL': 'فشل أحد الفحوصات',
-  'qv.verify.verdict.INCOMPLETE': 'غير مكتمل: لم تُنشر أي نتيجة بعد',
+  'qv.verify.verdict.INCOMPLETE': 'غير مكتمل: هناك حاجة إلى المزيد من الأدلة',
   'qv.verify.status.pass': 'نجح',
   'qv.verify.status.fail': 'فشل',
   'qv.verify.status.not_run': 'لم يُشغّل',

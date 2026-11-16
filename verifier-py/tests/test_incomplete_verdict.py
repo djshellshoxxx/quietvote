@@ -101,7 +101,8 @@ class TestIncompleteVerdict(unittest.TestCase):
                 with self.subTest(name=name):
                     path = Path(tmp) / (name + ".json")
                     path.write_text(json.dumps(bundle), encoding="utf-8")
-                    run = subprocess.run([sys.executable, "-I", str(CLI), "verify", str(path)],
+                    run = subprocess.run([sys.executable, "-I", str(CLI), "verify", str(path),
+                                          *(["--content-only"] if name == "complete" else [])],
                                          capture_output=True, text=True, timeout=30)
                     self.assertEqual(run.returncode, exit_code, run.stdout + run.stderr)
                     self.assertEqual(json.loads(run.stdout)["verdict"], verdict)

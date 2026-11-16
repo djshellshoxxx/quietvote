@@ -56,7 +56,7 @@ test('end to end: 3-of-5 trustees, 50 voters, revotes, spoiled ballots, one miss
   for (const s of final.values()) for (const [cid, ids] of Object.entries(s)) for (const id of ids) expected.get(cid)!.set(id, expected.get(cid)!.get(id)! + 1);
 
   const text = JSON.stringify(bundleOf(sim));
-  const rep = await verifyElectionText(text);
+  const rep = await verifyElectionText(text, { allowNoLog: true }); // Core cryptographic end-to-end fixture.
   assert.equal(rep.verdict, 'PASS', JSON.stringify(rep.findings.filter((f) => f.cls === 'F')));
   assert.equal(rep.counts.counted, final.size);
   assert.equal(rep.counts.spoiled, 5);

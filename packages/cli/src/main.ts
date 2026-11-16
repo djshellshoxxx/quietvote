@@ -20,7 +20,7 @@ export const HELP = `qv ${VERSION}: QuietVote command line (offline verification
 
 usage:
   qv --version                     print the version
-  qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>]
+  qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only]
                                    verify an election bundle (V1..V14); runs the canary self-test first
   qv verify-receipt <receipt.json> --log-key <hex> --origin <origin> --leaf-hash <hex> [--json]
                                    verify signed promise and inclusion against external anchors (no witness/freshness verdict)

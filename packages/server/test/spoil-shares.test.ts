@@ -103,7 +103,7 @@ test('t shares: tally posted with spoiled shares, verifyElection passes chk.bena
   assert.equal((await w.post('audit_close', c0, w.control('audit-close'))).status, 201);
   const ex = await w.get(`/api/v1/elections/${w.electionId}/export.json`);
   const rep = await verifyElectionText(ex.text);
-  assert.equal(rep.verdict, 'PASS', JSON.stringify(rep.findings.filter((f) => f.cls === 'F')));
+  assert.equal(rep.verdict, 'INCOMPLETE', JSON.stringify(rep.findings.filter((f) => f.cls === 'F')));
   assert.equal(rep.counts.spoiled, 2);
   assert.equal(rep.checks['chk.benaloh.spoiled'], 'pass');
   assert.deepEqual(Object.values(rep.checks).filter((c) => c === 'fail'), []);

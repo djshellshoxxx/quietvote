@@ -197,6 +197,10 @@ test('link-access elections require the read key', async () => {
   assert.equal((await w.get(`/api/v1/elections/${id}`)).status, 403);
   assert.equal((await w.get(`/api/v1/elections/${id}`, { 'qv-read-key': 'wrong' })).status, 403);
   assert.equal((await w.get(`/api/v1/elections/${id}`, { 'qv-read-key': r.json.read_key })).status, 200);
+  const exportUrl = `/api/v1/elections/${id}/export.json?board=1`;
+  assert.equal((await w.get(exportUrl)).status, 403);
+  assert.equal((await w.get(exportUrl, { 'qv-read-key': 'wrong' })).status, 403);
+  assert.equal((await w.get(exportUrl, { 'qv-read-key': r.json.read_key })).status, 409, 'authorized read retains the unpublished-manifest guard');
 });
 
 test('idempotency keys: replay returns stored response, mismatch is 422', async () => {

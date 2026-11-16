@@ -169,7 +169,9 @@ export async function prepareAdminAction(i: {
     : await signMulti(signer, scope, body);
   current();
   if (action === 'tally') {
-    const report = await verifyElection({ ...s.election, log: [...s.election.log, { seq: (s.election.log.at(-1)?.seq ?? 0) + 1, entry: record }] });
+    // A prospective tally is not appended yet: this is an internal content check,
+    // never a public assertion of log inclusion or witness coverage.
+    const report = await verifyElection({ ...s.election, log: [...s.election.log, { seq: (s.election.log.at(-1)?.seq ?? 0) + 1, entry: record }] }, { allowNoLog: true });
     if (report.verdict !== 'PASS' || report.checks['chk.tally.aggregate'] !== 'pass' || report.checks['chk.tally.decrypt'] !== 'pass' || report.checks['chk.result.rules'] !== 'pass') throw new AdminError('tally');
   }
   current();
@@ -248,7 +250,7 @@ export async function reviewSavedAdminPacket(text: string, snapshot: AdminSnapsh
     const same = (entry: unknown) => bytesToHex(jcs(entry)) === bytesToHex(jcs(input.record));
     if (existing.some((e) => !same(e.entry))) throw new AdminError('tally');
     const log = existing.length ? s.election.log : [...s.election.log, { seq: (s.election.log.at(-1)?.seq ?? 0) + 1, entry: input.record }];
-    const report = await verifyElection({ ...s.election, log });
+    const report = await verifyElection({ ...s.election, log }, { allowNoLog: true }); // internal saved-tally content check
     if (report.verdict !== 'PASS') throw new AdminError('tally');
   }
   return { packet: input.packet, record: input.record, quorum: true };

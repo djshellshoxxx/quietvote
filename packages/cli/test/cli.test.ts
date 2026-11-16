@@ -41,8 +41,8 @@ test('help, version, unknown commands and exit codes (in-process and real proces
   assert.equal(spawnQv(['--version']).code, 0);
   assert.equal(spawnQv(['frobnicate']).code, 2);
   const r = spawnQv(['verify', TINY, '--skip-selftest']);
-  assert.equal(r.code, 0);
-  assert.match(r.out, /VERDICT: PASS/);
+  assert.equal(r.code, 3);
+  assert.match(r.out, /VERDICT: INCOMPLETE/);
   assert.equal(spawnQv(['verify', CANARY, '--skip-selftest']).code, 1);
   assert.equal(spawnQv(['verify', '/no/such/file']).code, 4);
 });
@@ -50,7 +50,7 @@ test('help, version, unknown commands and exit codes (in-process and real proces
 // ---------------------------------------------------------------- verify
 
 test('verify: PASS=0, FAIL=1, INCOMPLETE=3, bad input=4, usage=2', async () => {
-  const pass = await qv(['verify', TINY, '--skip-selftest']);
+  const pass = await qv(['verify', TINY, '--skip-selftest', '--content-only']);
   assert.equal(pass.code, 0);
   assert.match(pass.out, /V1 +PASS/);
   assert.match(pass.out, /V4 +NOT RUN/);
@@ -76,9 +76,9 @@ test('verify: PASS=0, FAIL=1, INCOMPLETE=3, bad input=4, usage=2', async () => {
 
 test('verify: --json is structured; pinned manifest hash; self-test runs by default', async () => {
   const j = await qv(['verify', TINY, '--json']);
-  assert.equal(j.code, 0);
+  assert.equal(j.code, 3);
   const rep = JSON.parse(j.out);
-  assert.equal(rep.verdict, 'PASS');
+  assert.equal(rep.verdict, 'INCOMPLETE');
   assert.equal(rep.checks.V4.status, 'not_run');
   assert.equal(rep.checks.V13.status, 'not_run');
   assert.equal(rep.selfTest.ok, true);

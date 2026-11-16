@@ -45,7 +45,8 @@ const tallyOf = (b: ElectionBundle): Record<string, any> => entries(b, (e) => e.
 const run = async (m: Mut): Promise<VerificationReport> => {
   const b = clone(base);
   m(b);
-  return verifyElection(b);
+  // These mutations classify election content independently of board evidence.
+  return verifyElection(b, { allowNoLog: true });
 };
 const codes = (r: VerificationReport): string[] => r.findings.map((f) => f.code);
 function expectFail(r: VerificationReport, code: ErrorCode | string, check?: string): void {
@@ -58,7 +59,7 @@ function expectFail(r: VerificationReport, code: ErrorCode | string, check?: str
 
 test('baseline election: PASS, exact counts, results, one missing trustee', async () => {
   await init();
-  const r = await verifyElection(base);
+  const r = await verifyElection(base, { allowNoLog: true });
   assert.equal(r.verdict, 'PASS', JSON.stringify(r.findings));
   assert.equal(r.counts.counted, 6);
   assert.equal(r.counts.cast, 7);
@@ -69,7 +70,7 @@ test('baseline election: PASS, exact counts, results, one missing trustee', asyn
   assert.equal(r.results![0]!.outcome.kind, 'passed'); // yes 3, no 2 (voter 4 blank)
   assert.deepEqual(tallyOf(base).decrypters, [1, 3]);
   assert.equal(r.ctxPrefix!.length, 16);
-  const t = await verifyElectionText(JSON.stringify(base));
+  const t = await verifyElectionText(JSON.stringify(base), { allowNoLog: true });
   assert.equal(t.verdict, 'PASS');
 });
 
@@ -223,7 +224,7 @@ test('private-audit spoil: signature checked, code excluded from counting', asyn
   const priv = entries(base, (x) => x.intent === 'spoil' && x.reveal === undefined)[0]!.entry;
   assert.notEqual(priv.reveal_digest, '00'.repeat(32));
   const codeHex = H(ballotCode(sim.params!.ctx, priv.body));
-  const r = await verifyElection(base);
+  const r = await verifyElection(base, { allowNoLog: true });
   assert.ok(codeHex.length === 64 && r.checks['chk.benaloh.spoiled'] === 'pass');
 });
 

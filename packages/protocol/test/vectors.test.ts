@@ -1,3 +1,4 @@
+// Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -221,7 +222,7 @@ test('vectors: full elections verify to the expected report', async () => {
   for (const name of ['tiny-yesno-3v', 'small-approval-20v']) {
     const bundle = JSON.parse(readFileSync(join(ROOT, 'v1', 'elections', name, 'bundle.json'), 'utf8'));
     const exp = JSON.parse(readFileSync(join(ROOT, 'v1', 'elections', name, 'expected-report.json'), 'utf8'));
-    const r = await verifyElection(bundle);
+    const r = await verifyElection(bundle, { allowNoLog: true });
     assert.equal(r.verdict, exp.verdict, name);
     assert.deepEqual(r.checks, exp.checks, name);
     assert.deepEqual(r.results, exp.results, name);
@@ -233,7 +234,7 @@ test('vectors: full elections verify to the expected report', async () => {
 test('vectors: every mutant fails exactly its named checks; none passes all checks; canary behaves', async () => {
   for (const f of readdirSync(join(ROOT, 'v1', 'mutations'))) {
     const m = JSON.parse(readFileSync(join(ROOT, 'v1', 'mutations', f), 'utf8'));
-    const r = await verifyElection(m.bundle);
+    const r = await verifyElection(m.bundle, { allowNoLog: true });
     const failed = Object.entries(r.checks).filter(([, s]) => s === 'fail').map(([k]) => k).sort();
     assert.deepEqual(failed, m.expect.failed_checks, m.id);
     assert.equal(r.verdict, m.expect.verdict, m.id);
@@ -242,7 +243,7 @@ test('vectors: every mutant fails exactly its named checks; none passes all chec
   }
   const canary = JSON.parse(readFileSync(join(ROOT, 'v1', 'canary', 'canary-election.json'), 'utf8'));
   const exp = JSON.parse(readFileSync(join(ROOT, 'v1', 'canary', 'expected-report.json'), 'utf8'));
-  const r = await verifyElection(canary);
+  const r = await verifyElection(canary, { allowNoLog: true });
   assert.deepEqual(r.checks, exp.checks);
   assert.equal(r.checks['chk.ballots.valid'], 'fail');
   assert.equal(r.checks['chk.tally.aggregate'], 'fail');

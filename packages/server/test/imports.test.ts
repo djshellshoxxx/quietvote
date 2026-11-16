@@ -81,7 +81,7 @@ test('happy path: verified, then exposed as a read-only IMPORTED mirror identica
   assert.equal(job.state, 'done', JSON.stringify(job));
   assert.equal(job.progress, 1);
   assert.equal(job.result.election_id, A.electionId);
-  assert.equal(job.result.verdict, 'PASS');
+  assert.equal(job.result.verdict, 'INCOMPLETE');
   assert.equal(job.result.manifest_hash.length, 64);
   assert.equal(job.result_ref, A.electionId);
   void mh;
@@ -110,7 +110,7 @@ test('happy path: verified, then exposed as a read-only IMPORTED mirror identica
   // the protocol verifier accepts the mirror's export; the bundle round-trips (same entries, same election record)
   const ex = await B.get(`/api/v1/elections/${id}/export.json`);
   const rep = await verifyElectionText(ex.text);
-  assert.equal(rep.verdict, 'PASS');
+  assert.equal(rep.verdict, 'INCOMPLETE');
   const tarB = await exportQvb(B, id);
   const fa = readTar(tar);
   const fb = readTar(tarB);

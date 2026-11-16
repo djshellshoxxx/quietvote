@@ -87,7 +87,7 @@ class ApprovedReportParity(unittest.TestCase):
 
     def test_honest_result_and_completed_checks_are_retained(self):
         bundle = honest()
-        report = verify_bundle(bundle)
+        report = verify_bundle(bundle, allow_no_log=True)  # Content-only parity control.
         self.assertEqual(report["verdict"], "PASS")
         self.assertEqual(report["checks"]["chk.tally.decrypt"], "pass")
         self.assertEqual(report["checks"]["chk.result.rules"], "pass")

@@ -1,3 +1,4 @@
+// Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
 // Differential check of the shared full-election corpus. Unsupported Python
 // board/receipt capabilities are listed explicitly, never counted as agreement.
 // Protocol ambiguities remain failures here; this script does not pick a side.
@@ -28,7 +29,7 @@ from qv_verifier.election import verify_bundle
 rows = []
 for case in json.load(sys.stdin):
     try:
-        rows.append({"id": case["id"], "report": verify_bundle(case["bundle"])})
+        rows.append({"id": case["id"], "report": verify_bundle(case["bundle"], allow_no_log=True)})
     except Exception as exc:
         rows.append({"id": case["id"], "error": repr(exc)})
 json.dump(rows, sys.stdout)
@@ -44,7 +45,7 @@ for (let i = 0; i < cases.length; i++) {
   const c = cases[i]!;
   const p = python[i]!;
   assert.equal(p.id, c.id, 'Python must preserve case identity');
-  const ts = await verifyElection(c.bundle, { expectedManifestHash: c.bundle.manifest_hash });
+  const ts = await verifyElection(c.bundle, { allowNoLog: true });
   const differences: string[] = [];
   const compared: string[] = [];
   const skipped: string[] = [];

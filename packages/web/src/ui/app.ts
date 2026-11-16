@@ -31,7 +31,7 @@ import { checkPassphrase, generatePassphrase } from '../key/passphrase.ts';
 import type { Signer } from '../key/signer.ts';
 import type { DeviceStorage } from '../key/storage.ts';
 import { DEFAULT_SETTINGS } from '../key/storage.ts';
-import { canShowResults, verificationSummary, verifyLoadedElection } from '../flow/verification.ts';
+import { canShowResults, verificationSummary, verifyLoadedElection, verifyPublicBundleText } from '../flow/verification.ts';
 import { LockTimer } from '../key/lock.ts';
 import { ballotCodeDisplay, electionIdOf, sameElectionId, spokenForm } from '../util/crockford.ts';
 import { b64uDecode, b64uEncode } from '../util/hex.ts';
@@ -828,7 +828,11 @@ export function startApp(env: AppEnv): void {
     }
     render(t('qv.results.title'), ...head, heading(t('qv.results.title')), h('p', {}, t('qv.verify.running')));
     const snapshot = [...L.records];
-    const report = await verifyLoadedElection(snapshot, ctx, await fullRoll(L));
+    // Evidence is checked against the already loaded and pinned record snapshot.
+    // A concurrent append cannot replace that snapshot with unverified contents.
+    let board: unknown;
+    try { board = (await L.api.exportWithBoard(L.apiId) as { board?: unknown })?.board; } catch { /* absent evidence remains INCOMPLETE */ }
+    const report = await verifyLoadedElection(snapshot, ctx, await fullRoll(L), board);
     if (!currentRoute(epoch)) return;
     if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
     if (!canShowResults(report)) {
@@ -904,7 +908,7 @@ export function startApp(env: AppEnv): void {
         try {
           if (f.size > 64 * 1024 * 1024) throw new Error('file exceeds 67108864 bytes');
           const text = await f.text();
-          const rep = await verifyElectionText(text);
+          const rep = await verifyPublicBundleText(text);
           let mism = false;
           if (anchor.value.trim() !== '') { try { const mh = (JSON.parse(text) as { manifest_hash: string }).manifest_hash; mism = !sameElectionId(anchor.value, electionIdOf(hexToBytes(mh, 32))); } catch { mism = true; } }
           if (!currentRoute(epoch)) return;

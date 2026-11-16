@@ -57,7 +57,7 @@ test('all shipped executables complete one real-clock election with exact totals
     assert.equal((stdout + stderr).includes(passphrase), false, 'no passphrase in command output');
     for (const key of [...w.coord, ...w.voters]) assert.equal((stdout + stderr).includes(bytesToHex(key.secretKey)), false, 'no fixture seed in command output');
     assert.equal(code, expected, `${args.slice(0, 2).join(' ')}: ${stderr}`);
-    return JSON.parse(expected === 0 ? stdout : stderr);
+    return JSON.parse(expected === 0 || expected === 3 ? stdout : stderr);
   };
   const cli = (args: string[], expected = 0) => run(qvBin, args, expected);
   const online = (command: string, args: string[] = [], expected = 0) => cli(['online', command, '--server', w.base,
@@ -224,7 +224,9 @@ test('all shipped executables complete one real-clock election with exact totals
     }
     await relay('tally_result', await sign(tallyBody, true, true));
     const final = await download();
-    const report = await cli(['verify', final, '--manifest-hash', pin]);
+    assert.equal((await cli(['verify', final, '--manifest-hash', pin], 3))['verdict'], 'INCOMPLETE');
+    // This export is content-only; the independent corpus comparison is scoped explicitly.
+    const report = await cli(['verify', final, '--manifest-hash', pin, '--content-only']);
     assert.equal(report['verdict'], 'PASS');
     assert.deepEqual([report['counts'].cast, report['counts'].spoiled, report['counts'].counted], [3, 0, 3]);
     const vectorDir = join(w.dir, 'python-vector'); mkdirSync(vectorDir);

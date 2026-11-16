@@ -299,7 +299,7 @@ export const DE = {
   'qv.verify.running': 'Prüfungen laufen…',
   'qv.verify.verdict.PASS': 'Alle Prüfungen bestanden',
   'qv.verify.verdict.FAIL': 'Eine Prüfung ist fehlgeschlagen',
-  'qv.verify.verdict.INCOMPLETE': 'Unvollständig: Noch kein Ergebnis veröffentlicht',
+  'qv.verify.verdict.INCOMPLETE': 'Unvollständig: Weitere Nachweise erforderlich',
   'qv.verify.status.pass': 'bestanden',
   'qv.verify.status.fail': 'fehlgeschlagen',
   'qv.verify.status.not_run': 'nicht ausgeführt',

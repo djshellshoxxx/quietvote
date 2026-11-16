@@ -96,7 +96,7 @@ test('shipped coordinator and voter executables generate, relay and verify a thr
     const draft = path('tally-body.json');
     assert.equal((await online('election-tally-draft', ['--decrypters', '1,2', '--out', draft]))['verified'], false);
     await relay('tally_result', await sign(JSON.parse(readFileSync(draft, 'utf8')), await download()), w.coord[0]!);
-    const report = await cli(['verify', await download(), '--manifest-hash', bytesToHex(w.mh)]);
+    const report = await cli(['verify', await download(), '--manifest-hash', bytesToHex(w.mh), '--content-only']);
     assert.equal(report['verdict'], 'PASS');
     assert.equal(report['counts'].cast, 3); assert.equal(report['counts'].counted, 3);
     assert.equal(new Set(codes).size, 3);

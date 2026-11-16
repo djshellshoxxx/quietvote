@@ -299,7 +299,7 @@ export const PT_BR = {
   'qv.verify.running': 'Executando verificações…',
   'qv.verify.verdict.PASS': 'Todas as verificações aprovadas',
   'qv.verify.verdict.FAIL': 'Uma verificação falhou',
-  'qv.verify.verdict.INCOMPLETE': 'Incompleta: nenhum resultado foi publicado ainda',
+  'qv.verify.verdict.INCOMPLETE': 'Incompleta: são necessárias mais evidências',
   'qv.verify.status.pass': 'aprovada',
   'qv.verify.status.fail': 'falhou',
   'qv.verify.status.not_run': 'não executada',

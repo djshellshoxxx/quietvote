@@ -1,3 +1,4 @@
+// Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
 // `qv vectors check`: runs the test-vectors/v1 conformance corpus (QV-34) against this build.
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -268,7 +269,7 @@ export async function cmdVectorsCheck(argv: string[], io: Io): Promise<number> {
     const exp = rdJson(join(dir, 'expected-report.json'));
     if (!isObj(bundle)) throw malformed(join(dir, 'bundle.json'), 'bundle');
     if (!isObj(exp) || !isObj(exp.checks) || !isObj(exp.counts)) throw malformed(join(dir, 'expected-report.json'), 'report (checks and counts)');
-    const r = await verifyBundle(bundle);
+    const r = await verifyBundle(bundle, { allowNoLog: true });
     const same = r.verdict === exp.verdict && JSON.stringify(Object.keys(exp.checks).map((k) => r.chk[k])) === JSON.stringify(Object.values(exp.checks))
       && canonicalize(r.results) === canonicalize(exp.results) && r.ctxPrefix === exp.ctx_prefix && r.counts.counted === exp.counts.counted;
     add('elections', name, same, `verdict ${r.verdict}, expected ${exp.verdict}, or checks/results differ`);
@@ -279,7 +280,7 @@ export async function cmdVectorsCheck(argv: string[], io: Io): Promise<number> {
     const m = rdJson(path);
     if (!isObj(m) || typeof m.id !== 'string' || !isObj(m.bundle) || !isObj(m.expect) || !Array.isArray(m.expect.failed_checks)
       || !Array.isArray(m.expect.codes) || typeof m.expect.verdict !== 'string') throw malformed(path, 'mutation (id, bundle, expect)');
-    const r = await verifyBundle(m.bundle);
+    const r = await verifyBundle(m.bundle, { allowNoLog: true });
     const failed = chkOf(r);
     const ok = JSON.stringify(failed) === JSON.stringify(m.expect.failed_checks) && r.verdict === m.expect.verdict
       && (m.expect.codes as string[]).every((c) => r.findings.some((x) => x.code === c)) && (failed.length > 0 || r.verdict !== 'PASS');
@@ -287,7 +288,7 @@ export async function cmdVectorsCheck(argv: string[], io: Io): Promise<number> {
   }
   {
     const canaryPath = join(v1, 'canary', 'expected-report.json');
-    const r = await verifyBundle(rdJson(join(v1, 'canary', 'canary-election.json')));
+    const r = await verifyBundle(rdJson(join(v1, 'canary', 'canary-election.json')), { allowNoLog: true });
     const exp = rdJson(canaryPath);
     if (!isObj(exp) || !isObj(exp.checks)) throw malformed(canaryPath, 'report (checks)');
     add('canary', 'canary-election', r.verdict === exp.verdict && JSON.stringify(Object.keys(exp.checks).map((k) => r.chk[k])) === JSON.stringify(Object.values(exp.checks)), 'canary report differs from expected-report.json');

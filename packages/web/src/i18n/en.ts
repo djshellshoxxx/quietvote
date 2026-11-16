@@ -312,7 +312,7 @@ export const EN = {
   'qv.verify.running': n('Running checks…', 'Status.'),
   'qv.verify.verdict.PASS': n('Supplied checks passed', 'Verdict; skipped evidence stays explicit in the itemized list.'),
   'qv.verify.verdict.FAIL': n('A check failed', 'Verdict.'),
-  'qv.verify.verdict.INCOMPLETE': n('Incomplete: no result has been published yet', 'Verdict.'),
+  'qv.verify.verdict.INCOMPLETE': n("Incomplete: more evidence is needed", "Verdict; translated wording requires review."),
   'qv.verify.status.pass': n('passed', 'Check status text.'),
   'qv.verify.status.fail': n('failed', 'Check status text.'),
   'qv.verify.status.not_run': n('not run', 'Check status text.'),

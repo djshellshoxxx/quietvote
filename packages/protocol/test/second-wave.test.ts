@@ -26,7 +26,7 @@ test('P3: a second, different tally record makes the verdict FAIL (identical dup
   const first = sim.log[sim.log.length - 1]!.entry as { body: TallyBody };
   const dup = clone(bundleOf(sim));
   dup.log.push({ seq: sim.seq + 1, entry: clone(first) });
-  const rd = await verifyElection(dup);
+  const rd = await verifyElection(dup, { allowNoLog: true }); // Core duplicate classification.
   assert.equal(rd.verdict, 'PASS', JSON.stringify(rd.findings));
   const forged = clone(first.body);
   forged.contests[0]!.options[0]!.T += 1;
@@ -116,7 +116,7 @@ test('P9: an invalid keyconf does not shadow a later valid keyconf of the same t
   b.log[kcIdx[0]!]!.entry = bad;
   b.log[kcIdx[1]!]!.entry = j1;
   b.log[kcIdx[2]!]!.entry = j2;
-  const r = await verifyElection(b);
+  const r = await verifyElection(b, { allowNoLog: true }); // Core keyconf classification.
   assert.ok(r.findings.some((f) => f.code === 'E_DKG_KEYCONF' && f.cls === 'L'), JSON.stringify(r.findings));
   assert.equal(r.verdict, 'PASS', JSON.stringify(r.findings));
 });
@@ -124,7 +124,7 @@ test('P9: an invalid keyconf does not shadow a later valid keyconf of the same t
 test('P11: tally.decrypters must equal the recomputed T_valid', async () => {
   const sim = await finished('sw-p11');
   publishTally(sim, [1, 3]);
-  const ok = await verifyElection(bundleOf(sim));
+  const ok = await verifyElection(bundleOf(sim), { allowNoLog: true }); // Valid tally-content control.
   assert.equal(ok.verdict, 'PASS', JSON.stringify(ok.findings));
   const b = clone(bundleOf(sim));
   const rec = b.log[b.log.length - 1]!.entry as { body: TallyBody };

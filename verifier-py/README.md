@@ -40,15 +40,31 @@ vector FAILs**, 0 otherwise (NOT-IMPLEMENTED does not fail the run), and 2 on us
 
 `verify` writes the full JSON report to stdout: exit 0 for verdict PASS, 1 for FAIL,
 2 for input/usage errors, and 3 for INCOMPLETE (no fatal finding but tally
-decryption has not run). A missing tally produces no result; a rejected or
+decryption or required log evidence has not completed). A missing tally produces no result; a rejected or
 conflicting tally retains its failure. Exit 3 also denotes an explicitly unsupported capability;
 the shipped 48 log-evidence cases, including legacy controls, are implemented.
 Receipt samples are an array of `{receipt, voter?, code?}`; observed checkpoints are
 an array of signed-note strings. The API is `verify_bundle(bundle, log={"board": board,
 "receipts": samples, "observed": notes})`; omitting log runs the core election
-verifier without board/witness/receipt evidence checks. Optional `witnesses` (CLI `--witnesses`) supplies trusted `{name,pk}`
+verifier without board/witness/receipt evidence checks and cannot produce default PASS.
+The CLI also accepts an embedded `board` export; `--board` explicitly selects a separate file. Optional `witnesses` (CLI `--witnesses`) supplies trusted `{name,pk}`
 keys only when the manifest has no witness list. `extraAuthorKeys` (`--extra-author-key`)
 never overrides coordinator, trustee or voter authorization for recognised records.
+
+Default verification requires both `chk.board.append_only` and
+`chk.board.witness` to pass. Missing or unverified log evidence yields
+`INCOMPLETE` (CLI exit 3); fatal evidence still yields `FAIL` (exit 1).
+A completed tally alone does not establish a witnessed election result.
+
+For an explicitly scoped cryptographic content check, trusted callers may set
+`allowNoLog: true` (Python: `allow_no_log=True`), or invoke `--content-only` on
+`qv verify`, `qv-verify`, or Python `verify`. Only the actual Boolean true enables
+this option. A bundle field cannot enable it. The report prominently states that
+content-only PASS does not establish witnessed log integrity. The exception
+allows absent evidence, or a verified append-only log whose signed manifest
+explicitly requires zero witnesses. Supplied malformed, failed, skipped,
+interrupted or otherwise unverified append evidence never qualifies; required
+witnesses cannot be bypassed. Missing tallies remain incomplete in either mode.
 
 About `python -I -m qv_verifier`: from Python 3.11 on, `-I` implies `-P` (safe path), so the
 current directory is **not** put on `sys.path`. `python -I -m qv_verifier …` therefore works only

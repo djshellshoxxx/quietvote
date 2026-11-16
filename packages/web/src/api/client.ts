@@ -151,6 +151,9 @@ export class ApiClient {
   async exportJson(id: string): Promise<unknown> {
     return this.json(await this.req('GET', `${API}/elections/${enc(id)}/export.json`));
   }
+  async exportWithBoard(id: string): Promise<unknown> {
+    return this.json(await this.req('GET', `${API}/elections/${enc(id)}/export.json`, { query: { board: 1 } }));
+  }
 
   /** Untrusted coordinator proposal; the organizer verifies it locally before publication. */
   async tallyDraft(id: string): Promise<unknown> {

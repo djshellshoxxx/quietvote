@@ -30,7 +30,7 @@ class TestLogReview(unittest.TestCase):
 
     def test_unknown_core_record_is_not_log_authority(self):
         bundle = read(FIXTURES / 'notices/waiver-before-open.bundle.json')
-        report = verify_bundle(bundle)
+        report = verify_bundle(bundle, allow_no_log=True)  # Isolate core record classification.
         self.assertEqual(report['verdict'], 'PASS')
         self.assertEqual(report['checks']['chk.board.append_only'], 'not_run')
         self.assertEqual(report['checks']['chk.encoding.canonical'], 'fail')

@@ -102,7 +102,7 @@ class TestStableLog(unittest.TestCase):
     def test_core_control_is_class_l_and_log_authority_is_separate(self):
         self.assertEqual(verify_bundle(self.bundle)['checks']['chk.board.append_only'], 'not_run')
         control = read('notices/waiver-before-open.bundle.json')
-        core = verify_bundle(control)
+        core = verify_bundle(control, allow_no_log=True)  # Isolate core record classification.
         self.assertEqual(core['verdict'], 'PASS')
         self.assertTrue(any(f['code'] == 'E_VERSION' and not f['fatal'] for f in core['findings']))
         report = verify_bundle(control, log={'board': read('notices/waiver-before-open.board.json')})

@@ -138,7 +138,7 @@ class TestControlLogEvidence(unittest.TestCase):
                      'waiver-record-sig-not-coordinator', 'waiver-in-anchor-entry'):
             bundle = read(f'notices/{name}.bundle.json')
             board = read(f'notices/{name}.board.json')
-            core = verify_bundle(bundle)
+            core = verify_bundle(bundle, allow_no_log=True)  # Isolate core record classification.
             self.assertEqual(core['verdict'], 'PASS')
             self.assertTrue(any(f['code'] == 'E_VERSION' and not f['fatal'] for f in core['findings']))
             report = verify_bundle(bundle, log={'board': board})

@@ -19,7 +19,8 @@ docs/errata/spec-errata-log.md):
     §5.6.3 "pre-key scope"), every later record uses ctx; record_type is ``body.type``.
     The tally signature is a convenience signature and is reported only as a note.
   * Board consistency / witnesses / receipts are ``not_run`` when optional log
-    evidence is absent; the stable QV-18 path is composed only when supplied.
+    evidence is absent, capping the default verdict at INCOMPLETE. The stable
+    QV-18 path is composed only when supplied.
   * A stop makes only the checks that have not run yet ``not_run``; checks already completed
     (``chk.manifest.sig`` after App. C steps 2-4, ``chk.keys.trustees`` after steps 5-10) keep their
     result. ``chk.encoding.canonical`` is complete only once the voter envelopes were examined, so a
@@ -36,7 +37,7 @@ from typing import Any
 
 from . import ballot, dkg, ed25519, manifest as manifest_mod, merkle, qvjson, rules
 from .edwards import L as ELL
-from .errors import QVError
+from .errors import QVError, NotImplementedOp
 from .framed_hash import H256
 from .proofs import dec_check, pok_share_check
 from .ristretto import G, R_IDENTITY, RPoint, decode_hex, scalar_decode_hex
@@ -200,12 +201,16 @@ def bsgs(D: RPoint, bound: int) -> int | None:
     return None
 
 
-def verify_bundle(bundle: dict, *, log: dict | None = None) -> dict:
+def verify_bundle(bundle: dict, *, log: dict | None = None, allow_no_log: bool = False) -> dict:
     """Verify an election, optionally with independent QV-18 evidence.
 
     ``log`` contains ``board`` and optional ``receipts``, ``observed``,
     ``witnesses`` and ``extraAuthorKeys``. Log evidence authenticates legacy
     control notices independently of the core's class-L unknown-record finding.
+    ``allow_no_log`` is a trusted caller-only content-verification opt-out, never
+    a bundle field. Supplied log failures still fail; unchecked supplied evidence
+    never qualifies. A verified append-only log with an explicit zero-witness
+    manifest policy may retain a prominently caveated content-only PASS.
     """
     if log is not None:
         from . import logcheck
@@ -218,7 +223,17 @@ def verify_bundle(bundle: dict, *, log: dict | None = None) -> dict:
         pass
     if log is not None and "chk.manifest.sig" in st.completed and not any(
             st.failed(c) for c in ("chk.manifest.hash", "chk.manifest.sig")):
-        logcheck.verify_into(bundle, log, st)
+        try:
+            logcheck.verify_into(bundle, log, st)
+        except NotImplementedOp:
+            raise
+        except QVError:
+            st.add("chk.board.append_only", "E_LOG_FORMAT", True, "supplied log evidence rejected")
+        except Exception:
+            # Operational failure is not negative evidence about the election.
+            # Existing fatal findings survive; no partial log pass survives.
+            st.skip("chk.board.append_only", "chk.board.witness", "chk.receipts.sample")
+            st.notes.append("Supplied log evidence could not be fully checked; verification is INCOMPLETE unless another check fails")
     checks = {}
     for c in CHECKS:
         if any(f.check == c for f in st.findings):
@@ -230,8 +245,18 @@ def verify_bundle(bundle: dict, *, log: dict | None = None) -> dict:
     out["checks"] = checks
     # QV-ADR-027 / PY-02: an unfinished tally is neither a verified outcome nor
     # a fatal election failure. Fatal evidence always takes precedence.
+    incomplete_log = any(checks[c] != "pass" for c in ("chk.board.append_only", "chk.board.witness"))
+    zero_witness = (isinstance(bundle, dict) and isinstance(bundle.get("manifest"), dict) and
+                    isinstance(bundle["manifest"].get("body"), dict) and
+                    isinstance(bundle["manifest"]["body"].get("bb"), dict) and
+                    bundle["manifest"]["body"]["bb"].get("witness_quorum") == 0)
+    content_only = allow_no_log is True and (log is None or (
+        checks["chk.board.append_only"] == "pass" and zero_witness))
+    if content_only and incomplete_log:
+        st.notes.append("CONTENT-ONLY verification explicitly requested by the caller; PASS does not establish witnessed log integrity")
     out["verdict"] = ("FAIL" if any(f.fatal for f in st.findings) else
-                      "INCOMPLETE" if checks["chk.tally.decrypt"] == "not_run" else "PASS")
+                      "INCOMPLETE" if checks["chk.tally.decrypt"] == "not_run" or
+                      (incomplete_log and not content_only) else "PASS")
     out["codes"] = sorted({f.code for f in st.findings})
     out["findings"] = [f.__dict__ for f in st.findings]
     out["notes"] = st.notes

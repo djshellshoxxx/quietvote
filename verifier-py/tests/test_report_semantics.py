@@ -109,7 +109,7 @@ class TestRejectedTallyIsNotExamined(unittest.TestCase):
         self._assert_rejected(verify_bundle(b), "E_VERSION")
 
     def test_honest_bundle_control(self):
-        r = verify_bundle(json.loads(BASE.read_text(encoding="utf-8")))
+        r = verify_bundle(json.loads(BASE.read_text(encoding="utf-8")), allow_no_log=True)
         self.assertEqual(r["verdict"], "PASS")
         self.assertEqual(r["checks"]["chk.encoding.canonical"], "pass")
         self.assertEqual(r["checks"]["chk.result.rules"], "pass")

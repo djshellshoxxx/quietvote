@@ -14,8 +14,8 @@ export interface VerifierIo {
 }
 
 /** Runs the self-test and attaches it; a failing self-test forces FAIL (a broken verifier must not report PASS). */
-export async function verifyWithSelfTest(bundleText: string | Uint8Array, opts: { pinnedManifestHash?: string; skipSelfTest?: boolean; corpus?: Corpus; corpusText?: string } = {}): Promise<VerifierReport> {
-  const r = await verifyBundle(bundleText, opts.pinnedManifestHash === undefined ? {} : { pinnedManifestHash: opts.pinnedManifestHash });
+export async function verifyWithSelfTest(bundleText: string | Uint8Array, opts: { pinnedManifestHash?: string; allowNoLog?: boolean; skipSelfTest?: boolean; corpus?: Corpus; corpusText?: string } = {}): Promise<VerifierReport> {
+  const r = await verifyBundle(bundleText, { ...(opts.pinnedManifestHash === undefined ? {} : { pinnedManifestHash: opts.pinnedManifestHash }), allowNoLog: opts.allowNoLog === true });
   if (opts.skipSelfTest !== true) {
     try {
       const st = await runSelfTest(opts.corpus ?? loadCorpus(opts.corpusText));
@@ -35,17 +35,19 @@ export async function verifyWithSelfTest(bundleText: string | Uint8Array, opts: 
 export const exitCodeFor = (r: VerifierReport): number => (r.verdict === 'PASS' ? EXIT.ok : r.verdict === 'FAIL' ? EXIT.fail : EXIT.incomplete);
 
 export async function verifierMain(argv: string[], io: VerifierIo): Promise<number> {
-  const usage = 'usage: qv-verify <bundle.json> [--json] [--skip-selftest] [--manifest-hash <hex>]\n       qv-verify --selftest\n';
+  const usage = 'usage: qv-verify <bundle.json> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only]\n       --content-only explicitly permits a scoped PASS without witnessed log integrity\n       qv-verify --selftest\n';
   let json = false;
   let skip = false;
   let selftest = false;
   let pinned: string | undefined;
+  let contentOnly = false;
   const files: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a === '--json') json = true;
     else if (a === '--skip-selftest') skip = true;
     else if (a === '--selftest') selftest = true;
+    else if (a === '--content-only') contentOnly = true;
     else if (a === '--manifest-hash') pinned = argv[++i];
     else if (a.startsWith('-')) {
       io.err(`unknown option ${a}\n${usage}`);
@@ -74,7 +76,7 @@ export async function verifierMain(argv: string[], io: VerifierIo): Promise<numb
     io.err(`cannot read ${files[0]}: ${e instanceof Error ? e.message : 'error'}\n`);
     return EXIT.input;
   }
-  const r = await verifyWithSelfTest(data, { ...(pinned === undefined ? {} : { pinnedManifestHash: pinned }), skipSelfTest: skip });
+  const r = await verifyWithSelfTest(data, { ...(pinned === undefined ? {} : { pinnedManifestHash: pinned }), skipSelfTest: skip, allowNoLog: contentOnly });
   io.out(json ? JSON.stringify(r, null, 2) + '\n' : formatReport(r));
   return exitCodeFor(r);
 }

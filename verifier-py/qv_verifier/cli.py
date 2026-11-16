@@ -27,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("--report", metavar="FILE", help="also write a JSON report to FILE")
     verify = sub.add_parser('verify', help='verify an election JSON bundle with optional QV-18 evidence')
     verify.add_argument('bundle')
+    verify.add_argument('--content-only', action='store_true', help='explicitly permit a scoped PASS without witnessed log integrity; supplied evidence is still checked')
     verify.add_argument('--board', help='board JSON export (qv-bundle/v1)')
     verify.add_argument('--receipts', help='JSON array of receipt samples')
     verify.add_argument('--observed', help='JSON array of previously observed checkpoint notes')
@@ -36,21 +37,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "vectors":
         return main_vectors(args.dir, quiet=args.quiet, report_path=args.report)
     if args.cmd == 'verify':
-        if not args.board and (args.receipts or args.observed or args.witnesses or args.extra_author_key):
-            ap.error('log evidence options require --board')
         try:
             bundle = load_json(Path(args.bundle))
             if not isinstance(bundle, dict):
                 raise QVError('E_SCHEMA', 'election bundle must be an object')
             log = None
-            if args.board:
-                log = {'board': load_json(Path(args.board))}
+            if args.board or 'board' in bundle:
+                log = {'board': load_json(Path(args.board)) if args.board else bundle['board']}
                 for field in ('receipts', 'observed', 'witnesses'):
                     if getattr(args, field):
                         log[field] = load_json(Path(getattr(args, field)))
                 if args.extra_author_key:
                     log['extraAuthorKeys'] = args.extra_author_key
-            report = verify_bundle(bundle, log=log)
+            if log is None and (args.receipts or args.observed or args.witnesses or args.extra_author_key):
+                ap.error('log evidence options require --board or a bundled board export')
+            report = verify_bundle(bundle, log=log, allow_no_log=args.content_only)
         except NotImplementedOp as exc:
             print(json.dumps({'status': 'NOT-IMPLEMENTED', 'detail': str(exc)}))
             return 3

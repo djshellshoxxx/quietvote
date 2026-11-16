@@ -2,6 +2,22 @@
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
 Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-inspect|election-draft|election-submit|election-tally-draft|election-export`.
+
+Default verification requires both `chk.board.append_only` and
+`chk.board.witness` to pass. Missing or unverified log evidence yields
+`INCOMPLETE` (CLI exit 3); fatal evidence still yields `FAIL` (exit 1).
+A completed tally alone does not establish a witnessed election result.
+
+For an explicitly scoped cryptographic content check, trusted callers may set
+`allowNoLog: true` (Python: `allow_no_log=True`), or invoke `--content-only` on
+`qv verify`, `qv-verify`, or Python `verify`. Only the actual Boolean true enables
+this option. A bundle field cannot enable it. The report prominently states that
+content-only PASS does not establish witnessed log integrity. The exception
+allows absent evidence, or a verified append-only log whose signed manifest
+explicitly requires zero witnesses. Supplied malformed, failed, skipped,
+interrupted or otherwise unverified append evidence never qualifies; required
+witnesses cannot be bypassed. Missing tallies remain incomplete in either mode.
+
 Exit codes: 0 ok, 1 failure, 2 usage, 3 incomplete/partial, 4 bad input, 70 internal. Design notes: `packages/verifier/NOTES.md`.
 
 See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
