@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import itertools
 import json
 from pathlib import Path
 import struct
@@ -12,7 +13,7 @@ from qv_verifier.edwards import BASE, L, P, Point, ed_encode
 from qv_verifier.errors import QVError
 from qv_verifier.logwire import (
     MAX_SAFE, b64_decode, body_digest, decode_header, key_id,
-    parse_checkpoint, parse_receipt, witness_times,
+    parse_checkpoint, parse_receipt, witness_observations, witness_times,
 )
 
 FIXTURES = Path(__file__).resolve().parents[2] / "test-vectors/v1/elections/log-layer-4v"
@@ -197,6 +198,24 @@ class TestCheckpoints(unittest.TestCase):
                 self.assertEqual(witness_times(parsed, policy), {})
         parsed = parse_checkpoint(note(text, first), LOG_PK, ORIGIN)
         self.assertEqual(witness_times(parsed, [{"name": "witness", "pk": "01" + "00" * 31}]), {})
+
+    def test_witness_observations_are_permutation_invariant(self):
+        text = note_text()
+        early = cosig(text, timestamp=100)
+        late = cosig(text, timestamp=200)
+        alias = cosig(text, timestamp=150, name="alias")
+        policy = [{"name": "witness", "pk": WITNESS_PK.hex()},
+                  {"name": "alias", "pk": WITNESS_PK.hex()}]
+        for ordering in itertools.permutations((early, late, alias)):
+            with self.subTest(ordering=ordering):
+                parsed = parse_checkpoint(note(text, "".join(ordering) + early), LOG_PK, ORIGIN)
+                self.assertEqual(witness_observations(parsed, policy), {WITNESS_PK.hex(): [100, 150, 200]})
+                self.assertEqual(witness_times(parsed, policy), {WITNESS_PK.hex(): 100})
+
+        # Invalid claims at an earlier time must not replace authenticated evidence.
+        forged_early = cosig(text, timestamp=1, seed=AUTHOR_SEED)
+        parsed = parse_checkpoint(note(text, forged_early + late + early), LOG_PK, ORIGIN)
+        self.assertEqual(witness_observations(parsed, policy), {WITNESS_PK.hex(): [100, 200]})
 
     def test_mixed_order_log_key_is_rejected(self):
         torsion = Point(0, P - 1, 1, 0)

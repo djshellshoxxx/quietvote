@@ -220,12 +220,13 @@ def parse_checkpoint(note: str, log_pk: bytes, expected_origin: str) -> dict:
         raise _error("invalid checkpoint encoding", code) from exc
 
 
-def witness_times(checkpoint: dict, witnesses: list[dict]) -> dict[str, int]:
-    """Valid type-0x04 cosignatures, counted once per distinct public key.
+def witness_observations(checkpoint: dict, witnesses: list[dict]) -> dict[str, list[int]]:
+    """All distinct authenticated type-0x04 timestamps, grouped by public key.
 
     The caller chooses trusted witnesses. Unknown, invalid, duplicate, and
-    unsupported signature lines cannot contribute to quorum. First valid line
-    wins in note order, matching the documented board policy.
+    unsupported signature lines cannot add quorum votes. Retaining each valid
+    time makes cross-checkpoint monotonicity checks independent of note order.
+    Aliases for the same public key remain one witness.
     """
     if (not isinstance(checkpoint, dict) or not isinstance(witnesses, list)
             or not isinstance(checkpoint.get("text"), str)
@@ -242,7 +243,7 @@ def witness_times(checkpoint: dict, witnesses: list[dict]) -> dict[str, int]:
         if not ed25519.valid_public_key(pk):
             continue
         trusted[(name, _note_key_id(name, 4, pk))] = (key, pk)
-    result = {}
+    result: dict[str, set[int]] = {}
     for item in checkpoint["signatures"]:
         if not isinstance(item, (list, tuple)) or len(item) != 2:
             continue
@@ -250,7 +251,7 @@ def witness_times(checkpoint: dict, witnesses: list[dict]) -> dict[str, int]:
         if not isinstance(name, str) or not isinstance(payload, bytes) or len(payload) != 76:
             continue
         key = trusted.get((name, payload[:4]))
-        if key is None or key[0] in result:
+        if key is None:
             continue
         timestamp = int.from_bytes(payload[4:12], "big")
         if timestamp > MAX_SAFE:
@@ -260,8 +261,18 @@ def witness_times(checkpoint: dict, witnesses: list[dict]) -> dict[str, int]:
         except UnicodeEncodeError:
             continue
         if ed25519.verify(key[1], msg, payload[12:]):
-            result[key[0]] = timestamp
-    return result
+            result.setdefault(key[0], set()).add(timestamp)
+    return {key: sorted(timestamps) for key, timestamps in result.items()}
+
+
+def witness_times(checkpoint: dict, witnesses: list[dict]) -> dict[str, int]:
+    """Earliest authenticated timestamp per distinct trusted public key.
+
+    A later cosignature or a reordered duplicate cannot erase an earlier
+    authenticated observation. Use ``witness_observations`` when every observed
+    time is required, for example to exclude non-monotone witnesses.
+    """
+    return {key: times[0] for key, times in witness_observations(checkpoint, witnesses).items()}
 
 
 def parse_receipt(receipt: dict, log_pk: bytes, expected_origin: str) -> dict:
