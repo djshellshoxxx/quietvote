@@ -11,7 +11,7 @@ const PROTOCOL_TYPES = new Set([
   'key_confirm', 'ballot', 'ballot_audit', 'tally_result',
 ]);
 
-export function electionBundle(rt: ElectionRuntime): ElectionBundle {
+export function electionBundle(rt: ElectionRuntime, opts: { includeBoardRecords?: boolean } = {}): ElectionBundle {
   const st = rt.st;
   if (!st.manifestRec || !st.mh) throw new Error('no manifest');
   const log: LogEntry[] = [];
@@ -21,9 +21,9 @@ export function electionBundle(rt: ElectionRuntime): ElectionBundle {
     for (const r of page.rows) {
       if (r.seq === 0 || r.body === null) continue;
       const isNotice = r.type === 'notice';
-      if (!PROTOCOL_TYPES.has(r.type) && !isNotice) continue;
+      if (!opts.includeBoardRecords && !PROTOCOL_TYPES.has(r.type) && !isNotice) continue;
       const rec = parseQvJson(r.body) as { body?: { type?: string } };
-      if (isNotice && rec.body?.type !== 'marker') continue; // control notices are board-level only
+      if (!opts.includeBoardRecords && isNotice && rec.body?.type !== 'marker') continue; // legacy content-only export
       log.push({ seq: r.seq, entry: rec });
     }
     if (!page.more) break;

@@ -986,7 +986,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       if (c.query.get('board') === '1') {
         // One synchronous snapshot, same read/access/export guards. Do not reuse
         // the content-only ETag: witness cosignatures may change at the same size.
-        return { status: 200, json: { ...electionBundle(rt), board: bundleToJson(logBundle(rt)) }, cache: 'no-store' };
+        return { status: 200, json: { ...electionBundle(rt, { includeBoardRecords: true }), board: bundleToJson(logBundle(rt)) }, cache: 'no-store' };
       }
       if (c.header('if-none-match') === exportEtag(rt)) return { status: 304, etag: exportEtag(rt), cache: 'public, max-age=600' };
       const b = cachedExport(rt, 'json');

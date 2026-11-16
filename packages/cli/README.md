@@ -84,10 +84,11 @@ Remaining workflow gaps: organization account enrollment, independent tally-draf
 backup/restore commands. This command group supplies transport adapters; it does not resolve those gaps.
 
 The online integration test exports an actual successful three-voter election and runs both the TypeScript CLI
-and Python's existing `vectors` CLI on it, comparing all shared report fields. Python currently has no direct
-`verify <bundle>` CLI or caller-supplied manifest-pin option, and does not implement board append-only,
-witness or receipt-sample checks. The JSON export has no board evidence; those checks remain `not_run`, and
-matching reports do not establish board/witness assurance. That test uses the server `World` harness for
+and Python's `vectors` CLI on it, comparing all shared report fields under explicit content-only scope.
+The default JSON export has no board evidence, so direct verification reports INCOMPLETE; those checks
+remain `not_run`, and matching content-only reports do not establish board/witness assurance. Python
+also supports direct `verify` with board, witness and receipt evidence; the additive `export.json?board=1`
+contains board evidence and all public records for verification. That test uses the server `World` harness for
 trustee cryptography. A separate trustee executable test now drives production `qv-trustee` commands through
 the real HTTP server and `qv online` relay, keeping trustee secrets out of the parent harness. See the
 [trustee README](../trustee/README.md) for the remaining preparation and all-client acceptance boundaries.

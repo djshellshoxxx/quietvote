@@ -423,7 +423,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.verify.running`: Running checks…
 - `qv.verify.verdict.PASS`: Supplied checks passed
 - `qv.verify.verdict.FAIL`: A check failed
-- `qv.verify.verdict.INCOMPLETE`: Incomplete: no result has been published yet
+- `qv.verify.verdict.INCOMPLETE`: Incomplete: more evidence is needed
 - `qv.verify.status.pass`: passed
 - `qv.verify.status.fail`: failed
 - `qv.verify.status.not_run`: not run

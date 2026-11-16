@@ -61,7 +61,7 @@ handoff for execution receipts and independent-review status.
   QV-16 §5.12.2 says a zero-digest spoil is "valid only if the manifest enables it", but no spec gives the code, check or
   class for the invalid case, so it is not implemented here (TS does not enforce it at the ballot level either). See D-95.
   **PY-02/D-96:** the approved no-tally INCOMPLETE behavior is implemented below. The broader
-  P1/TSV-05 missing-log default/caller opt-out is a separate interface migration. The stable QV-18
+  P1/TSV-05 missing-log default/caller opt-out is implemented in the later milestone below. The stable QV-18
   board/witness/receipt subset is implemented below; no adapter protocol was added.
 * Shipped unsupported vectors stay explicit: 13 notice/control `log.verify_election` cases. Their absence is not a pass
   or a claim of cross-verifier conformance. The corpus is unsigned; constant-time, large-scale and external-audit gates remain open.
@@ -148,6 +148,20 @@ still yields FAIL. Actual `verify` CLI exits are PASS=0, FAIL=1, INCOMPLETE=3.
 
 This closes the narrow PY-02 report-enum gap without modifying the vector corpus,
 its expected reports, the strict comparator, or absent-log policy. It does not
-implement the separate P1/TSV-05 full-verifier default/caller opt-out migration.
+implement the separate P1/TSV-05 full-verifier default/caller opt-out migration by itself; that later milestone is recorded below.
 Regression evidence: `tests/test_incomplete_verdict.py`; final receipts and
 review status are in the corresponding milestone handoff.
+
+## P1 / TSV-05 / TSV-04 evidence gate — 2026-11-16
+
+The default now requires append-only and witness checks to pass; absent or
+unverified evidence yields INCOMPLETE unless fatal evidence yields FAIL. Only
+strict caller `allow_no_log=True` / CLI `--content-only` enables the narrow
+content-only exception. It permits absent evidence or verified append-only
+evidence with signed witness quorum zero. Malformed, unverified or interrupted
+supplied evidence cannot use it, and required witnesses cannot be bypassed.
+Operational exceptions preserve any previously established fatal findings.
+The CLI accepts embedded `board` evidence or explicit `--board`; bundle option
+fields never grant authority. Existing conformance callers opt out explicitly,
+without changing vector bytes or expected reports. See the
+[P1 milestone handoff](../docs/handoffs/P1-LOG-REQUIRED-20261116.md).
