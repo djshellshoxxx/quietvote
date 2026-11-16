@@ -159,6 +159,7 @@ export const AR = {
   'qv.key.lockWarn': 'سيُقفل مفتاحك خلال {seconds, plural, one {ثانية واحدة} two {ثانيتين} few {# ثوانٍ} many {# ثانية} other {# ثانية}} بسبب عدم النشاط.',
   'qv.key.stayUnlocked': 'البقاء مفتوحاً',
   'qv.key.lockNow': 'قفل المفتاح الآن',
+  'qv.key.enrollmentUnavailable': 'يحتاج هذا التصويت إلى دعوة محدثة. تواصل مع منظمه.',
   'qv.key.registered': 'تم تسجيل مفتاحك. سيضيفه المنظّم إلى قائمة الناخبين.',
   'qv.key.onRoll': 'أنت على قائمة الناخبين.',
   'qv.key.notYetRoll': 'مفتاحك ليس على قائمة الناخبين بعد.',

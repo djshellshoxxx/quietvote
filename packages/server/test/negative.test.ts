@@ -219,8 +219,7 @@ test('invite codes: single use, wrong code generic failure', async () => {
     await w2.setupOrgAndElection();
     const inv = (await w2.signed('POST', `/api/v1/elections/${w2.electionId}/invites`, { count: 2 }, w2.owner, w2.idemKey())).json.invites;
     const reg = async (code: string, k: ReturnType<typeof kp>) => {
-      const pop = await import('@quietvote/crypto').then((c) => c.ed25519Sign(k.secretKey, new Uint8Array([...new TextEncoder().encode(`QV-REG-v1\0${w2.electionId}\0`), ...k.publicKey])));
-      return w2.req('POST', `/api/v1/elections/${w2.electionId}/registrations`, { invite_code: code, pk: b64u(k.publicKey), alg: 'ed25519', pop: b64u(pop) });
+      return w2.req('POST', `/api/v1/elections/${w2.electionId}/registrations`, w2.registrationBody(code, k));
     };
     const k1 = kp('x', 'a');
     const k2 = kp('x', 'b');
@@ -229,7 +228,7 @@ test('invite codes: single use, wrong code generic failure', async () => {
     const used = await reg(inv[0].code, k2);
     assert.equal(used.status, 409);
     assert.equal(used.json.code, 'INVITE_USED');
-    assert.equal((await reg('A'.repeat(22), k2)).status, 422);
+    assert.equal((await reg('A'.repeat(22), k2)).status, 409);
     const roll = (await w2.get(`/api/v1/elections/${w2.electionId}/roll`)).json;
     assert.equal(roll.roll_size, 1);
     // a code never appears in storage

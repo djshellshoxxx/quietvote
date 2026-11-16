@@ -158,6 +158,7 @@ export const PT_BR = {
   'qv.key.lockWarn': 'Sua chave será bloqueada em {seconds, plural, one {# segundo} other {# segundos}} por inatividade.',
   'qv.key.stayUnlocked': 'Manter desbloqueada',
   'qv.key.lockNow': 'Bloquear chave agora',
+  'qv.key.enrollmentUnavailable': 'Esta votação precisa de um convite atualizado. Entre em contato com o organizador.',
   'qv.key.registered': 'Sua chave está registrada. O organizador a incluirá na lista de eleitores.',
   'qv.key.onRoll': 'Você está na lista de eleitores.',
   'qv.key.notYetRoll': 'Sua chave ainda não está na lista de eleitores.',

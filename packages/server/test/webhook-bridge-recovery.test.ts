@@ -103,7 +103,7 @@ test('upgrade floors pre-cursor history without replaying already delivered even
     const rel = w.server.env.control.election(w.electionId)!.db_path;
     await w.server.stop();
     const oldElection = new DatabaseSync(join(w.dir, rel));
-    oldElection.exec("DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5");
+    oldElection.exec("ALTER TABLE election DROP COLUMN registration_scheme; DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5");
     oldElection.close();
     const oldControl = new DatabaseSync(join(w.dir, 'control.sqlite'));
     oldControl.exec('DROP TABLE webhook_event_cursor; DELETE FROM schema_migration WHERE version=7; PRAGMA user_version=6');
@@ -141,7 +141,7 @@ test('legacy pending webhook retries survive bridge migration with their origina
     const rel = w.server.env.control.election(w.electionId)!.db_path;
     await w.server.stop();
     const oldElection = new DatabaseSync(join(w.dir, rel));
-    oldElection.exec("DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5");
+    oldElection.exec("ALTER TABLE election DROP COLUMN registration_scheme; DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5");
     oldElection.close();
     const oldControl = new DatabaseSync(join(w.dir, 'control.sqlite'));
     oldControl.exec('DROP TABLE webhook_event_cursor; DELETE FROM schema_migration WHERE version=7; PRAGMA user_version=6');

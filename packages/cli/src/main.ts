@@ -11,7 +11,7 @@ import { cmdKeygen } from './cmd-keygen.ts';
 import { cmdSelftest, cmdVerify } from './cmd-verify.ts';
 import { cmdVectorsCheck } from './cmd-vectors.ts';
 import { EXIT, type Io } from './io.ts';
-import { cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
+import { cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 
 export const VERSION = '0.1.0';
 
@@ -56,6 +56,10 @@ usage:
   qv online admin-status --server <origin> --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
   qv online election-create --server <origin> --audience <qv:id@publicUrl> --key <keyfile>
                     --org <id> --title <title> --access public|link --idempotency-key <key> [passphrase options] [--json]
+  qv online enroll --server <origin> --id <id> --key <keyfile> --invite-file <file> [passphrase options] [--read-key-file <file>] [--json]
+                                   enroll in a hashed-pop-v1 election; invite tokens never come from argv
+  qv online registration-preview --server <origin> --id <id> --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
+                                   inspect legacy migration status without changing invites or the election
   qv online election-inspect --server <origin> --id <id> [--read-key-file <file>] [--json]
   qv online election-draft --server <origin> --id <id> --file <draft.json>
                     --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
@@ -80,7 +84,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
   election: { 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
-  online: { instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
+  online: { enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
 };
 

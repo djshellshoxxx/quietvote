@@ -205,6 +205,7 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: Verifie
         security?.invites.set(reg.election_id, inviteSecurityFloor(rt.edb.db));
         security?.operationReceipts.set(reg.election_id, operationReceiptSecurityFloor(rt.edb.db));
         const row = rt.edb.row();
+        security?.registrationSchemes.set(reg.election_id, row.registration_scheme);
         checkAuthors(rt);
         if (row.org_id !== reg.org_id || row.imported !== reg.imported || rt.quarantineReason() !== undefined || rt.edb.hasKeyEvidence() ||
             rt.log.size < rt.edb.maxEvidenceSize() || !(await auditLog(rt)).ok) fail('BACKUP_INTEGRITY');

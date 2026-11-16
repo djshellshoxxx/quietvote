@@ -12,6 +12,7 @@ export interface BackupSecurityFloor {
   requests: Map<string, Row>;
   eventCursors: Map<string, Row>;
   invites: Map<string, Map<string, Row>>;
+  registrationSchemes: Map<string, string>;
   operationReceipts: Map<string, Map<string, Row>>;
 }
 function rows(db: DatabaseSync, sql: string, keys: string[]): Map<string, Row> {
@@ -33,6 +34,7 @@ export function controlSecurityFloor(db: DatabaseSync): BackupSecurityFloor {
     requests: rows(db, 'SELECT principal,idem_key,method,path,req_sha256,status,response,expires_at FROM idempotency', ['principal', 'idem_key']),
     eventCursors: rows(db, 'SELECT election_id,event_id FROM webhook_event_cursor', ['election_id']),
     invites: new Map(),
+    registrationSchemes: new Map(),
     operationReceipts: new Map(),
   };
 }
@@ -104,6 +106,7 @@ export function preservesSecurityFloor(candidate: BackupSecurityFloor, floor: Ba
       if ((!pending && !completedReceipt(before, old)) || !completed) return false;
     }
   }
+  for (const [election, scheme] of floor.registrationSchemes) if (candidate.registrationSchemes.get(election) !== scheme) return false;
   for (const [election, invites] of floor.invites) {
     const nextInvites = candidate.invites.get(election);
     if (!nextInvites) return false;

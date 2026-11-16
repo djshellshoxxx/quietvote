@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { authorKeyId, b64u } from '@quietvote/board';
+import { logOrigin } from '@quietvote/protocol';
 import { ApiClient } from '../src/api/client.ts';
 import * as clientModule from '../src/api/client.ts';
 import { createSigner } from '../src/key/signer.ts';
@@ -22,22 +24,24 @@ test('N-20: ApiClient has no session-token or challenge/session methods and no e
 test('N-20: no request ever carries an Authorization: Bearer header (reads, voter calls, signed calls)', async () => {
   const seen: { url: string; auth: string | undefined }[] = [];
   const signer = await createSigner(new Uint8Array(32).fill(5));
+  const id = 'ab'.repeat(16);
   const api = new ApiClient({
     baseUrl: 'https://board.example', sleep: async () => undefined, readKey: 'rk',
     signing: { signer, audience: 'qv:inst@https://board.example' },
     fetch: async (url, init) => {
       seen.push({ url, auth: (init!.headers as Record<string, string>).Authorization });
-      return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
+      const body = url.endsWith('/registrations') ? { voter_kid: b64u(authorKeyId('ed25519', signer.publicKey)), status: 'approved' } : { election_id: id, origin: logOrigin({ election_id: id }), registration_scheme: 'hashed-pop-v1' };
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
     },
   });
   await api.instance();
   await api.election('e1');
-  await api.register('e1', {} as never);
+  await api.register(id, { invite_code: 'unused-test-bearer', pk: b64u(signer.publicKey), alg: 'ed25519', pop: 'unused-test-signature' });
   await api.postEntry('e1', 'h', 'b');
   await api.createElection('o1', 'T', 'key-abcdefgh');
   await api.putDraft('e1', {});
   await api.createInvites('e1', 1, 'key-abcdefgh');
-  assert.equal(seen.length, 7);
+  assert.equal(seen.length, 8);
   for (const s of seen) assert.ok(s.auth === undefined || /^QV-Sig /.test(s.auth), `${s.url}: ${s.auth}`);
   assert.equal(seen.filter((s) => s.auth !== undefined).length, 3, 'exactly the three management calls are signed');
 });

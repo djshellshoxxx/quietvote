@@ -166,6 +166,7 @@ export const EN = {
   'qv.key.lockWarn': n('Your key will lock in {seconds, plural, one {# second} other {# seconds}} because of inactivity.', 'Pre-lock warning.'),
   'qv.key.stayUnlocked': n('Stay unlocked', 'Button.'),
   'qv.key.lockNow': n('Lock key now', 'Button.'),
+  'qv.key.enrollmentUnavailable': n('This election needs an updated invitation. Contact its organizer.', 'Enrollment requires a supported invitation contract; no credential was sent.'),
   'qv.key.registered': n('Your key is registered. The organizer will add it to the voter list.', 'After registration.'),
   'qv.key.onRoll': n('You are on the voter list.', 'Roll membership confirmed.'),
   'qv.key.notYetRoll': n('Your key is not on the voter list yet.', 'Roll membership not yet confirmed.'),

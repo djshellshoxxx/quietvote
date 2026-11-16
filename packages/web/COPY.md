@@ -133,6 +133,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.key.lockWarn`: Your key will lock in {seconds, plural, one {# second} other {# seconds}} because of inactivity.
 - `qv.key.stayUnlocked`: Stay unlocked
 - `qv.key.lockNow`: Lock key now
+- `qv.key.enrollmentUnavailable`: This election needs an updated invitation. Contact its organizer.
 - `qv.key.registered`: Your key is registered. The organizer will add it to the voter list.
 - `qv.key.onRoll`: You are on the voter list.
 - `qv.key.notYetRoll`: Your key is not on the voter list yet.

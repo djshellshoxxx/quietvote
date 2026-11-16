@@ -55,6 +55,11 @@ async function refuses(candidate: string, floor: string): Promise<void> {
   assert.equal(existsSync(destination), false);
 }
 
+test('private restore cannot downgrade the recorded registration scheme', async () => {
+  const downgraded = changed('election', (db) => db.exec("UPDATE election SET registration_scheme='legacy-raw-v1'"));
+  await refuses(downgraded, original);
+});
+
 test('minimum snapshot refuses resurrecting revoked organizer credentials with unchanged public history', async () => {
   const floor = changed('control', (db) => db.exec('UPDATE account_key SET revoked_at=1'));
   assert.deepEqual((await verifyBackup(original, key)).elections, (await verifyBackup(floor, key)).elections);

@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { decodeHeader, toHex, type BoardStore, type StoredCheckpoint, type StoredEntry } from '@quietvote/board';
 import { all, closeDb, get, openDb, run, tx, type Migration } from './db.ts';
 import { b64u } from '@quietvote/board';
+import type { RegistrationScheme } from './registration.ts';
 import type { OperationReceipt } from './operation-receipts.ts';
 
 const MIGRATIONS: Migration[] = [
@@ -162,6 +163,9 @@ CREATE TABLE operation_receipt (
 ) STRICT;
 `,
   },
+  { version: 9, name: 'registration_scheme', sql: `
+ALTER TABLE election ADD COLUMN registration_scheme TEXT NOT NULL DEFAULT 'legacy-raw-v1' CHECK (registration_scheme IN ('legacy-raw-v1','hashed-pop-v1'));
+` },
 ];
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
@@ -174,6 +178,7 @@ export interface EventRow {
 }
 
 export interface ElectionRow {
+  registration_scheme: RegistrationScheme;
   election_id: string;
   origin: string;
   state: string;
@@ -306,7 +311,7 @@ export class ElectionDb {
     return tx(this.db, fn);
   }
 
-  init(row: Omit<ElectionRow, 'quarantine' | 'draft' | 'imported'>): void {
+  init(row: Omit<ElectionRow, 'quarantine' | 'draft' | 'imported' | 'registration_scheme'>): void {
     this.tx(() => {
       run(this.db, `INSERT INTO election(election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,org_id,created_at)
         VALUES (?,?, 'DRAFT', ?,?,?,?,?,?,?,?,?)`, row.election_id, row.origin, row.log_pk, row.log_sk_enc, row.srv_pk, row.srv_sk_enc, row.access, row.read_key_hash, row.title, row.org_id, row.created_at);
@@ -314,7 +319,7 @@ export class ElectionDb {
     });
   }
   /** Read-only mirror of a verified bundle (QV-18-REQ-033): no signing keys, state IMPORTED. */
-  initImported(row: Omit<ElectionRow, 'quarantine' | 'draft' | 'imported' | 'log_sk_enc' | 'srv_sk_enc' | 'state'>): void {
+  initImported(row: Omit<ElectionRow, 'quarantine' | 'draft' | 'imported' | 'registration_scheme' | 'log_sk_enc' | 'srv_sk_enc' | 'state'>): void {
     this.tx(() => {
       run(this.db, `INSERT INTO election(election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,org_id,created_at,imported)
         VALUES (?,?, 'IMPORTED', ?, NULL, ?, NULL, ?,?,?,?,?, 1)`, row.election_id, row.origin, row.log_pk, row.srv_pk, row.access, row.read_key_hash, row.title, row.org_id, row.created_at);
@@ -365,7 +370,7 @@ export class ElectionDb {
     return get<{ m: number | null }>(this.db, "SELECT MAX(tree_size) AS m FROM equivocation_evidence WHERE kind='rollback'")?.m ?? 0;
   }
   row(): ElectionRow {
-    const r = get<ElectionRow>(this.db, 'SELECT election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,draft,org_id,quarantine,created_at,imported FROM election');
+    const r = get<ElectionRow>(this.db, 'SELECT election_id,origin,state,log_pk,log_sk_enc,srv_pk,srv_sk_enc,access,read_key_hash,title,draft,org_id,quarantine,created_at,imported,registration_scheme FROM election');
     if (!r) throw new Error('election row missing');
     return r;
   }

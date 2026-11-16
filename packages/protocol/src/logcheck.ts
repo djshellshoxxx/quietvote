@@ -38,7 +38,7 @@ function base32(bytes: Uint8Array): string {
 }
 
 /** X-21: log origin of an election = `quietvote/v1/` + base32(election_id bytes). */
-export function logOrigin(m: Manifest): string {
+export function logOrigin(m: Pick<Manifest, 'election_id'>): string {
   return `quietvote/v1/${base32(hexToBytes(m.election_id, 16))}`;
 }
 

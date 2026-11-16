@@ -1,7 +1,8 @@
 // Thin HTTP adapters: the server remains authoritative for validation, authorization and lifecycle transitions.
-import { closeSync, existsSync, openSync, readSync, writeFileSync } from 'node:fs';
-import { signRequest } from '@quietvote/board';
-import { parseQvJson, wipe } from '@quietvote/crypto';
+import { closeSync, constants, existsSync, fstatSync, openSync, readSync, writeFileSync } from 'node:fs';
+import { authorKeyId, b64u, unb64u, signRequest } from '@quietvote/board';
+import { ed25519Sign, parseQvJson, sha256, wipe } from '@quietvote/crypto';
+import { logOrigin, registrationMessage } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs, type FlagSpec, type Parsed } from './args.ts';
 import { PASSPHRASE_FLAGS, isHex, printJson } from './common.ts';
 import { loadVoterKey } from './cmd-keygen.ts';
@@ -31,10 +32,14 @@ function electionPath(p: Parsed): string {
   return `/api/v1/elections/${id}`;
 }
 
-function readLimited(path: string, limit: number): Uint8Array {
+function readLimited(path: string, limit: number, regular = false): Uint8Array {
   let fd: number | undefined;
   try {
-    fd = openSync(path, 'r');
+    fd = openSync(path, regular ? constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0) : 'r');
+    if (regular) {
+      const stat = fstatSync(fd);
+      if (!stat.isFile() || stat.size > limit) throw new InputError('invite input must be a bounded regular file');
+    }
     const bytes = Buffer.alloc(limit + 1);
     let size = 0;
     while (size < bytes.length) {
@@ -139,6 +144,44 @@ export async function cmdOnlineAdminStatus(argv: string[], io: Io): Promise<numb
 export async function cmdOnlineElectionInspect(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { id: 'value', 'read-key-file': 'value' });
   return jsonRequest(p, io, 'GET', electionPath(p));
+}
+export async function cmdOnlineEnroll(argv: string[], io: Io): Promise<number> {
+  const p = args(argv, { id: 'value', key: 'value', 'invite-file': 'value', 'read-key-file': 'value', ...PASSPHRASE_FLAGS });
+  const path = electionPath(p), id = needFlag(p, 'id');
+  // Refuse missing/unknown/legacy schemes before loading the invite or private key.
+  let election: Record<string, unknown>;
+  try { election = parseQvJson(await request(p, io, 'GET', path)) as Record<string, unknown>; }
+  catch (e) { if (e instanceof FailError) throw e; throw new FailError('invalid election metadata'); }
+  if (!election || election['election_id'] !== id || election['origin'] !== logOrigin({ election_id: id }) || election['registration_scheme'] !== 'hashed-pop-v1') {
+    throw new FailError('election does not support hashed-pop-v1 enrollment; inspect registration migration status');
+  }
+  const inviteFile = needFlag(p, 'invite-file');
+  let code: string;
+  try { code = new TextDecoder('utf-8', { fatal: true }).decode(readLimited(inviteFile, 128, true)).trim(); }
+  catch (e) { if (e instanceof InputError) throw e; throw new InputError('invite file must be UTF-8 text'); }
+  const token = unb64u(code);
+  if (!token || token.length !== 16 || b64u(token) !== code) throw new InputError('invite file must contain one canonical 16-byte base64url token');
+  const hash = sha256(token);
+  try {
+    const key = await loadVoterKey(needFlag(p, 'key'), p, io);
+    try {
+      const body = { invite_code: b64u(hash), pk: b64u(key.publicKey), alg: 'ed25519',
+        pop: b64u(ed25519Sign(key.seed, registrationMessage(id, hash, key.publicKey))) };
+      const response = await request(p, io, 'POST', `${path}/registrations`, body);
+      let result: Record<string, unknown>;
+      try { result = parseQvJson(response) as Record<string, unknown>; }
+      catch { throw new FailError('enrollment response is invalid; outcome unknown; inspect server state'); }
+      if (!result || result['voter_kid'] !== b64u(authorKeyId('ed25519', key.publicKey)) || (result['status'] !== 'approved' && result['status'] !== 'pending')) {
+        throw new FailError('enrollment response does not identify this voter; outcome unknown; inspect server state');
+      }
+      printJson(io, { voter_kid: result['voter_kid'], status: result['status'] });
+      return EXIT.ok;
+    } finally { wipe(key.seed); }
+  } finally { wipe(token); wipe(hash); }
+}
+export async function cmdOnlineRegistrationPreview(argv: string[], io: Io): Promise<number> {
+  const p = args(argv, { id: 'value', ...AUTH });
+  return jsonRequest(p, io, 'GET', `${electionPath(p)}/registration-migration`, undefined, true);
 }
 export async function cmdOnlineElectionCreate(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { ...AUTH, org: 'value', title: 'value', access: 'value', 'idempotency-key': 'value' });

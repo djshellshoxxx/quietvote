@@ -426,6 +426,13 @@ export function startApp(env: AppEnv): void {
     const tabs = h('ul', { class: 'tabs' }, ...([...(['overview', 'rules', 'key', 'vote', 'receipt', 'results', 'admin'] as const), ...(L.ctx?.manifest.spoil_trustee_decrypt === true ? (['spoils'] as const) : [])]).map((v) =>
       h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + (frag.token ? location.hash : ''), t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results', admin: 'qv.nav.admin', spoils: 'qv.spoil.title' } as const)[v]), '', r))));
     const head = [electionHeader(L), tabs, liveLine];
+    // Enrollment precedes DKG/roll commitment. This path cannot cast or claim roll membership.
+    if (L.ctx === undefined && frag.token && ['overview', 'rules', 'key'].includes(sub)) {
+      const summary = await L.api.election(L.apiId);
+      if (!currentRoute(epoch)) return;
+      if (summary.election_id !== L.apiId || summary.registration_scheme !== 'hashed-pop-v1') return render(t('qv.key.title'), ...head, h('p', { class: 'error' }, t('qv.key.enrollmentUnavailable')));
+      return keyView(L, undefined, head, frag.token);
+    }
     if (L.ctx === undefined) return render(t('qv.shell.electionTitle'), ...head, errorBox('E-ORG-MANIFEST', { detail: L.ctxError ?? '' }));
     const ctx = L.ctx;
     if (sub === 'overview') {
@@ -474,7 +481,7 @@ export function startApp(env: AppEnv): void {
     throw new Error('voter list is too large');
   }
 
-  function keyView(L: Loaded, ctx: ElectionContext, head: Child[], token: Uint8Array | undefined): void {
+  function keyView(L: Loaded, ctx: ElectionContext | undefined, head: Child[], token: Uint8Array | undefined): void {
     const slot = keySlot(L.apiId);
     const status = h('div', { class: 'hint' });
     const out = h('div', {});
@@ -505,12 +512,12 @@ export function startApp(env: AppEnv): void {
           if (!registered) throw new Error('invalid registration response');
         } catch (e) {
           clear(out);
-          add(out, [errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close })]);
+          add(out, [e instanceof ApiError && e.code === 'REGISTRATION_UNAVAILABLE' ? h('p', { class: 'error' }, t('qv.key.enrollmentUnavailable')) : errorFor(e, { opens: ctx?.manifest.voting_open, closes: ctx?.manifest.voting_close })]);
           return;
         }
       }
       clear(out);
-      const onRoll = token ? false : checkRoll(await fullRoll(L), ctx.rollRootHex, bytesToHex(signer.publicKey)).onRoll;
+      const onRoll = token || !ctx ? false : checkRoll(await fullRoll(L), ctx.rollRootHex, bytesToHex(signer.publicKey)).onRoll;
       add(out, [h('p', {}, t(registered ? 'qv.key.registered' : onRoll ? 'qv.key.onRoll' : 'qv.key.notYetRoll')),
         link(electionPath(L.apiId, 'vote'), t('qv.nav.vote'), 'btn primary')]);
     };

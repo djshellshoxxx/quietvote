@@ -158,6 +158,7 @@ export const DE = {
   'qv.key.lockWarn': 'Ihr Schlüssel wird wegen Inaktivität in {seconds, plural, one {# Sekunde} other {# Sekunden}} gesperrt.',
   'qv.key.stayUnlocked': 'Entsperrt bleiben',
   'qv.key.lockNow': 'Schlüssel jetzt sperren',
+  'qv.key.enrollmentUnavailable': 'Diese Abstimmung benötigt eine aktualisierte Einladung. Wenden Sie sich an den Organisator.',
   'qv.key.registered': 'Ihr Schlüssel ist registriert. Der Organisator fügt ihn der Wählerliste hinzu.',
   'qv.key.onRoll': 'Sie stehen auf der Wählerliste.',
   'qv.key.notYetRoll': 'Ihr Schlüssel steht noch nicht auf der Wählerliste.',

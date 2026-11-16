@@ -1,11 +1,11 @@
-// Consolidation regressions exercise actual HTTP admission and the retained registration-contract blocker.
+// Consolidation regressions exercise actual HTTP admission and the approved invite-bound registration contract.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { b64u, cosignLine, unb64u } from '@quietvote/board';
-import { bytesToHex, jcs, sha256, utf8 } from '@quietvote/crypto';
+import { bytesToHex, jcs } from '@quietvote/crypto';
 import { ballotCode, buildTally, makeCast, makeSpoil, signRecord, verifyElectionText, type Manifest } from '@quietvote/protocol';
 import { registrationBody } from '../../web/src/flow/onboarding.ts';
 import { createSigner } from '../../web/src/key/signer.ts';
@@ -14,23 +14,22 @@ import { STATIC_CSP } from '../src/http.ts';
 import { exportQvb, importAndWait } from './helpers/full.ts';
 import { World, kp } from './helpers/world.ts';
 
-test('real server: permitted registration, client-contract blocker, voting, stored-aggregate draft after eviction, tally and export', { timeout: 300_000 }, async (t) => {
+test('real server: actual web registration, voting, stored-aggregate draft after eviction, tally and export', { timeout: 300_000 }, async () => {
   const w = new World({ seed: 'consolidation-http', n: 3, t: 2, voters: 3 });
   await w.start();
   try {
     await w.setupOrgAndElection();
-    // B3-01 remains an owner blocker: reproduce the actual web helper's mismatch without changing either contract.
+    // QV-ADR-028: the real browser request registers the first voter; no fixture PoP is substituted.
     const invite = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { count: 1 }, w.owner, w.idemKey());
     assert.equal(invite.status, 201, invite.text);
-    const signer = await createSigner(sha256(utf8('consolidation-web-key')), { preferWebCrypto: false });
+    const signer = await createSigner(w.voters[0]!.secretKey.slice(), { preferWebCrypto: false });
     try {
       const body = await registrationBody({ apiElectionId: w.electionId, token: unb64u(invite.json.invites[0].code)!, signer });
-      const refused = await w.req('POST', `/api/v1/elections/${w.electionId}/registrations`, body);
-      assert.equal(refused.status, 401);
-      assert.equal(refused.json.code, 'BAD_SIGNATURE');
-      t.diagnostic('B3-01 unresolved: actual web registrationBody is rejected with 401 BAD_SIGNATURE; raw-token server-contract registration below succeeds.');
+      const registered = await w.req('POST', `/api/v1/elections/${w.electionId}/registrations`, body);
+      assert.equal(registered.status, 201, registered.text);
+      assert.equal(registered.json.status, 'approved');
     } finally { signer.lock(); }
-    await w.registerVoters();
+    await w.registerVoters(1);
     const roll = (await w.get(`/api/v1/elections/${w.electionId}/roll?limit=2`)).json;
     const rollRest = (await w.get(`/api/v1/elections/${w.electionId}/roll?limit=2&cursor=${roll.next_cursor}`)).json;
     assert.deepEqual([...roll.items, ...rollRest.items].map((v) => bytesToHex(unb64u(v.pk)!)), w.rollHex);

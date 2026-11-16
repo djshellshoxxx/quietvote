@@ -64,7 +64,7 @@ failure during a mutation also exit 1 and explicitly report an unknown outcome; 
 Commands never retry a mutation automatically. Downloads use mode 0600, never overwrite an existing path,
 and are labelled `verified: false` until checked separately.
 
-Remaining workflow gaps: organization account enrollment, registration (owner-held B3-01), automatic construction of lifecycle bodies and independent tally-draft checking, automatic receipt-proof checks, and
+Remaining workflow gaps: organization account enrollment, independent tally-draft checking, automatic receipt-proof checks, and
 backup/restore commands. This command group supplies transport adapters; it does not resolve those gaps.
 
 The online integration test exports an actual successful three-voter election and runs both the TypeScript CLI
@@ -197,3 +197,14 @@ latest independent view. The summary retains `witness_quorum_verified: false`, `
 `signed: false` and `admitted: false`. Existing separate-organizer archive refusal remains in force.
 For open/close signing, also download the content JSON export for the existing `sign-record --election`
 context check; the unsigned proposal itself is derived from the authenticated `.qvb` history.
+
+### Voter enrollment and legacy invitation preview
+
+```sh
+qv online enroll --server https://board.example --id <32-hex-api-id> --key voter.qvkey --invite-file invite.txt --passphrase-file pass.txt --json
+qv online registration-preview --server https://board.example --id <32-hex-api-id> --key organizer.qvkey --audience qv:INSTANCE_ID@https://board.example --passphrase-file pass.txt --json
+```
+
+`invite.txt` is a bounded regular UTF-8 file containing one canonical issued 16-byte base64url token. Tokens and passphrases are not accepted in command arguments. Enrollment checks the requested election ID/origin and `hashed-pop-v1` scheme before reading the token or private key, signs the invite/election/key binding, and reports success only for the expected voter identity. Unknown/legacy schemes refuse; network ambiguity is not automatically retried. The preview is read-only and cannot revoke or migrate old invitations.
+
+The shipped executable enrollment test covers a real server before manifest publication. It does not resolve D99 pinned-roll membership, group labels, or the deliberately absent invite-to-voter linkage.

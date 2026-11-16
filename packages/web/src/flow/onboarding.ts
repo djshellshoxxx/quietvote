@@ -1,5 +1,6 @@
 // Voter onboarding services (QV-19 §6.1): key generation, import, restore, unlock, registration.
-import { bytesToHex, ed25519Keypair, hexToBytes, sha256, systemRng, utf8, type Rng } from '@quietvote/crypto';
+import { registrationMessage } from '@quietvote/protocol';
+import { bytesToHex, ed25519Keypair, hexToBytes, sha256, systemRng, type Rng } from '@quietvote/crypto';
 import type { RegistrationBody } from '../api/types.ts';
 import {
   DEFAULT_PARAMS, KeyError, adaptParams, defaultDeps, needsRewrap, parseContainer, serializeContainer, unwrapSeed, wrapSeed,
@@ -130,15 +131,16 @@ export async function unlockKey(a: { storage: DeviceStorage; slot: string; passp
   }
 }
 
-const REG_DOMAIN = utf8('QV-REG-v1\0');
+// Exact enrollment framing is shared with CLI/server (QV-ADR-028).
 
 /**
- * Registration request (QV-19 §6.1): `invite_code` carries SHA-256(token) so the server never receives a usable credential
- * (REQ-010); the proof of possession signs (election id, SHA-256(token), pk) under the registration domain.
+ * Registration request (QV-19 §6.1): `invite_code` carries SHA-256(token), itself a usable enrollment bearer.
+ * The raw fragment token is omitted from redemption; the proof of possession signs (election id, SHA-256(token), pk) under the registration domain.
  */
 export async function registrationBody(a: { apiElectionId: string; token: Uint8Array; signer: Signer }): Promise<RegistrationBody> {
+  if (a.token.length !== 16) throw new Error('invalid invite token');
   const h = sha256(a.token);
-  const msg = new Uint8Array([...REG_DOMAIN, ...utf8(a.apiElectionId), 0, ...h, ...a.signer.publicKey]);
+  const msg = registrationMessage(a.apiElectionId, h, a.signer.publicKey);
   return { invite_code: inviteHash(a.token), pk: b64uEncode(a.signer.publicKey), alg: 'ed25519', pop: b64uEncode(await a.signer.sign(msg)) };
 }
 

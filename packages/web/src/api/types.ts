@@ -11,6 +11,7 @@ export interface Instance {
 }
 
 export interface ElectionSummary {
+  registration_scheme?: string;
   election_id: string;
   origin: string;
   /** Log public key, base64url. */

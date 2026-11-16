@@ -60,7 +60,7 @@ sequenceDiagram
 - Registration of a new organization key uses the same flow with `purpose: "register"` and the public key supplied inline (proof of possession).
 
 ### 3.3 Voter
-- **Registration** (`POST /elections/{id}/registrations`): body carries a one-time `invite_code` (128-bit; sent out-of-band by the organizer), the voter's new public key `pk`, and a proof-of-possession signature over `(election_id, pk)`. The code authorizes *only* registering one key.
+- **Registration** (`POST /elections/{id}/registrations`, QV-ADR-028): fresh elections advertise `registration_scheme: "hashed-pop-v1"`. The organizer issues a canonical unpadded base64url code for 16 random bytes `T`; redemption sends `invite_code = b64u(SHA-256(T))` (43 characters), `pk = b64u(P)` (32-byte strict Ed25519 key), `alg: "ed25519"`, and the 64-byte Ed25519 `pop`. Exact signed bytes are `UTF8("QV-REG-v1") || 0x00 || UTF8(api_election_id) || 0x00 || SHA-256(T) || P`: 107 bytes for the 32-character lowercase-hex API ID. The raw token is omitted from redemption; its hash is still a usable bearer. The server stores a separately domain-separated digest, detailed in the [implementation addendum](reports/registration-implementation-20261116.md). Schema upgrades retain old elections as `legacy-raw-v1`; a request is checked against exactly its persisted scheme, without signature fallback. Modern web/CLI enrollment refuses absent, unknown and legacy schemes before transmitting the bearer. New invites default to 14 days; explicit stored expiries remain authoritative. Unknown, revoked and used-with-new-key invitations return `409 INVITE_USED`; expired invitations return `422 INVITE_EXPIRED`.
 - **Ballot casting and revoting**: `POST /elections/{id}/log/entries` with `type=ballot`; authorization = valid signature by a key in the roll committed by the `roll_commit` entry. No bearer is needed or accepted.
 - Voters hold no server session. Anything a voter may read is public (Phase 1). Phase 2 (blind tokens, QV-ADR-005) changes the ballot author to a token key; same endpoint.
 
@@ -143,7 +143,7 @@ All errors: `Content-Type: application/problem+json`.
 ### 4.4 Idempotency
 - **Log appends** are naturally idempotent: identical `(header, body)` ⇒ `200` with original receipt; same `(author,type,author_nonce)` with different bytes ⇒ `409 NONCE_REUSE`. Clients retry safely after network errors with the **same bytes**.
 - **Other mutating `POST`/`PUT`/`PATCH`/`DELETE`** accept `Idempotency-Key: <8–128 chars>`; required on `POST /orgs`, `POST …/elections`, `…/invites`, `…/exports`, `/imports`. Same key + same request hash ⇒ stored response replayed (header `Idempotent-Replay: true`) for 24 h; same key + different request ⇒ `422 IDEMPOTENCY_MISMATCH`; concurrent in-flight ⇒ `409 IDEMPOTENCY_IN_PROGRESS`. Scope of a key: `(principal, key)`. If an internal failure or restart leaves the original outcome unknown, the server retains the request binding and returns `409 STATE_CONFLICT` with reason `IDEMPOTENCY_INTERRUPTED` and `retryable: false` until the original expiry. The operation may already have committed; reconcile resources/jobs before issuing a new request.
-- `POST registrations` is idempotent on `(invite_code, pk)`: repeating with the same pk returns the original result; a different pk → `409 INVITE_USED`.
+- `POST registrations` preserves the current privacy constraint of no stored invite-to-voter relation. A used invite with an already registered key returns that voter status; a new key receives `409 INVITE_USED`. This prevents creating a second voter but cannot prove that a retry used the original invite/key pair (B2-10 remains open for that linkage decision). Do not describe cross-invite existing-key success as proof of original redemption. Clients accept success only when `voter_kid` matches their submitted key and status is `pending` or `approved`.
 - `PUT`/`DELETE` are idempotent by definition.
 
 ### 4.5 Versioning and compatibility
@@ -557,9 +557,9 @@ Shared definitions (`$defs`) — abbreviated; complete files live in `packages/p
                      "expires_at": {"$ref": "common.json#/$defs/Ts"}, "deliver": {"type": "boolean", "default": false}},
       "oneOf": [{"required": ["count"]}, {"required": ["items"]}]},
     "Registration": {"type": "object", "required": ["invite_code", "pk", "alg", "pop"], "additionalProperties": false,
-      "properties": {"invite_code": {"type": "string", "minLength": 22, "maxLength": 64},
+      "properties": {"invite_code": {"type": "string", "minLength": 43, "maxLength": 43, "pattern": "^[A-Za-z0-9_-]{43}$"},
                      "pk": {"$ref": "common.json#/$defs/B64u"}, "alg": {"$ref": "common.json#/$defs/Alg"},
-                     "pop": {"$ref": "common.json#/$defs/B64u", "description": "signature over (election_id, pk) under domain QV-REG-v1 (QV-16)"}}},
+                     "pop": {"$ref": "common.json#/$defs/B64u", "description": "Ed25519 over UTF8(QV-REG-v1), NUL, UTF8(api_election_id), NUL, raw SHA256(token), raw pk (QV-ADR-028)"}}},
     "RegistrationResult": {"type": "object", "required": ["voter_kid", "status"],
       "properties": {"voter_kid": {"$ref": "common.json#/$defs/KeyId"}, "status": {"enum": ["pending", "approved"]}}},
     "Voter": {"type": "object", "required": ["voter_kid", "pk", "alg", "status"],

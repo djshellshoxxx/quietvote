@@ -5,7 +5,7 @@ import {
   type EntryHeader, type Receipt, type WitnessPolicy,
 } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, ed25519Keypair, ed25519Sign, ed25519Verify, hexToBytes, jcs, sha256, utf8 } from '@quietvote/crypto';
-import { PROTO_ID } from '@quietvote/protocol';
+import { PROTO_ID, registrationMessage } from '@quietvote/protocol';
 import { audienceOf, authenticate, keyIdOf } from './auth.ts';
 import { resolveConfig, type ServerConfig, type ServerOptions } from './config.ts';
 import { ControlDb } from './controldb.ts';
@@ -23,6 +23,7 @@ import { Logger } from './logger.ts';
 import { ElectionPool } from './pool.ts';
 import type { OperationJournal } from './operation-receipts.ts';
 import { ApiError, conflict, forbidden, notFound } from './problem.ts';
+import { canonicalB64u, storedInviteHash } from './registration.ts';
 import { FailureCounter, RateLimiter } from './ratelimit.ts';
 import { SseHub } from './sse.ts';
 import { TargetRejected } from './ssrf.ts';
@@ -380,7 +381,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
         status: 200, etag: `"${rt.log.size}"`,
         json: {
           election_id: rt.id, origin: rt.origin, title: rt.st.manifest?.title ?? row.title, state: rt.state, access: row.access, log_pk: b64u(rt.logPk),
-          server_pk: b64u(rt.srvPk), tree_size: rt.log.size, created_at: toIso(row.created_at / 1000),
+          registration_scheme: row.registration_scheme, server_pk: b64u(rt.srvPk), tree_size: rt.log.size, created_at: toIso(row.created_at / 1000),
           ...(rt.st.mh ? { manifest_hash: b64u(rt.st.mh) } : {}),
         },
       };
@@ -541,7 +542,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       }));
       if ((b.count === undefined) === (b.items === undefined)) throw new ApiError(400, 'BAD_REQUEST', 'exactly one of count or items is required');
       if (b.deliver) throw new ApiError(422, 'VALIDATION_FAILED', 'server-side delivery is not configured');
-      let exp: number | null = null;
+      let exp: number | null = nowMs() + 14 * 86_400_000;
       if (b.expires_at !== undefined) {
         exp = Date.parse(b.expires_at);
         if (Number.isNaN(exp)) throw new ApiError(400, 'BAD_REQUEST', 'bad expires_at');
@@ -559,7 +560,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
           const id = b64u(randomBytes(16)).slice(0, 26).toLowerCase().replace(/[^a-z2-7]/g, 'a').padEnd(26, 'a');
           const it = b.items?.[i];
           rows.push({
-            invite_id: id, code_hash: sha256(utf8(`QV-INVITE-v1\0${code}`)), label_enc: it?.label ? seal(dek, utf8(it.label), 'label') : null,
+            invite_id: id, code_hash: rt.edb.row().registration_scheme === 'hashed-pop-v1' ? storedInviteHash(sha256(unb64u(code)!)) : sha256(utf8(`QV-INVITE-v1\0${code}`)), label_enc: it?.label ? seal(dek, utf8(it.label), 'label') : null,
             contact_enc: it?.contact ? seal(dek, utf8(it.contact), 'contact') : null, state: 'issued' as const, created_at: nowMs(), expires_at: exp,
           });
           out.push({ invite_id: id, code, ...(it?.label ? { label: it.label } : {}) });
@@ -598,6 +599,18 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     },
   });
   add({
+    method: 'GET', path: '/api/v1/elections/:id/registration-migration', cls: 'M', auth: 'sig',
+    handler: async (c) => {
+      const rt = await orgElection(c), scheme = rt.edb.row().registration_scheme;
+      const outstanding = Number(rt.edb.db.prepare("SELECT COUNT(*) AS n FROM voter_invite WHERE state IN ('issued','sent')").get()!['n']);
+      return { status: 200, json: { election_id: rt.id, registration_scheme: scheme,
+        target_scheme: 'hashed-pop-v1', outstanding_invites: outstanding,
+        registered_voters: rt.edb.voterCount(), automatic_conversion: false,
+        disposition: scheme === 'hashed-pop-v1' ? 'already_current' : 'legacy_preserved',
+        next_steps: scheme === 'hashed-pop-v1' ? [] : ['Keep existing election and invites on their recorded legacy scheme.', 'Use a new hashed-pop-v1 election for modern enrollment.', 'A future explicit cutover must revoke and reissue outstanding invites; stored hashes cannot be converted.'] } };
+    },
+  });
+  add({
     method: 'POST', path: '/api/v1/elections/:id/registrations', cls: 'A', auth: 'none', body: 'json', maxBody: 4096,
     handler: async (c) => {
       const rt = await rtOf(c);
@@ -611,12 +624,18 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
         env.failures.fail(`reg:${c.bucket}`);
         throw e;
       };
-      const pk = unb64u(b.pk);
-      const pop = unb64u(b.pop);
+      const scheme = rt.edb.row().registration_scheme;
+      if (scheme !== 'hashed-pop-v1' && scheme !== 'legacy-raw-v1') throw new ApiError(503, 'REGISTRATION_UNAVAILABLE', 'unknown registration scheme');
+      const pk = canonicalB64u(b.pk, 32);
+      const pop = canonicalB64u(b.pop, 64);
       if (!pk || pk.length !== 32 || !pop || !ed25519IsStrictPoint(pk)) return fail(new ApiError(400, 'BAD_REQUEST', 'pk is not a strict Ed25519 key'));
-      if (!ed25519Verify(pk, pop, new Uint8Array([...utf8(`QV-REG-v1\0${rt.id}\0`), ...pk]))) return fail(new ApiError(401, 'BAD_SIGNATURE', 'proof of possession invalid'));
-      const inv = rt.edb.inviteByHash(sha256(utf8(`QV-INVITE-v1\0${b.invite_code}`)));
-      if (!inv || inv.state === 'revoked') return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code is not valid'));
+      const bearer = canonicalB64u(b.invite_code, scheme === 'hashed-pop-v1' ? 32 : 16);
+      if (!bearer) return fail(new ApiError(400, 'BAD_REQUEST', 'invite encoding does not match the election registration scheme'));
+      const message = scheme === 'hashed-pop-v1' ? registrationMessage(rt.id, bearer, pk) : new Uint8Array([...utf8(`QV-REG-v1\0${rt.id}\0`), ...pk]);
+      if (!ed25519Verify(pk, pop, message)) return fail(new ApiError(401, 'BAD_SIGNATURE', 'proof of possession invalid'));
+      const inv = rt.edb.inviteByHash(scheme === 'hashed-pop-v1' ? storedInviteHash(bearer) : sha256(utf8(`QV-INVITE-v1\0${b.invite_code}`)));
+      if (!inv || inv.state === 'revoked') return fail(conflict('invite code is not valid', 'INVITE_USED'));
+      if (inv.state === 'expired') return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
       if (inv.expires_at !== null && inv.expires_at < nowMs()) return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
       const kid = b64u(authorKeyId('ed25519', pk));
       const existing = rt.edb.voter(kid);

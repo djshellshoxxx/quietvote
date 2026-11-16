@@ -399,6 +399,8 @@ CREATE TABLE voter (                         -- the roll; projection of registra
 ) STRICT;
 ```
 
+Schema 9 adds immutable-by-API `election.registration_scheme`, with legacy rows defaulting to `legacy-raw-v1`; new elections explicitly select `hashed-pop-v1`. The modern invite `code_hash` is `SHA-256(UTF8("QV-INVITE-HASH-v1") || 0x00 || SHA-256(T))`, where `T` is the 16-byte random token. This differs from both the usable wire bearer and the legacy digest of encoded code text. Existing digests cannot be converted into modern ones. The private restore floor preserves the recorded scheme even for elections without invitation rows. See the [migration boundary](reports/registration-implementation-20261116.md).
+
 Unlinkability note: the invite→voter relation is deliberately **not stored**. Registration presents invite code + public key in one request; the server marks the invite `registered` and inserts a voter row in the same transaction, with `registered_at` hour-rounded and no foreign key. An organizer who delivers each invite to a known person *and* observes the order of registrations could still correlate; the doc states this (non-claim); Phase 2 blind tokens (ADR-005) remove it.
 
 ```sql

@@ -158,6 +158,7 @@ export const FR = {
   'qv.key.lockWarn': 'Votre clé se verrouillera dans {seconds, plural, one {# seconde} other {# secondes}} en raison de l’inactivité.',
   'qv.key.stayUnlocked': 'Rester déverrouillé',
   'qv.key.lockNow': 'Verrouiller la clé maintenant',
+  'qv.key.enrollmentUnavailable': 'Ce vote nécessite une invitation mise à jour. Contactez son organisateur.',
   'qv.key.registered': 'Votre clé est enregistrée. L’organisateur l’ajoutera à la liste des électeurs.',
   'qv.key.onRoll': 'Vous êtes sur la liste des électeurs.',
   'qv.key.notYetRoll': 'Votre clé ne figure pas encore sur la liste des électeurs.',

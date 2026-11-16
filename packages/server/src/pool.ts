@@ -128,6 +128,7 @@ export class ElectionPool {
           srv_pk: srvKp.publicKey, srv_sk_enc: seal(dek, srvKp.secretKey, 'srv_sk'), access, read_key_hash: readKeyHash, title, org_id: orgId,
           created_at: this.env.nowMs(),
         });
+        db.db.prepare("UPDATE election SET registration_scheme='hashed-pop-v1'").run();
         committed?.(db, result);
       });
     } catch (e) {

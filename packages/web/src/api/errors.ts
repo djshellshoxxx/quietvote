@@ -47,6 +47,7 @@ export function uxCodeFor(e: unknown, submitting = false): UxCode {
     case 'RATE_LIMITED': return 'E-API-RATE';
     case 'LOG_UNAVAILABLE':
     case 'QUARANTINED':
+    case 'REGISTRATION_UNAVAILABLE':
     case 'MAINTENANCE': return 'E-API-UNAVAILABLE';
     case 'READ_KEY_REQUIRED': return 'E-READ-KEY';
     default: return 'E-GEN-UNKNOWN';

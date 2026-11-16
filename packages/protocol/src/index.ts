@@ -1,6 +1,7 @@
 export * from './types.ts';
 export * from './schema.ts';
 export * from './records.ts';
+export * from './registration.ts';
 export * from './merkle.ts';
 export * from './manifest.ts';
 export * from './dkg.ts';

@@ -198,14 +198,19 @@ export class World {
     this.logPkHex = r.json.log_pk_hex;
   }
 
-  async registerVoters(): Promise<void> {
-    const inv = await this.signed('POST', `/api/v1/elections/${this.electionId}/invites`, { count: this.voters.length }, this.owner, this.idemKey());
+  registrationBody(code: string, key: Ed25519Keypair): { invite_code: string; pk: string; alg: 'ed25519'; pop: string } {
+    const hash = sha256(unb64u(code)!);
+    const message = new Uint8Array([...utf8(`QV-REG-v1\0${this.electionId}\0`), ...hash, ...key.publicKey]);
+    return { invite_code: b64u(hash), pk: b64u(key.publicKey), alg: 'ed25519', pop: b64u(ed25519Sign(key.secretKey, message)) };
+  }
+
+  async registerVoters(skip = 0): Promise<void> {
+    const inv = await this.signed('POST', `/api/v1/elections/${this.electionId}/invites`, { count: this.voters.length - skip }, this.owner, this.idemKey());
     if (inv.status !== 201) throw new Error(`invites ${inv.status} ${inv.text}`);
     const codes: { code: string }[] = inv.json.invites;
-    for (let i = 0; i < this.voters.length; i++) {
+    for (let i = skip; i < this.voters.length; i++) {
       const v = this.voters[i]!;
-      const pop = ed25519Sign(v.secretKey, new Uint8Array([...utf8(`QV-REG-v1\0${this.electionId}\0`), ...v.publicKey]));
-      const r = await this.req('POST', `/api/v1/elections/${this.electionId}/registrations`, { invite_code: codes[i]!.code, pk: b64u(v.publicKey), alg: 'ed25519', pop: b64u(pop) });
+      const r = await this.req('POST', `/api/v1/elections/${this.electionId}/registrations`, this.registrationBody(codes[i - skip]!.code, v));
       if (r.status !== 201) throw new Error(`register ${i}: ${r.status} ${r.text}`);
     }
     this.rollHex = this.voters.map((v) => H(v.publicKey)).sort();

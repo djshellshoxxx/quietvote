@@ -100,7 +100,7 @@ sequenceDiagram
   V->>V: Verify proof against manifest root; display "You are on the roll"
 ```
 
-Rules: the invite token is single-use, 128 bits, hashed (SHA-256) before leaving the device so the server stores no usable credential; no email or phone number is requested by the client; the key never leaves the device unwrapped. Voter is shown their fingerprint and told to check it against the published roll after freeze.
+Rules: the invite token is single-use, 128 bits, hashed (SHA-256) before its redemption request. This hash is itself an enrollment bearer, so the server stores a further domain-separated hash of it ([2026-11-16 implementation](reports/registration-implementation-20261116.md)); the server originally generates and returns the raw code during issuance. Modern clients refuse unknown/legacy registration schemes before sending credentials; no email or phone number is requested by the client; the key never leaves the device unwrapped. Voter is shown their fingerprint and told to check it against the published roll after freeze.
 
 ### 6.2 Benaloh cast-or-audit flow
 

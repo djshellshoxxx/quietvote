@@ -2,6 +2,8 @@
 // No cookies, no ambient credentials: organizer management calls carry a QV-08 signed request (signing.ts); log appends are
 // self-authenticating and never carry a credential (QV-09-REQ-005).
 import { utf8 } from '@quietvote/crypto';
+import { authorKeyId, b64u, unb64u } from '@quietvote/board';
+import { logOrigin } from '@quietvote/protocol';
 import { ApiError, BAD_RESPONSE, NETWORK, TIMEOUT, isRetryable } from './errors.ts';
 import { qvSigHeader, type RequestSigning } from './signing.ts';
 import type {
@@ -188,7 +190,13 @@ export class ApiClient {
 
   // ---- voter
   async register(id: string, body: RegistrationBody): Promise<RegistrationResult> {
-    return this.json(await this.req('POST', `${API}/elections/${enc(id)}/registrations`, { body }));
+    const election = await this.election(id);
+    if (election.election_id !== id || election.origin !== logOrigin({ election_id: id }) || election.registration_scheme !== 'hashed-pop-v1') throw new ApiError({ status: 409, code: 'REGISTRATION_UNAVAILABLE' });
+    const key = unb64u(body.pk);
+    if (!key || key.length !== 32) throw new ApiError({ status: 400, code: BAD_RESPONSE });
+    const result = await this.json<RegistrationResult>(await this.req('POST', `${API}/elections/${enc(id)}/registrations`, { body }));
+    if (!result || result.voter_kid !== b64u(authorKeyId('ed25519', key)) || !['pending', 'approved'].includes(result.status)) throw new ApiError({ status: 200, code: BAD_RESPONSE });
+    return { voter_kid: result.voter_kid, status: result.status };
   }
 
   /** Appends one entry. Identical bytes are idempotent (QV-09 §4.4), so retries resend exactly the same body. */

@@ -45,7 +45,7 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
 * **Roll**: voters auto-approved on registration (no approval policy in the manifest); roll_commit must equal the server's
   approved set and its size must be >= the effective `min_counted_ballots`. Invite->voter link is not stored; replay of
   `(code, same pk)` returns the voter id. Idempotent replay of `POST invites` returns invite ids with `code_withheld:true`
-  (codes are never stored). Registration PoP message: `"QV-REG-v1\0" election_id "\0" pk`.
+  (codes are never stored). Fresh elections use QV-ADR-028 hashed bearer and invite-bound PoP; legacy elections retain their recorded raw-v1 scheme. See the 2026-11-16 addendum below.
 * Spoil `trustees` mode (QV-ADR-020) is accepted only if the manifest enables it; its share relay, storage and tally inclusion are implemented below.
 * `reveal` verification (`verifySpoilReveal`) is done at admission (costly); rejected with E_SPOIL_MISMATCH.
 * Bucket for IPv6 is /64 (finer than the spec's /56; address expansion prevents compressed text leaking host bits into the bucket);
@@ -465,3 +465,9 @@ witness freshness, offsite backup custody or power-loss qualification.
 See [the integrated continuation](../../docs/handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md)
 and its server/private-recovery/fresh-review handoffs for the source-specific
 tests and remaining operational boundaries.
+
+### Registration implementation — 2026-11-16 (QV-ADR-028, B2-10)
+
+Fresh elections now use `hashed-pop-v1`, with exact existing web PoP bytes and a distinct verifier hash at rest. Schema 9 preserves existing rows as legacy; no opportunistic signature fallback or destructive migration exists. The authenticated migration-preview route reports outstanding invitations and non-convertibility. Web enrollment works before DKG/roll commitment; the CLI offers token-file enrollment. New invites default to 14 days; unknown/revoked matches used 409 and expired 422. These changes implement the recorded approvals and supersede the historical B3-01 blanket hold above for this narrow endpoint.
+
+D99 pinned-roll membership, group/label enrollment and original invite-to-voter retry linkage remain separate unresolved contracts. External protocol/security review remains required. Exact framing, migration, validation and limits: [implementation report](../../docs/reports/registration-implementation-20261116.md).
