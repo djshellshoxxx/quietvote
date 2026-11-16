@@ -254,3 +254,10 @@ This bounds one open; concurrent processes still require an operator memory
 budget. No host memory benchmark or global process admission limit is claimed.
 Regression coverage is in `test/kdf-budget.test.ts` and crypto second-wave tests.
 Refs: QV-17-REQ-021.
+
+## Shipped public-input preparation — 2026-11-16
+
+The executable acceptance test now calls `qv election prepare` for ceremony `.qvl` inputs and release
+JSON with complete board evidence. It no longer unpacks `.qvb` files in the test harness. Trustee release
+checks, KDF defaults, key custody, protocol rules and the organizer/coordinator authority boundary are
+unchanged. Coordinator setup and voter actions remain harness operations.

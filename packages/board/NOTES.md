@@ -79,3 +79,12 @@ Where QV-18 is ambiguous or depends on QV-16 (not yet written), the safest readi
     11. `MemoryBoardStore.putCheckpoint` compares full roots with `bytesEqual` and requires 32-byte roots.
     12. `isPow2` (merkle.ts, now exported for tests) uses exact arithmetic; `Math.log2(2**52+1)` rounds to 52.
     Not implemented on purpose: `broken_promise` second branch (F11) and origin base32-vs-hex spec wording (F13) are spec questions, left as is.
+
+## Shared archive transport — 2026-11-16
+
+The strict deterministic tar reader/writer now lives in `src/tar.ts`; the server path re-exports the
+same functions. `readChecksummedArchive` shares the server's existing strict tar and SHA256SUMS checks
+with the offline CLI. These pure helpers return in-memory byte views; they perform no extraction,
+filesystem access, network access or cryptographic trust decision. Callers bound input bytes and file
+counts, then verify the manifest, authors, board and protocol for their own workflow. This supersedes
+the earlier note assigning all container/checksum handling to CLI/server. No new dependency is added.

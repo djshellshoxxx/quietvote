@@ -105,7 +105,29 @@ CREATE INDEX job_state ON job(state, created_at);
 ALTER TABLE election_registry ADD COLUMN quarantine TEXT;
 `,
   },
+  {
+    version: 5,
+    name: 'gossip_health',
+    // Bounded to configured peer hashes plus one scheduler row; never stores URLs, IPs or election identifiers.
+    sql: `
+CREATE TABLE gossip_health (
+  peer_id TEXT PRIMARY KEY,
+  last_attempt_at INTEGER, last_success_at INTEGER, last_failure_at INTEGER,
+  consecutive_failures INTEGER NOT NULL DEFAULT 0 CHECK (consecutive_failures>=0),
+  last_error TEXT
+) STRICT;
+`,
+  },
 ];
+
+export interface GossipHealthRow {
+  peer_id: string;
+  last_attempt_at: number | null;
+  last_success_at: number | null;
+  last_failure_at: number | null;
+  consecutive_failures: number;
+  last_error: string | null;
+}
 
 export interface OutboxRow {
   seq: number;
@@ -185,6 +207,22 @@ export interface RegistryRow {
 
 export class ControlDb {
   readonly db: DatabaseSync;
+
+  configureGossipHealth(peers: string[]): void {
+    const ids = [...new Set([...peers, 'scheduler'])];
+    tx(this.db, () => {
+      run(this.db, `DELETE FROM gossip_health WHERE peer_id NOT IN (${ids.map(() => '?').join(',')})`, ...ids);
+      for (const id of ids) run(this.db, 'INSERT OR IGNORE INTO gossip_health(peer_id) VALUES (?)', id);
+    });
+  }
+
+  gossipHealth(): GossipHealthRow[] { return all(this.db, 'SELECT * FROM gossip_health ORDER BY peer_id'); }
+
+  recordGossipHealth(peerId: string, error: string | null): void {
+    const now = this.now();
+    if (error === null) run(this.db, `UPDATE gossip_health SET last_attempt_at=?, last_success_at=?, consecutive_failures=0, last_error=NULL WHERE peer_id=?`, now, now, peerId);
+    else run(this.db, `UPDATE gossip_health SET last_attempt_at=?, last_failure_at=?, consecutive_failures=MIN(consecutive_failures+1,2147483647), last_error=? WHERE peer_id=?`, now, now, error, peerId);
+  }
   private readonly now: () => number;
   constructor(dataDir: string, now: () => number, appVersion: string) {
     this.now = now;

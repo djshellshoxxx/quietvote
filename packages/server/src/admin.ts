@@ -1,3 +1,4 @@
+import { gossipHealthStatus } from './gossip-health.ts';
 // Instance administration (QV-09 §10 `/admin/*`): status, listing, backups, self-audit, quarantine clearing, deletion.
 import { createHash } from 'node:crypto';
 import { chmodSync, mkdirSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
@@ -54,6 +55,7 @@ export function adminStatus(env: Env, pool: ElectionPool): Record<string, unknow
     instance_id: c.instanceId(),
     db: { elections: c.countAllElections(), by_state: c.electionsByState(), open_runtimes: pool.openCount() },
     backups: { last_at: last ?? null },
+    gossip: gossipHealthStatus(env),
     quarantined: q.map((x) => x.election_id),
     quarantine_incidents: q,
     disk: { free_bytes: free },

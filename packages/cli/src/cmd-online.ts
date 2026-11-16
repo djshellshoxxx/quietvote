@@ -133,6 +133,9 @@ async function jsonRequest(p: Parsed, io: Io, method: string, path: string, body
 export async function cmdOnlineInstance(argv: string[], io: Io): Promise<number> {
   return jsonRequest(args(argv, {}), io, 'GET', '/api/v1/instance');
 }
+export async function cmdOnlineAdminStatus(argv: string[], io: Io): Promise<number> {
+  return jsonRequest(args(argv, AUTH), io, 'GET', '/api/v1/admin/status', undefined, true);
+}
 export async function cmdOnlineElectionInspect(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { id: 'value', 'read-key-file': 'value' });
   return jsonRequest(p, io, 'GET', electionPath(p));

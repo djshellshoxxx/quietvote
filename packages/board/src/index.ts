@@ -9,3 +9,5 @@ export * from './log.ts';
 export * from './equivocation.ts';
 export * from './bundle.ts';
 export * from './request-auth.ts';
+export * from './tar.ts';
+export * from './archive.ts';

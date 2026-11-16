@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election spoil-collect`, `vectors check`, `online instance|election-create|election-inspect|election-draft|election-submit|election-export`.
+Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-inspect|election-draft|election-submit|election-export`.
 Exit codes: 0 ok, 1 failure, 2 usage, 3 incomplete/partial, 4 bad input, 70 internal. Design notes: `packages/verifier/NOTES.md`.
 
 See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
@@ -64,7 +64,7 @@ Commands never retry a mutation automatically. Downloads use mode 0600, never ov
 and are labelled `verified: false` until checked separately.
 
 Remaining workflow gaps: organization account enrollment, registration (owner-held B3-01), integrated generation
-of coordinator lifecycle packets, ceremony-log and trustee evidence-file preparation, automatic receipt-proof checks, and
+of coordinator lifecycle packets, automatic receipt-proof checks, and
 backup/restore commands. This command group supplies transport adapters; it does not resolve those gaps.
 
 The online integration test exports an actual successful three-voter election and runs both the TypeScript CLI
@@ -75,3 +75,38 @@ matching reports do not establish board/witness assurance. That test uses the se
 trustee cryptography. A separate trustee executable test now drives production `qv-trustee` commands through
 the real HTTP server and `qv online` relay, keeping trustee secrets out of the parent harness. See the
 [trustee README](../trustee/README.md) for the remaining preparation and all-client acceptance boundaries.
+
+## Prepare public archives for trustees
+
+```sh
+qv online election-export --server https://vote.example --id ELECTION_ID --out public.qvb
+qv election prepare public.qvb --manifest-hash ANNOUNCED_HASH --format ceremony --out ceremony.qvl
+qv-trustee import --bundle trustee.qvtb --log ceremony.qvl
+qv election prepare public.qvb --manifest-hash ANNOUNCED_HASH --out release-input.json
+qv-trustee tally-release --bundle trustee.qvtb --election release-input.json
+```
+
+Obtain the manifest hash through an independent channel. The preparer accepts regular files up to 64 MiB,
+at most 10000 board entries and 10032 archive members. It checks strict tar framing, all listed checksums,
+the manifest signature and pinned hash, entry authorization/signatures, origin bindings, the complete
+Merkle tree and log-signed checkpoints. It writes a new mode-0600 file exclusively; existing paths and
+symlink destinations are refused. Archive member names are never extracted to the filesystem.
+
+Ceremony output carries all public records in the existing `.qvl` format. Election output carries
+`log_evidence` and every public board body, including server aggregate records omitted by content-only
+JSON exports. Preparation does not assert that an election passed protocol verification or met its
+witness quorum; the trustee performs those checks before releasing. The JSON summary reports both checks
+as false. A manifest envelope authored by a separate organizer remains refused under the current trustee
+verification policy; the preparer does not change that policy. These generated trustee input files are
+not accepted as `qv verify` bundles, whose top-level schema excludes `log_evidence`.
+
+## Operator gossip health
+
+```sh
+qv online admin-status --server https://vote.example \
+  --audience qv:INSTANCE_ID@https://vote.example --key admin.key --passphrase-file passphrase.txt
+```
+
+The server requires an instance-admin key. The `gossip` member reports durable contact timestamps,
+consecutive failures, stale peers and scheduler health using hashed peer identifiers. These operational
+indicators are not election-integrity or witness-independence verdicts.

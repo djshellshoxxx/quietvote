@@ -47,10 +47,10 @@ Receipt verification and coordinator packet generation remain separate work.
 
 The executable integration test uses three actual `qv-trustee` processes across
 commands, production randomness and the default bundle KDF. The test harness
-still prepares coordinator records, registrations, ballots and the public
-ceremony/election input files. In particular, converting a downloaded `.qvb`
-archive into the trustee's existing JSON `log_evidence` input is not yet a
-shipped command. This is trustee executable coverage, not complete acceptance
+still prepares coordinator records, registrations and ballots. The shipped
+`qv election prepare` command now creates ceremony `.qvl` files and complete
+JSON `log_evidence` inputs from downloaded `.qvb` archives. See the
+[CLI guide](../cli/README.md#prepare-public-archives-for-trustees). This is trustee executable coverage, not complete acceptance
 of an election using only shipped clients.
 
 If `backup` returns `BACKUP_NOT_REMOVED` (exit 60, including with `--json`), the

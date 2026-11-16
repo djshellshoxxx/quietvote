@@ -345,3 +345,26 @@ SIGINT/SIGTERM cleanup through the existing service lifecycle. Real-server
 launcher tests cover readiness and clean shutdown. Deployment examples are
 reviewable scaffolding; Docker/systemd execution, offline restore and the full
 `quietvote doctor` gate remain unqualified. See `deploy/README.md`.
+
+## Durable gossip contact health (BT-13) — 2026-11-16
+
+Control schema migration 5 adds a bounded `gossip_health` table: configured peer hashes and one scheduler
+row. A startup transaction removes rows for unconfigured peers; no URL, IP, election ID or raw exception
+is stored. Last attempt/success/failure times, capped consecutive failures and catalog error codes survive
+restart. Success requires at least one valid log-signed note; a syntactically successful HTTP response
+alone does not reset durable failures. Existing in-memory request counters keep their historical meaning.
+
+Authenticated `/api/v1/admin/status` includes `gossip`: configured/healthy/stale counts, hashed peer
+rows, scheduler state and `stale_after_ms`. A peer is healthy only after a validated exchange, with no
+subsequent failed exchange and no stale/future success timestamp. Staleness uses three configured
+intervals (three minutes when manual) or twice the request timeout, whichever is longer. Monitor
+`healthy_peers < configured_peers`, nonzero consecutive failures and stale scheduler contact externally;
+`scheduler_enabled` distinguishes manual-only deployments. No notification service is added.
+
+Failures and recovery emit safe static log events on outcome/code transitions. DNS/SSRF rejection,
+transport error, HTTP status, truncation, malformed JSON/notes and unexpected sweep failures are distinct.
+Logs omit peer hashes and addresses. A valid fork report still records quarantine evidence; contact health
+does not override election integrity. This measures peer contact, not successful coverage of every election.
+The existing 256-election round limit and enumeration behavior are unchanged. No public health endpoint
+or configuration default is changed. Tests cover real database reopen, outage, malformed response, DNS
+rebinding, recovery, stale contact, scheduler failure and log privacy.

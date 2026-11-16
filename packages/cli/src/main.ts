@@ -2,13 +2,14 @@ import { FailError, InputError, UsageError } from './args.ts';
 import { cmdBallotAudit, cmdBallotEncrypt } from './cmd-ballot.ts';
 import { cmdVerifyReceipt } from './cmd-receipt.ts';
 import { cmdBoardVerify } from './cmd-board.ts';
+import { cmdElectionPrepare } from './cmd-prepare.ts';
 import { cmdElectionInspect } from './cmd-election.ts';
 import { cmdElectionSpoilCollect } from './cmd-spoil.ts';
 import { cmdKeygen } from './cmd-keygen.ts';
 import { cmdSelftest, cmdVerify } from './cmd-verify.ts';
 import { cmdVectorsCheck } from './cmd-vectors.ts';
 import { EXIT, type Io } from './io.ts';
-import { cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
+import { cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 
 export const VERSION = '0.1.0';
 
@@ -33,12 +34,16 @@ usage:
   qv board verify <board-bundle|election-bundle> [--log-key <hex>] [--manifest-hash <hex>] [--author-key <hex>]...
                     [--witness-policy <file>] [--pin-file <f>] [--json]
                                    --witness-policy applies only to standalone board bundles
+  qv election prepare <archive.qvb> --manifest-hash <hex> --out <file> [--format election|ceremony] [--json]
+                                   checks archive, pinned manifest and board before preparing trustee inputs;
+                                   accepts regular files up to 64 MiB and 10000 entries; refuses existing outputs
   qv election inspect <bundle> [--json]
   qv election spoil-collect --election <bundle> --code <hex> --packet <file> [--packet <file>]... [--manifest-hash <hex>]
                     [--post-body-out <dir>] [--json]
                                    combine trustee spoil-share packets for one trustees-mode spoil and decode its selections;
                                    exit 1 if fewer than t shares verify or the code is cast/re-wrapped/not a trustees-mode spoil
   qv online instance --server <origin> [--json]
+  qv online admin-status --server <origin> --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
   qv online election-create --server <origin> --audience <qv:id@publicUrl> --key <keyfile>
                     --org <id> --title <title> --access public|link --idempotency-key <key> [passphrase options] [--json]
   qv online election-inspect --server <origin> --id <id> [--read-key-file <file>] [--json]
@@ -63,8 +68,8 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   keygen: cmdKeygen,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
-  election: { inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
-  online: { instance: cmdOnlineInstance, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
+  election: { prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
+  online: { instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
 };
 

@@ -441,3 +441,66 @@ test('outbound: the interval timer runs rounds on its own and stops with the ser
 });
 
 void b64u; void unb64u;
+
+test('outbound: durable health survives restart and reports outage, malformed response, DNS change, recovery and staleness', async () => {
+  dns.clear(); dns.set('good.example', ['93.184.216.34']);
+  const w = await mk('g-durable-health', peerOpts(['https://good.example']), 2);
+  const status = async () => {
+    const response = await w.signed('GET', '/api/v1/admin/status', undefined, admin);
+    assert.equal(response.status, 200);
+    return response.json.gossip;
+  };
+  try {
+    assert.equal((await status()).configured_peers, 1);
+    reply = () => ({ status: 503, truncated: false, body: Buffer.from('{}') });
+    await w.server.gossip.runOnce();
+    let health = await status();
+    assert.equal(health.healthy_peers, 0);
+    assert.equal(health.peers[0].consecutive_failures, 1);
+    const failureAt = health.peers[0].last_failure_at;
+    await w.server.stop(); await w.start();
+    health = await status();
+    assert.equal(health.peers[0].last_failure_at, failureAt);
+    assert.equal(health.peers[0].consecutive_failures, 1);
+    const note = await latest(w);
+    reply = () => json({ latest_note: note });
+    w.tick(); await w.server.gossip.runOnce();
+    health = await status();
+    assert.equal(health.healthy_peers, 1);
+    assert.equal(health.peers[0].consecutive_failures, 0);
+    const successAt = health.peers[0].last_success_at;
+    reply = () => ({ status: 200, truncated: false, body: Buffer.from('not json') });
+    w.tick(); await w.server.gossip.runOnce();
+    health = await status();
+    assert.equal(health.peers[0].last_success_at, successAt);
+    assert.equal(health.peers[0].last_error, 'GOSSIP_BAD_RESPONSE');
+    dns.set('good.example', ['127.0.0.1']);
+    w.tick(); await w.server.gossip.runOnce();
+    health = await status();
+    assert.equal(health.peers[0].consecutive_failures, 2);
+    assert.equal(health.peers[0].last_error, 'GOSSIP_TARGET_BLOCKED');
+    dns.set('good.example', ['93.184.216.34']);
+    reply = () => json({ latest_note: note });
+    w.tick(); await w.server.gossip.runOnce();
+    health = await status();
+    assert.equal(health.healthy_peers, 1);
+    w.tick(health.stale_after_ms / 1000 + 1);
+    assert.equal((await status()).stale_peers, 1);
+    const list = w.server.env.control.listAllElections;
+    w.server.env.control.listAllElections = () => { throw new Error('private-detail-never-log'); };
+    try { await assert.rejects(w.server.gossip.runOnce()); }
+    finally { w.server.env.control.listAllElections = list; }
+    assert.equal((await status()).sweep.last_error, 'GOSSIP_SWEEP_FAILED');
+    const row = w.server.env.control.election(w.electionId)!;
+    w.server.env.control.listAllElections = () => Array.from({ length: 257 }, (_, index) => ({ ...row, election_id: String(index), state: 'DRAFT' as const }));
+    try { await w.server.gossip.runOnce(); }
+    finally { w.server.env.control.listAllElections = list; }
+    assert.equal((await status()).sweep.last_error, null, 'a completed bounded round recovers scheduler health');
+    assert.equal((await status()).sweep.consecutive_failures, 0);
+    const logs = w.logs.join('\n');
+    assert.equal(logs.includes('private-detail-never-log'), false);
+    assert.equal(logs.includes('good.example'), false);
+    assert.match(logs, /GOSSIP_TARGET_BLOCKED/);
+    assert.match(logs, /GOSSIP_BAD_RESPONSE/);
+  } finally { await w.stop(); }
+});

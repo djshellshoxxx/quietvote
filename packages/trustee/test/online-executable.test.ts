@@ -7,11 +7,10 @@ import { promisify } from 'node:util';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { b64u, unb64u } from '@quietvote/board';
-import { bytesToHex, hexToBytes, parseQvJson } from '@quietvote/crypto';
+import { b64u } from '@quietvote/board';
+import { bytesToHex, hexToBytes } from '@quietvote/crypto';
 import { PROTO_ID, adjudicateDkg, expectedLogId, rollRoot, signRecord, type ElectionBundle, type MarkerSeqs } from '@quietvote/protocol';
 import { World } from '../../server/test/helpers/world.ts';
-import { readTarStrict } from '../../server/src/tar.ts';
 import { markerSeq, takeDkg } from '../src/ceremonylog.ts';
 
 const exec = promisify(execFile);
@@ -58,7 +57,8 @@ test('shipped trustee executable completes 2-of-3 DKG and tally over HTTP withou
   };
   const syncAll = async (): Promise<ElectionBundle> => {
     const bundle = JSON.parse(readFileSync(await download(), 'utf8')) as ElectionBundle;
-    const path = write(`log-${serial++}.qvl`, { format: 'qv-ceremony-log/v1', manifest_hash: bundle.manifest_hash, entries: bundle.log });
+    const path = join(w.dir, `log-${serial++}.qvl`);
+    await run(qvBin, ['election', 'prepare', await download('qvb'), '--manifest-hash', bundle.manifest_hash, '--format', 'ceremony', '--out', path]);
     for (const i of [1, 2, 3]) await trustee(i, 'import', ['--log', path]);
     return bundle;
   };
@@ -137,21 +137,12 @@ test('shipped trustee executable completes 2-of-3 DKG and tally over HTTP withou
     const missingEvidence = write('missing-evidence.json', closed);
     assert.equal((await trustee(1, 'tally-release', ['--election', missingEvidence], 60))['code'], 'LOG_EVIDENCE_REQUIRED');
 
-    // Public-file preparation only: unpack the real downloaded archive into the trustee's existing JSON input format.
-    // A shipped qvb-to-trustee-input command remains separate work; no server private state is read here.
-    const files = readTarStrict(readFileSync(await download('qvb')), { maxFiles: 1000 });
-    const text = (name: string): string => new TextDecoder().decode(files.get(name)!);
-    const meta = JSON.parse(text('bundle.json'));
-    const board = { format: meta.format, origin: meta.origin, created_at: meta.created_at,
-      tree_size: meta.tree_size, root_b64: meta.root_b64, generator: meta.generator, spec: meta.spec,
-      entries: text('log/entries.jsonl').trim().split('\n').map((line) => JSON.parse(line)),
-      checkpoints: [...files.keys()].filter((name) => name.startsWith('log/checkpoints/')).map(text),
-      receipts: [], policy: JSON.parse(text('witness/policy.json')), redactions: JSON.parse(text('redactions.json')) };
-    // The content-only JSON export omits server aggregate entries. Evidence must bind every actual board entry.
-    const fullLog = board.entries.slice(1).map((entry: { seq: number; body_b64u: string }) =>
-      ({ seq: entry.seq, entry: parseQvJson(unb64u(entry.body_b64u)!) }));
-    const releaseInput = write('release-input.json', { ...closed, log: fullLog,
-      log_evidence: { board, extraAuthorKeys: [bytesToHex(unb64u(meta.server_pk_b64u)!)] } });
+    // The shipped preparer retains every board body, including the server tally aggregate.
+    const releaseInput = join(w.dir, 'release-input.json');
+    await run(qvBin, ['election', 'prepare', await download('qvb'), '--manifest-hash', bytesToHex(w.mh), '--out', releaseInput]);
+    const prepared = JSON.parse(readFileSync(releaseInput, 'utf8'));
+    assert.equal(prepared.log.length, prepared.log_evidence.board.entries.length - 1);
+    assert.ok(prepared.log.some((entry: { entry: { body?: { type?: string } } }) => entry.entry.body?.type === 'tally-aggregate'));
     for (const i of [1, 2]) {
       await trustee(i, 'tally-release', ['--election', releaseInput]);
       await submit(i, 'tally-share');

@@ -145,3 +145,14 @@ This proves inclusion of the expected leaf in the signed checkpoint; it does
 not establish witness quorum, checkpoint freshness, election integrity or that
 a ballot was counted. It makes no network request and changes no board rules.
 Refs: QV-18-REQ-013.
+
+## Public archive preparation — 2026-11-16
+
+`qv election prepare` supplies the missing shipped public-file path for trustee ceremony import and
+release evidence (QV-17-REQ-040, QV-18-REQ-033). It reuses `protocol.verifyLogStructure`, the same
+binding/author/tree/checkpoint path used by trustee release, after validating the pinned manifest and
+its coordinator signatures. The strict archive reader and SHA256SUMS checker now live in the portable
+board package; server import reuses them without changing its protocol verification or admission rules.
+The separate-organizer refusal is retained and regression-tested. Preparation is not a full protocol,
+witness, receipt or freshness verdict. The existing executable election test now uses this command for
+both ceremony log and tally release inputs, replacing its manual archive unpacking.

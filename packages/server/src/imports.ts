@@ -2,12 +2,11 @@
 // checksums, every entry, tree, checkpoint, witness gate, author signature and authorisation, every protocol record and proof -
 // BEFORE anything is exposed, and only then becomes a read-only election (state IMPORTED, no signing keys, no invites).
 // Rejections carry the exact failing {seq, rule, detail}.
-import { createHash } from 'node:crypto';
 import { mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import {
-  authorKeyId, b64u, bundleFromJson, bundleToJson, decodeHeader, hashLeaf, nonceKey, parseCheckpoint, toHex, unb64u,
+  readChecksummedArchive, ArchiveError, authorKeyId, b64u, bundleFromJson, bundleToJson, decodeHeader, hashLeaf, nonceKey, parseCheckpoint, toHex, unb64u,
   type EntryHeader, type LogBundle, type WitnessPolicy, type Verdict,
 } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, hexToBytes, jcs, parseQvJson, sha256, utf8 } from '@quietvote/crypto';
@@ -15,7 +14,6 @@ import { manifestHash, type ElectionBundle, type Manifest, type VerificationRepo
 import { ElectionDb } from './electiondb.ts';
 import { ElectionRuntime, SERVER_VERSION } from './election.ts';
 import type { Env } from './env.ts';
-import { readTarStrict, TarError } from './tar.ts';
 import { originOf, unbase32 } from './util.ts';
 
 export class ImportError extends Error {
@@ -92,7 +90,6 @@ export interface Yield {
 }
 
 const HEX32 = /^[0-9a-f]{64}$/;
-const SUM_LINE = /^([0-9a-f]{64}) {2}([A-Za-z0-9._/-]{1,100})$/;
 const CP_NAME = /^log\/checkpoints\/(0|[1-9][0-9]{0,15})\.txt$/;
 const PROTOCOL_TYPES = new Set([
   'ceremony_start', 'joint_key', 'roll_commit', 'election_open', 'election_close', 'dkg_round1', 'dkg_round2', 'dkg_complaint',
@@ -152,32 +149,10 @@ export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHa
   // ---- 1. tar framing and checksums
   let files: Map<string, Uint8Array>;
   try {
-    files = readTarStrict(buf, { maxFiles: cfg.maxImportEntries + 32 });
+    files = readChecksummedArchive(buf, { maxFiles: cfg.maxImportEntries + 32 });
   } catch (e) {
-    throw new ImportError('BUNDLE_TAR', e instanceof TarError ? e.message : 'archive cannot be read');
+    throw new ImportError(e instanceof ArchiveError ? e.rule : 'BUNDLE_TAR', e instanceof Error ? e.message : 'archive cannot be read');
   }
-  const sumsRaw = files.get('SHA256SUMS');
-  if (!sumsRaw) throw new ImportError('BUNDLE_FORMAT', 'SHA256SUMS is missing');
-  let sumsText: string;
-  try {
-    sumsText = text(sumsRaw);
-  } catch {
-    throw new ImportError('BUNDLE_FORMAT', 'SHA256SUMS is not UTF-8');
-  }
-  if (sumsText.length === 0 || !sumsText.endsWith('\n')) throw new ImportError('BUNDLE_FORMAT', 'SHA256SUMS must end with a newline');
-  const sums = new Map<string, string>();
-  for (const line of sumsText.slice(0, -1).split('\n')) {
-    const m = SUM_LINE.exec(line);
-    if (!m || sums.has(m[2]!)) throw new ImportError('BUNDLE_FORMAT', 'SHA256SUMS has a malformed or duplicate line');
-    sums.set(m[2]!, m[1]!);
-  }
-  for (const [name, data] of files) {
-    if (name === 'SHA256SUMS') continue;
-    const want = sums.get(name);
-    if (want === undefined) throw new ImportError('BUNDLE_CHECKSUM', `file ${name} is not listed in SHA256SUMS`);
-    if (createHash('sha256').update(data).digest('hex') !== want) throw new ImportError('BUNDLE_CHECKSUM', `checksum mismatch for ${name}`);
-  }
-  for (const name of sums.keys()) if (!files.has(name)) throw new ImportError('BUNDLE_CHECKSUM', `${name} is listed in SHA256SUMS but missing`);
   await tick();
   progress(0.05);
 
