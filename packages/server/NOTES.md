@@ -441,3 +441,27 @@ Webhook removal and its deletion audit now commit atomically; that audit is a re
 DELETE callers may optionally supply Idempotency-Key for durable 204 replay; existing no-key calls remain
 supported. Election creation, invitation creation and quarantine clearing still cross store boundaries and
 retain conservative IDEMPOTENCY_INTERRUPTED handling if their final response cannot be saved.
+
+## Integrated recovery completion — 2026-11-16
+
+This section supersedes the recovery gaps described in the earlier checkpoints
+above. Election schema 7 stores append-completion intents atomically with the
+authenticated log row. Recovery reconstructs supplemental phase/alert events
+using original timestamps; witness event/checkpoint updates are atomic, and
+retention cannot prune unresolved completion evidence. Archive replay removes
+the existing wrapped signing-key material and restores read-only state before
+clearing its intent. A second-crash regression exposed early intent deletion;
+intents now survive until final registry/lifecycle projections commit.
+
+Election schema 8 stores redacted operation receipts in the mutation transaction
+for creation, invitations and quarantine clearing. Startup bridges only the
+matching live interrupted control-marker generation and original expiry. It
+replays no invitation codes, raw credentials or new mutation. Private restore
+floors protect receipt generations/outcomes, invitation terminal/erasure state,
+event cursors and credential revocation/deletion/suspension. Snapshot checksums
+stream in bounded chunks. These are local recovery guarantees, not external
+witness freshness, offsite backup custody or power-loss qualification.
+
+See [the integrated continuation](../../docs/handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md)
+and its server/private-recovery/fresh-review handoffs for the source-specific
+tests and remaining operational boundaries.

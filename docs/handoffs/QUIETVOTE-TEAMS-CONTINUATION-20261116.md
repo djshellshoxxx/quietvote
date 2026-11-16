@@ -1,7 +1,8 @@
 # QuietVote parallel continuation — 2026-11-16
 
 Starting published source: PR #51, `5566c88c5e42d57fc1e50e2539d91aba16f2a30f`.
-Integration branch: `codex/quietvote-teams-20261116`.
+Integration branch: `codex/quietvote-teams-20261116`,
+[draft PR #52](https://github.com/djshellshoxxx/quietvote/pull/52).
 
 This is an implementation and verification checkpoint. QuietVote is not complete
 or release-qualified. Main, releases and deployment remain unchanged. Scope and
@@ -22,6 +23,11 @@ AI review does not replace the required independent protocol/security reviews.
 - [Streaming backup hashes](QUIETVOTE-TEAMS-BACKUP-HASH-20261116.md),
   [private recovery floors](QUIETVOTE-TEAMS-PRIVATE-RECOVERY-20261116.md), and
   [fresh recovery review](../reports/quietvote-teams-recovery-review-20261116.md).
+- [Combined executable election acceptance](QUIETVOTE-TEAMS-ACCEPTANCE-20261116.md).
+- [Stable Python log evidence](python-stable-log-20261116.md) and
+  [fresh trust-boundary review](../reports/python-stable-log-fresh-review-20261116.md).
+- [Approved Python report parity](QUIETVOTE-PYTHON-REPORT-PARITY-20261116.md).
+- [Reconciled decision and contract inventory](QUIETVOTE-REMAINING-CONTRACTS-20261116.md).
 
 ## Source accounting
 
@@ -37,10 +43,18 @@ organizer preflight/import races consistently expose the installed key for
 read-only unlock. Focused recovery/organizer tests passed 33/33 at incorporation.
 Browser assertions still require a browser-capable host.
 
-## Retained boundaries
+## Decision reconciliation and remaining scope
 
-B3-01/D-99 registration, authority/control decisions, D-92–D-96 verifier semantics,
-and passphrase-normalization compatibility remain held. Missing signed GroupRules,
+Fresh review found that earlier continuation notes had carried old task-specific
+holds forward despite explicit owner approval in ADR-027/028. Those older notes
+are historical evidence, not the authority for this continuation. The approved
+B3-25 passphrase policy and the three report-dependency choices are implemented;
+the unchanged strict comparator now agrees on 27/27 detailed reports in its lane.
+Existing log notice/control compatibility and modern registration are being
+completed against their already accepted contracts. External review before
+release is distinct from authorization to implement these decisions.
+
+Missing signed GroupRules,
 proposal/version/review, membership rotation/revocation and challenge/dispute
 contracts are core scope gaps, not completed or silently deferred features.
 Ranked/weighted/delegated voting, federation and stronger identity phases remain
@@ -57,5 +71,9 @@ Integrated qualification and publication receipts will be recorded here after
 the active continuation milestones finish. Do not infer final-candidate acceptance
 from an earlier lane pass. The local Chromium probe failed before assertions at
 process-singleton socket creation (`EPERM`); browser qualification is pending.
-The preserved strict comparator still has 27/27 verdict agreement and three
-detailed-report differences. Expectations and comparator gates were not changed.
+The initial published checkpoint's CI reproduced the three report differences
+before the approved parity fix was added. Expectations and comparator gates were
+not changed. The new organizer browser fixture initially tried to send only one
+signature under its 2-of-3 coordinator policy; the application correctly kept
+Send disabled. The corrected journey prepares a partial signature on one device,
+co-signs on a second device and then explicitly sends. Its hosted rerun is pending.

@@ -14,6 +14,27 @@ means evidence from people, infrastructure or supported devices is still needed.
 An absent feature is not automatically a held decision: the contract work needed
 to implement it is specified below.
 
+## Integrated continuation outcomes
+
+The table below updates the starting inventory without erasing its provenance.
+The implementation is proposed in [draft PR #52](https://github.com/djshellshoxxx/quietvote/pull/52),
+stacked on PR #51. It is not a completed-project or release declaration.
+
+| Capability | Delivered in this continuation | Qualification boundary |
+|---|---|---|
+| Coordinator CLI lifecycle | Authenticated archive-driven body generation for all existing DKG, roll, open and close markers; existing signing/framing/relay commands remain explicit. | 65-test CLI lane, independent hostile-record probes; real-client registration still uses the existing fixture contract. |
+| Connected organizer console | Pinned manifest, ceremony/open/close/tally preparation, trustee packet relay, partial coordinator co-signing, saved exact packet recovery, explicit review/send and authenticated acknowledgement handling. | Integrated web suite 312/312; hosted real-browser evidence is recorded in the continuation handoff. Native accessibility and translation review remain separate. |
+| Combined executable acceptance | Actual server, coordinator/voter and trustee processes complete one election, exact 2-of-3 share release and tally, TypeScript verification and Python shared-report comparison. | Successful lane run 693.7 seconds; witness quorum zero and fixture enrollment. Later integrated candidate requires its own CI receipt. |
+| Crash recovery | Durable webhook bridge, supplemental-event intents, atomic management responses/deletion tombstones, archived-election cleanup, mutation receipts and repeated-crash projection recovery. | Integrated server suite 269/269 plus three subsequently integrated independent floor probes; pending intents survive failures instead of silently losing state. |
+| Private restore and backup hashing | Streamed checksums; revoked/deleted/suspended security-state floors, invitation terminal state, event cursors and operation-receipt generation/response checks. | Local adversarial snapshots and crash tests; no claim of independent witness/WAL freshness, offsite custody or live disaster-recovery qualification. |
+| ElGamal rerandomization | Explicit-randomness additive library operation; identity/zero/cancellation rejection and plaintext-preservation coverage. | Crypto suite 93/93 plus independent review probes; required external crypto/protocol review is not replaced by agent review. |
+| Python private audit | Signed-envelope and reveal-commitment validation plus exact ciphertext/proof regeneration. | Python lane 71/71 and five additional supported corpus cases; log-completion evidence is recorded separately after integration. |
+
+The source-specific validation receipts, fresh review findings and remaining
+contract work are tracked in the [continuation handoff](../handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md).
+The core contract gaps below remain material; implementation counts do not measure
+their completion.
+
 ## Core workflow inventory
 
 Paths in the evidence column are repository-relative. Existing test names are
