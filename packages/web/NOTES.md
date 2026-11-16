@@ -45,8 +45,9 @@ remain evidence of the audited revision, not claims that the current tree has pa
   the result snapshot after lazy chart import. The production regression delivers a real SSE reread while holding the chart
   HTTP response; a newly appended conflicting signed tally must fail before any table is drawn. Both regressions failed
   before these fixes and pass afterward.
-* Paused-state machine reasons/copy, normative one-ballot guarantee wording and web/CLI passphrase normalization remain owner
-  review gates. Existing normal English error/verifier wording was corrected; no guarantee string/review hash was changed,
+* At that consolidation, paused-state machine reasons/copy, normative one-ballot guarantee wording and web/CLI passphrase normalization
+  remained owner review gates. B3-25 normalization is now implemented under the recorded QV-ADR-027 approval (see below).
+  Existing normal English error/verifier wording was corrected; no guarantee string/review hash was changed,
   no translation was endorsed, and every draft locale remains unoffered. Draft normal-string wording needs review against
   the changed English source before release.
 

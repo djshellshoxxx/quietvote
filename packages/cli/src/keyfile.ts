@@ -3,6 +3,7 @@
 import {
   argon2idKdfAsync, bytesToHex, ed25519Keypair, hexToBytes, isHex, jcs, parseQvJson, sha256, utf8, wipe, type Rng,
 } from '@quietvote/crypto';
+import { canonicalKeyPassphrase, keyPassphraseUnlockCandidates } from '@quietvote/protocol';
 import { InputError, UsageError } from './args.ts';
 
 export interface KdfParams { m: number; t: number; p: number }
@@ -18,8 +19,6 @@ export interface QvKey1 {
 
 export const keyIdOf = (publicKey: Uint8Array): string => bytesToHex(sha256(publicKey).slice(0, 8));
 const aadFor = (keyId: string): string => `qv-key-v1|${keyId}`;
-/** NFKC only: the web client additionally folds word-list passphrases (lower-case, single spaces), which is not replicated here. */
-const canon = (s: string): string => s.normalize('NFKC');
 
 export function validateParams(prm: KdfParams): void {
   if (![prm.m, prm.t, prm.p].every(Number.isInteger)) throw new UsageError('KDF parameters must be integers');
@@ -28,12 +27,14 @@ export function validateParams(prm: KdfParams): void {
 }
 
 async function kek(passphrase: string, salt: Uint8Array, prm: KdfParams): Promise<CryptoKey> {
-  const pw = utf8(canon(passphrase));
+  const pw = utf8(passphrase);
   try {
     const raw = await argon2idKdfAsync(pw, salt, { ...prm, dkLen: 32 });
-    const k = await globalThis.crypto.subtle.importKey('raw', raw as BufferSource, 'AES-GCM', false, ['encrypt', 'decrypt']);
-    wipe(raw);
-    return k;
+    try {
+      return await globalThis.crypto.subtle.importKey('raw', raw as BufferSource, 'AES-GCM', false, ['encrypt', 'decrypt']);
+    } finally {
+      wipe(raw);
+    }
   } finally {
     wipe(pw);
   }
@@ -41,19 +42,23 @@ async function kek(passphrase: string, salt: Uint8Array, prm: KdfParams): Promis
 
 export async function wrapSeed(seed: Uint8Array, passphrase: string, rng: Rng, prm: KdfParams = DEFAULT_PARAMS): Promise<QvKey1> {
   validateParams(prm);
-  // Measured on the NFKC form the key is derived from: a decomposed passphrase must not pass on its raw length.
-  if ([...canon(passphrase)].length < MIN_PASSPHRASE_CHARS) throw new UsageError(`passphrase must have at least ${MIN_PASSPHRASE_CHARS} characters`);
+  // Measure the exact canonical KDF input, not a longer hand-typed variant.
+  const canonical = canonicalKeyPassphrase(passphrase);
+  if ([...canonical].length < MIN_PASSPHRASE_CHARS) throw new UsageError(`passphrase must have at least ${MIN_PASSPHRASE_CHARS} characters`);
   const publicKey = ed25519Keypair(seed).publicKey;
   const keyId = keyIdOf(publicKey);
   const salt = rng.bytes(16);
   const iv = rng.bytes(12);
-  const key = await kek(passphrase, salt, prm);
+  const key = await kek(canonical, salt, prm);
   const plain = new Uint8Array(64);
   plain.set(seed, 0);
   plain.set(publicKey, 32);
-  const ct = new Uint8Array(await globalThis.crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv as BufferSource, additionalData: utf8(aadFor(keyId)) as BufferSource }, key, plain as BufferSource));
-  wipe(plain);
-  return { v: 1, kdf: 'argon2id', m: prm.m, t: prm.t, p: prm.p, salt: bytesToHex(salt), aead: 'A256GCM', iv: bytesToHex(iv), aad: aadFor(keyId), ct: bytesToHex(ct), keyId };
+  try {
+    const ct = new Uint8Array(await globalThis.crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv as BufferSource, additionalData: utf8(aadFor(keyId)) as BufferSource }, key, plain as BufferSource));
+    return { v: 1, kdf: 'argon2id', m: prm.m, t: prm.t, p: prm.p, salt: bytesToHex(salt), aead: 'A256GCM', iv: bytesToHex(iv), aad: aadFor(keyId), ct: bytesToHex(ct), keyId };
+  } finally {
+    wipe(plain);
+  }
 }
 
 export const serialize = (c: QvKey1): string => new TextDecoder().decode(jcs(c)) + '\n';
@@ -76,13 +81,18 @@ export function parseContainer(v: unknown): QvKey1 {
 }
 
 export async function unwrapSeed(c: QvKey1, passphrase: string): Promise<{ seed: Uint8Array; publicKey: Uint8Array }> {
-  const key = await kek(passphrase, hexToBytes(c.salt, 16), { m: c.m, t: c.t, p: c.p });
-  let plain: Uint8Array;
-  try {
-    plain = new Uint8Array(await globalThis.crypto.subtle.decrypt({ name: 'AES-GCM', iv: hexToBytes(c.iv, 12) as BufferSource, additionalData: utf8(c.aad) as BufferSource }, key, hexToBytes(c.ct, 80) as BufferSource));
-  } catch {
-    throw new InputError('wrong passphrase or damaged key file');
+  c = parseContainer(c);
+  let plain: Uint8Array | undefined;
+  for (const candidate of keyPassphraseUnlockCandidates(passphrase)) {
+    const key = await kek(candidate, hexToBytes(c.salt, 16), { m: c.m, t: c.t, p: c.p });
+    try {
+      plain = new Uint8Array(await globalThis.crypto.subtle.decrypt({ name: 'AES-GCM', iv: hexToBytes(c.iv, 12) as BufferSource, additionalData: utf8(c.aad) as BufferSource }, key, hexToBytes(c.ct, 80) as BufferSource));
+      break;
+    } catch {
+      // Only an authenticated-decryption failure permits the distinct legacy spelling.
+    }
   }
+  if (plain === undefined) throw new InputError('wrong passphrase or damaged key file');
   const seed = plain.slice(0, 32);
   const stored = plain.slice(32, 64);
   wipe(plain);

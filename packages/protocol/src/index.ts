@@ -11,3 +11,5 @@ export * from './tally.ts';
 export * from './spoilshare.ts';
 export * from './verify.ts';
 export * from './logcheck.ts';
+export * from './key-passphrase.ts';
+export { WORDS as KEY_PASSPHRASE_WORDS, WORD_INDEX as KEY_PASSPHRASE_WORD_INDEX } from './key-wordlist.ts';

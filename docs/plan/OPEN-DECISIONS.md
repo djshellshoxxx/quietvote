@@ -13,10 +13,11 @@
   `(ID, SHA-256(TOKEN), pubkey)`, while QV-04-REQ-005 also mentions a label. No
   acceptance-set or authority-rule change is approved. Specify the exact wire
   bytes, storage hash, signature framing and label treatment before unblocking.
-- **Passphrase portability (B3-25):** web generated-word normalization and CLI
-  raw-NFKC behavior differ. No canonicalization change is adopted in this
-  consolidation. The CLI documents exact-spelling requirements; review and
-  version any eventual shared normalization policy with legacy key fixtures.
+- **Passphrase portability (B3-25): implemented 2026-11-16 under QV-ADR-027.**
+  The approved shared canonical form and distinct legacy NFKC unlock fallback
+  preserve version-1 containers. Immutable CLI/web fixtures cover the compatibility
+  boundary; older CLI files still require their original spelling. This supersedes
+  this item's earlier consolidation hold, not independent security-review gates.
 - Existing cryptographic/verifier errata, D-84/D-87 and review gates remain open;
   a passing subset of tests does not resolve them.
 

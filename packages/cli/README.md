@@ -6,9 +6,10 @@ Exit codes: 0 ok, 1 failure, 2 usage, 3 incomplete/partial, 4 bad input, 70 inte
 
 See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
 
-Keep the exact passphrase used to create a CLI key, including capitalization, spaces and hyphens. For a word passphrase generated
-by the web client, enter the displayed lower-case words with one space between words in the CLI. The web client accepts case and
-separator variants that the CLI does not; those variants are not portable between clients (B3-25 remains unresolved).
+New QVKEY1 keys use the same passphrase normalization in the CLI and web client: phrases of at least six embedded-list words
+accept case, whitespace and hyphen variants; other phrases retain NFKC-normalized spelling. Keep the exact spelling used for
+older CLI-created keys, including capitalization, spaces and hyphens. Both clients can unlock those files using a distinct
+legacy NFKC fallback (at most two KDF attempts). The container stays version 1; no key file is rewritten merely by unlocking.
 
 `board verify --witness-policy` applies to standalone board bundles; election bundles use their manifest policy and refuse that option.
 

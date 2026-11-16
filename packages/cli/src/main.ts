@@ -28,7 +28,7 @@ usage:
             [--no-passphrase] [--kdf-memory-kib <n>] [--kdf-iterations <n>] [--force] [--json]
                                    create a voter key; seed and passphrase never come from argv; the key file is
                                    passphrase-protected (QVKEY1, Argon2id) unless --no-passphrase
-                                   keep the exact passphrase spelling; web-generated words use lower-case and single spaces
+                                   shared web/CLI word normalization; old CLI keys still need their original spelling
   qv ballot encrypt --election <bundle> --key <keyfile> [--manifest-hash <hex>] [--select contest=opt[,opt]]... --out <file>
                     [--intent cast|spoil] [--supersedes <hex>] [--audit-out <file>] [--publish-reveal]
                     [--passphrase-file <f> | --passphrase-stdin] [--json]
