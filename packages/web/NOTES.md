@@ -310,3 +310,14 @@ review regressions and all ten coordinator stages over actual HTTP. Build and
 typecheck passed; this does not establish browser acceptance. Registration
 decisions remain held. Native locale review remains outstanding; translations
 are drafts.
+
+## QVKEY1 passphrase compatibility — 2026-11-16
+
+QV-ADR-027/B3-25 now uses one shared existing-web canonicalizer for new CLI and
+web containers. Unlock tries canonical input and then distinct legacy CLI NFKC
+input, at most two KDF derivations. Immutable old-writer fixtures retain legacy
+compatibility; old CLI files still require their original spelling. The version,
+parameter bounds and read-only organizer unlock behavior are unchanged. Password,
+derived-key, encryption plaintext and failed-signer-import PKCS8 buffers are wiped
+on errors. See the [milestone handoff](../../docs/handoffs/QUIETVOTE-PASSPHRASE-COMPATIBILITY-20261116.md)
+for executed cross-client tests, full web unit results and reciprocal review.

@@ -1,0 +1,83 @@
+{
+  "source_commit": "9bb0556e4a1fcc09f130473f95e27e7816ad38a7",
+  "source_tree": "62fa5685129c61c19c6f4d6f7e309080d2ddf8b7",
+  "node": "v24.22.1",
+  "qualification_scope": "Affected CLI tests and complete web unit suite; browser and later integration not covered",
+  "checks": {
+    "typecheck": {
+      "exit": 0,
+      "seconds": 14.6
+    },
+    "cli": {
+      "exit": 0,
+      "seconds": 108.5
+    },
+    "web": {
+      "exit": 0,
+      "seconds": 80.3
+    },
+    "deps": {
+      "exit": 0,
+      "seconds": 0.8
+    },
+    "build": {
+      "exit": 0,
+      "seconds": 1.5
+    },
+    "i18n": {
+      "exit": 0,
+      "seconds": 3.2
+    },
+    "links": {
+      "exit": 0,
+      "seconds": 0.7
+    }
+  },
+  "test_counts": {
+    "cli": {
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0
+    },
+    "web": {
+      "passed": 312,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "commands": {
+    "typecheck": "npm run typecheck",
+    "cli": "node --test --test-concurrency=1 packages/cli/test/keyfile-compatibility.test.ts packages/cli/test/cli.test.ts packages/cli/test/audit-regressions.test.ts",
+    "web": "node --test --test-concurrency=1 packages/web/test/**/*.test.ts",
+    "deps": "npm run deps:check",
+    "build": "npm run build -w @quietvote/web",
+    "i18n": "npm run i18n:check -w @quietvote/web",
+    "links": "npm run links:check"
+  },
+  "production_build_kib_gzip": {
+    "all_js": 198.0,
+    "entry_js": 95.3
+  },
+  "known_deviations": [
+    "D-97 protocol-to-board declaration and import: unchanged, no new dependency violations"
+  ],
+  "fixture_sha256": "ff1edf18ff3c1cf82168072e6dbb2ba3901c6acdcf8227ee67c7b8eae5f5541d",
+  "independent_review_correction": {
+    "source_commit": "9e4c74feb31a83ad8a69b8004042038c3793107c",
+    "change": "Wipe temporary PKCS8 seed bytes after failed WebCrypto import before noble fallback",
+    "author_reported_tests": {
+      "new_review_cases": 6,
+      "existing_key_cases": 14,
+      "passed": 20,
+      "failed": 0
+    },
+    "reciprocal_review": {
+      "command": "node --test --test-concurrency=1 --test-name-pattern=\"failed WebCrypto signer import\" packages/web/test/key-compatibility-review.test.ts",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "exit": 0,
+      "result": "No blocker; transient import copy wiped on success/failure and functional fallback preserved"
+    }
+  }
+}
