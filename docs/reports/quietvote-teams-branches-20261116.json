@@ -1,0 +1,618 @@
+{
+  "base_commit": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+  "date": "2026-11-16",
+  "method": "git merge-base --is-ancestor REF BASE; git cherry BASE REF; git diff-tree for unique non-merge patches",
+  "branch_count": 57,
+  "contained_count": 50,
+  "branches": [
+    {
+      "branch": "origin/chatgpt/quietvote-ci-action-pin-guard-20261104",
+      "sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114",
+      "sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/quietvote-trustee-fixture-paths-20261102",
+      "sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/quietvote-visual-ci-repair-20261102",
+      "sha": "980a5cd72c9b05bc8ce28a588376462ce85f8206",
+      "ancestor": false,
+      "unique": 0,
+      "equivalent": 1,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/quietvote-visual-ci-signed-20261102",
+      "sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex-continuation-spec-20261109",
+      "sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+      "ancestor": false,
+      "unique": 1,
+      "equivalent": 0,
+      "changes": [
+        {
+          "commit": "d5c79981870646cb79feee75f87bd68333bf5159",
+          "subject": "docs: specify isolated ChatGPT-only QuietVote continuation",
+          "files": [
+            "docs/CHATGPT_ZERO_CODEX_CONTINUATION.md"
+          ]
+        }
+      ]
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/audit-rate-config-20261110",
+      "sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/board-reader-lengths-20261110",
+      "sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/crockford-display-grouping-20261110",
+      "sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/docs-wiki-sections-20261110",
+      "sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/election-inspect-counters-20261110",
+      "sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/import-preabort-20261110",
+      "sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/job-start-recovery-20261110",
+      "sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/pool-delete-diagnostic-20261110",
+      "sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/seal-worker-lifecycle-20261110",
+      "sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/chatgpt/zero-codex/verifier-triage-20261110",
+      "sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/checkpoint/quietvote-ordinary-ux-20261024",
+      "sha": "1b531b8f83eea607de07da847c4044c861964056",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/clever-gates-uqd5p1",
+      "sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/dazzling-cerf-n8ha3g",
+      "sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/docs-screenshots",
+      "sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+      "ancestor": false,
+      "unique": 1,
+      "equivalent": 0,
+      "changes": [
+        {
+          "commit": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+          "subject": "Docs: refresh README status, note no UI, clarify spec index",
+          "files": [
+            "README.md",
+            "docs/SPEC-INDEX.md"
+          ]
+        }
+      ]
+    },
+    {
+      "branch": "origin/claude/exciting-hawking-r0evza",
+      "sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/haiku-T01-baseline",
+      "sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+      "ancestor": false,
+      "unique": 1,
+      "equivalent": 0,
+      "changes": [
+        {
+          "commit": "5c63db82979e7ba1647bdddea6dbef432da95177",
+          "subject": "docs: add haiku baseline qualification receipt (T01)",
+          "files": [
+            "docs/reports/haiku-baseline-2026-11-14.md"
+          ]
+        }
+      ]
+    },
+    {
+      "branch": "origin/claude/laughing-volta-61srfa",
+      "sha": "2aaf0a01816afb256a804c23dd45de86eca2a993",
+      "ancestor": false,
+      "unique": 5,
+      "equivalent": 0,
+      "changes": [
+        {
+          "commit": "13b86c22f973aee91453090b2ec5bcff104e8804",
+          "subject": "fix(board,server): rollback anchor, no zero-seed receipts, control reason enum (QV-ADR-027 B2-07, B2-12, B2-16)",
+          "files": [
+            "docs/07-threat-model-security.md",
+            "docs/audit/consolidation-2026-10-30.md",
+            "packages/board/NOTES.md",
+            "packages/board/src/log.ts",
+            "packages/board/test/log.test.ts",
+            "packages/server/NOTES.md",
+            "packages/server/src/admin.ts",
+            "packages/server/src/app.ts",
+            "packages/server/src/controldb.ts",
+            "packages/server/src/election.ts",
+            "packages/server/src/env.ts",
+            "packages/server/src/gossip.ts",
+            "packages/server/src/records.ts",
+            "packages/server/test/admin.test.ts",
+            "packages/server/test/adr027-anchor.test.ts",
+            "packages/server/test/e2e.test.ts"
+          ]
+        },
+        {
+          "commit": "07fd61c83c89dd220403fe8df5dab4b3533b79de",
+          "subject": "feat(server): invite expiry default, rate-limit headers, signed-request auth only, IPv6 /56 buckets, export ack before archive delete (QV-ADR-027 B2-10 partial, N-16, N-20, N-32 a/b, N-21)",
+          "files": [
+            "docs/09-api-data-contracts.md",
+            "docs/28-data-model-storage.md",
+            "docs/audit/consolidation-2026-10-30.md",
+            "docs/errata/spec-errata-log.md",
+            "docs/plan/OPEN-DECISIONS.md",
+            "docs/plan/TODO.md",
+            "packages/server/NOTES.md",
+            "packages/server/src/admin.ts",
+            "packages/server/src/app.ts",
+            "packages/server/src/electiondb.ts",
+            "packages/server/src/export.ts",
+            "packages/server/src/ext-routes.ts",
+            "packages/server/src/http.ts",
+            "packages/server/src/pool.ts",
+            "packages/server/src/problem.ts",
+            "packages/server/src/ratelimit.ts",
+            "packages/server/test/adr027-c2.test.ts",
+            "packages/server/test/audit.test.ts",
+            "packages/web/NOTES.md",
+            "packages/web/src/api/client.ts",
+            "packages/web/src/api/types.ts",
+            "packages/web/test/n20-auth.test.ts"
+          ]
+        },
+        {
+          "commit": "b2f043e0b9e648d3c85503ee40ccf4b6f0278c83",
+          "subject": "feat(web): integrity-pinned preloads for lazy chunks, trustee steps stay CLI-only (QV-ADR-027 W15, N-37c)",
+          "files": [
+            "docs/10-user-experience.md",
+            "docs/17-key-ceremony-trustees.md",
+            "docs/19-client-supply-chain.md",
+            "docs/audit/consolidation-2026-10-30.md",
+            "docs/audit/web-second-wave.md",
+            "packages/web/NOTES.md",
+            "packages/web/e2e/verifier.ts",
+            "packages/web/src/build/site.ts",
+            "packages/web/src/i18n/runtime.ts",
+            "packages/web/src/ui/app.ts",
+            "packages/web/src/util/pinned-preload.ts",
+            "packages/web/test/lazy.test.ts",
+            "packages/web/test/pinned-preload.test.ts",
+            "packages/web/test/trustee-scope.test.ts"
+          ]
+        },
+        {
+          "commit": "80c3a17d59cd2c9d87d9afef7a82684a818aa9c3",
+          "subject": "docs: report-only traceability script, historical claims markers, empty-state maintainer/key/licence notes, REQ-063 client scope (QV-ADR-027 N-23c, CLAIMS-LINT-HISTORICAL, N-08b, RECON-REQ063-SERVER)",
+          "files": [
+            "MAINTAINERS.md",
+            "docs/13-accessibility-localization.md",
+            "docs/24-traceability-matrix.md",
+            "docs/LICENSE-NOTE.md",
+            "docs/RELEASE-KEYS.md",
+            "docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md",
+            "docs/audit/2026-10-28/B3-quietvote-web.md",
+            "docs/audit/consolidation-2026-10-30.md",
+            "docs/plan/COMPLETION.md",
+            "docs/plan/TODO.md",
+            "docs/reports/security-review-2026-10-21.md",
+            "docs/reports/traceability-matrix.md",
+            "docs/research/outstanding-research.md",
+            "docs/research/security-speculative.md",
+            "docs/research/ui-security-ux.md",
+            "packages/server/NOTES.md",
+            "packages/server/test/events.test.ts",
+            "packages/web/NOTES.md",
+            "packages/web/test/i18n-catalogs.test.ts",
+            "packages/web/test/locale-preference.test.ts",
+            "scripts/trace.mjs",
+            "scripts/trace.test.mjs"
+          ]
+        },
+        {
+          "commit": "2aaf0a01816afb256a804c23dd45de86eca2a993",
+          "subject": "docs(handoff): pause handoff for claude/laughing-volta-61srfa; preserve rejected web-ballot work as a patch",
+          "files": [
+            "docs/handoffs/2026-11-11-laughing-volta-handoff.md",
+            "docs/handoffs/wip/2026-11-11-web-ballot-adr027-B3-06-B3-14-B3-11a-B3-28-B3-25.patch"
+          ]
+        }
+      ]
+    },
+    {
+      "branch": "origin/claude/quietvote-audit-board-cli-1",
+      "sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-audit-crypto-protocol-1",
+      "sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-audit-qa-1",
+      "sha": "563eec8659184e32771244088d59acc5035fa798",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-audit-server-1",
+      "sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-audit-trustee-1",
+      "sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-audit-web-verifier-1",
+      "sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-board-cli-1",
+      "sha": "c69473f242c9848847c3e899016c562e51a325e4",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-ci-gates-1",
+      "sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-cli-spoil-collect-1",
+      "sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-complete-1",
+      "sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-docs-1",
+      "sha": "5341f6f66d237e0bba6a6d68efcc11ace5c8ac6c",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-finish-1",
+      "sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-security-fixes-k616wx",
+      "sha": "5382d5f89226a7464025480c3a6be606da79859a",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-spoil-wiring-1",
+      "sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-trustee-hardening-1",
+      "sha": "f0423305cb4571b584a7b9454ed774d006663613",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-ui-locale-a11y-sltfb3",
+      "sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quietvote-web-triage-1",
+      "sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/quirky-curie-n5pxf5",
+      "sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/sharp-archimedes-tu76rh",
+      "sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/tender-maxwell-93ctiw",
+      "sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/claude/wonderful-hypatia-9yszin",
+      "sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/codex/quietvote-completion-20261116",
+      "sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/codex/quietvote-consolidation-audit-20261104",
+      "sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/codex/quietvote-continue-20261116",
+      "sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/codex/quietvote-finish-20261116",
+      "sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/codex/quietvote-milestone-20261109",
+      "sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/codex/quietvote-resume-20261116",
+      "sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/codex/quietvote-trustee-acceptance-20261116",
+      "sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/docs/readme-and-wiki",
+      "sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+      "ancestor": false,
+      "unique": 1,
+      "equivalent": 0,
+      "changes": [
+        {
+          "commit": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+          "subject": "Add wiki pages and README wiki section",
+          "files": [
+            "README.md",
+            "docs/wiki/Codebase-Map.md",
+            "docs/wiki/Decisions-and-Status.md",
+            "docs/wiki/Home.md",
+            "docs/wiki/Specification-Map.md",
+            "docs/wiki/_Sidebar.md"
+          ]
+        }
+      ]
+    },
+    {
+      "branch": "origin/fix/pr51-restore-organizer",
+      "sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/integration/quietvote-completion",
+      "sha": "5382d5f89226a7464025480c3a6be606da79859a",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/integration/quietvote-consolidated-20261030",
+      "sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/main",
+      "sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "ancestor": true,
+      "unique": 0,
+      "equivalent": 0,
+      "changes": []
+    },
+    {
+      "branch": "origin/planning/future-cli-specs-20261110",
+      "sha": "85a7d3e0a898adec0fba9b07ef492ff5d5c5ed20",
+      "ancestor": false,
+      "unique": 1,
+      "equivalent": 0,
+      "changes": [
+        {
+          "commit": "85a7d3e0a898adec0fba9b07ef492ff5d5c5ed20",
+          "subject": "docs: propose future command-line interface specification",
+          "files": [
+            "docs/future-cli-spec.md"
+          ]
+        }
+      ]
+    }
+  ]
+}

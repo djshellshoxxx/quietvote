@@ -5,7 +5,8 @@
   (DKG output), so honest behaviour is unchanged. Regression: `test/audit.test.ts` "C8: cp-dec-spoil refuses an identity key share",
   which fails with the guard removed. Crypto change: needs the two-approval crypto review (docs/30). verifier-py derives `Y_j` from the
   DKG without an explicit identity check for either proof type; parity there is not yet assessed.
-# T-028 rerandomization helper — 2026-11-16
+
+## T-028 rerandomization helper — 2026-11-16
 
 `elgamalRerandomize(K, ciphertext, r)` completes the previously missing narrow
 library operation in T-028. It adds an encryption of zero using the existing
