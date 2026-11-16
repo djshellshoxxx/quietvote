@@ -1,13 +1,16 @@
 // Signed-request authentication (QV-08 §7): `Authorization: QV-Sig keyid=…,ts=…,nonce=…,sig=…`.
 // Ed25519 over a domain-separated digest of method, target, audience, timestamp, nonce and body hash.
 // Window +-120 s; (key, nonce) pairs are single-use inside the window (persisted in control.sqlite).
-import { authorKeyId, b64u, unb64u } from '@quietvote/board';
-import { ed25519Sign, ed25519Verify, sha256, concatBytes, utf8, ed25519Keypair } from '@quietvote/crypto';
+import { authorKeyId, b64u, unb64u, requestMessage } from '@quietvote/board';
+import { ed25519Verify, ed25519Keypair } from '@quietvote/crypto';
 import type { AccountKey } from './controldb.ts';
 import type { Env } from './env.ts';
 import { ApiError } from './problem.ts';
 
 export const WINDOW_SEC = 120;
+
+// Public API preserved; pure client framing lives below the service layer.
+export { requestMessage, signRequest } from '@quietvote/board';
 
 export interface AuthInfo {
   keyId: string;
@@ -16,18 +19,8 @@ export interface AuthInfo {
   orgId: string | null;
 }
 
-export function requestMessage(method: string, target: string, audience: string, ts: number, nonce: Uint8Array, body: Uint8Array): Uint8Array {
-  return concatBytes(utf8(`QV-REQ-v1\0${method}\0${target}\0${audience}\0${ts}\0`), nonce, sha256(body));
-}
-
 export function keyIdOf(pk: Uint8Array): string {
   return b64u(authorKeyId('ed25519', pk));
-}
-
-/** Client helper (used by tests, the CLI and the web client). */
-export function signRequest(sk: Uint8Array, pk: Uint8Array, method: string, target: string, audience: string, body: Uint8Array, ts: number, nonce: Uint8Array): string {
-  const sig = ed25519Sign(sk, requestMessage(method, target, audience, ts, nonce, body));
-  return `QV-Sig keyid=${keyIdOf(pk)},ts=${ts},nonce=${b64u(nonce)},sig=${b64u(sig)}`;
 }
 
 const DUMMY = ed25519Keypair(new Uint8Array(32).fill(7));
