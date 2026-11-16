@@ -540,6 +540,11 @@ export const EN = {
   'qv.spoil.out.accepted': n('Trustee {j}: share accepted.', 'Result line.'),
   'qv.spoil.out.local': n('Not sent: {reason}', '{reason} is a qv.spoil.reason.* text.'),
   'qv.spoil.out.server': n('The board refused this share (status {status}).', '{status} is an HTTP status.'),
+
+  // ---- key-file KDF cost confirm (B3-28, QV-ADR-027). Locale text for these keys is machine-drafted and unreviewed (packages/web/NOTES.md).
+  'qv.key.costWarn': n('This key file needs more memory and time than usual to unlock. It asks for {mem} MiB of memory, {passes} passes and {lanes} lanes. On a slow device this can take long or fail. Continue only if you trust the file.', 'Dialog body. MiB = mebibytes; passes and lanes are Argon2 settings, plain numbers.'),
+  'qv.key.costConfirm': n('Unlock anyway', 'Dialog confirm button.'),
+  'qv.key.costCancelled': n('Unlock cancelled. Nothing was unlocked.', 'Status after the user cancels the dialog.'),
 } as const satisfies Record<string, CatalogEntry>;
 
 export type MessageKey = keyof typeof EN;

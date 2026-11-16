@@ -195,3 +195,13 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
 * This adds actionable recovery evidence for handled failures. A hard kill between backup publication and live registration can
   still leave an unregistered copy without running rollback; no transactional crash journal or physical erasure guarantee is added.
   Local coverage is Linux/POSIX. Windows ACL enforcement remains absent; the hosted OS/Node matrix must qualify this candidate.
+
+## CLI unknown options (L1)
+
+* `parseArgs` used to accept any `--name value` pair and ignore names no command reads, so a typo'd option (for example
+  `--passphrase-fil`) let the command run as if the option were absent. Options are now checked against one allowlist of every
+  option the commands read; an unknown option is a USAGE error (exit 2) before any value is consumed and before any state changes.
+* The error names the option only when it is a plain lowercase word (at most 40 characters); otherwise it prints
+  `(name withheld)`. The option's value is never echoed. Known options and their behaviour are unchanged.
+* Allowlist is global, not per command: `status --out F` is still accepted and ignored. Per-command validation is a possible follow-up.
+* Regression tests: `test/cli-unknown-options.test.ts`.

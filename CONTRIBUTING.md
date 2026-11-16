@@ -4,7 +4,7 @@ QuietVote is in its **specification and early implementation** phase. Specificat
 
 ## Sign-off (DCO)
 
-Every commit must carry a `Signed-off-by:` line certifying the [Developer Certificate of Origin](DCO). Use `git commit -s`. The name and email must match the commit author. The `dco` check fails commits without it. There is no CLA. Contributions are accepted under AGPL-3.0-or-later.
+Every commit must carry a `Signed-off-by:` line certifying the [Developer Certificate of Origin](DCO). Use `git commit -s`. The name and email must match the commit author. Sign-off is required for every contribution. An automated check is **not yet enforced**: no workflow in `.github/workflows/` implements the planned `dco` check, so reviewers must verify the trailer by hand (the pull request template has a checklist item for it). Many commits made before this wording was corrected have no `Signed-off-by` trailer; whether and how to attest to them retroactively is an open decision for the project owner, and this note does not make or imply that attestation. There is no CLA. Contributions are accepted under AGPL-3.0-or-later.
 
 ## Development
 

@@ -16,7 +16,7 @@ Read [CONTRIBUTING.md](https://github.com/djshellshoxxx/quietvote/blob/main/CONT
 
 ## Code contributions
 
-- **Sign off every commit** with `git commit -s` (Developer Certificate of Origin, DCO; decision QV-ADR-011). The DCO check is planned but not yet in the repo.
+- **Sign off every commit** with `git commit -s` (Developer Certificate of Origin, DCO; decision QV-ADR-011). The DCO check is planned but not yet in the repo, so sign-off is verified by reviewers by hand. Many earlier commits lack the trailer; retroactive attestation is an open owner decision.
 - **Conventional Commits:** `feat`, `fix`, `test`, `docs`, `build`, `ci` and so on, with the package as scope. Subject 72 characters or fewer. Add a `Refs:` footer where possible.
 - **Pull requests** should stay near 400 changed lines or fewer. Larger ones need a design note.
 - **Reviews:** the author cannot approve their own pull request. Crypto or protocol changes need at least two approvals, one from the security reviewers.

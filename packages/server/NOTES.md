@@ -321,3 +321,15 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   the held partial upload, then still requires a full upload to complete. The competing archive body is withheld during early refusal;
   production HTTP behavior is unchanged. A missing-release mutation still fails recovery (503 rather than 202). See the report's
   Windows follow-up for the observed reset and qualification boundary.
+
+## KEK startup guard (lane L2)
+* `kek.ts` `loadOrCreateKek` refuses to start when `kek/kek.bin` is missing but `control.sqlite` already holds KEK-wrapped data
+  (`election_registry.dek_wrapped` not NULL, or any `webhook` row). It never writes a replacement KEK in that case. A fresh data
+  directory (no such rows) still creates the KEK. Regression tests: `test/kek-missing.test.ts`. Restore the original `kek.bin` to recover.
+
+## L3 server reliability (tally crash window, delete guard)
+* **Delete guard**: the registry row is written after the election's own state row (`syncState`), so a crash can leave it behind.
+  `ElectionPool.remove` keeps the registry check as a fast refusal, then opens the election (replay heals the registry) and
+  refuses on the replayed `logState`. Test: `test/delete-authoritative-state.test.ts`.
+* **Tally aggregate**: `maybeAggregateLocked` is a no-op once `aggregateSeq` is set (no second aggregate). A close that is durable
+  but has no aggregate (crash in between) is retried when the election is loaded. Test: `test/tally-crash-window.test.ts`.

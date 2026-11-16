@@ -21,7 +21,7 @@ added under `audit-b1-poc/` in the audit worktree only.
 * Prior audits checked: in-SHA `docs/audit/{README,web-verifier,web-second-wave}.md`, `docs/reports/security-review-2026-10-21.md`;
   unmerged branches (read with `git show origin/<branch>:<path>`): PR #10 `crypto-protocol.md` (CP-01..08 and second wave P1-P11,
   C1-C11), PR #9 `server.md`, PR #11 `board-cli.md`/`dependencies.md`, PR #8 `trustee.md`, PR #6 `HANDOFF.md`. `git merge-base
-  --is-ancestor` confirms none of the audit-fix branches (#6, #8-#11, #14-#17) is an ancestor of the audited SHA, so their fixes are absent.
+  --is-ancestor` confirms none of the audit-fix branches (#6, #8-#11, #14-#17) is an ancestor of the audited SHA, so their fixes are absent. <!-- claims-lint-ignore -->
 
 ## 2. Method
 

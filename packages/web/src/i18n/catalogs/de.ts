@@ -515,4 +515,8 @@ export const DE = {
   'qv.spoil.out.accepted': 'Treuhänder {j}: Anteil angenommen.',
   'qv.spoil.out.local': 'Nicht gesendet: {reason}',
   'qv.spoil.out.server': 'Die Anschlagtafel hat diesen Anteil abgelehnt (Status {status}).',
+  // Machine-drafted, unreviewed (key-file KDF cost confirm, B3-28).
+  'qv.key.costWarn': 'Diese Schlüsseldatei verlangt zum Entsperren mehr Speicher und Zeit als üblich: {mem} MiB Speicher, {passes} Durchläufe, {lanes} Spuren. Auf einem langsamen Gerät oder bei wenig Speicher kann das lange dauern oder scheitern. Fahren Sie nur fort, wenn Sie der Herkunft der Datei vertrauen.',
+  'qv.key.costConfirm': 'Trotzdem entsperren',
+  'qv.key.costCancelled': 'Entsperren abgebrochen. Nichts wurde entsperrt.',
 } as const satisfies Record<MessageKey, string>;

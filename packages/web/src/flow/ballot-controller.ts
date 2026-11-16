@@ -141,6 +141,7 @@ export class BallotController {
     const { ctx, signer, api, apiElectionId, origin, logPk } = this.d;
     const codeHex = this.sealed.codeHex;
     const codeDisplay = ballotCodeDisplay(hexToBytes(codeHex, 32));
+    let posted: Awaited<ReturnType<ApiClient['postEntryWithRetry']>> | undefined;
     try {
       if (!this.pending) {
         const env: CastEnvelope = {
@@ -150,19 +151,16 @@ export class BallotController {
         this.pending = await prepareEntry({ signer, origin, type: 'ballot', record: env, rng: this.d.rng, now: this.now() });
       }
       const res = await api.postEntryWithRetry(apiElectionId, this.pending.headerB64u, this.pending.bodyB64u);
+      posted = res; // the board has the ballot from here on, whatever verification says
       const info = verifyAppendResult(res, { origin, leafHash: this.pending.leafHash, logPk });
       // W2: the head in the receipt must extend the pinned one (rollback / fork alarms) before it replaces the pin.
       if (info.checkpointNote !== undefined && info.treeSize !== undefined) await this.checkAgainstPin(info.checkpointNote);
       const report: CastReport = { outcome: info.outcome, seq: info.seq, codeHex, codeDisplay, sequencedAt: res.receipt.promise.sequenced_at };
       {
-        const file: ReceiptFile = {
-          format: 'qv-receipt/1', election: this.d.apiElectionId, manifest_hash: ctx.manifestHashHex, ballot_code: codeHex, seq: info.seq,
-          leaf_hash: res.receipt.leaf_hash, receipt: res.receipt, client_build: this.d.clientBuild,
-        };
+        const file = this.receiptFor(res, codeHex, info.seq);
         report.receipt = file;
         try {
-          const settings = await this.d.storage.getSettings();
-          if (settings.rememberReceipts) await this.d.storage.putReceipt({ electionId: this.d.apiElectionId, code: codeHex, seq: info.seq, json: receiptFileText(file) });
+          await this.keepReceipt(file);
           if (info.checkpointNote !== undefined && info.treeSize !== undefined) await this.d.storage.putHead({ electionId: this.d.apiElectionId, size: info.treeSize, note: info.checkpointNote });
         } catch {
           // The log's signed receipt remains valid even when this device cannot retain it.
@@ -185,6 +183,18 @@ export class BallotController {
         outcome: outcome ?? 'PENDING_UNCONFIRMED', codeHex, codeDisplay,
         error: { ux, requestId: e instanceof ApiError ? e.requestId : undefined },
       };
+      // The board accepted the ballot, so its receipt is kept and offered (the alarm text asks the voter to save the evidence).
+      // W2 exception: a head that forks or rolls back the pinned one is not offered as a receipt. No checkpoint is pinned here.
+      const headConflict = ux === 'E-BOARD-FORK' || ux === 'E-BOARD-ROLLBACK';
+      if (posted !== undefined && !headConflict) {
+        const file = this.receiptFor(posted, codeHex, posted.receipt.seq);
+        report.receipt = file;
+        try {
+          await this.keepReceipt(file);
+        } catch {
+          report.storageFailed = true;
+        }
+      }
       this.lastCast = report;
       if (outcome !== undefined) {
         this.discardSecrets();
@@ -194,6 +204,19 @@ export class BallotController {
       }
       return report;
     }
+  }
+
+  private receiptFor(res: Awaited<ReturnType<ApiClient['postEntryWithRetry']>>, codeHex: string, seq: number): ReceiptFile {
+    return {
+      format: 'qv-receipt/1', election: this.d.apiElectionId, manifest_hash: this.d.ctx.manifestHashHex, ballot_code: codeHex, seq,
+      leaf_hash: res.receipt.leaf_hash, receipt: res.receipt, client_build: this.d.clientBuild,
+    };
+  }
+
+  /** Stores the receipt when the voter chose to remember receipts on this device. Throws if storage fails. */
+  private async keepReceipt(file: ReceiptFile): Promise<void> {
+    const settings = await this.d.storage.getSettings();
+    if (settings.rememberReceipts) await this.d.storage.putReceipt({ electionId: this.d.apiElectionId, code: file.ballot_code, seq: file.seq, json: receiptFileText(file) });
   }
 
   private async checkAgainstPin(note: string): Promise<void> {

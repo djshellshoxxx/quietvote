@@ -515,4 +515,8 @@ export const ES = {
   'qv.spoil.out.accepted': 'Fideicomisario {j}: parte aceptada.',
   'qv.spoil.out.local': 'No enviada: {reason}',
   'qv.spoil.out.server': 'El tablón rechazó esta parte (estado {status}).',
+  // Machine-drafted, unreviewed (key-file KDF cost confirm, B3-28).
+  'qv.key.costWarn': 'Este archivo de clave pide más memoria y tiempo de lo habitual para desbloquearse: {mem} MiB de memoria, {passes} pasadas, {lanes} carriles. En un dispositivo lento o con poca memoria puede tardar mucho o fallar. Continúe solo si confía en el origen de este archivo.',
+  'qv.key.costConfirm': 'Desbloquear de todos modos',
+  'qv.key.costCancelled': 'Desbloqueo cancelado. No se desbloqueó nada.',
 } as const satisfies Record<MessageKey, string>;

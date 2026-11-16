@@ -1,4 +1,6 @@
 // Error model (QV-09 §4.3, RFC 9457) and mapping to UX error codes (QV-10 §8.1).
+import type { Args } from '../i18n/icu.ts';
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -48,6 +50,27 @@ export function uxCodeFor(e: unknown, submitting = false): UxCode {
     case 'MAINTENANCE': return 'E-API-UNAVAILABLE';
     case 'READ_KEY_REQUIRED': return 'E-READ-KEY';
     default: return 'E-GEN-UNKNOWN';
+  }
+}
+
+export interface PhaseTimes {
+  opens?: string | undefined;
+  closes?: string | undefined;
+}
+
+/**
+ * B3-06: the UX code to show for a failure together with the arguments its catalog text needs. `ux` is an already-chosen code
+ * (ballot state) or undefined to derive it from `e`. A `{time}` or `{seconds}` placeholder left empty makes the translator throw
+ * and the screen falls back to the generic error, so every code that takes arguments gets them here. A closed/not-open phase whose
+ * time is unknown (no manifest loaded yet) shows the "unavailable" copy instead of inventing a time.
+ */
+export function uxPresentation(ux: string | undefined, e: unknown, times: PhaseTimes = {}): { ux: string; args: Args } {
+  const code = ux ?? uxCodeFor(e);
+  switch (code) {
+    case 'E-API-RATE': return { ux: code, args: { seconds: e instanceof ApiError && e.retryAfter !== undefined ? Math.ceil(e.retryAfter) : 60 } };
+    case 'E-VOT-CLOSED': return times.closes !== undefined ? { ux: code, args: { time: times.closes } } : { ux: 'E-API-UNAVAILABLE', args: {} };
+    case 'E-VOT-NOTOPEN': return times.opens !== undefined ? { ux: code, args: { time: times.opens } } : { ux: 'E-API-UNAVAILABLE', args: {} };
+    default: return { ux: code, args: {} };
   }
 }
 
