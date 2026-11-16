@@ -15,7 +15,7 @@ import { World } from './helpers/world.ts';
 const H = bytesToHex;
 
 test('S1-02: refuse a cast that re-wraps ciphertexts of an admitted, published spoil', { timeout: 300_000 }, async (t) => {
-  const w = new World({ seed: 's1-spoil-then-cast', n: 3, t: 2, voters: 3 });
+  const w = new World({ seed: 's1-spoil-then-cast', n: 3, t: 2, voters: 4 });
   await w.start();
   try {
     await w.setupOrgAndElection();
@@ -35,10 +35,15 @@ test('S1-02: refuse a cast that re-wraps ciphertexts of an admitted, published s
     t.diagnostic(`1. spoil (published reveal) of ciphertexts C under code ${H(ballotCode(w.params.ctx, body)).slice(0, 16)}...: ${rs.status}`);
     assert.equal(rs.status, 201, rs.text);
     w.tick(5);
+    // The spoil/cast exclusion must survive a restart: admission rebuilds its
+    // ciphertext set from durable log entries rather than relying on RAM.
+    await w.server.stop();
+    await w.start();
     // 2. Cast the original body: same ciphertexts and proofs, different code.
     const rc = await w.post('ballot', v, makeCast(w.params, v.secretKey, b));
     t.diagnostic(`2. cast of the same ciphertexts C under code ${H(b.code).slice(0, 16)}...: ${rc.status} ${rc.json?.reason ?? ''}`);
-    if (rc.status === 201) w.last.set(H(v.publicKey), H(b.code));
+    assert.equal(rc.status, 422, 'a cast re-using the ciphertexts of an admitted spoil must be refused after restart');
+    assert.equal(rc.json.reason, 'E_SPOILED_CODE_CAST');
     w.tick(5);
     // control: the other order is refused at admission (existing CP-01/TR-01 behaviour)
     const b1 = w.build(1, { budget: ['yes'], chair: ['ann'] });
@@ -52,8 +57,10 @@ test('S1-02: refuse a cast that re-wraps ciphertexts of an admitted, published s
     assert.equal(ctl.status, 422);
     w.tick(5);
     assert.equal((await w.cast(2, { budget: ['yes'], chair: ['bob'] })).status, 201);
+    w.tick(5);
+    assert.equal((await w.cast(3, { budget: ['no'], chair: ['cy'] })).status, 201);
 
-    // 3. Finish the election.
+    // 3. Finish with three legitimate casts, satisfying the unchanged privacy floor.
     assert.equal((await w.close()).status, 201);
     for (const j of [1, 3]) assert.equal((await w.trusteeShares(j)).status, 201);
     const draft = await w.get(`/api/v1/elections/${w.electionId}/tally/draft?decrypters=1,3`);
@@ -75,7 +82,8 @@ test('S1-02: refuse a cast that re-wraps ciphertexts of an admitted, published s
 
     // EXPECTED: the server refuses, at admission, a cast whose ciphertexts were already spoiled (as it does for the other order),
     // so a counted ballot never has its opening on the log and no voter can force the election-wide Benaloh alarm.
-    assert.equal(rc.status, 422, 'a cast re-using the ciphertexts of an admitted spoil must be refused at admission');
+    assert.equal(castEntry, undefined, 'the refused cast must not enter the public log');
+    assert.equal(report.counts.counted, 3, 'only the three legitimate casts are counted');
     assert.equal(report.checks['chk.benaloh.spoiled'], 'pass');
   } finally {
     await w.stop();
