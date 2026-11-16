@@ -326,4 +326,3 @@ test('real tree: no new violations and no stale known deviation', () => {
   assert.deepEqual(report.stale_known_deviations, []);
   assert.equal(result.status, 0);
 });
-
