@@ -72,6 +72,23 @@ Every tombstone in the minimum backup must remain DELETED in the candidate.
 Restoring its old live snapshot or omitting that tombstone is refused, so a
 restored backup cannot forget deletions needed by future recovery floors.
 
+Restore also compares private security state from the two verified snapshots.
+It refuses missing or rebound account keys, reactivated revoked credentials or
+organizations, reenabled disabled webhooks, resurrection or loss of recorded
+webhook deletions, and loss or rollback of unexpired replay/idempotency records.
+Closed invitations cannot become usable again; erased invitation labels and
+contacts cannot reappear. Rejections use `BACKUP_SECURITY_ROLLBACK` before any
+destination is created. Expired replay/idempotency records may be pruned. The
+private comparison data is never included in the command's JSON report.
+
+These are conservative monotonic checks, not a merge of two snapshots. If an
+intentional administrative reactivation is incompatible with an older floor,
+retain a newer independently verified floor before restoring. The public
+`verifyBackup` library report alone carries only the existing public-history
+floor; `restore` obtains private state by independently verifying both full
+snapshots. This does not establish global snapshot atomicity or discover
+security changes absent from both supplied backups.
+
 Success reports instance ID, file/envelope counts, deleted election IDs and election roots/sizes, never
 keys or unsealed data. Zero authenticated envelopes means there is no encrypted
 material proving which KEK was used. Exit codes: `0` success, `1` verification/I/O

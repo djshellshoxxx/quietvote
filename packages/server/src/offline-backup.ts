@@ -17,6 +17,7 @@ import type { Env } from './env.ts';
 import { open as unseal } from './kek.ts';
 import { Logger } from './logger.ts';
 import { FailureCounter, RateLimiter } from './ratelimit.ts';
+import { controlSecurityFloor, inviteSecurityFloor, preservesSecurityFloor, type BackupSecurityFloor } from './backup-security-floor.ts';
 
 export class BackupError extends Error {
   readonly code: string;
@@ -154,10 +155,12 @@ function checkAuthors(rt: ElectionRuntime): void {
 /** Verify private copies with the shipped startup replay and self-audit; no listeners, jobs, webhooks or gossip are started. */
 export async function verifyBackup(directory: string, kekPath: string, minimum?: BackupReport): Promise<BackupReport> {
   const kek = keyFile(kekPath);
-  try { return await verifyCopy(resolve(directory), kek, manifest(resolve(directory)), minimum); }
+  try { return (await verifyCopy(resolve(directory), kek, manifest(resolve(directory)), minimum ? { report: minimum } : undefined)).report; }
   finally { kek.fill(0); }
 }
-async function verifyCopy(dir: string, kek: Buffer, m: Manifest, minimum?: BackupReport): Promise<BackupReport> {
+interface VerifiedBackup { report: BackupReport; security: BackupSecurityFloor }
+async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: { report: BackupReport; security?: BackupSecurityFloor }): Promise<VerifiedBackup> {
+  const minimum = floor?.report;
   const temp = mkdtempSync(join(tmpdir(), 'qv-backup-check-'));
   let control: ControlDb | undefined;
   try {
@@ -170,6 +173,7 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, minimum?: Backu
     }
     // Migration checksums and supported schema checks run only on the disposable copy.
     control = new ControlDb(temp, Date.now, SERVER_VERSION);
+    const security = controlSecurityFloor(control.db);
     const registry = control.db.prepare('SELECT * FROM election_registry ORDER BY election_id').all() as unknown as RegistryRow[];
     // Tombstones can drive resumable cleanup at startup too; never trust their paths.
     for (const reg of registry) pathOf(reg);
@@ -198,6 +202,7 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, minimum?: Backu
       if (reg.quarantine !== null) fail('BACKUP_QUARANTINE');
       const rt = await ElectionRuntime.open(env, reg);
       try {
+        security.invites.set(reg.election_id, inviteSecurityFloor(rt.edb.db));
         const row = rt.edb.row();
         checkAuthors(rt);
         if (row.org_id !== reg.org_id || row.imported !== reg.imported || rt.quarantineReason() !== undefined || rt.edb.hasKeyEvidence() ||
@@ -229,7 +234,8 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, minimum?: Backu
       } finally { rt.close(); }
     }
     if (minimum?.elections.some((e) => !report.elections.some((r) => r.election_id === e.election_id))) fail('BACKUP_ROLLBACK');
-    return report;
+    if (floor?.security && !preservesSecurityFloor(security, floor.security, Date.now())) fail('BACKUP_SECURITY_ROLLBACK');
+    return { report, security };
   } catch (error) {
     if (error instanceof BackupError) throw error;
     throw new BackupError('BACKUP_VERIFY'); // Never echo SQLite errors, decoded data, paths or authentication exceptions.
@@ -246,7 +252,7 @@ export async function restoreBackup(directory: string, kekPath: string, destinat
     const m = manifest(dir);
     const floorDir = resolve(minimumDirectory);
     const floor = await verifyCopy(floorDir, kek, manifest(floorDir));
-    const report = await verifyCopy(dir, kek, m, floor);
+    const { report } = await verifyCopy(dir, kek, m, floor);
     const target = resolve(destination);
     // mkdir is the atomic no-clobber reservation. No recursive mkdir and no rename over a target.
     mkdirSync(target, { mode: 0o700 });
