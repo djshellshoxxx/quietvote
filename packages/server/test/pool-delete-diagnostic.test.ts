@@ -9,6 +9,7 @@ test('rejected deletion lists IMPORTED among the pre-existing permitted states',
   let changed = false;
   const env = {
     control: {
+      pendingElectionCleanup: () => [],
       election: () => ({ state: 'OPEN' }),
       markDeleted: () => { changed = true; },
     },
