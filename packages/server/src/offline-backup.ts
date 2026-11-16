@@ -158,8 +158,8 @@ export async function verifyBackup(directory: string, kekPath: string, minimum?:
   try { return (await verifyCopy(resolve(directory), kek, manifest(resolve(directory)), minimum ? { report: minimum } : undefined)).report; }
   finally { kek.fill(0); }
 }
-interface VerifiedBackup { report: BackupReport; security: BackupSecurityFloor }
-async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: { report: BackupReport; security?: BackupSecurityFloor }): Promise<VerifiedBackup> {
+interface VerifiedBackup { report: BackupReport; security?: BackupSecurityFloor }
+async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: VerifiedBackup, captureSecurity = false): Promise<VerifiedBackup> {
   const minimum = floor?.report;
   const temp = mkdtempSync(join(tmpdir(), 'qv-backup-check-'));
   let control: ControlDb | undefined;
@@ -173,7 +173,7 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: { repor
     }
     // Migration checksums and supported schema checks run only on the disposable copy.
     control = new ControlDb(temp, Date.now, SERVER_VERSION);
-    const security = controlSecurityFloor(control.db);
+    const security = captureSecurity || floor?.security ? controlSecurityFloor(control.db) : undefined;
     const registry = control.db.prepare('SELECT * FROM election_registry ORDER BY election_id').all() as unknown as RegistryRow[];
     // Tombstones can drive resumable cleanup at startup too; never trust their paths.
     for (const reg of registry) pathOf(reg);
@@ -202,7 +202,7 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: { repor
       if (reg.quarantine !== null) fail('BACKUP_QUARANTINE');
       const rt = await ElectionRuntime.open(env, reg);
       try {
-        security.invites.set(reg.election_id, inviteSecurityFloor(rt.edb.db));
+        security?.invites.set(reg.election_id, inviteSecurityFloor(rt.edb.db));
         const row = rt.edb.row();
         checkAuthors(rt);
         if (row.org_id !== reg.org_id || row.imported !== reg.imported || rt.quarantineReason() !== undefined || rt.edb.hasKeyEvidence() ||
@@ -234,8 +234,8 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: { repor
       } finally { rt.close(); }
     }
     if (minimum?.elections.some((e) => !report.elections.some((r) => r.election_id === e.election_id))) fail('BACKUP_ROLLBACK');
-    if (floor?.security && !preservesSecurityFloor(security, floor.security, Date.now())) fail('BACKUP_SECURITY_ROLLBACK');
-    return { report, security };
+    if (floor?.security && (!security || !preservesSecurityFloor(security, floor.security, Date.now()))) fail('BACKUP_SECURITY_ROLLBACK');
+    return { report, ...(security ? { security } : {}) };
   } catch (error) {
     if (error instanceof BackupError) throw error;
     throw new BackupError('BACKUP_VERIFY'); // Never echo SQLite errors, decoded data, paths or authentication exceptions.
@@ -251,7 +251,7 @@ export async function restoreBackup(directory: string, kekPath: string, destinat
     const dir = resolve(directory);
     const m = manifest(dir);
     const floorDir = resolve(minimumDirectory);
-    const floor = await verifyCopy(floorDir, kek, manifest(floorDir));
+    const floor = await verifyCopy(floorDir, kek, manifest(floorDir), undefined, true);
     const { report } = await verifyCopy(dir, kek, m, floor);
     const target = resolve(destination);
     // mkdir is the atomic no-clobber reservation. No recursive mkdir and no rename over a target.

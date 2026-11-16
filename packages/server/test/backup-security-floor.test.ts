@@ -107,7 +107,17 @@ test('minimum snapshot prevents invitation reactivation and resurrection of eras
   await refuses(original, closed);
   const purged = changed('election', (db) => db.exec('UPDATE voter_invite SET label_enc=NULL,contact_enc=NULL'), closed);
   await refuses(closed, purged);
+  await refuses(changed('election', (db) => db.exec('UPDATE voter_invite SET closed_at=2'), closed), closed);
+  await refuses(changed('election', (db) => db.exec('UPDATE voter_invite SET expires_at=9999999999999'), closed), closed);
   const omitted = changed('election', (db) => db.exec('DELETE FROM voter_invite'), purged);
   await refuses(omitted, purged);
   await restoreBackup(purged, key, join(root, 'purge-preserved'), closed);
+});
+
+test('minimum snapshot retains the durable event forwarding cursor', async () => {
+  const floor = changed('control', (db) => db.prepare('INSERT OR REPLACE INTO webhook_event_cursor(election_id,event_id) VALUES (?,?)').run(w.electionId, 1));
+  const missing = changed('control', (db) => db.exec('DELETE FROM webhook_event_cursor'), floor);
+  const older = changed('control', (db) => db.exec('UPDATE webhook_event_cursor SET event_id=0'), floor);
+  await refuses(missing, floor); await refuses(older, floor);
+  await restoreBackup(floor, key, join(root, 'event-cursor-preserved'), floor);
 });

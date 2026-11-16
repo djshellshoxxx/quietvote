@@ -10,6 +10,7 @@ export interface BackupSecurityFloor {
   deletedHooks: Set<string>;
   nonces: Map<string, Row>;
   requests: Map<string, Row>;
+  eventCursors: Map<string, Row>;
   invites: Map<string, Map<string, Row>>;
 }
 function rows(db: DatabaseSync, sql: string, keys: string[]): Map<string, Row> {
@@ -29,12 +30,13 @@ export function controlSecurityFloor(db: DatabaseSync): BackupSecurityFloor {
     deletedHooks: new Set(db.prepare("SELECT target FROM operator_audit WHERE action='webhook.delete' AND target IS NOT NULL").all().map((r) => JSON.stringify([r['target']]))),
     nonces: rows(db, 'SELECT key_id,nonce,expires_at FROM replay_nonce', ['key_id', 'nonce']),
     requests: rows(db, 'SELECT principal,idem_key,method,path,req_sha256,status,response,expires_at FROM idempotency', ['principal', 'idem_key']),
+    eventCursors: rows(db, 'SELECT election_id,event_id FROM webhook_event_cursor', ['election_id']),
     invites: new Map(),
   };
 }
 export function inviteSecurityFloor(db: DatabaseSync): Map<string, Row> {
   // Only keep presence markers for erased data, never decrypted or encrypted contact values.
-  return rows(db, 'SELECT invite_id,code_hash,state,label_enc IS NULL AS label_erased,contact_enc IS NULL AS contact_erased FROM voter_invite', ['invite_id']);
+  return rows(db, 'SELECT invite_id,code_hash,state,created_at,expires_at,closed_at,label_enc IS NULL AS label_erased,contact_enc IS NULL AS contact_erased FROM voter_invite', ['invite_id']);
 }
 /** Reject rollback of security state that does not advance the public Merkle tree. */
 export function preservesSecurityFloor(candidate: BackupSecurityFloor, floor: BackupSecurityFloor, now: number): boolean {
@@ -66,13 +68,18 @@ export function preservesSecurityFloor(candidate: BackupSecurityFloor, floor: Ba
         (Number(old['status']) !== 0 && Number(next['status']) === 0) ||
         (Number(old['status']) > 0 && !fields(next, old, ['status', 'response']))) return false;
   }
+  for (const [id, old] of floor.eventCursors) {
+    const next = candidate.eventCursors.get(id);
+    if (!next || Number(next['event_id']) < Number(old['event_id'])) return false;
+  }
   for (const [election, invites] of floor.invites) {
     const nextInvites = candidate.invites.get(election);
     if (!nextInvites) return false;
     for (const [id, old] of invites) {
       const next = nextInvites.get(id);
-      if (!next || !same(next['code_hash'], old['code_hash']) ||
+      if (!next || !fields(next, old, ['code_hash', 'created_at', 'expires_at']) ||
           (old['state'] !== 'issued' && old['state'] !== 'sent' && (next['state'] === 'issued' || next['state'] === 'sent')) ||
+          (old['closed_at'] !== null && (next['closed_at'] === null || Number(next['closed_at']) > Number(old['closed_at']))) ||
           (old['label_erased'] === 1 && next['label_erased'] !== 1) ||
           (old['contact_erased'] === 1 && next['contact_erased'] !== 1)) return false;
     }
