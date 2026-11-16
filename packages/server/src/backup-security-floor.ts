@@ -50,7 +50,7 @@ export function preservesSecurityFloor(candidate: BackupSecurityFloor, floor: Ba
   }
   for (const [id, old] of floor.hooks) {
     const next = candidate.hooks.get(id);
-    if (old['disabled_at'] !== null && next?.['disabled_at'] === null) return false;
+    if (old['disabled_at'] !== null && (next ? next['disabled_at'] === null : !candidate.deletedHooks.has(id))) return false;
   }
   // Preserve deletion evidence as well, so the next recovery floor cannot forget it.
   for (const id of floor.deletedHooks) if (candidate.hooks.has(id) || !candidate.deletedHooks.has(id)) return false;

@@ -69,11 +69,15 @@ test('minimum snapshot refuses resurrecting revoked organizer credentials with u
 
 test('minimum snapshot retains organization suspension and webhook disable/delete evidence', async () => {
   await refuses(original, changed('control', (db) => db.exec("UPDATE org SET status='suspended'")));
-  await refuses(original, changed('control', (db) => db.exec('UPDATE webhook SET disabled_at=1')));
+  const disabled = changed('control', (db) => db.exec('UPDATE webhook SET disabled_at=1'));
+  await refuses(original, disabled);
+  const lostDisable = changed('control', (db) => db.exec('DELETE FROM webhook'), disabled);
+  await refuses(lostDisable, disabled);
   const floor = changed('control', (db) => db.exec("DELETE FROM webhook; INSERT INTO operator_audit(ts,actor,action,target,detail) VALUES (1,'operator','webhook.delete','hook-canary','{}')"));
   await refuses(original, floor);
   const omitted = changed('control', (db) => db.exec("DELETE FROM operator_audit WHERE action='webhook.delete'"), floor);
   await refuses(omitted, floor);
+  await restoreBackup(floor, key, join(root, 'disabled-then-deleted'), disabled);
 });
 
 test('minimum snapshot retains live replay and idempotency protection but permits expiry', async () => {
