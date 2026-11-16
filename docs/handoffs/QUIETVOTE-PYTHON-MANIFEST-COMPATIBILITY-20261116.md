@@ -1,6 +1,7 @@
 # Approved Python manifest compatibility — 2026-11-16
 
 Base source: `12565e6b9de976b439b140cb8f34845dcb72274f`.
+Signed implementation: `5a73bcd2f98a1c404a9dad34862808db521b431c`.
 Scope: QV-ADR-027's already accepted B1-05 option A and PY-01 option A in
 [the decision register](../plan/DECISIONS-2026-11-04.md). The older blanket holds
 do not supersede that approval. Independent review and final integration
@@ -39,8 +40,14 @@ Three positive manifest/hash results were computed independently with the
 unchanged TypeScript `validateManifest` and `manifestHash` at the base source:
 false flag, ALM title, and both. Their fixed digests are retained in the Python
 tests, which require no Node runtime. All three validate in both implementations.
-`git diff --check` passes. Full corpus validation is recorded in the follow-up
-receipt; do not infer a full-candidate pass from these focused tests.
+`python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet` then completed
+with exit 0: **282 total, 282 PASS, 0 FAIL, 0 NOT-IMPLEMENTED**. All 79 manifest
+file hashes match, none missing/mismatched; the corpus signature remains unsigned
+and the runner does not recompute its Merkle root. The 25 skipped non-vector
+input files are referenced fixture payloads, not skipped operation cases.
+`git diff 12565e6 -- test-vectors` is empty. Links check passes (1,311 links,
+249 files), and `git diff --check` passes. No full-unit-suite or final combined
+P1-candidate pass is claimed by this focused lane.
 
 The integrator owns independent review of the small manifest-only production
 diff and final combined tests. The P1 lane owns concurrent README/NOTES edits;
