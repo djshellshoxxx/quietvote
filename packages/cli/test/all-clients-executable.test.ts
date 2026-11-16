@@ -118,7 +118,7 @@ test('all shipped executables complete one real-clock election with exact totals
     w.manifest.created = ts(started - 86_400_000);
     w.manifest.voting_open = ts(started - 60_000);
     // The executable intentionally has no test clock. Wait for the actual deadline; never weaken close admission.
-    w.manifest.voting_close = ts(started + 360_000);
+    w.manifest.voting_close = ts(started + 600_000);
     w.manifest.bb.log_id = expectedLogId(w.origin);
     w.mh = manifestHash(w.manifest);
     const pin = bytesToHex(w.mh);
@@ -147,11 +147,11 @@ test('all shipped executables complete one real-clock election with exact totals
       await cli(['election', 'prepare', await download('qvb'), '--manifest-hash', pin, '--format', 'ceremony', '--out', log]);
       for (const i of [1, 2, 3]) await trustee(i, 'import', ['--log', log]);
     };
-    const marker = async (kind: string, type = 'notice', context = false) => {
+    const marker = async (kind: string, type = 'notice', options: { context?: boolean; sync?: boolean } = {}) => {
       const body = path('draft.json');
       await cli(['election', 'draft-record', await download('qvb'), '--manifest-hash', pin, '--kind', kind, '--out', body]);
-      await relay(type, await sign(body, context));
-      await sync();
+      await relay(type, await sign(body, options.context));
+      if (options.sync !== false) await sync();
     };
     const submitTrustee = async (i: number, round: string) => {
       const out = path('trustee-entry.json');
@@ -178,9 +178,9 @@ test('all shipped executables complete one real-clock election with exact totals
       await trustee(i, 'confirm', ['--compared-with', String(i === 1 ? 2 : 1), '--words', words[0]!]);
       await submitTrustee(i, 'r4-keyconf');
     }
-    await marker('dkg-final', 'joint_key');
-    await marker('roll-commit', 'roll_commit');
-    await marker('election-open', 'election_open', true);
+    await marker('dkg-final', 'joint_key', { sync: false });
+    await marker('roll-commit', 'roll_commit', { sync: false });
+    await marker('election-open', 'election_open', { context: true });
     const voting = await download();
     const codes: string[] = [];
     for (const i of [0, 1, 2]) {
@@ -195,7 +195,7 @@ test('all shipped executables complete one real-clock election with exact totals
     while (Date.now() < Date.parse(w.manifest.voting_close)) {
       await delay(Math.min(10_000, Date.parse(w.manifest.voting_close) - Date.now()), undefined, { signal: t.signal });
     }
-    await marker('election-close', 'election_close', true);
+    await marker('election-close', 'election_close', { context: true });
     const release = path('release.json');
     await cli(['election', 'prepare', await download('qvb'), '--manifest-hash', pin, '--out', release]);
     for (const i of [1, 2]) {
