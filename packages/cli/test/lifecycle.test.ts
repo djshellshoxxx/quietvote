@@ -3,10 +3,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { bytesToHex } from '@quietvote/crypto';
-import { expectedLogId } from '@quietvote/protocol';
+import { b64u } from '@quietvote/board';
+import { bytesToHex, sha256, utf8 } from '@quietvote/crypto';
+import { expectedLogId, signRecord } from '@quietvote/protocol';
+import { buildBoard } from '../../protocol/test/helpers/board.ts';
+import { bundleOf, setup } from '../../protocol/test/helpers/sim.ts';
+import { writeTar } from '../../server/src/tar.ts';
 import { World } from '../../server/test/helpers/world.ts';
 import { exportQvb } from '../../server/test/helpers/full.ts';
+import { prepareElectionArchive } from '../src/cmd-prepare.ts';
 import { qv, spawnQv, tmp } from './helpers.ts';
 
 test('draft-record executable generates each ceremony, roll, open and close body from an authenticated archive', { timeout: 180_000 }, async () => {
@@ -86,5 +91,49 @@ test('draft-record rejects malformed invocation before touching the input or out
     assert.equal((await qv([...args, '--manifest-hash', 'ab'.repeat(32), '--kind', 'dkg-open'])).code, 2);
     assert.equal((await qv(['election', 'draft-record', '/missing.qvb', '--manifest-hash', 'ab'.repeat(32), '--kind', 'arbitrary', '--out', output])).code, 2);
     assert.equal(existsSync(output), false);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('draft-record refuses invalid inner signatures and key confirmations even under authentic board envelopes', async () => {
+  const dir = tmp(), seed = 'cli-lifecycle-inner-records';
+  const sim = await setup({ seed, n: 3, t: 2, voters: 3, boundLog: true });
+  const complete = bundleOf(sim);
+  const finalSeq = complete.log.find((e) => (e.entry as { body?: { name?: string } }).body?.name === 'dkg-final')!.seq;
+  complete.log = complete.log.filter((e) => e.seq < finalSeq);
+  const pin = bytesToHex(sim.mh);
+  try {
+    for (const mutation of ['valid', 'signature', 'keyconf-proof'] as const) {
+      const election = structuredClone(complete);
+      if (mutation === 'signature') {
+        const record = election.log.find((e) => (e.entry as any).body.type === 'dkg-commit')!.entry as any;
+        record.sig.sig = '00'.repeat(64);
+      }
+      if (mutation === 'keyconf-proof') {
+        const record = election.log.find((e) => (e.entry as any).body.type === 'dkg-keyconf')!;
+        const body = (record.entry as any).body;
+        body.c = '00'.repeat(32);
+        const trustee = sim.trusteeKeys[body.j - 1]!;
+        record.entry = signRecord(trustee.secretKey, trustee.publicKey, sim.mh, body);
+      }
+      // Re-sign every outer envelope and checkpoint with the authorized fixture keys. Archive integrity stays valid.
+      const board = buildBoard(sim, election, [{ size: election.log.length + 1 }], { seed }).json as any;
+      const entries = utf8(board.entries.map((e: unknown) => JSON.stringify(e)).join('\n') + '\n');
+      const files = new Map<string, Uint8Array>([
+        ['election.json', utf8(JSON.stringify(election))], ['log/entries.jsonl', entries],
+        ['witness/policy.json', utf8(JSON.stringify(board.policy))], ['redactions.json', utf8('[]')],
+        ['bundle.json', utf8(JSON.stringify({ ...board, entries: undefined, checkpoints: undefined, policy: undefined, receipts: undefined, redactions: undefined,
+          entries_sha256: bytesToHex(sha256(entries)), server_pk_b64u: b64u(sim.coord[0]!.publicKey) }))],
+        [`log/checkpoints/${election.log.length + 1}.txt`, utf8(board.checkpoints[0])],
+      ]);
+      files.set('SHA256SUMS', utf8([...files].map(([name, data]) => `${bytesToHex(sha256(data))}  ${name}`).sort().join('\n') + '\n'));
+      const path = join(dir, `${mutation}.qvb`), out = join(dir, `${mutation}.json`);
+      writeFileSync(path, writeTar([...files].map(([name, data]) => ({ name, data }))));
+      assert.doesNotThrow(() => prepareElectionArchive(path, pin), 'outer archive authentication succeeds');
+      const result = await qv(['election', 'draft-record', path, '--manifest-hash', pin, '--kind', 'dkg-final', '--out', out]);
+      assert.equal(result.code, mutation === 'valid' ? 0 : 1, `${mutation}: ${result.err}`);
+      assert.equal(existsSync(out), mutation === 'valid');
+      if (mutation === 'signature') assert.match(result.err, /unauthenticated trustee/);
+      if (mutation === 'keyconf-proof') assert.match(result.err, /invalid timely trustee key confirmation/);
+    }
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

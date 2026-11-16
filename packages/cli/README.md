@@ -186,7 +186,7 @@ It verifies coordinator and trustee record signatures, recomputes DKG qualificat
 existing protocol implementation, and requires `t` timely verified trustee key confirmations before
 producing `dkg-final`. Roll/open/close proposals recheck that outcome. Open references are derived from
 authenticated sequence positions and close requires a valid context-signed, history-bound open marker.
-Changed hashes, invalid proofs, malformed input, existing outputs and path aliases are refused by the
+Changed hashes, invalid proofs, malformed input, archive symlinks and existing outputs are refused by the
 shared archive/output boundaries. Every new output is an exclusive mode-0600 file.
 
 A roll not pinned in the manifest is still an **uncommitted proposal** from the supplied snapshot;
