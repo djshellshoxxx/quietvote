@@ -2,6 +2,7 @@ import { FailError, InputError, UsageError } from './args.ts';
 import { cmdBallotAudit, cmdBallotEncrypt } from './cmd-ballot.ts';
 import { cmdVerifyReceipt } from './cmd-receipt.ts';
 import { cmdBoardVerify } from './cmd-board.ts';
+import { cmdElectionDraftRecord } from './cmd-lifecycle.ts';
 import { cmdElectionPrepare } from './cmd-prepare.ts';
 import { cmdElectionSignRecord, cmdElectionExportEntry } from './cmd-packet.ts';
 import { cmdElectionInspect } from './cmd-election.ts';
@@ -38,6 +39,9 @@ usage:
   qv election prepare <archive.qvb> --manifest-hash <hex> --out <file> [--format election|ceremony] [--json]
                                    checks archive, pinned manifest and board before preparing trustee inputs;
                                    accepts regular files up to 64 MiB and 10000 entries; refuses existing outputs
+  qv election draft-record <archive.qvb> --manifest-hash <hex> --kind <phase> --out <body.json> [--json]
+                                   phases: dkg-open, dkg-r1-open, dkg-r1-close, dkg-r2-close, dkg-r3-close,
+                                   dkg-final, roll-commit, election-open, election-close; unsigned, never submitted
   qv election sign-record --manifest <manifest.json> --manifest-hash <hex> --body <body.json> | --record <record.json>
                     --key <keyfile> --out <file> [--election <bundle>] [passphrase options] [--json]
                                    add one coordinator signature; quorum:false means additional signers are needed
@@ -75,7 +79,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   keygen: cmdKeygen,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
-  election: { 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
+  election: { 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
   online: { instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
 };

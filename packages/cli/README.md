@@ -113,8 +113,8 @@ indicators are not election-integrity or witness-independence verdicts.
 ## Coordinator signatures and voter packet files
 
 These commands reuse protocol record signatures and board entry framing. Obtain the manifest hash and election
-origin independently. Review the lifecycle body before signing; these adapters do not decide ceremony markers,
-roll commitments, open references or election state for the operator. Body schemas and signature framing are
+origin independently. Review the lifecycle body before signing; `draft-record` can derive ceremony/roll/open/close bodies from an authenticated public archive,
+while each coordinator still reviews and signs explicitly. Body schemas and signature framing are
 checked locally; server admission and independent verification remain separate checks.
 
 ```sh
@@ -164,3 +164,35 @@ three voter encryptions, tally proposal download/signing and final pinned verifi
 the real HTTP server. Operator enrollment, registration under the held B3-01 contract and trustee cryptography remain
 fixture setup. This is complementary to the trustee executable test; it does not claim a complete all-client
 registration journey or remove independent review gates.
+
+## Generate coordinator lifecycle proposals
+
+```sh
+# Export a fresh public snapshot before each transition. Keep earlier snapshots for comparison.
+qv online election-export --server https://vote.example --id ELECTION_ID --out phase.qvb
+qv election draft-record phase.qvb --manifest-hash ANNOUNCED_HASH --kind dkg-open --out body.json
+# Review body.json, then use sign-record, export-entry and online election-submit above.
+```
+
+`--kind` supports the existing sequence `dkg-open`, `dkg-r1-open`, `dkg-r1-close`,
+`dkg-r2-close`, `dkg-r3-close`, `dkg-final`, `roll-commit`, `election-open`, `election-close`.
+The JSON summary gives the required outer `entry_type`; the four intermediate DKG markers use `notice`.
+Only the next transition is generated. Existing, skipped, out-of-order or terminal transitions are refused.
+No command signs a generated body, submits it, retries a mutation or changes a scheduled opening/closing time.
+The server still enforces its current admission and time rules when the separately signed packet is submitted.
+
+This command uses the same bounded archive, manifest pin and authenticated board checks as `prepare`.
+It verifies coordinator and trustee record signatures, recomputes DKG qualification/joint key using the
+existing protocol implementation, and requires `t` timely verified trustee key confirmations before
+producing `dkg-final`. Roll/open/close proposals recheck that outcome. Open references are derived from
+authenticated sequence positions and close requires a valid context-signed, history-bound open marker.
+Changed hashes, invalid proofs, malformed input, existing outputs and path aliases are refused by the
+shared archive/output boundaries. Every new output is an exclusive mode-0600 file.
+
+A roll not pinned in the manifest is still an **uncommitted proposal** from the supplied snapshot;
+`roll_source: uncommitted-proposal` makes that explicit. Review its membership before signing.
+This does not change the held B3-01/D-99 registration contract or establish that the snapshot is the
+latest independent view. The summary retains `witness_quorum_verified: false`, `freshness_verified: false`,
+`signed: false` and `admitted: false`. Existing separate-organizer archive refusal remains in force.
+For open/close signing, also download the content JSON export for the existing `sign-record --election`
+context check; the unsigned proposal itself is derived from the authenticated `.qvb` history.

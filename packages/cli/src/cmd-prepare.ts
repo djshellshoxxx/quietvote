@@ -27,19 +27,13 @@ function readArchive(path: string): Uint8Array {
   finally { if (fd !== undefined) closeSync(fd); }
 }
 
-export async function cmdElectionPrepare(argv: string[], io: Io): Promise<number> {
-  const p = parseArgs(argv, { 'manifest-hash': 'value', out: 'value', format: 'value', json: 'bool' });
-  const [path] = needPositional(p, 1, 'election prepare <archive.qvb>');
-  const pin = pinnedHash(p);
-  if (pin === undefined || !p.has('out')) throw new UsageError('prepare requires --manifest-hash and --out');
-  const format = p.get('format') ?? 'election';
-  if (format !== 'election' && format !== 'ceremony') throw new UsageError('--format must be election or ceremony');
-
+/** Authenticates the existing public archive framing; consumers still apply their own protocol stage checks. */
+export function prepareElectionArchive(path: string, pin: string) {
   let election: ReturnType<typeof loadBundle> & { ok: true };
   let board: ReturnType<typeof bundleToJson>;
   let serverKey: string;
   try {
-    const files = readChecksummedArchive(readArchive(path!), { maxFiles: MAX_ENTRIES + 32 });
+    const files = readChecksummedArchive(readArchive(path), { maxFiles: MAX_ENTRIES + 32 });
     const need = (name: string): Uint8Array => {
       const data = files.get(name);
       if (!data) throw new Error(`${name} is missing`);
@@ -110,6 +104,17 @@ export async function cmdElectionPrepare(argv: string[], io: Io): Promise<number
   }
   const structure = verifyLogStructure(m, content.manifest, content.roll, content.log, { board, extraAuthorKeys: [serverKey] });
   if (!structure.ok) throw new FailError(`archive verification refused: ${structure.findings.map((f) => f.code).join(', ')}`);
+  return { content, board, serverKey };
+}
+
+export async function cmdElectionPrepare(argv: string[], io: Io): Promise<number> {
+  const p = parseArgs(argv, { 'manifest-hash': 'value', out: 'value', format: 'value', json: 'bool' });
+  const [path] = needPositional(p, 1, 'election prepare <archive.qvb>');
+  const pin = pinnedHash(p);
+  if (pin === undefined || !p.has('out')) throw new UsageError('prepare requires --manifest-hash and --out');
+  const format = p.get('format') ?? 'election';
+  if (format !== 'election' && format !== 'ceremony') throw new UsageError('--format must be election or ceremony');
+  const { content, board, serverKey } = prepareElectionArchive(path!, pin);
   const output = format === 'ceremony'
     ? { format: 'qv-ceremony-log/v1', manifest_hash: pin, entries: content.log }
     : { ...content, log_evidence: { board, extraAuthorKeys: [serverKey] } };
