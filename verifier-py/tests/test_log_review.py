@@ -10,8 +10,6 @@ import unittest
 from pathlib import Path
 
 from qv_verifier.election import verify_bundle
-from qv_verifier.errors import NotImplementedOp
-from qv_verifier.logcheck import require_supported
 
 
 TREE = Path(__file__).resolve().parents[2] / "test-vectors" / "v1"
@@ -30,22 +28,13 @@ class TestLogReview(unittest.TestCase):
         cls.board = read(FIXTURES / "board.json")
         cls.vectors = read(FIXTURES / "vectors.json")["vectors"]
 
-    def test_preflight_inventory_is_input_dependent(self):
-        supported, held = [], []
-        for vector in self.vectors:
-            inp = vector["input"]
-            bundle = read(TREE / inp["bundle"]["path"])
-            board = read(TREE / inp["board"]["path"])
-            board.update(inp["board"].get("replace", {}))
-            with self.subTest(vector=vector["id"]):
-                try:
-                    require_supported(bundle, {"board": board})
-                    supported.append(vector["id"])
-                except NotImplementedOp:
-                    held.append(vector["id"])
-        self.assertEqual(len(supported), 35)
-        self.assertEqual(len(held), 13)
-        self.assertTrue(all(x.startswith("notice-") for x in held))
+    def test_unknown_core_record_is_not_log_authority(self):
+        bundle = read(FIXTURES / 'notices/waiver-before-open.bundle.json')
+        report = verify_bundle(bundle)
+        self.assertEqual(report['verdict'], 'PASS')
+        self.assertEqual(report['checks']['chk.board.append_only'], 'not_run')
+        self.assertEqual(report['checks']['chk.encoding.canonical'], 'fail')
+        self.assertTrue(any(f['code'] == 'E_VERSION' and not f['fatal'] for f in report['findings']))
 
     def test_missing_or_malformed_protocol_dkg_notice_is_failure_not_hold(self):
         for mutation in ("missing", "name-list", "name-null", "type-list"):
@@ -61,7 +50,6 @@ class TestLogReview(unittest.TestCase):
             with self.subTest(mutation=mutation):
                 # The actual board body is still an ordinary DKG marker. A
                 # missing/malformed protocol counterpart cannot invent an X31 hold.
-                require_supported(bundle, {"board": self.board})
                 result = verify_bundle(bundle, log={"board": self.board})
                 self.assertEqual(result["verdict"], "FAIL")
                 self.assertEqual(result["checks"]["chk.board.append_only"], "fail")

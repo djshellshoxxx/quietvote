@@ -225,7 +225,7 @@ class TestPrivateAudit(unittest.TestCase):
                 self.assertFalse(actual["ok"], actual)
                 self.assertIn(actual["error"], ("E_SCHEMA", "E_MANIFEST"), actual)
 
-    def test_log_verification_is_still_explicitly_unsupported(self):
+    def test_log_file_inputs_require_contextual_runner_not_primitive_dispatch(self):
         self.assertNotIn("log.verify_election", OPS)
 
 

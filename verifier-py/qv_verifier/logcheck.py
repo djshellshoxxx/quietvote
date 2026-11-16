@@ -1,8 +1,9 @@
 """Independent QV-18 evidence verification over the stable suite-v1 records.
 
 Sources: QV-18, board NOTES 1-9, protocol NOTES X21-X30, and shipped wire vectors.
-Control/notice policy in X31-X34 is intentionally not implemented. The existing
-core election verifier remains responsible for record/proof/tally semantics.
+Legacy control notices follow ADR-027 / N-12 and protocol NOTES X31-X34.
+The core verifier remains responsible for record/proof/tally semantics; notices
+never relax a witness gate or change the manifest schedule.
 """
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from . import ballot, ed25519, merkle, qvjson
-from .errors import NotImplementedOp, QVError
+from .errors import QVError
 from .logwire import b64_decode, body_digest, decode_header, key_id, parse_checkpoint, parse_receipt, witness_observations
 from .recordfields import hex_field
 
@@ -49,6 +50,8 @@ def _entry_type(record: Any) -> str | None:
         return None
     if kind == 'ballot':
         return {'cast': 'ballot', 'spoil': 'ballot_audit'}.get(record.get('intent'))
+    if kind == 'control':
+        return CONTROL_TYPES.get(b.get('action')) if isinstance(b.get('action'), str) else None
     if kind == 'marker':
         if not isinstance(b.get('name'), str):
             return None
@@ -60,45 +63,44 @@ def _entry_type(record: Any) -> str | None:
             'roll-commit': 'roll_commit', 'tally': 'tally_result'}.get(kind)
 
 
-def require_supported(bundle: Any, evidence: Any) -> None:
-    """The hold is input-dependent, never based on vector IDs/expectations.
+CONTROL_TYPES = {
+    'pause': 'notice', 'resume': 'notice', 'invalidate': 'notice',
+    'security-notice': 'notice', 'witness-waiver': 'notice', 'extension': 'notice',
+    'audit-close': 'audit_close', 'cancel': 'election_cancel', 'abort': 'ceremony_abort',
+}
 
-    Ordinary DKG round markers use notice headers and ARE supported. Other notice
-    bodies, and control records even when mislabeled as anchor, need X31 decisions.
+
+def _control_action(record: dict, manifest_hash: bytes, coordinator: dict) -> str:
+    """Authenticate the approved legacy N-12 schema; no control_seq migration.
+
+    The header must separately be signed by a coordinator key. Strict record
+    signatures bind this election's manifest hash and count distinct keys only.
     """
-    if not isinstance(bundle, dict):
-        return
-    records = {0: bundle.get('manifest')}
-    if isinstance(bundle.get('log'), list):
-        for item in bundle['log']:
-            if isinstance(item, dict):
-                record = item.get('entry')
-                if _body(record).get('type') == 'control':
-                    raise NotImplementedOp('X31: control record shape, authority and core finding class await owner decision')
-                if _uint(item.get('seq')):
-                    records[item['seq']] = record
-    board = evidence.get('board') if isinstance(evidence, dict) else None
-    if not isinstance(board, dict) or not isinstance(board.get('entries'), list):
-        return
-    for item in board['entries'][:MAX_ITEMS]:
-        if not isinstance(item, dict):
-            continue
-        try:
-            header = decode_header(b64_decode(item.get('header_b64u'), url=True, max_bytes=2048))
-        except QVError:
-            continue  # malformed evidence is a failure, not an unsupported capability
-        record = records.get(item.get('seq')) if _uint(item.get('seq')) else None
-        if item.get('body_b64u') is not None:
-            try:
-                decoded = qvjson.parse(b64_decode(item['body_b64u'], url=True).decode('utf-8'))
-            except (QVError, UnicodeError, RecursionError):
-                continue
-            if _body(decoded).get('type') == 'control':
-                raise NotImplementedOp('X31: control record policy awaits owner decision')
-            record = decoded
-        kind = _body(record).get('type')
-        if header['type'] == 'notice' and isinstance(kind, str) and kind not in STABLE_RECORD_TYPES:
-            raise NotImplementedOp('X31: non-DKG notice body and authority await owner decision')
+    from .election import _coordinator_ok
+    b = _body(record)
+    def text_bound(value, maximum):
+        # Adopted legacy JSON schema counts UTF-16 code units, as its existing
+        # wire contract does; non-BMP scalars occupy two units.
+        return isinstance(value, str) and len(value) <= maximum and sum(1 + (ord(c) > 0xffff) for c in value) <= maximum
+    if (not _object(record, {'body', 'sigs'})
+            or not _object(b, {'proto', 'type', 'action'}, {'reason'})
+            or b['proto'] != 'qv1-r255-sha2' or b['type'] != 'control'
+            or not text_bound(b['action'], 32)
+            or ('reason' in b and not text_bound(b['reason'], 256))
+            or not isinstance(record['sigs'], list) or not 1 <= len(record['sigs']) <= 8
+            or any(not _object(sig, {'key', 'sig'}) or not hex_field(sig['key'], 32)
+                   or not hex_field(sig['sig'], 64) for sig in record['sigs'])):
+        raise QVError('E_LOG_FORMAT', 'malformed legacy control record')
+    try:
+        qvjson.check_value(record)
+    except QVError as exc:
+        raise QVError('E_LOG_FORMAT', f'control is outside QV-JSON: {exc.detail}') from exc
+    action = b['action']
+    if action not in CONTROL_TYPES:
+        raise QVError('E_LOG_BINDING', 'unrecognised legacy control action')
+    if not _coordinator_ok(manifest_hash, b, record['sigs'], coordinator):
+        raise QVError('E_LOG_BINDING', 'control lacks distinct coordinator quorum signatures on this manifest')
+    return action
 
 
 def _author_keys(record: dict, manifest: dict, roll: set[str], extra: set[str]) -> set[str]:
@@ -106,7 +108,7 @@ def _author_keys(record: dict, manifest: dict, roll: set[str], extra: set[str]) 
     kind = b.get('type')
     coord = set(manifest['coordinator']['keys'])
     trustees = {t['index']: t['sign_pk'] for t in manifest['trustees']}
-    if kind in ('manifest', 'marker', 'roll-commit'):
+    if kind in ('manifest', 'marker', 'roll-commit', 'control'):
         return coord
     if kind in ('dkg-commit', 'dkg-dealing', 'dkg-shares', 'dkg-complaint', 'dkg-keyconf'):
         field = 'accuser' if kind == 'dkg-complaint' else 'j' if kind == 'dkg-keyconf' else 'i'
@@ -255,14 +257,17 @@ def _verify(bundle: dict, evidence: Any, st: Any) -> None:
                 st.notes.append(f'Entry {seq} redacted in board; canonical body supplied and authenticated by protocol view')
             elif b64_decode(entry['body_b64u'], url=True) != wanted:
                 raise QVError('E_LOG_BINDING', f'entry {seq}: body is not exact JCS of protocol record')
+            if len(wanted) > _body_limit(h['type'], m['n']):
+                raise QVError('E_LOG_FORMAT', f'entry {seq}: per-type body limit')
+            action = _control_action(record, bytes.fromhex(bundle['manifest_hash']), m['coordinator']) if _body(record).get('type') == 'control' else None
             expected_type = _entry_type(record)
             record_type = _body(record).get('type')
             if isinstance(record_type, str) and record_type in STABLE_RECORD_TYPES and expected_type is None:
                 raise QVError('E_LOG_BINDING', f'entry {seq}: unrecognised stable record variant')
+            if h['type'] == 'notice' and expected_type != 'notice':
+                raise QVError('E_LOG_BINDING', f'entry {seq}: notice is neither a DKG marker nor an authenticated control')
             if expected_type is not None and h['type'] != expected_type:
                 raise QVError('E_LOG_BINDING', f'entry {seq}: header/record type mismatch')
-            if len(wanted) > _body_limit(h['type'], m['n']):
-                raise QVError('E_LOG_FORMAT', f'entry {seq}: per-type body limit')
             authorized = _author_keys(record, m, set(bundle['roll']), extra)
             pk = next((bytes.fromhex(k) for k in authorized if key_id(bytes.fromhex(k)) == h['author']), None)
             if pk is None or not ed25519.verify(pk, h['signed_bytes'], h['sig']):
@@ -285,6 +290,13 @@ def _verify(bundle: dict, evidence: Any, st: Any) -> None:
                 raise QVError('E_LOG_BINDING', f'entry {seq}: setup record after open')
             if h['type'] == 'tally_result' and (cl is None or seq <= cl):
                 raise QVError('E_LOG_BINDING', f'entry {seq}: tally before close')
+            if action is not None:
+                label = action.replace('-', ' ').upper()
+                st.notes.append(f'{label} at seq {seq}: authenticated coordinator notice; never relaxes witness gates or changes the manifest schedule')
+                if action == 'extension' and cl is not None and seq > cl:
+                    st.add(TIME, 'E_TIME_WINDOW', True, f'extension at seq {seq} was sequenced after election-close {cl}')
+                if action in ('invalidate', 'cancel', 'abort'):
+                    st.notes.append(f'{label}: terminal/election-validity effects are outside this legacy evidence report')
         except QVError as exc:
             st.add(APPEND, exc.code, True, exc.detail)
             # Preserve the physical index after a framing error; no signed head may

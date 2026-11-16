@@ -39,11 +39,12 @@ Each vector is reported `PASS`, `FAIL` or `NOT-IMPLEMENTED`. The exit status is 
 vector FAILs**, 0 otherwise (NOT-IMPLEMENTED does not fail the run), and 2 on usage errors.
 
 `verify` writes the full JSON report to stdout: exit 0 for verdict PASS, 1 for FAIL,
-2 for input/usage errors, and **3 for an explicitly unsupported notice/control input**.
+2 for input/usage errors. Exit 3 remains reserved for an unsupported capability;
+the shipped 48 log-evidence cases, including legacy controls, are implemented.
 Receipt samples are an array of `{receipt, voter?, code?}`; observed checkpoints are
 an array of signed-note strings. The API is `verify_bundle(bundle, log={"board": board,
-"receipts": samples, "observed": notes})`; omitted log evidence keeps the original
-core-only behavior. Optional `witnesses` (CLI `--witnesses`) supplies trusted `{name,pk}`
+"receipts": samples, "observed": notes})`; omitting log runs the core election
+verifier without board/witness/receipt evidence checks. Optional `witnesses` (CLI `--witnesses`) supplies trusted `{name,pk}`
 keys only when the manifest has no witness list. `extraAuthorKeys` (`--extra-author-key`)
 never overrides coordinator, trustee or voter authorization for recognised records.
 
@@ -79,12 +80,14 @@ cd verifier-py && python3 -I -m unittest
 | Stable QV-18 log evidence | `logwire.py`, `logcheck.py`, `logio.py` | authenticated entry/record binding, checkpoints/prefix consistency, witness gates/times, fork/rollback and receipt samples |
 | Runner / CLI | `runner.py`, `cli.py`, `__main__.py` | QV-34 §10.3 comparison, applied strictly |
 
-The stable non-control `log.verify_election` subset is implemented. With no log evidence,
-`chk.board.*` and `chk.receipts.sample` remain `not_run`. The **13 notice/control vectors remain
-NOT-IMPLEMENTED per input** because protocol NOTES X31 leaves the record shape/authority unresolved
-and the core verifiers disagree on the unknown-record finding class. The Python core's fatal
-`E_SCHEMA` behavior is unchanged. See [the stable log handoff](../docs/handoffs/python-stable-log-20261116.md)
-for exact supported/held cases and validation. Also not implemented: trustee-decryption spoil mode
+All 48 shipped `log.verify_election` cases are implemented. With no log evidence,
+`chk.board.*` and `chk.receipts.sample` remain `not_run`. The **13 notice/control vectors are
+supported under QV-ADR-027's approved legacy schema and coordinator authority**. The core rejects
+unknown non-ballot types as class-L `E_VERSION`; the independent log path checks control signatures,
+header authority and body binding. Notices never waive manifest witness or time requirements.
+See [the control milestone handoff](../docs/handoffs/python-controls-20261116.md) for the precise
+scope and validation. Full V13 control effects and the future signed `control_seq` wire transition
+are separate work. Also not implemented: trustee-decryption spoil mode
 (§5.13.4), the ristretto255 one-way map / hash-to-group, the QV-34 §10.2 stdin/stdout adapter
 protocol, scale vectors, and anything from Phase 2 or 3.
 
@@ -174,8 +177,8 @@ Each is recorded in `docs/errata/spec-errata-log.md`:
 Remaining work for a real second verifier, in priority order:
 
 1. Review by someone other than the author.
-2. Resolve the QV-18 notice/control authority and core-class decisions before implementing
-   the remaining 13 `log.verify_election` vectors; independently review the stable 35-case subset.
+2. Qualify the separately approved B2-05 versioned control-counter transition and full V13
+   effects, and independently review the complete 48-case legacy log-evidence implementation.
 3. The QV-34 §10.2 adapter protocol, so the shared runner can drive this verifier.
 4. Constant-time review, if any secret-handling op is ever used outside the test vectors.
 5. Resolving the errata with the spec owner, then regenerating the vectors.

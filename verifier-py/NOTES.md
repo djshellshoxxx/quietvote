@@ -106,3 +106,31 @@ is retained so duplicate notes/lines cannot hide earlier times; malformed unsign
 inclusion cannot erase an authentic broken promise. See
 [`python-stable-log-20261116.md`](../docs/handoffs/python-stable-log-20261116.md) for the exact
 35-supported/13-held inventory, interface, limitations, validation and continuation instructions.
+
+## Approved legacy controls — 2026-11-16 continuation
+
+The preceding 13-case implementation hold is superseded by QV-ADR-027's existing
+N-12 / D-87 and B1-02 option-A approvals. All **48** log-evidence vectors now run;
+the whole unchanged corpus reports **282 PASS, 0 FAIL, 0 NOT-IMPLEMENTED**, with
+all 79 hashes matching. Unknown non-ballot string types are rejected from core
+computation as nonfatal `E_VERSION`; the log layer separately checks every legacy
+control's closed schema, exact bytes/header, coordinator header author and distinct
+manifest-hash signature quorum. It surfaces authenticated notices and enforces
+unchanged manifest witness/time requirements, including fatal post-close extensions.
+
+The actual API/CLI accepts legacy notices. Closed body bounds are action 32/reason 256
+UTF-16 units and 1..8 signature objects. Invalid extras, wrong election scope,
+repeated signers, operator/trustee impersonation and unrecognised actions cannot
+supply control authority. Cheap size/schema bounds precede signature arithmetic.
+
+The three separately approved report-parity fixes were consumed as dependency
+`4efcc58` (local cherry-pick `1b0d67c`); the unchanged strict comparator now reports
+**27/27 verdict agreement, zero differences, exit 0**. Other B1-02 rows and full V13
+terminal/window effects are not claimed. Future B2-05 `control_seq = previous + 1`
+needs an explicit versioned transition across producers and both verifiers; it is
+not accepted as an extra member of the current legacy body. See
+[`python-controls-20261116.md`](../docs/handoffs/python-controls-20261116.md).
+
+Final continuation validation: **128 Python tests, OK**; **282/282 vectors PASS**;
+**27/27 strict comparator cases agree with zero differences**. Corpus/comparator
+bytes remain unchanged. The separate fresh review qualifies the signed source.

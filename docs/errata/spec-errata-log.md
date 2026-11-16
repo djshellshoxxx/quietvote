@@ -84,3 +84,25 @@ corpus plus independently altered signatures/counts and an honest control.
 No vector, expected report, TypeScript implementation or comparator exclusion
 changed. This addendum resolves only these three report-dependency differences;
 other historical errata and unsupported capabilities retain their own scope.
+
+## Approved legacy control-evidence implementation, 2026-11-16
+
+QV-ADR-027 adopts N-12 / D-87 and B1-02 option A. The earlier Python log hold is
+superseded for the existing `qv1-r255-sha2` control-evidence corpus:
+
+- The core rejects an unknown string non-ballot `type` with class-L `E_VERSION`
+  on `chk.encoding.canonical`. It does not consume the body or give it authority.
+- With board evidence, control records must satisfy the closed legacy schema,
+  exact byte/header binding, coordinator header author and distinct coordinator
+  signature quorum on `sig-record(manifest_hash, "control", body)`. Missing,
+  malformed or falsely attributed authority produces fatal log findings.
+- Authenticated notices are reported. Waiver/extension/pause/resume records
+  never replace manifest witness keys/quorum or move manifest time bounds;
+  a sequenced post-close extension is fatal `E_TIME_WINDOW`.
+
+This implements the unknown-type B1-02 row and the existing N-12 / X31-X34
+legacy evidence contract. Other B1-02 rows (known malformed records, first valid
+marker selection and duplicate tally handling), full V13 effects and the
+separately approved versioned B2-05 `control_seq` transition remain distinct
+work. No legacy counter field was added, no existing vector was regenerated,
+and no comparator exclusion or expected report was changed.

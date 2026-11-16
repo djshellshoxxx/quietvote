@@ -204,12 +204,11 @@ def verify_bundle(bundle: dict, *, log: dict | None = None) -> dict:
     """Verify an election, optionally with independent QV-18 evidence.
 
     ``log`` contains ``board`` and optional ``receipts``, ``observed``,
-    ``witnesses`` and ``extraAuthorKeys``. Held X31 control/notice inputs raise
-    NotImplementedOp; omitting log preserves the original core semantics.
+    ``witnesses`` and ``extraAuthorKeys``. Log evidence authenticates legacy
+    control notices independently of the core's class-L unknown-record finding.
     """
     if log is not None:
         from . import logcheck
-        logcheck.require_supported(bundle, log)
     st = State()
     st.skip("chk.board.append_only", "chk.receipts.sample")
     out: dict[str, Any] = {"counts": {"cast": 0, "spoiled": 0, "counted": 0}}
@@ -354,6 +353,14 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         except QVError as ex:
             st.add("chk.encoding.canonical", ex.code, True, f"seq {e['seq']}: {ex.detail}")
             rejected_tally |= is_tally
+            continue
+        body_type = en.get('body', {}).get('type') if isinstance(en.get('body'), dict) else None
+        if isinstance(body_type, str) and body_type not in _RECORD_KEYS:
+            # ADR-027 / B1-02 option A: an unrecognised non-ballot record is
+            # rejected from protocol computation as class L, not an election
+            # veto. Legacy control authority is checked separately with log
+            # evidence (N-12 / X31-X34); this branch grants it no authority.
+            st.add('chk.encoding.canonical', 'E_VERSION', False, f"seq {e['seq']}: unknown record type {body_type}")
             continue
         if not _record_schema_ok(en):
             # QV-16 §5.5 item 7 (closed schemas, "eliminating malleability through junk fields"), App. C step 1

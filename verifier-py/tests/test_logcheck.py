@@ -11,8 +11,8 @@ import unittest
 
 from qv_verifier import ed25519, merkle, qvjson
 from qv_verifier.election import State, verify_bundle
-from qv_verifier.errors import NotImplementedOp, QVError
-from qv_verifier.logcheck import verify_into, require_supported
+from qv_verifier.errors import QVError
+from qv_verifier.logcheck import verify_into
 from qv_verifier.logio import load_json, vector_input
 from qv_verifier.logwire import b64_decode, body_digest, decode_header, key_id
 from qv_verifier.runner import _run_log_vector
@@ -90,32 +90,28 @@ class TestStableLog(unittest.TestCase):
     def report(self, **kwargs):
         return verify_bundle(self.bundle, log={'board': self.board, **kwargs})
 
-    def test_every_stable_vector_and_explicit_policy_holds(self):
-        passed = held = 0
+    def test_every_log_vector_has_exact_report_and_no_capability_skip(self):
+        passed = 0
         for v in read('vectors.json')['vectors']:
             with self.subTest(vector=v['id']):
-                try:
-                    ok, reason = _run_log_vector(TREE, v)
-                except NotImplementedOp:
-                    held += 1
-                    self.assertIn('notice', v['tags'])
-                else:
-                    self.assertTrue(ok, reason)
-                    passed += 1
-        self.assertEqual((passed, held), (35, 13))
+                ok, reason = _run_log_vector(TREE, v)
+                self.assertTrue(ok, reason)
+                passed += 1
+        self.assertEqual(passed, 48)
 
-    def test_core_semantics_unchanged_when_log_absent(self):
+    def test_core_control_is_class_l_and_log_authority_is_separate(self):
         self.assertEqual(verify_bundle(self.bundle)['checks']['chk.board.append_only'], 'not_run')
         control = read('notices/waiver-before-open.bundle.json')
         core = verify_bundle(control)
-        self.assertEqual(core['verdict'], 'FAIL')
-        self.assertTrue(any(f['code'] == 'E_SCHEMA' and f['fatal'] for f in core['findings']))
-        with self.assertRaises(NotImplementedOp):
-            verify_bundle(control, log={'board': read('notices/waiver-before-open.board.json')})
+        self.assertEqual(core['verdict'], 'PASS')
+        self.assertTrue(any(f['code'] == 'E_VERSION' and not f['fatal'] for f in core['findings']))
+        report = verify_bundle(control, log={'board': read('notices/waiver-before-open.board.json')})
+        self.assertEqual(report['verdict'], 'PASS')
+        self.assertEqual(report['checks']['chk.board.append_only'], 'pass')
+        self.assertIn('WITNESS WAIVER', ' '.join(report['notes']))
 
     def test_missing_protocol_notice_marker_is_binding_failure_not_policy_hold(self):
         self.bundle['log'] = [r for r in self.bundle['log'] if r['seq'] != 4]
-        require_supported(self.bundle, {'board': self.board})
         report = self.report()
         self.assertEqual(report['verdict'], 'FAIL')
         self.assertIn('E_LOG_BINDING', report['codes'])
@@ -217,15 +213,15 @@ class TestStableLog(unittest.TestCase):
         self.assertEqual(report['verdict'], 'FAIL')
         self.assertIn('E_LOG_WITNESS', report['codes'])
 
-    def test_actual_cli_and_explicit_hold_exit_status(self):
+    def test_actual_cli_control_notice_and_usage_exit_status(self):
         def run(*args):
             return subprocess.run([sys.executable, '-I', str(PKG), 'verify', *map(str, args)], capture_output=True, text=True)
         good = run(FIXTURE / 'bundle.json', '--board', FIXTURE / 'board.json')
         self.assertEqual(good.returncode, 0, good.stderr)
         self.assertEqual(json.loads(good.stdout)['checks']['chk.board.witness'], 'pass')
-        held = run(FIXTURE / 'notices/waiver-before-open.bundle.json', '--board', FIXTURE / 'notices/waiver-before-open.board.json')
-        self.assertEqual(held.returncode, 3)
-        self.assertEqual(json.loads(held.stdout)['status'], 'NOT-IMPLEMENTED')
+        notice = run(FIXTURE / 'notices/waiver-before-open.bundle.json', '--board', FIXTURE / 'notices/waiver-before-open.board.json')
+        self.assertEqual(notice.returncode, 0, notice.stderr)
+        self.assertIn('WITNESS WAIVER', ' '.join(json.loads(notice.stdout)['notes']))
         usage = run(FIXTURE / 'bundle.json', '--receipts', 'anything.json')
         self.assertEqual(usage.returncode, 2)
 
