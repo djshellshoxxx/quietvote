@@ -1,5 +1,8 @@
 # QuietVote implementation checkpoint — 2026-11-16
 
+Later continuation: [trustee relay and executable acceptance](QUIETVOTE-TRUSTEE-RELAY-20261116.md),
+[PR #48](https://github.com/djshellshoxxx/quietvote/pull/48). The snapshot below is historical.
+
 Status: continued implementation and consolidation; **assignment remains incomplete**.
 This is an experimental prototype, not a beta acceptance, release authorization,
 external cryptographic approval or independent professional audit. No workers
