@@ -123,3 +123,12 @@ The regression still requires refusal even with `t` valid share packets, empty s
 earlier verified-spoil gate. The ordinary-spoil combination and all other spoil-collect cases pass (8/8, direct test-file run).
 The standalone-policy/election-bundle regression passes (1/1); workspace typecheck passes. After the protocol/schema integration
 fixes, final `npm test -w @quietvote/cli` passes all 47 tests, including the real-process command checks and vector/self-test checks.
+
+## Online adapters — 2026-11-16
+
+Added explicit `online` instance/create/inspect/draft/submit/export commands using the real HTTP API.
+Management requests reuse the pure signed-request helper extracted to `@quietvote/board`; the server re-exports the same helper, with no dependency or framing changes.
+Server admission remains authoritative; signed packet relay introduces no new protocol rules. Online JSON
+responses are not verifier verdicts. No automatic mutation retries; unknown network outcomes are explicit.
+Real-server integration tests cover signed organizer management, wrong audience, strict options, real DKG/open,
+cast and close, early-close refusal, tally publication, no-overwrite export, and strict comparison of the exported supported election through the real TypeScript and Python CLIs. Registration and protocol-policy holds remain open.

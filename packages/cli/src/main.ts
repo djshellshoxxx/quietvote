@@ -7,10 +7,11 @@ import { cmdKeygen } from './cmd-keygen.ts';
 import { cmdSelftest, cmdVerify } from './cmd-verify.ts';
 import { cmdVectorsCheck } from './cmd-vectors.ts';
 import { EXIT, type Io } from './io.ts';
+import { cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 
 export const VERSION = '0.1.0';
 
-export const HELP = `qv ${VERSION}: QuietVote command line (offline-friendly, no dependencies)
+export const HELP = `qv ${VERSION}: QuietVote command line (offline verification and online operators)
 
 usage:
   qv --version                     print the version
@@ -34,6 +35,17 @@ usage:
                     [--post-body-out <dir>] [--json]
                                    combine trustee spoil-share packets for one trustees-mode spoil and decode its selections;
                                    exit 1 if fewer than t shares verify or the code is cast/re-wrapped/not a trustees-mode spoil
+  qv online instance --server <origin> [--json]
+  qv online election-create --server <origin> --audience <qv:id@publicUrl> --key <keyfile>
+                    --org <id> --title <title> --access public|link --idempotency-key <key> [passphrase options] [--json]
+  qv online election-inspect --server <origin> --id <id> [--read-key-file <file>] [--json]
+  qv online election-draft --server <origin> --id <id> --file <draft.json>
+                    --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
+  qv online election-submit --server <origin> --id <id> --file <signed-entry.json> [--json]
+  qv online election-export --server <origin> --id <id> --out <file> [--format qvb|json]
+                    [--read-key-file <file>] [--json]
+                                   all online commands accept --timeout-ms (1..120000, default 20000);
+                                   server responses and downloaded bundles are not independently verified
   qv vectors check [dir] [--strict] [--json]
 
 exit codes: 0 ok / PASS, 1 verification or conformance failure, 2 usage error, 3 INCOMPLETE or PARTIAL (nothing failed,
@@ -48,6 +60,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
   election: { inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
+  online: { instance: cmdOnlineInstance, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
 };
 
