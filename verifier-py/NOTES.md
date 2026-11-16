@@ -54,10 +54,10 @@ handoff for execution receipts and independent-review status.
 
 * **B1-02/SG7:** malformed/unknown non-ballot records, bad earlier markers and duplicate tally finding classes still differ from TS.
   This is deliberately recorded as an unresolved verifier-parity gap; no classes or governance semantics were silently rewritten.
-* **B1-05/SG8:** bidi-control lists differ (U+061C); needs one normative list. **B1-07:** yes/no ties, count-quorum field name,
+* **B1-05/SG8:** implemented under ADR-027: U+061C is accepted, matching TS; the other 11 rejected marks remain rejected. **B1-07:** yes/no ties, count-quorum field name,
   winner order, DKG duplicate/early/equivocating records/complaints and latest-excluded-ballot rules remain owner decisions.
 * **B1-08:** exact numeric limits, full witness-schema closure and method-specific tie-break restrictions remain unresolved.
-* **PY-01/D-88/D-95:** trustee-mode spoil decryption is unsupported; manifests carrying `spoil_trustee_decrypt` are rejected.
+* **PY-01/D-88:** implemented under ADR-027: Boolean `spoil_trustee_decrypt=false` is accepted; Boolean `true` is a named `E_UNSUPPORTED` refusal. Other types are schema failures. Trustee-mode spoil cryptography remains unsupported. **D-95:**
   QV-16 §5.12.2 says a zero-digest spoil is "valid only if the manifest enables it", but no spec gives the code, check or
   class for the invalid case, so it is not implemented here (TS does not enforce it at the ballot level either). See D-95.
   **PY-02/D-96:** the approved no-tally INCOMPLETE behavior is implemented below. The broader
