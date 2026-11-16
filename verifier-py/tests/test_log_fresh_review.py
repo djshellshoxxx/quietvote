@@ -6,6 +6,11 @@ rejection cannot be attributed merely to a broken signature or stale tree root.
 """
 
 import copy
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 from qv_verifier import merkle, qvjson
@@ -113,6 +118,31 @@ class TestFreshLogReview(unittest.TestCase):
         self.assertEqual(report['checks']['chk.board.append_only'], 'not_run')
         self.assertEqual(report['checks']['chk.board.witness'], 'not_run')
         self.assertEqual(report['checks']['chk.receipts.sample'], 'not_run')
+
+    def test_missing_manifest_quorum_also_stops_optional_log_and_cli(self):
+        bundle = read('bundle.json')
+        bundle['manifest']['sigs'] = []
+        # Even structurally unusable optional evidence has no authority until
+        # the coordinator quorum authenticates the election manifest.
+        board = {'this': 'is not a board export'}
+        report = verify_bundle(bundle, log={'board': board})
+        self.assertEqual(report['verdict'], 'FAIL')
+        self.assertEqual(report['codes'], ['E_MANIFEST_SIG'])
+        self.assertEqual(report['checks']['chk.manifest.hash'], 'pass')
+        self.assertEqual(report['checks']['chk.manifest.sig'], 'fail')
+        self.assertTrue(all(status == 'not_run' for check, status in report['checks'].items()
+                            if check not in ('chk.manifest.hash', 'chk.manifest.sig')))
+        self.assertNotIn('ctx_prefix', report)
+        self.assertNotIn('results', report)
+        package = Path(__file__).resolve().parents[1] / 'qv_verifier'
+        with tempfile.TemporaryDirectory() as tmp:
+            election, evidence = Path(tmp) / 'election.json', Path(tmp) / 'board.json'
+            election.write_text(json.dumps(bundle))
+            evidence.write_text(json.dumps(board))
+            result = subprocess.run([sys.executable, '-I', str(package), 'verify', str(election),
+                                     '--board', str(evidence)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(json.loads(result.stdout), report)
 
 
 if __name__ == '__main__':
