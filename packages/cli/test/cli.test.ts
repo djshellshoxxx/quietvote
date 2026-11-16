@@ -390,14 +390,14 @@ test('election inspect: summary, JSON, mismatching hash, invalid manifest, bad i
 test('vectors check: repository corpus conforms; summary line; JSON', async () => {
   const r = await qv(['vectors', 'check']);
   assert.equal(r.code, 0, r.out);
-  assert.match(r.out, /vectors: (\d+)\/\1 passed, 0 failed, 1 file\(s\) not run/);
-  assert.match(r.out, /SKIP protocol\/dkg\/dkg.json/);
+  assert.match(r.out, /vectors: (\d+)\/\1 passed, 0 failed, 0 file\(s\) not run/);
+  assert.doesNotMatch(r.out, /SKIP/);
   const strict = await qv(['vectors', 'check', VEC, '--strict', '--json']);
-  assert.equal(strict.code, 1, 'not-run files fail under --strict');
+  assert.equal(strict.code, 0, 'all shipped operations run under --strict');
   const sj = JSON.parse(strict.out);
-  assert.equal(sj.ok, false);
+  assert.equal(sj.ok, true);
   assert.deepEqual(sj.failed, []);
-  assert.equal(sj.skipped.length, 1);
+  assert.equal(sj.skipped.length, 0);
 });
 
 test('vectors check: corrupted vectors, mutant expectations and manifest drift are detected; bad dir is an input error', async () => {

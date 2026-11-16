@@ -9,7 +9,7 @@ import {
 } from '@quietvote/crypto';
 import {
   auditSpoil, ballotCode, binderFor, castDigest, deriveXi, encryptBallot, evaluateContest, manifestHash, rollLeaf, rollRoot, validateManifest,
-  verifyEnvelope, verifySpoilReveal, type ElectionParams, type Manifest,
+  verifyEnvelope, verifySpoilReveal, adjudicateDkg, arr, check, hex, int, obj, S, type DkgInput, type ElectionParams, type Manifest, type Schema,
 } from '@quietvote/protocol';
 import { pokVerify } from '@quietvote/crypto';
 import { verifyBundle } from '@quietvote/verifier';
@@ -30,7 +30,29 @@ const sc = (h: string): bigint => scalarFromBytes(hb(h));
 const pt = (h: string): ReturnType<typeof pointFromBytes> => pointFromBytes(hb(h));
 const params = (p: Any): ElectionParams => ({ manifest: p.manifest as Manifest, mh: manifestHash(p.manifest), K: pt(p.K_hex), ctx: hb(p.ctx_hex) });
 
+/** Adapt the public QV-34 record layout to the existing adjudicator. This checks
+ * transport shape only; phase ordering, proofs, complaints and quorum are still
+ * decided by adjudicateDkg, with no sorting, filtering or generator dependency. */
+async function dkgVector(input: unknown): Promise<unknown> {
+  try { canonicalize(input); } catch { return err('E_SCHEMA'); }
+  if (!isObj(input) || !Number.isSafeInteger(input.t) || input.t < 1 || input.t > 32) return err('E_SCHEMA');
+  const row = (body: Schema): Schema => obj({ seq: int(0, 0xffffffff), body });
+  const schema = obj({
+    manifest_hash_hex: hex(32), n: int(1, 32), t: int(1, 32),
+    markers: obj(Object.fromEntries(['dkg-open', 'dkg-r1-open', 'dkg-r1-close', 'dkg-r2-close', 'dkg-r3-close', 'dkg-final'].map(k => [k, int(0, 0xffffffff)]))),
+    records: obj({ commits: arr(row(S.dkgCommit), 0, 10000), dealings: arr(row(S.dkgDealing(input.t)), 0, 10000),
+      shares: arr(row(S.dkgShares), 0, 10000), complaints: arr(row(S.dkgComplaint), 0, 10000) }),
+  });
+  if (check(schema, input) !== null || input.t > input.n) return err('E_SCHEMA');
+  const i = input as { manifest_hash_hex: string; n: number; t: number; markers: DkgInput['markers']; records: Pick<DkgInput, 'commits' | 'dealings' | 'shares' | 'complaints'> };
+  const result = await adjudicateDkg({ mh: hexToBytes(i.manifest_hash_hex, 32), n: i.n, t: i.t, markers: i.markers, ...i.records });
+  if (!result.ok) return err(result.error);
+  return { Q: result.value.Q, qmask: result.value.qmask, K_hex: H(pointToBytes(result.value.K)), ctx_hex: H(result.value.ctx),
+    Y_hex: Object.fromEntries([...result.value.Y].map(([j, y]) => [String(j), H(pointToBytes(y))])) };
+}
+
 const runners: Record<string, Runner> = {
+  'dkg.adjudicate': dkgVector,
   'hash.sha256': (i) => ({ digest_hex: H(sha256(hb(i.msg_hex))) }),
   'hash.sha512': (i) => ({ digest_hex: H(sha512(hb(i.msg_hex))) }),
   'hash.tagged': (i) => {
@@ -120,9 +142,6 @@ const runners: Record<string, Runner> = {
     };
   },
 };
-
-/** Operations this CLI does not run (they need generator-side adapters); counted and reported, never silently passed. */
-const UNSUPPORTED = new Set(['dkg.adjudicate']);
 
 interface Row { file: string; id: string; ok: boolean; detail?: string }
 
@@ -221,14 +240,14 @@ export async function cmdVectorsCheck(argv: string[], io: Io): Promise<number> {
     const ids = file.vectors.map((v: Any) => v.id);
     add(rel, 'envelope', file.format_version === 1 && new Set(ids).size === ids.length, 'format_version != 1 or duplicate vector ids');
     const run = Object.hasOwn(runners, file.operation) ? runners[file.operation] : undefined;
-    if (run === undefined || UNSUPPORTED.has(file.operation)) {
+    if (run === undefined) {
       skipped.push(`${rel} (${file.operation})`);
       continue;
     }
     for (const v of file.vectors as { id: string; input: Any; expect: { ok: boolean; output?: unknown; error?: string } }[]) {
       let got: Any;
       try {
-        got = run(v.input);
+        got = await run(v.input);
       } catch (e) {
         add(rel, v.id, false, `threw: ${e instanceof Error ? e.message : 'error'}`);
         continue;
