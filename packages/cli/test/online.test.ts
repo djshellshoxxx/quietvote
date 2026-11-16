@@ -90,7 +90,11 @@ test('online signed-entry relay opens/closes an election and exports without ove
     const exported = await qv(['online', 'election-export', ...common, '--format', 'json', '--out', out]);
     assert.equal(exported.code, 0, exported.err);
     assert.equal(JSON.parse(readFileSync(out, 'utf8')).manifest.body.election_id, w.electionId);
-    const verified = await qv(['verify', out, '--manifest-hash', bytesToHex(w.mh), '--json']);
+    const incomplete = await qv(['verify', out, '--manifest-hash', bytesToHex(w.mh), '--json']);
+    assert.equal(incomplete.code, 3, incomplete.err);
+    assert.equal(JSON.parse(incomplete.out).verdict, 'INCOMPLETE');
+    // The independent comparison below is explicitly scoped to content-only JSON.
+    const verified = await qv(['verify', out, '--manifest-hash', bytesToHex(w.mh), '--json', '--content-only']);
     assert.equal(verified.code, 0, verified.err);
     const report = JSON.parse(verified.out);
     assert.equal(report.counts.cast, 3);

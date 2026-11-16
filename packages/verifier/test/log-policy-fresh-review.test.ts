@@ -109,7 +109,7 @@ test('fresh P1: board-layer exception cannot return PASS or expose private excep
     import {mock} from 'node:test';
     import {readFileSync} from 'node:fs';
     const original=await import('@quietvote/board');
-    mock.module('@quietvote/board',{exports:{...original,verifyLog(){throw new Error('private-review-sentinel');}}});
+    mock.module('@quietvote/board',{namedExports:{...original,verifyLog(){throw new Error('private-review-sentinel');}}});
     const {verifyBundle}=await import(${JSON.stringify(target)});
     const base=${JSON.stringify(fileURLToPath(fixture))};
     const input={...JSON.parse(readFileSync(base+'bundle.json','utf8')),board:JSON.parse(readFileSync(base+'board.json','utf8'))};
@@ -139,7 +139,7 @@ test('fresh P1: interrupted witness layer cannot exploit the signed zero-witness
   const script = `
     import {mock} from 'node:test';
     const original=await import(${JSON.stringify(logModule)});
-    mock.module(${JSON.stringify(logModule)},{exports:{...original,verifyWitnessing(){throw new Error('private-review-sentinel');}}});
+    mock.module(${JSON.stringify(logModule)},{namedExports:{...original,verifyWitnessing(){throw new Error('private-review-sentinel');}}});
     const {setup,castBallot,closeElection,publishTally,bundleOf,defaultContests,kp}=await import(${JSON.stringify(simModule)});
     const {buildBoard}=await import(${JSON.stringify(boardModule)});
     const {verifyElection}=await import('@quietvote/protocol');
