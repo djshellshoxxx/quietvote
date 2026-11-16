@@ -921,7 +921,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       sse.closeAll();
       webhooks.stop();
       gossip.stop();
-      retention.stop();
+      await retention.stop();
       await jobs.stop();
       await http.close();
       await pool.closeAll();
