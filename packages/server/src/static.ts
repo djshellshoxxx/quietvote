@@ -1,6 +1,6 @@
 // Static asset server: an in-memory map built at startup (no request-derived filesystem access, R-02 §4.4).
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { isAbsolute, join, relative, sep } from 'node:path';
 import { sha256 } from '@quietvote/crypto';
 import { toHex } from '@quietvote/board';
 import type { Reply, StaticHandler } from './http.ts';
@@ -16,15 +16,33 @@ export class StaticAssets implements StaticHandler {
   readonly files = new Map<string, Asset>();
   private verifierCsp: string | undefined;
   constructor(dir: string) {
+    if (lstatSync(dir).isSymbolicLink()) throw new Error('static root must not be a symlink');
+    const root = realpathSync(dir);
+    if (!lstatSync(root).isDirectory()) throw new Error('static root must be a directory');
     const walk = (rel: string, depth: number): void => {
       if (depth > 8 || this.files.size > 5000) throw new Error('static dir too large');
-      for (const name of readdirSync(join(dir, rel))) {
+      for (const name of readdirSync(join(root, rel))) {
         const r = rel ? `${rel}/${name}` : name;
-        const st = statSync(join(dir, r));
+        const path = join(root, r);
+        const st = lstatSync(path);
+        // Reject links even when their current target is inside the root. Deployment
+        // mistakes must fail startup rather than quietly publish linked host files.
+        if (st.isSymbolicLink()) throw new Error('static asset must not be a symlink');
+        const resolved = relative(root, realpathSync(path));
+        if (isAbsolute(resolved) || resolved === '..' || resolved.startsWith(`..${sep}`)) throw new Error('static asset escapes root');
         if (st.isDirectory()) walk(r, depth + 1);
-        else if (st.isFile() && st.size <= 16 * 1024 * 1024) {
-          const bytes = new Uint8Array(readFileSync(join(dir, r)));
-          this.files.set('/' + r, { path: r, bytes, type: TYPES[name.split('.').pop() ?? ''] ?? 'application/octet-stream', sha256: toHex(sha256(bytes)) });
+        else if (!st.isFile()) throw new Error('static asset must be a regular file');
+        else if (st.size <= 16 * 1024 * 1024) {
+          // O_NOFOLLOW protects the final component on supporting platforms; fstat
+          // additionally rejects replacement between inspection and opening.
+          const fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+          try {
+            const opened = fstatSync(fd);
+            if (!opened.isFile() || opened.dev !== st.dev || opened.ino !== st.ino) throw new Error('static asset changed during load');
+            if (opened.size > 16 * 1024 * 1024) throw new Error('static asset grew during load');
+            const bytes = new Uint8Array(readFileSync(fd));
+            this.files.set('/' + r, { path: r, bytes, type: TYPES[name.split('.').pop() ?? ''] ?? 'application/octet-stream', sha256: toHex(sha256(bytes)) });
+          } finally { closeSync(fd); }
         }
       }
     };
