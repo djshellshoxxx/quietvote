@@ -48,6 +48,7 @@ confirm those error paths too.
 | PKCS8 failure probe before repair | One test failed on the retained seed bytes, as expected. |
 | Six independent review probes plus existing `key.test.ts` | 20 passed, 0 failed/skipped, 5.716 seconds on the repair tree. |
 | Root TypeScript typecheck | Passed. |
+| Implementation author's independent review of the repair | No blocker; targeted failed-WebCrypto-import regression 1/1 passed on `9e4c74f`. |
 | Production web build | Passed; reported gzip total 198.0 kB, entry 95.3 kB, standalone verifier 186.9 kB. Existing 200/110 limits unchanged. |
 | Diff check | Passed. |
 
