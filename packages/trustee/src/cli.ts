@@ -9,7 +9,7 @@ import { OVERRIDE_NO_LEDGER, OVERRIDE_UNWITNESSED, Trustee, realTarget, type Pac
 import { atomicWrite, exists, lockPath, readSecretFile } from './fsutil.ts';
 import { ledgerPath } from './ledger.ts';
 import { tombstonePath } from './bundle.ts';
-import { verifyTranscript, type Transcript } from './transcript.ts';
+import { verifyTranscript, type CeremonyMode, type Transcript } from './transcript.ts';
 import type { VaultDeps } from './bundle.ts';
 
 export interface CliIo {
@@ -39,7 +39,8 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   backup --bundle F --to F2 [--backup-passphrase-file F] | restore --from F2 --bundle F [--backup-passphrase-file F] [--ledger F.releases] [--override-no-ledger PHRASE]
   destroy --bundle F --audit-close F --confirm "<election title>"
   report-compromise --bundle F --severity suspected|confirmed [--out F]
-  export-transcript --bundle F --out F [--mode airgap-dkg] | cosign-transcript --bundle F --in F --out F | verify-transcript --in F [--witness-key NAME=HEX]
+  export-transcript --bundle F --out F [--mode online-dkg|airgap-dkg|airgap-dealer]
+  cosign-transcript --bundle F --in F --out F | verify-transcript --in F [--witness-key NAME=HEX]
 Passphrase: --passphrase-file F (or QV_TRUSTEE_PASSPHRASE_FILE), otherwise a hidden prompt. Never on the command line.
 Options: --json   Exit codes: 0 ok, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
 
@@ -66,6 +67,23 @@ const COMMAND_OPTIONS = new Map<string, readonly string[]>([
 ]);
 const OPTIONS = new Set(['json', ...[...COMMAND_OPTIONS.values()].flat()]);
 
+function transcriptMode(value: string | undefined): CeremonyMode {
+  const mode = value ?? 'airgap-dkg';
+  if (mode !== 'online-dkg' && mode !== 'airgap-dkg' && mode !== 'airgap-dealer') {
+    throw new TrusteeError('USAGE', 'USAGE', '--mode must be online-dkg, airgap-dkg or airgap-dealer (value withheld)');
+  }
+  return mode;
+}
+
+function witnessKeys(value: string | undefined): Record<string, string> {
+  if (value === undefined) return {};
+  const match = /^([^=\r\n]+)=([0-9a-f]{64})$/.exec(value);
+  if (match === null || match[0] !== value || match[1]!.trim().length === 0) {
+    throw new TrusteeError('USAGE', 'USAGE', '--witness-key must be NAME=HEX with a nonempty name and 32-byte lowercase hex key (value withheld)');
+  }
+  return Object.fromEntries([[match[1]!, match[2]!]]);
+}
+
 function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags: Set<string> } {
   const [cmd = '', ...rest] = argv;
   const o = new Map<string, string>();
@@ -90,6 +108,8 @@ function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags
       o.set(k, v);
     }
   }
+  if (o.has('mode')) transcriptMode(o.get('mode'));
+  if (o.has('witness-key')) witnessKeys(o.get('witness-key'));
   return { cmd, o, flags };
 }
 
@@ -278,7 +298,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       }
       case 'export-transcript': {
         const t = await open();
-        const tr = await t.exportTranscript((o.get('mode') ?? 'airgap-dkg') as 'airgap-dkg', { network: 'offline' });
+        const tr = await t.exportTranscript(transcriptMode(o.get('mode')), { network: 'offline' });
         await atomicWrite(need('out'), utf8(JSON.stringify(tr)), 0o644);
         report({ summary_hash: tr.summary_hash, out: need('out') });
         return 0;
@@ -291,10 +311,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
         return 0;
       }
       case 'verify-transcript': {
-        const witnessKeys: Record<string, string> = {};
-        const wk = o.get('witness-key');
-        if (wk !== undefined) witnessKeys[wk.split('=')[0]!] = wk.split('=')[1]!;
-        const r = await verifyTranscript(await jsonOf(need('in')), { witnessKeys });
+        const r = await verifyTranscript(await jsonOf(need('in')), { witnessKeys: witnessKeys(o.get('witness-key')) });
         report({ ...r });
         return r.ok ? 0 : 20;
       }

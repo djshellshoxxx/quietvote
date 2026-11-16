@@ -209,3 +209,12 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
 * Unexpected positional arguments are rejected without echoing their contents. A following `--option` cannot be consumed as a
   missing value. `finalize` does not emit a packet and therefore rejects `--out`; help now lists it separately.
 * Regression tests: `test/cli-unknown-options.test.ts`, `test/cli-argument-safety.test.ts` (including spawned CLI secret canaries).
+
+## Transcript option validation
+
+* `--mode` accepts the three existing transcript modes (`online-dkg`, `airgap-dkg`, `airgap-dealer`); unknown values are usage errors
+  before a secret bundle is opened. This validates existing modes without changing their semantics or the default (`airgap-dkg`).
+* `--witness-key NAME=HEX` requires a nonempty single-line name and exactly 32 bytes of lowercase hex. Missing separators, truncated
+  keys and extra fields fail before the transcript is read; diagnostics withhold the value. A name such as `__proto__` is stored as
+  an own data property rather than interpreted as a prototype setter. The CLI still accepts one witness key per invocation.
+* Regression tests: `test/cli-transcript-options.test.ts`.
