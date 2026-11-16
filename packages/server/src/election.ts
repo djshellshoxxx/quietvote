@@ -77,6 +77,7 @@ export class ElectionState {
   spoils = new Map<string, number>();
   codeOwner = new Map<string, string>();
   castAlphas = new Set<string>();
+  spoilAlphas = new Set<string>();
   spoiledCodes = new Set<string>();
   openSeq: number | undefined;
   closeSeq: number | undefined;
@@ -488,6 +489,7 @@ export class ElectionRuntime {
           st.casts.set(voter, (st.casts.get(voter) ?? 0) + 1);
           if (!st.codeOwner.has(code)) st.codeOwner.set(code, voter);
         } else {
+          collectAlphas(env.body, st.spoilAlphas);
           st.spoils.set(voter, (st.spoils.get(voter) ?? 0) + 1);
           st.spoiledCodes.add(code);
           if (!st.admittedSpoils.has(code)) st.admittedSpoils.set(code, { seq, code, voter, env });
@@ -1045,6 +1047,9 @@ export class ElectionRuntime {
       const owner = st.codeOwner.get(code);
       if (owner !== undefined && owner !== voter) throw invalid('E_DUP_CODE', 'ballot code already used by another voter');
       if (st.spoiledCodes.has(code)) throw invalid('E_SPOILED_CODE_CAST', 'this ballot code was spoiled');
+      const alphas = new Set<string>();
+      collectAlphas(env.body, alphas);
+      if ([...alphas].some((a) => st.spoilAlphas.has(a))) throw invalid('E_SPOILED_CODE_CAST', 'cast shares ciphertexts with an admitted spoil (S1-02)');
     } else {
       if ((st.spoils.get(voter) ?? 0) + 1 > m.ballots.max_spoils_per_voter) throw new ApiError(429, 'REVOTE_LIMIT', 'max_spoils_per_voter reached', { reason: 'E_REVOTE_LIMIT', retryable: false });
       if (st.codeOwner.has(code)) throw invalid('E_SPOILED_CODE_CAST', 'this ballot code was already cast');
