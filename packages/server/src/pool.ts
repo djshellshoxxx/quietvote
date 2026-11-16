@@ -50,6 +50,7 @@ export class ElectionPool {
     if (hit && !hit.poisoned) {
       this.open.delete(id);
       this.open.set(id, hit);
+      hit.recoverEvents();
       return hit;
     }
     if (hit?.poisoned) await this.evict(id);
@@ -71,6 +72,7 @@ export class ElectionPool {
     this.open.set(id, rt);
     // finish a tally aggregate interrupted by a crash (idempotent; a failure is retried on the next cosignature)
     await rt.recoverTally().catch(() => this.env.logger.event('tally_recover', { outcome: 'error' }));
+    rt.recoverEvents();
     await this.trim();
     return rt;
   }

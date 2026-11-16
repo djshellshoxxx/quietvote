@@ -98,7 +98,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   const gossip = new GossipService(env, pool);
   cleanup.push(() => gossip.stop());
   const retention = new RetentionSweeper(env);
-  env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
+  env.recoverEvents = (who, db) => webhooks.recover(who, db);
 
   // ---------------------------------------------------------------- helpers
   const rtOf = async (c: Ctx): Promise<ElectionRuntime> => {
@@ -960,6 +960,17 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     async start() {
       if (stopped) throw new Error('server has stopped; build a new instance to restart');
       try {
+        // Recover every live election's durable events even when no client reopens it after a crash.
+        let after: string | undefined;
+        for (;;) {
+          const page = control.listAllElections(undefined, after, 100);
+          for (const row of page) {
+            try { await pool.get(row.election_id); }
+            catch { env.logger.event('webhook_bridge', { outcome: 'error', note: 'election_recovery_pending' }); }
+          }
+          if (page.length < 100) break;
+          after = page.at(-1)!.election_id;
+        }
         const a = await http.listen();
         retention.start();
         return { ...a, url: `http://${a.host}:${a.port}` };

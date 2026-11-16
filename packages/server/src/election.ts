@@ -222,6 +222,17 @@ export class ElectionRuntime {
         /* integrations are best effort */
       }
     }
+    this.recoverEvents();
+  }
+
+  /** Retry forwarding from durable rows, including gaps left by a prior process or failed callback. */
+  recoverEvents(): boolean {
+    try {
+      return this.env.recoverEvents?.({ electionId: this.id, orgId: this.orgId }, this.edb) ?? true;
+    } catch {
+      this.env.logger.event('webhook_bridge', { outcome: 'error', note: 'storage_retry_pending' });
+      return false;
+    }
   }
 
   /** Records and publishes events outside an append (cosignatures, alerts). */
@@ -236,6 +247,7 @@ export class ElectionRuntime {
     const at = this.env.control.election(this.id)?.archived_at ?? null;
     if (this.st.state !== 'ARCHIVED' || at === null || this.env.nowMs() - at < 30 * 86400_000) return false;
     if (this.edb.eventBounds() === undefined) return false;
+    if (!this.recoverEvents()) return false; // Do not prune a row that was never admitted to the durable bridge.
     this.edb.pruneEvents();
     return true;
   }

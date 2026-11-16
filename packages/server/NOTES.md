@@ -413,3 +413,18 @@ an input path boundary, with privately owned filesystem parents still required.
 retained KEK and restores only into a new directory. See
 [the recovery runbook](../../docs/OFFLINE-BACKUP-RESTORE.md) for commands, the required
 minimum-history backup, activation gates and bounded verification claims.
+
+## Durable webhook event bridge — 2026-11-16
+
+Election event rows now forward through a control-database cursor. Each source event's matching delivery rows,
+queue-cap pruning and cursor advance share one transaction. Memory queues and network sends start only after
+commit. Failed forwarding leaves the source row pending; startup scans live elections, and runtime access or
+the next event retries it. Event retention refuses to prune an unforwarded source history. Delivery remains
+at least once with the existing stable ID, bounded queue, body-size cap and terminal-failure policy.
+
+Control schema 7 stores forwarding cursors; election schema 6 records an upgrade floor. Pre-upgrade event
+history has no delivered receipt and is not replayed wholesale. Existing control outbox rows still resume as
+before. Forwarding uses subscriptions still enabled when recovery runs and excludes hooks created after the
+source timestamp; it is not an immutable historical subscription snapshot. Missing/corrupt election storage
+is logged with static tokens and remains pending. No remote delivery guarantee, power-loss or cross-platform
+qualification is claimed. Supplemental phase/witness events that never committed remain a separate gap.

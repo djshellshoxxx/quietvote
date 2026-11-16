@@ -129,6 +129,17 @@ CREATE TABLE election_cleanup (
 INSERT INTO election_cleanup(election_id) SELECT election_id FROM election_registry WHERE state='DELETED';
 `,
   },
+  {
+    version: 7,
+    name: 'webhook_event_cursor',
+    // The cursor and matching delivery rows commit together, closing the election/control database bridge.
+    sql: `
+CREATE TABLE webhook_event_cursor (
+  election_id TEXT PRIMARY KEY,
+  event_id INTEGER NOT NULL CHECK (event_id >= 0)
+) STRICT;
+`,
+  },
 ];
 
 export interface GossipHealthRow {
@@ -446,6 +457,13 @@ export class ControlDb {
   }
 
   // ---- webhook outbox (pending deliveries survive restarts; WebhookService is the only writer)
+  webhookEventCursor(electionId: string): number | undefined {
+    return get<{ event_id: number }>(this.db, 'SELECT event_id FROM webhook_event_cursor WHERE election_id=?', electionId)?.event_id;
+  }
+  advanceWebhookEventCursor(electionId: string, eventId: number): void {
+    run(this.db, `INSERT INTO webhook_event_cursor(election_id,event_id) VALUES (?,?)
+      ON CONFLICT(election_id) DO UPDATE SET event_id=MAX(event_id,excluded.event_id)`, electionId, eventId);
+  }
   outboxCount(): number {
     return get<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM webhook_outbox')?.n ?? 0;
   }

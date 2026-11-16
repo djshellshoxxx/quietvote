@@ -127,6 +127,14 @@ ALTER TABLE voter_invite ADD COLUMN closed_at INTEGER;
 UPDATE voter_invite SET closed_at = COALESCE(registered_at, created_at) WHERE state IN ('registered','revoked','expired');
 `,
   },
+  {
+    version: 6,
+    name: 'webhook_bridge_floor',
+    // Pre-upgrade events may already have been delivered without a cursor. Do not redeliver that unknown history.
+    sql: `
+INSERT INTO meta(key,value) VALUES ('webhook_bridge_floor', CAST(COALESCE((SELECT seq FROM sqlite_sequence WHERE name='event'),0) AS TEXT));
+`,
+  },
 ];
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
@@ -347,6 +355,9 @@ export class ElectionDb {
     run(this.db, 'UPDATE election SET quarantine=?', reason);
   }
   // ---- event outbox
+  webhookBridgeFloor(): number {
+    return Number(get<{ value: string }>(this.db, "SELECT value FROM meta WHERE key='webhook_bridge_floor'")!.value);
+  }
   insertEvent(ts: number, type: string, seq: number | null, data: string): EventRow {
     const r = run(this.db, 'INSERT INTO event(ts,type,seq,data) VALUES (?,?,?,?)', ts, type, seq, data);
     return { id: Number(r.lastInsertRowid), ts, type, seq, data };

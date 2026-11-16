@@ -17,7 +17,7 @@
 // stats.dropped, their retry timers cancelled); the newcomer is always kept. A delivery in flight is never pruned.
 import { createHmac, randomBytes } from 'node:crypto';
 import type { WebhookRow } from './controldb.ts';
-import type { EventRow } from './electiondb.ts';
+import type { ElectionDb, EventRow } from './electiondb.ts';
 import type { Env } from './env.ts';
 import { open as unseal, seal } from './kek.ts';
 import { TargetRejected, httpsTransport, systemResolver, validateTarget, type WebhookResolver, type WebhookTransport } from './ssrf.ts';
@@ -110,57 +110,63 @@ export class WebhookService {
 
   // ------------------------------------------------------------------ fan-out
 
-  /** Env.onEvent hook: enqueue one delivery per matching, enabled webhook. Never throws. */
-  onEvent(who: { electionId: string; orgId: string }, ev: EventRow): void {
-    if (this.stopped) return;
-    let hooks: WebhookRow[];
+  /** Replay durable election events in order. The upgrade floor excludes pre-cursor delivery history. */
+  recover(who: { electionId: string; orgId: string }, db: ElectionDb): boolean {
+    if (this.stopped) return false;
     try {
-      hooks = this.env.control.webhooksFor(who.orgId, who.electionId);
+      let cursor = Math.max(this.env.control.webhookEventCursor(who.electionId) ?? 0, db.webhookBridgeFloor());
+      this.env.control.advanceWebhookEventCursor(who.electionId, cursor);
+      for (;;) {
+        const page = db.eventsAfter(cursor, 256);
+        for (const row of page) {
+          if (!this.onEvent(who, row)) return false;
+          cursor = row.id;
+        }
+        if (page.length < 256) return true;
+      }
     } catch {
-      return;
-    }
-    for (const h of hooks) {
-      let types: string[];
-      try {
-        types = JSON.parse(h.events) as string[];
-      } catch {
-        continue;
-      }
-      if (!types.includes(ev.type)) continue;
-      const deliveryId = `${h.webhook_id}.${who.electionId}.${ev.id}`;
-      const body = JSON.stringify({
-        id: deliveryId, election_id: who.electionId, event_id: ev.id, type: ev.type, seq: ev.seq, ts: toIso(ev.ts / 1000), data: JSON.parse(ev.data) as unknown,
-      });
-      if (Buffer.byteLength(body) > this.env.cfg.webhookMaxBodyBytes) {
-        this.stats.dropped++;
-        continue;
-      }
-      try {
-        this.admit({ hookId: h.webhook_id, deliveryId, body, eventType: ev.type, attempt: 1 });
-      } catch {
-        this.stats.dropped++; // storage failure: the delivery is not queued (the public log remains the source of truth)
-      }
+      this.env.logger.event('webhook_bridge', { outcome: 'error', note: 'storage_retry_pending' });
+      return false;
     }
   }
 
-  /**
-   * Persists a new delivery and queues it. Enforces `webhookMaxQueue` by pruning the oldest pending rows, all in one transaction.
-   * Rows pruned from memory are cancelled here; a pruned in-flight delivery is handled in run().
-   */
-  private admit(j: Job): void {
+  /** Atomically admits every matching delivery and advances the source cursor. Memory/transport follows commit only. */
+  onEvent(who: { electionId: string; orgId: string }, ev: EventRow): boolean {
+    if (this.stopped) return false;
     const ctl = this.env.control;
-    const max = this.env.cfg.webhookMaxQueue;
-    const pruned = ctl.tx(() => {
-      const gone = ctl.outboxPruneTo(max - 1, this.flying); // leave room for the newcomer
-      ctl.outboxInsert({ delivery_id: j.deliveryId, webhook_id: j.hookId, event_type: j.eventType, body: j.body, attempt: j.attempt, next_at: this.env.cfg.now() });
-      return gone;
-    });
-    for (const id of pruned) {
-      this.forget(id);
-      this.stats.dropped++;
+    const queued: Job[] = [];
+    const pruned: string[] = [];
+    let dropped = 0;
+    try {
+      ctl.tx(() => {
+        if (ev.id <= (ctl.webhookEventCursor(who.electionId) ?? 0)) return;
+        for (const h of ctl.webhooksFor(who.orgId, who.electionId)) {
+          // A hook registered after an event is not a subscription to the earlier backlog.
+          if (h.created_at > ev.ts) continue;
+          const types = JSON.parse(h.events) as string[];
+          if (!types.includes(ev.type)) continue;
+          const deliveryId = `${h.webhook_id}.${who.electionId}.${ev.id}`;
+          const body = JSON.stringify({
+            id: deliveryId, election_id: who.electionId, event_id: ev.id, type: ev.type, seq: ev.seq, ts: toIso(ev.ts / 1000), data: JSON.parse(ev.data) as unknown,
+          });
+          if (Buffer.byteLength(body) > this.env.cfg.webhookMaxBodyBytes) { dropped++; continue; }
+          pruned.push(...ctl.outboxPruneTo(this.env.cfg.webhookMaxQueue - 1, this.flying));
+          ctl.outboxInsert({ delivery_id: deliveryId, webhook_id: h.webhook_id, event_type: ev.type, body, attempt: 1, next_at: this.env.cfg.now() });
+          queued.push({ hookId: h.webhook_id, deliveryId, body, eventType: ev.type, attempt: 1 });
+        }
+        ctl.advanceWebhookEventCursor(who.electionId, ev.id);
+      });
+    } catch {
+      // Nothing from a rolled-back fanout reaches transport; the durable source row will be retried.
+      this.env.logger.event('webhook_bridge', { outcome: 'error', note: 'storage_retry_pending' });
+      return false;
     }
-    this.queue.push(j);
+    const removed = new Set(pruned);
+    for (const id of removed) this.forget(id);
+    this.stats.dropped += dropped + removed.size;
+    this.queue.push(...queued.filter((job) => !removed.has(job.deliveryId)));
     this.pump();
+    return true;
   }
 
   /** Cancels the in-memory state of a delivery whose row was removed. */

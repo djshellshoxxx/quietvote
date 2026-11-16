@@ -75,7 +75,7 @@ test('migration resumes deletion tombstones left by earlier versions', async () 
     const db = new DatabaseSync(join(w.dir, 'control.sqlite'));
     try {
       // Recreate an actual pre-migration tombstone/crash window without a cleanup cursor.
-      db.exec('DROP TABLE election_cleanup; DELETE FROM schema_migration WHERE version=6; PRAGMA user_version=5');
+      db.exec('DROP TABLE webhook_event_cursor; DROP TABLE election_cleanup; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5');
       db.prepare("UPDATE election_registry SET state='DELETED',dek_wrapped=NULL,deleted_at=? WHERE election_id=?").run(w.clock, id);
     } finally {
       db.close();

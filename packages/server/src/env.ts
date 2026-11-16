@@ -1,7 +1,7 @@
 import type { WitnessPolicy } from '@quietvote/board';
 import type { ServerConfig } from './config.ts';
 import type { ControlDb } from './controldb.ts';
-import type { EventRow } from './electiondb.ts';
+import type { ElectionDb, EventRow } from './electiondb.ts';
 import type { Logger } from './logger.ts';
 import type { FailureCounter, RateLimiter } from './ratelimit.ts';
 
@@ -19,6 +19,8 @@ export interface Env {
   nowMs(): number;
   nowSec(): number;
   witnessPolicy(quorum: number): WitnessPolicy;
+  /** Retry committed election events into durable webhook delivery rows. Returns false on storage failure. */
+  recoverEvents?: (who: { electionId: string; orgId: string }, db: ElectionDb) => boolean;
   /** Committed outbox events; wired to the webhook dispatcher. */
   onEvent?: (who: { electionId: string; orgId: string }, ev: EventRow) => void;
 }
