@@ -65,3 +65,26 @@ test('BT-12: top-level sweep failure is visible, retry recovers, shutdown drains
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+
+test('BT-12: audit storage failure still emits an operational alarm and never marks success', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'qv-retention-'));
+  const logs: string[] = [];
+  const s = buildServer({ dataDir: dir, retentionSweepMs: 0, logSink: (l) => logs.push(l) });
+  const original = s.env.control.audit;
+  try {
+    s.env.control.audit = () => { throw new Error('private audit failure canary'); };
+    await assert.rejects(s.retention.runOnce(), /private audit failure canary/);
+    assert.equal(s.retention.status.lastSuccessAt, null);
+    assert.equal(s.retention.status.consecutiveFailures, 1);
+    assert.ok(logs.some((l) => JSON.parse(l).code === 'RETENTION_AUDIT_FAILED'));
+    assert.ok(!logs.join('').includes('canary'));
+    s.env.control.audit = original;
+    await s.retention.runOnce();
+    assert.equal(s.retention.status.consecutiveFailures, 0);
+  } finally {
+    s.env.control.audit = original;
+    await s.stop();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

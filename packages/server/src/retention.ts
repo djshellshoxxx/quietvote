@@ -87,6 +87,15 @@ export class RetentionSweeper {
       }
       complete = failed === 0;
     } finally {
+      let auditFailed = false;
+      let auditError: unknown;
+      try {
+        this.env.control.audit('system', 'retention.sweep', null, { checked, failed, purged: total, complete });
+      } catch (error) {
+        auditFailed = true;
+        auditError = error;
+        complete = false;
+      }
       this.health.checkedDatabases = checked;
       this.health.failedDatabases = failed;
       if (complete) {
@@ -96,10 +105,10 @@ export class RetentionSweeper {
         this.health.lastFailureAt = this.env.nowMs();
         this.health.consecutiveFailures++;
       }
-      this.env.control.audit('system', 'retention.sweep', null, { checked, failed, purged: total, complete });
       this.env.logger.event('retention_sweep', complete
         ? { outcome: 'ok' }
-        : { outcome: 'error', error_code: 'RETENTION_SWEEP_FAILED' });
+        : { outcome: 'error', error_code: auditFailed ? 'RETENTION_AUDIT_FAILED' : 'RETENTION_SWEEP_FAILED' });
+      if (auditFailed) throw auditError;
     }
     return total;
   }
