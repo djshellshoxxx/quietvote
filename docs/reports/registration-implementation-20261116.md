@@ -29,7 +29,7 @@ The claim is only that redemption omits `T/C`, not that all traffic or the serve
 never sees usable credentials.
 
 Unknown, revoked and used-with-new-key invitations return `409 INVITE_USED`.
-Expired invitations return `422 INVITE_EXPIRED`. Shape/signature failures remain
+Expired invitations return `422 INVITE_EXPIRED`, including the exact recorded deadline. Unknown/revoked/consumed refusals use the same problem body apart from the request ID and perform the same key/invite lookup shape; this is not a measured constant-time claim. Shape/signature failures remain
 separate. Consumption and voter insertion share the same SQLite transaction;
 concurrent distinct-key attempts cannot create two voters from one invitation.
 

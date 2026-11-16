@@ -634,19 +634,19 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       const message = scheme === 'hashed-pop-v1' ? registrationMessage(rt.id, bearer, pk) : new Uint8Array([...utf8(`QV-REG-v1\0${rt.id}\0`), ...pk]);
       if (!ed25519Verify(pk, pop, message)) return fail(new ApiError(401, 'BAD_SIGNATURE', 'proof of possession invalid'));
       const inv = rt.edb.inviteByHash(scheme === 'hashed-pop-v1' ? storedInviteHash(bearer) : sha256(utf8(`QV-INVITE-v1\0${b.invite_code}`)));
+      const kid = b64u(authorKeyId('ed25519', pk));
+      const existing = rt.edb.voter(kid); // Same lookup shape for unknown and consumed invitations.
       if (!inv || inv.state === 'revoked') return fail(conflict('invite code is not valid', 'INVITE_USED'));
       if (inv.state === 'expired') return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
-      if (inv.expires_at !== null && inv.expires_at < nowMs()) return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
-      const kid = b64u(authorKeyId('ed25519', pk));
-      const existing = rt.edb.voter(kid);
+      if (inv.expires_at !== null && inv.expires_at <= nowMs()) return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
       if (inv.state === 'registered') {
         if (existing) return { status: 201, json: { voter_kid: kid, status: existing.status === 'committed' ? 'approved' : existing.status } };
-        return fail(conflict('invite code already used', 'INVITE_USED'));
+        return fail(conflict('invite code is not valid', 'INVITE_USED'));
       }
       if (existing) throw conflict('this key is already registered');
       if (rt.edb.voterCount() >= cfg.maxVotersPerElection) throw new ApiError(429, 'RATE_LIMITED', 'roll is full', { retryable: false });
       rt.edb.tx(() => {
-        if (!rt.edb.consumeInvite(inv.invite_id, Math.floor(nowMs() / 3_600_000) * 3_600_000)) throw conflict('invite code already used', 'INVITE_USED');
+        if (!rt.edb.consumeInvite(inv.invite_id, Math.floor(nowMs() / 3_600_000) * 3_600_000)) throw conflict('invite code is not valid', 'INVITE_USED');
         rt.edb.addVoter({ voter_kid: kid, pk, alg: 'ed25519', status: 'approved', registered_at: Math.floor(nowMs() / 3_600_000) * 3_600_000 });
       });
       return { status: 201, json: { voter_kid: kid, status: 'approved' } };

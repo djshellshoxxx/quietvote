@@ -19,6 +19,31 @@ async function issue(w: World, count = 1, expires_at?: string): Promise<{ invite
 }
 const path = (w: World) => `/api/v1/elections/${w.electionId}/registrations`;
 
+test('B2-10 unknown, revoked and consumed invitations expose the same refusal body', async () => {
+  const w = await fixture('registration-oracle');
+  try {
+    const [used, revoked] = await issue(w, 2), first = kp('registration', 'oracle-first'), other = kp('registration', 'oracle-other');
+    assert.equal((await w.req('POST', path(w), w.registrationBody(used!.code, first))).status, 201);
+    await w.signed('DELETE', `/api/v1/elections/${w.electionId}/invites/${revoked!.invite_id}`);
+    const results = [];
+    for (const code of [used!.code, revoked!.code, b64u(new Uint8Array(16))]) {
+      const r = await w.req('POST', path(w), w.registrationBody(code, other));
+      assert.equal(r.status, 409);
+      const { request_id: _id, ...problem } = r.json; results.push(problem);
+    }
+    assert.deepEqual(results[0], results[1]); assert.deepEqual(results[1], results[2]);
+  } finally { await w.stop(); }
+});
+
+test('an invitation expires exactly at its recorded deadline', async () => {
+  const w = await fixture('registration-expiry-boundary');
+  try {
+    const [invite] = await issue(w, 1, new Date(w.clock).toISOString());
+    assert.equal((await w.req('POST', path(w), w.registrationBody(invite!.code, kp('registration', 'boundary')))).status, 422);
+    assert.equal((await w.server.pool.get(w.electionId))!.edb.voterCount(), 0);
+  } finally { await w.stop(); }
+});
+
 test('ADR028 real browser client enrolls first voter before manifest; stored hash is not the wire bearer', async () => {
   const w = await fixture('registration-browser-adapter');
   const signer = await createSigner(kp('registration', 'browser').secretKey.slice(), { preferWebCrypto: false });
