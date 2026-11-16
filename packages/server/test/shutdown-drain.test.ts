@@ -34,14 +34,14 @@ test('pool shutdown waits for opening runtimes and rejects new acquisition', asy
     const rejected = assert.rejects(opening, /shutting down/);
     await entered.promise;
     let closed = false;
-    const closing = w.server.pool.closeAll().then(() => { closed = true; });
+    const closing = w.server.pool.shutdown().then(() => { closed = true; });
     await tick();
     assert.equal(closed, false, 'opening runtime must drain before pool closes');
     await assert.rejects(w.server.pool.get(w.electionId), /shutting down/);
     resume.resolve();
     await Promise.all([closing, rejected]);
     assert.equal(w.server.pool.openCount(), 0);
-    await w.server.pool.closeAll();
+    await w.server.pool.shutdown();
   } finally { resume.resolve(); await w.stop(); }
 });
 
@@ -165,5 +165,44 @@ test('server shutdown waits for the active gossip exchange before releasing stor
     await Promise.all([run, stopping]);
     const next = buildServer({ dataDir: w.dir });
     await next.stop();
+  } finally { resume.resolve(); await w.stop(); }
+});
+
+
+test('closeAll drains and evicts transiently, then permits runtime replay and HTTP reads', async (t) => {
+  const w = new World({ seed: 'close-all-reusable', n: 3, t: 2, voters: 1 });
+  await w.start();
+  const entered = deferred();
+  const resume = deferred();
+  try {
+    await w.setupOrgAndElection();
+    const first = await w.server.pool.get(w.electionId);
+    await w.server.pool.closeAll();
+    assert.equal(w.server.pool.openCount(), 0);
+    const replay = await w.server.pool.get(w.electionId);
+    assert.ok(replay);
+    assert.notEqual(replay, first);
+    await w.server.pool.evict(w.electionId);
+    const original = ElectionRuntime.open;
+    t.mock.method(ElectionRuntime, 'open', async (...args: Parameters<typeof ElectionRuntime.open>) => {
+      entered.resolve();
+      await resume.promise;
+      return original(...args);
+    });
+    const opening = w.server.pool.get(w.electionId);
+    const rejected = assert.rejects(opening, /shutting down/);
+    await entered.promise;
+    let closed = false;
+    const closing = w.server.pool.closeAll().then(() => { closed = true; });
+    await tick();
+    assert.equal(closed, false);
+    await assert.rejects(w.server.pool.get(w.electionId), /shutting down/);
+    resume.resolve();
+    await Promise.all([closing, rejected]);
+    assert.equal(w.server.pool.openCount(), 0);
+    const reopened = await w.server.pool.get(w.electionId);
+    assert.ok(reopened);
+    assert.notEqual(reopened, first);
+    assert.equal((await w.get(`/api/v1/elections/${w.electionId}/state`)).status, 200);
   } finally { resume.resolve(); await w.stop(); }
 });

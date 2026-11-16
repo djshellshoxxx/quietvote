@@ -26,7 +26,7 @@ export class ElectionPool {
   }
 
   private ensureRunning(): void {
-    if (this.stopping) throw new ApiError(503, 'MAINTENANCE', 'server is shutting down');
+    if (this.stopping || this.closing) throw new ApiError(503, 'MAINTENANCE', 'server is shutting down');
   }
 
   async get(id: string): Promise<ElectionRuntime | undefined> {
@@ -131,12 +131,18 @@ export class ElectionPool {
     this.env.control.audit('system', 'election.delete', id);
   }
 
+  /** Drain and evict cached runtimes, permitting later replay. Acquisition is refused during the drain. */
   closeAll(): Promise<void> {
-    this.stopping = true; // no new acquisitions can enter while the existing opens drain
     this.closing ??= (async () => {
       await Promise.allSettled([...this.opening.values()]);
       for (const id of [...this.open.keys()]) await this.evict(id);
-    })();
+    })().finally(() => { this.closing = undefined; });
     return this.closing;
+  }
+
+  /** Permanently refuse acquisition and drain before process ownership can transfer. */
+  shutdown(): Promise<void> {
+    this.stopping = true;
+    return this.closeAll();
   }
 }

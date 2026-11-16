@@ -940,7 +940,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       const jobsStopped = jobs.stop();
       const httpStopped = http.close();
       await Promise.all([gossipStopped, retentionStopped, jobsStopped, httpStopped, webhooks.idle()]);
-      await pool.closeAll();
+      await pool.shutdown();
       control.close();
       releaseLock();
     })();
