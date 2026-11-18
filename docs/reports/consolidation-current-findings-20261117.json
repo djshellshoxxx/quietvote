@@ -1,0 +1,2329 @@
+{
+  "repository": "djshellshoxxx/quietvote",
+  "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+  "candidate_pr57_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+  "historical_findings_sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+  "historical_handoff_sha": "9a03414e0e826db292f9dd5728e4d3d2f0682784",
+  "scope": "All 72 extract identifiers accounted for by current source review and selected regression execution. This is not 72 fresh exploit reproductions, complete KNOWN-catalogue closure, professional security approval or production qualification. See each row for execution scope and source SHA. Historical severity and confirmation records are preserved.",
+  "findings": [
+    {
+      "id": "B1-01",
+      "historical_severity": "Medium",
+      "current_status": "Fixed for the reproduced scenarios; regressions executed",
+      "evidence": "`packages/protocol/test/b1-regressions.test.ts` covers before-open, after-close and over-limit signed spoils; `verifier-py/tests/test_audit_regressions.py` covers the same-code exclusion. The protocol and Python suites passed.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-01",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-16-REQ-015",
+          "QV-16 \u00a75.13.2 step 4",
+          "QV-16 \u00a75.14.4 #14"
+        ],
+        "location": "packages/protocol/src/ballotlog.ts:75-79,packages/protocol/src/ballotlog.ts:83-88,packages/protocol/src/ballotlog.ts:96,packages/protocol/src/ballotlog.ts:124",
+        "summary": "A spoil beyond max_spoils_per_voter or outside the voting window is dropped before entering the spoiled set, so the same code cast later is counted without E_SPOILED_CODE_CAST even when its reveal is published.",
+        "scenario": "Manifest max_spoils_per_voter: 0 (or voter past limit); voter posts ballot X as spoil with published reveal, then casts same body X; TS verifier counts X, chk.benaloh.spoiled pass, only E_REVOTE_LIMIT/L; verifier-py (no limit) excludes it and FAILs (E_COUNTED_ROOT, E_AGG_MISMATCH).",
+        "evidence": "node --test audit-b1-poc/b1-poc.test.ts test B1-01 passes (verdict PASS, code in countedBallots); py_diff.py row E1-spoil-over-limit TS=PASS PY=FAIL; control E1c-spoil-within-limit both flag. PoC dir /home/user/audit/quietvote-b1/audit-b1-poc/.",
+        "known_ref": "",
+        "suggested_fix": "Register every envelope-valid voter-signed spoil code in the spoiled set before window/limit rules (which still raise their L finding); same in verifier-py plus the limit; add regression tests for over-limit and outside-window. PR #10 P4 fix does not cover this."
+      }
+    },
+    {
+      "id": "B1-02",
+      "historical_severity": "Medium",
+      "current_status": "Fixed for adopted historical cases; regressions executed",
+      "evidence": "`packages/protocol/test/approved-semantic-parity.test.ts`, Python `test_approved_semantic_parity.py` and `test_approved_parity_fresh_review.py` cover malformed non-tally records, first authenticated marker selection and duplicate/conflicting tallies. Notice/control corpus cases execute. Newer governance effects are separate.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-02",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "divergence (QV-35)",
+        "spec_ids": [
+          "QV-35 \u00a71",
+          "QV-35 \u00a76",
+          "QV-16 \u00a75.20",
+          "QV-ADR-022"
+        ],
+        "location": "verifier-py/qv_verifier/election.py:314-320,verifier-py/qv_verifier/election.py:341-344,verifier-py/qv_verifier/election.py:354-358,verifier-py/qv_verifier/election.py:396-400,verifier-py/qv_verifier/election.py:509-511",
+        "summary": "verifier-py makes non-ballot record anomalies (control entries, unknown types, bad-signature markers preceding valid ones, binding fields on non-open markers, repeated identical tally) fatal, failing elections the reference passes.",
+        "scenario": "Shipped vector test-vectors/v1/elections/log-layer-4v/notices/pause-resume.bundle.json: TS PASS, Python FAIL (E_SCHEMA fatal); also E11-control-entries, E7-bad-close-then-good (E_SIG fatal), E13-C3-close-with-binding, E17-tally-posted-twice all TS PASS / Py FAIL; anyone able to append to the exported log can make verifier-py FAIL a valid election.",
+        "evidence": "python3 -I audit-b1-poc/py_diff.py on TS-built bundles; quick_ts.ts / quick_py.py on pause-resume bundle; test_b1_py_poc.py.",
+        "known_ref": "",
+        "suggested_fix": "Mirror the reference in verifier-py: class L for unknown/malformed non-ballot records and bad signatures, pick first validly signed marker, treat identical repeated tally as duplicate; record classes in QV-16 \u00a75.20 (owner decision); add mutants."
+      }
+    },
+    {
+      "id": "B1-03",
+      "historical_severity": "Low",
+      "current_status": "Fixed; regressions executed",
+      "evidence": "Python `test_audit_regressions.py` verifies one-seat approval defaults and named rejection of yes/no without a rule. Rule errors no longer escape the tested public path.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-03",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "robustness",
+        "spec_ids": [
+          "QV-35 \u00a77",
+          "QV-20 \u00a75.3"
+        ],
+        "location": "verifier-py/qv_verifier/rules.py:25,verifier-py/qv_verifier/rules.py:59,verifier-py/qv_verifier/election.py:186-193,verifier-py/qv_verifier/election.py:624-626,verifier-py/qv_verifier/manifest.py:130-139",
+        "summary": "verifier-py raises an uncaught QVError for an approval contest without winners and would KeyError on a yes-no contest without rule, which its manifest validation accepts.",
+        "scenario": "E5-approval-no-winners: TS PASS (one seat), verify_bundle raises QVError('E_RULES: number of winners undefined'); callers other than the vector runner get an exception instead of a verdict.",
+        "evidence": "Python PoC test_B1_03_* in audit-b1-poc/test_b1_py_poc.py (python3 -I -m unittest discover -s audit-b1-poc -p 'test_b1_py_poc.py').",
+        "known_ref": "",
+        "suggested_fix": "Default approval to one seat per QV-20 \u00a75.3 (or reject at validation with named error consistently with reference), require rule for yes-no in validation, catch evaluation errors as named failure."
+      }
+    },
+    {
+      "id": "B1-04",
+      "historical_severity": "Medium",
+      "current_status": "Fixed for recorded cases; regressions executed",
+      "evidence": "`verifier-py/qv_verifier/recordfields.py` validates record encodings before arithmetic. Python audit regressions reject Boolean indices, uppercase points/roll/tally fields and malformed wrappers. This is not a claim of exhaustive parser fuzzing.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-04",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "conformance / divergence",
+        "spec_ids": [
+          "QV-16 \u00a75.5 item 3",
+          "QV-16 \u00a75.5 item 7",
+          "QV-35-REQ-003"
+        ],
+        "location": "verifier-py/qv_verifier/election.py:85-132,verifier-py/qv_verifier/election.py:280,verifier-py/qv_verifier/ristretto.py:116-121,verifier-py/qv_verifier/ristretto.py:144-149,verifier-py/qv_verifier/dkg.py:24-29",
+        "summary": "verifier-py does not enforce lower-case fixed-width hex or integer types in records outside ballot envelopes and manifest (bytes.fromhex accepts upper case/whitespace; True == 1), so verifiers compute different DKG outcomes and verdicts.",
+        "scenario": "D2-uppercase-hex-dealing: TS Q=[1,2], Python E_DKG_QUORUM; D5-boolean-index-trustee-1 (\"i\": true): TS Q=[2,3], Python E_DKG_QUORUM; E14-tally-share-uppercase-hex and E18-roll-uppercase-hex: TS FAIL, Python PASS.",
+        "evidence": "op_py.py / oplevel.ts op-level probes; py_diff.py and quick_ts.ts/quick_py.py on out/E18-roll-uppercase-hex.bundle.json; test_b1_py_poc.py.",
+        "known_ref": "",
+        "suggested_fix": "Validate every record field in verifier-py with the closed schema used on the ballot path (lower-case fixed-width hex regex, type(x) is int and ranges) before decoding."
+      }
+    },
+    {
+      "id": "B1-05",
+      "historical_severity": "Low",
+      "current_status": "Fixed under ADR-027; regressions and probes executed",
+      "evidence": "U+061C acceptance and the eleven rejected bidi marks agree. `packages/protocol/src/manifest.ts` checks trustee/witness text; Python `test_manifest_compatibility.py` exercises the exact approved policy. Preserved M5/M6 probes now agree.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-05",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "divergence",
+        "spec_ids": [
+          "QV-13-REQ-082",
+          "QV-13 \u00a78",
+          "QV-34 \u00a77.2"
+        ],
+        "location": "packages/protocol/src/manifest.ts:10,packages/protocol/src/manifest.ts:63-67,verifier-py/qv_verifier/manifest.py:27,verifier-py/qv_verifier/manifest.py:75",
+        "summary": "Bidi-control rejection sets differ: Python also rejects U+061C which TS accepts, and TS skips trustee/witness names (KNOWN P6).",
+        "scenario": "M6-title-U061C: TS accepts, Python rejects; M5-trustee-name-bidi-U202E: TS accepts, Python rejects; verifiers disagree on the same manifest.",
+        "evidence": "op_py.py op-level probes; TS PoC test B1-05 in audit-b1-poc/b1-poc.test.ts passes.",
+        "known_ref": "P6 (partial overlap)",
+        "suggested_fix": "One normative list in QV-16/QV-13 (owner), same in both verifiers, a QV-34 vector per code point."
+      }
+    },
+    {
+      "id": "B1-06",
+      "historical_severity": "Medium",
+      "current_status": "Disclosure repaired; caller trust requirement remains",
+      "evidence": "`packages/verifier/src/verify.ts` records the manifest hash source and adds an out-of-band caveat when absent; `format.ts` prints the hash. `packages/verifier/test/b1-anchor.test.ts` tests unpinned disclosure and rejection of an incorrect caller pin. This does not make external manifest acquisition automatic.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-06",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-16 \u00a75.6.1",
+          "QV-16 App. C Inputs"
+        ],
+        "location": "packages/verifier/src/main.ts:38,packages/verifier/src/main.ts:49,packages/verifier/src/main.ts:77,packages/verifier/src/verify.ts:122-123,packages/protocol/src/verify.ts:166-172,packages/verifier/src/format.ts:159-161",
+        "summary": "qv-verify without --manifest-hash compares the manifest with the bundle's own manifest_hash, reports V1 PASS and exits 0 with no caveat and without printing the manifest hash.",
+        "scenario": "A distributor substitutes a complete self-consistent election (own coordinator, trustees, roll, results); qv-verify bundle.json prints V1 PASS, VERDICT PASS, exit 0.",
+        "evidence": "node packages/verifier/src/bin.ts audit-b1-poc/out/E0-baseline.bundle.json --skip-selftest -> VERDICT PASS, V1 PASS, exit 0; PoC test B1-06 in b1-poc.test.ts builds attacker election and asserts PASS, no pin caveat, hash absent from output.",
+        "known_ref": "BC-04 (same class, covered only qv ballot encrypt/audit)",
+        "suggested_fix": "Always print the verified manifest hash; without pin report V1 not run or verdict INCOMPLETE with caveat 'manifest hash NOT pinned'; mandatory pin is an owner decision. Same pattern for qv verify (packages/cli/src/cmd-verify.ts:8-12) and web page (packages/web/src/verifier/page.ts:55-63)."
+      }
+    },
+    {
+      "id": "B1-07",
+      "historical_severity": "Medium",
+      "current_status": "Fixed for adopted distinguishing cases; paired regressions executed",
+      "evidence": "Paired TS/Python semantic tests cover count-quorum `value`, exact threshold ties, winner order, excluded-latest casts, DKG equivocation, complaints and phase timing. They do not establish all possible manifest/report parity.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-07",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "conformance (spec gaps)",
+        "spec_ids": [
+          "QV-16 \u00a75.19.3",
+          "QV-16 \u00a75.7.6",
+          "QV-16 \u00a75.14.2",
+          "QV-20 \u00a75.1",
+          "QV-ERR-PY-003",
+          "QV-ERR-PY-009",
+          "QV-ERR-PY-010"
+        ],
+        "location": "packages/protocol/src/rules.ts:26-31,packages/protocol/src/rules.ts:34-46,packages/protocol/src/schema.ts:231,packages/protocol/src/dkg.ts:189-205,packages/protocol/src/dkg.ts:275-280,packages/protocol/src/ballotlog.ts:105-132,verifier-py/qv_verifier/rules.py:20,verifier-py/qv_verifier/rules.py:37-47,verifier-py/qv_verifier/rules.py:60-67,verifier-py/qv_verifier/manifest.py:195-198,verifier-py/qv_verifier/dkg.py:24-29,verifier-py/qv_verifier/dkg.py:76,verifier-py/qv_verifier/dkg.py:128,verifier-py/qv_verifier/election.py:476-504",
+        "summary": "Open spec questions recorded in errata now produce verdict-level disagreement between the TS and Python verifiers on honest elections.",
+        "scenario": "E3-tie-basis-counted (TS tie, Py E_RESULT), E3b-2of3-status-quo-yes, E2-count-quorum (Py E_SCHEMA), E4-kofn-winner-order, E15-excluded-latest-cast (Py E_COUNTED_ROOT), DKG D1-duplicate-different-commit, D3-complaint-vs-R2-disqualified (different Q and ctx), D4-commit-before-dkg-open.",
+        "evidence": "gen.ts + py_diff.py on honest TS-built bundles; oplevel.ts / op_py.py for DKG rows; existing rules.json/dkg.json vectors pass in both and do not distinguish.",
+        "known_ref": "QV-ERR-PY-003, QV-ERR-PY-009, QV-ERR-PY-010 (errata; verdict consequence new)",
+        "suggested_fix": "Owner decisions on each question in QV-16 \u00a75.19.3, \u00a75.7.6, \u00a75.14.2; align both verifiers; add distinguishing vectors."
+      }
+    },
+    {
+      "id": "B1-08",
+      "historical_severity": "Low",
+      "current_status": "Partially fixed; residual acceptance differences reproduced",
+      "evidence": "Calendar validity, created/open ordering, signing-key subgroup checks and explicit roll bounds are tested. The preserved 25-input corpus still has 12 acceptance differences: two documented scope/spec differences and ten remaining validation differences. Numeric or schema choices without normative support require the recorded ruling.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-08",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-16 App. C step 3",
+          "QV-16 \u00a75.5 item 5",
+          "QV-16 \u00a75.6.1",
+          "QV-ADR-018"
+        ],
+        "location": "verifier-py/qv_verifier/manifest.py:155-269,verifier-py/qv_verifier/manifest.py:170-175",
+        "summary": "verifier-py manifest validation accepts manifests the reference rejects (time ordering, impossible dates, yes-no without rule, small-order/non-canonical keys, witness rules, size bounds) and diverges in both directions.",
+        "scenario": "23 of 25 probes diverge, e.g. M1 created after voting_open, M2 2026-02-30, M3 hour 24, M10/M11/M23 small-order or non-canonical keys, M18 yes-no without rule: Python accepts, TS rejects.",
+        "evidence": "op_py.py / oplevel.ts manifest probes (M0 valid control); test_b1_py_poc.py.",
+        "known_ref": "",
+        "suggested_fix": "Port reference checks the spec states into verifier-py; record the rest as errata."
+      }
+    },
+    {
+      "id": "B1-09",
+      "historical_severity": "Info",
+      "current_status": "Historical documentation claim corrected; source classification fixed",
+      "evidence": "`docs/plan/COMPLETION.md` explicitly annotates the old C3 claim as historical and incorrect. Subsequent ADR-027 code and paired tests repair the classification behavior. Preserve the historical table; do not rewrite the earlier audit.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-09",
+        "severity": "Info",
+        "confidence": "CONFIRMED",
+        "category": "conformance (status accuracy)",
+        "spec_ids": [
+          "COMPLETION.md C3",
+          "QV-ADR-015"
+        ],
+        "location": "docs/plan/COMPLETION.md:27,verifier-py/qv_verifier/election.py:95-109",
+        "summary": "COMPLETION C3 says verifier-py does not reject binding fields on non-open markers, but it rejects them fatally; the real gap is the class mismatch.",
+        "scenario": "E13 close marker carrying binding fields: TS PASS (class L, ignored), Python FAIL (E_SCHEMA fatal), contrary to the status text.",
+        "evidence": "Code reading of _record_schema_ok; py_diff.py row E13-C3-close-with-binding.",
+        "known_ref": "",
+        "suggested_fix": "Update C3 to describe the class mismatch (part of B1-02)."
+      }
+    },
+    {
+      "id": "B1-10",
+      "historical_severity": "Info",
+      "current_status": "Documentation corrected; rerandomization remains outside completed scope",
+      "evidence": "TODO T-028 is `Partial` and explicitly records that rerandomization is absent. No rerandomization API was invented; the original scope-overstatement is no longer a current completion claim. Source/doc inspection only.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-10",
+        "severity": "Info",
+        "confidence": "CONFIRMED",
+        "category": "conformance (status inflation)",
+        "spec_ids": [
+          "TODO T-028"
+        ],
+        "location": "packages/crypto/src/elgamal.ts",
+        "summary": "T-028 'Exponential ElGamal encrypt/decrypt-to-point, rerandomize' is marked Done but no rerandomize function exists.",
+        "scenario": "TODO row overstates implemented scope; grep finds no rerandomize (not required by suite v1).",
+        "evidence": "grep -rni rerandom packages/crypto/src packages/protocol/src returns nothing.",
+        "known_ref": "",
+        "suggested_fix": "Correct the TODO row status/description."
+      }
+    },
+    {
+      "id": "B1-11",
+      "historical_severity": "Low",
+      "current_status": "Partially addressed; complete coverage qualification remains open",
+      "evidence": "Crypto tests cover strict small-order/mixed-order Ed25519 and per-field proof binding. Protocol B1 regressions cover late complaints and late key confirmations. Those tests passed. This reviewer did not repeat the historical complete mutation sweep or prove full Appendix C vector coverage.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-11",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "test coverage",
+        "spec_ids": [
+          "QV-16-REQ-020",
+          "QV-16 \u00a711",
+          "QV-34-REQ-001",
+          "QV-34-REQ-007",
+          "QV-34-REQ-009",
+          "QV-34 \u00a77.2",
+          "QV-34 \u00a79.3"
+        ],
+        "location": "test-vectors/v1/*,packages/crypto/test/*,packages/protocol/src/dkg.ts:276,packages/protocol/src/verify.ts:388,packages/crypto/test/proofs.test.ts:98-103",
+        "summary": "Negative corpus does not cover every Appendix C check and Ed25519/DKG edge cases, and a mutation sweep leaves 3 real survivors (Ed25519 small-order R, late DKG complaint, late key confirmation).",
+        "scenario": "Removing the Ed25519 strict R check (M14), adjudicating complaints after dkg-r3-close (M26), or counting key confirmations outside the window (M30) passes all tests; e.g. with t=n a late confirmation turns E_DKG_KEYCONF FAIL into PASS.",
+        "evidence": "Vector inventory script over test-vectors/v1; 32-mutant sweep via audit-b1-poc/mutation/mutate.py on scratchpad copies (summary.txt: 21 killed, 8 equivalent/unreachable, 3 real); small_order_r.ts shows noble accepts R=identity; identity_cds.ts shows CDS identity test passes for wrong reason.",
+        "known_ref": "CP-08 (partly)",
+        "suggested_fix": "One negative test each for M14/M26/M30 plus QV-34 vectors for small-order R, DKG timing, and missing Appendix C mutants."
+      }
+    },
+    {
+      "id": "B1-12",
+      "historical_severity": "Info",
+      "current_status": "Reproduced on canonical; fixed in candidate, pending required review",
+      "evidence": "Independent synthetic comparison plus new `conformance-nonce-hedge.test.ts` in crypto/protocol. Canonical `72bccc6` retains CP-02; candidate `fd23cb3` repairs it. This finding is historical Info for the test-description defect; do not silently upgrade its historical severity.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": false,
+      "canonical_status_override": "Known failed-RNG condition reproduced on 72bccc6; repair exists only on candidate",
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-12",
+        "severity": "Info",
+        "confidence": "CONFIRMED",
+        "category": "test quality",
+        "spec_ids": [
+          "QV-16 \u00a75.16",
+          "QV-16 Appendix B item 6"
+        ],
+        "location": "packages/crypto/test/proofs.test.ts:208-220",
+        "summary": "The test claiming decryption nonces never repeat with a failed RNG varies only oid; with same (ctx,cid,oid) and different aggregate the nonce repeats and s_j is recovered.",
+        "scenario": "constantRng, same (ctx, cid, oid), different aggregate: both proofs verify and s_j = (s1-s2)/(c1-c2) recovered.",
+        "evidence": "node audit-b1-poc/known_check.ts (CP-02 AFFECTED).",
+        "known_ref": "CP-02",
+        "suggested_fix": "Rename the test or add the failing case once CP-02 is decided."
+      }
+    },
+    {
+      "id": "B1-13",
+      "historical_severity": "Low",
+      "current_status": "Fixed; regressions executed",
+      "evidence": "`packages/protocol/test/b1-regressions.test.ts` and Python audit regressions reject unsigned extra manifest-envelope/signature members while retaining named signature/version errors.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-13",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-16 \u00a75.5 item 7",
+          "QV-16 Envelope"
+        ],
+        "location": "packages/protocol/src/verify.ts:157-173,packages/verifier/src/bundle.ts:43",
+        "summary": "The manifest record envelope {body, sigs} and its signature objects are not checked against a closed schema, so unknown members pass in TS while verifier-py FAILs.",
+        "scenario": "out/E19-manifest-envelope-extra-members.bundle.json (E0 plus manifest.note and extra member in sig): protocol.verifyElection PASS with chk.encoding.canonical pass, qv-verify PASS, verifier-py FAIL (E_SCHEMA).",
+        "evidence": "quick_ts.ts / quick_py.py on E19 bundle; b1-poc.test.ts and test_b1_py_poc.py.",
+        "known_ref": "",
+        "suggested_fix": "Check S.multiSigned(manifest) shape (closed, sigs as S.sig) and report E_SCHEMA with chk.encoding.canonical fail."
+      }
+    },
+    {
+      "id": "B1-14",
+      "historical_severity": "Low",
+      "current_status": "Fixed; regressions executed",
+      "evidence": "Python audit regressions require all six DKG phase markers, reject missing and out-of-order markers, and include the preserved E20 example.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "B1-14",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "conformance / divergence",
+        "spec_ids": [
+          "QV-16 \u00a75.7",
+          "QV-16 App. C step 5",
+          "QV-35 \u00a76"
+        ],
+        "location": "verifier-py/qv_verifier/election.py:363,verifier-py/qv_verifier/dkg.py:65,packages/verifier/src/canary.ts:50-51",
+        "summary": "verifier-py neither requires the dkg-open marker nor checks DKG marker order, passing a bundle the reference (and its own canary) rejects.",
+        "scenario": "out/E20-dkg-open-marker-dropped.bundle.json (first log entry dkg-open removed): TS FAIL (E_DKG_MARKERS), Python PASS.",
+        "evidence": "quick_ts.ts / quick_py.py on E20 bundle; test_b1_py_poc.py.",
+        "known_ref": "",
+        "suggested_fix": "Require all six markers in strictly increasing order as adjudicateDkg does (dkg.ts:182-183)."
+      }
+    },
+    {
+      "id": "CP-01 (verifier-py residual)",
+      "historical_severity": "Medium",
+      "current_status": "Fixed for recorded rewrap/plant cases; regressions executed",
+      "evidence": "Python audit regressions and protocol audit/B1 suites reject rewrapped spoiled ciphertexts and ignore invalid-signature alpha planting. Private trustee-mode capability remains separately bounded.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "CP-01 (verifier-py residual)",
+        "severity": "Medium",
+        "confidence": "CONFIRMED (reproduced at SHA)",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-16-REQ-015"
+        ],
+        "location": "verifier-py/qv_verifier/election.py,packages/protocol/src/verify.ts:571-581,packages/protocol/src/ballotlog.ts:63-66",
+        "summary": "Counted ballot re-wrapped under another supersedes with published reveal passes; the verifier-py side has no fix on any branch.",
+        "scenario": "K-CP01: TS PASS with chk.benaloh.spoiled pass and Python PASS; also a planted invalid cast's alpha makes an honest trustee-mode audit raise E_SPOILED_CODE_CAST/ALARM.",
+        "evidence": "node audit-b1-poc/known_election.ts (K-CP01); node audit-b1-poc/known_tr01_plant.ts.",
+        "known_ref": "CP-01",
+        "suggested_fix": "Apply PR #10 fix in TS (castAlphas restricted to valid casts) and an equivalent check in verifier-py."
+      }
+    },
+    {
+      "id": "CP-04 (verifier-py residual)",
+      "historical_severity": "Medium",
+      "current_status": "Fixed; independent-construction regressions executed",
+      "evidence": "Python audit tests independently construct mixed-order points; strict key and signature rejection agrees with the TS crypto audit/ZIP-215 tests. Honest signature controls pass.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "CP-04 (verifier-py residual)",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "divergence",
+        "spec_ids": [
+          "QV-16-REQ-016",
+          "QV-ADR-018"
+        ],
+        "location": "verifier-py/qv_verifier/ed25519.py:52-57,packages/crypto/src/ed25519.ts",
+        "summary": "Even after PR #10's TS fix, verifier-py still accepts mixed-order public keys and 1/8 of signatures, so acceptance sets differ.",
+        "scenario": "Mixed-order key A = aB + T8: at SHA TS accepts 16/16, Python 2/16; with PR #10 ed25519.ts TS 0/16 and rejects the key while Python accepts the key, so a roll with it is E_ROLL FAIL in patched TS and PASS in Python.",
+        "evidence": "op_py.py / oplevel.ts Ed25519 mixed-order probes; scratchpad copy of packages/crypto with PR #10 ed25519.ts, node check.ts.",
+        "known_ref": "CP-04",
+        "suggested_fix": "Add the same torsion-free check to verifier-py valid_public_key."
+      }
+    },
+    {
+      "id": "TSV-04",
+      "historical_severity": "Info",
+      "current_status": "Repaired in the current log-evidence policy",
+      "evidence": "`packages/protocol/src/verify.ts` prevents interrupted evidence from becoming content-only PASS. `packages/verifier/test/log-policy-fresh-review.test.ts` exercises board-layer exceptions and absence/malformed/caller-option boundaries.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "TSV-04",
+        "severity": "Info",
+        "confidence": "yes (code read)",
+        "category": "verifier robustness",
+        "spec_ids": [],
+        "location": "packages/verifier/src/verify.ts:133-138,packages/verifier/src/verify.ts:255",
+        "summary": "A throwing board layer only sets boardSkipped; PASS stays reachable.",
+        "scenario": "Board-layer verification throws; verdict can still be PASS.",
+        "evidence": "Code read at SHA (HANDOFF 3.2.4 item, no severity given).",
+        "known_ref": "TSV-04 (PR #6 HANDOFF)",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "TSV-06",
+      "historical_severity": "Info",
+      "current_status": "Fixed",
+      "evidence": "`packages/verifier/src/canary.ts` compares `expect.verdict`; `packages/verifier/test/b1-anchor.test.ts` alters only the expected verdict and requires self-test failure.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "TSV-06",
+        "severity": "Info",
+        "confidence": "yes (code read)",
+        "category": "verifier self-test",
+        "spec_ids": [],
+        "location": "packages/verifier/src/canary.ts:85-90",
+        "summary": "Canary self-test never compares expect.verdict.",
+        "scenario": "A canary yielding the wrong verdict is not detected.",
+        "evidence": "Code read at SHA (HANDOFF 3.2.4, no severity given).",
+        "known_ref": "TSV-06 (PR #6 HANDOFF)",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "PY-01",
+      "historical_severity": "Info",
+      "current_status": "Approved refusal behavior implemented; optional capability unsupported",
+      "evidence": "Python accepts Boolean false, rejects Boolean true with `E_UNSUPPORTED`, and rejects other types. Tests and M12 probe confirm it. Full trustee-mode spoil decryption is not implemented; that is the explicit ADR-027/D-88 choice, not a silent successful verification.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "PY-01",
+        "severity": "Info",
+        "confidence": "yes",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-35-REQ-012"
+        ],
+        "location": "verifier-py/qv_verifier/manifest.py",
+        "summary": "verifier-py has no trustee-mode spoils; manifests with spoil_trustee_decrypt are rejected.",
+        "scenario": "Probe M12: manifest with spoil_trustee_decrypt rejected by Python, accepted by TS (allowed interim with named error).",
+        "evidence": "op_py.py M12.",
+        "known_ref": "PY-01 (PR #6 HANDOFF)",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "PY-02",
+      "historical_severity": "Info",
+      "current_status": "Fixed; regressions executed",
+      "evidence": "Python no-tally and missing/unverified-log paths return INCOMPLETE, fatal evidence remains FAIL, and only literal caller-controlled content-only opt-out changes scope. `test_incomplete_verdict.py`, `test_incomplete_fresh_review.py`, `test_log_required.py`, `test_log_policy_fresh_review.py` passed.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "PY-02",
+        "severity": "Info",
+        "confidence": "yes",
+        "category": "conformance",
+        "spec_ids": [],
+        "location": "verifier-py/qv_verifier/election.py:203",
+        "summary": "verifier-py verdict is PASS/FAIL only.",
+        "scenario": "No INCOMPLETE/other verdict states are reported.",
+        "evidence": "Code read at SHA.",
+        "known_ref": "PY-02 (PR #6 HANDOFF)",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "WV-9",
+      "historical_severity": "Info",
+      "current_status": "Still present; source inspection confirms",
+      "evidence": "`test-vectors/MANIFEST.json` says `unsigned (release job signs)` and vector metadata remains candidate with no independent confirmations. Passing hashes are integrity checks, not a signed release attestation.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "WV-9",
+        "severity": "Info",
+        "confidence": "yes",
+        "category": "test vectors",
+        "spec_ids": [],
+        "location": "test-vectors/v1",
+        "summary": "Test-vector corpus is unsigned.",
+        "scenario": "Corpus integrity relies on unsigned MANIFEST hashes.",
+        "evidence": "In-SHA docs/audit/web-verifier.md item re-checked.",
+        "known_ref": "WV-9",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "N-13, N-24, N-25, N-27",
+      "historical_severity": "Info",
+      "current_status": "Partially implemented; grouped residual remains open",
+      "evidence": "Legacy control authorization is implemented, while V13 terminal/governance effects remain `not_run`. Vendoring remains absent, scalars remain plain bigint with incomplete secret-lifetime discipline, and TS still rejects `basis:roll` accepted by Python/spec. Source inspection and the M15 probe support these boundaries.",
+      "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "canonical_source_equivalent": true,
+      "canonical_status_override": null,
+      "review_lane": "crypto/verifier",
+      "historical_record": {
+        "id": "N-13, N-24, N-25, N-27",
+        "severity": "Info",
+        "confidence": "yes",
+        "category": "tracked gaps",
+        "spec_ids": [
+          "QV-ADR-024",
+          "QV-16-REQ-021"
+        ],
+        "location": "docs/plan/TODO.md",
+        "summary": "Tracked TODO gaps still present: V13 not run, no vendoring, no secret types/constant-time discipline beyond noble, no rule basis roll.",
+        "scenario": "e.g. basis roll manifests unsupported (M15); V13 never runs.",
+        "evidence": "Code read / probes at SHA.",
+        "known_ref": "N-13, N-24, N-25, N-27 (TODO)",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "B2-01",
+      "historical": {
+        "id": "B2-01",
+        "severity": "High",
+        "confidence": "CONFIRMED",
+        "category": "DoS / availability",
+        "spec_ids": [
+          "QV-29-REQ-019",
+          "QV-29-REQ-001",
+          "QV-09 \u00a713"
+        ],
+        "location": "packages/server/src/app.ts:410-421, packages/server/src/election.ts:1041-1058, packages/server/src/election.ts:1150-1161, packages/protocol/src/tally.ts:224-228",
+        "summary": "Anonymous GET /elections/{id}/tally/draft synchronously recomputes the full homomorphic aggregate (and after restart/eviction the full proof-verifying ballot analysis) on the single event loop on every call.",
+        "scenario": "Once any election has its tally aggregate posted (TALLYING/STALLED/AUDIT/ARCHIVED/IMPORTED), an anonymous client loops GET .../tally/draft; with 2,000 counted ballots each request stalls the whole instance 5.5-6.9 s.",
+        "evidence": "PoC packages/server/test/b2-audit-poc.test.ts in /home/user/audit/quietvote-b2, `node --test --test-name-pattern=B2-01 test/b2-audit-poc.test.ts`: aggregate 2.659-3.344 ms per counted ballot; 2000 counted -> 409 after 5539-6948 ms with /healthz delayed equally; analyzeBallotLog 116-119 ms per ballot (PoC injects 2,000-ballot set into cached analysis).",
+        "known_ref": "",
+        "suggested_fix": "Serve draft from stored aggregate; return 409 before work when fewer than t shares; cache per (decrypters, shares); move work to a bounded worker queue; consider class P or coordinator-only access."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed stored-aggregate draft regression, including insufficient-share rejection before proof work, eviction, caching, and imported-mirror refusal. Does not qualify all proof-admission load bounds.",
+      "source_paths": [
+        "packages/server/test/consolidation.test.ts"
+      ],
+      "execution_log": "b2-regressions.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-02",
+      "historical": {
+        "id": "B2-02",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "DoS / availability",
+        "spec_ids": [
+          "QV-29-REQ-019",
+          "QV-18-REQ-033",
+          "QV-09 \u00a710"
+        ],
+        "location": "packages/server/src/imports.ts:196, packages/server/src/imports.ts:323, packages/server/src/ext-routes.ts:107-111, packages/server/NOTES.md:144",
+        "summary": "POST /imports runs full verifyElection on the event loop and checks ELECTION_EXISTS only after full verification, so a valid bundle can be resubmitted repeatedly to stall the instance.",
+        "scenario": "Attacker creates an org (default registrationMode open) and resubmits a large public bundle with new Idempotency-Keys; each submission stalls the instance for full proof verification, then fails ELECTION_EXISTS.",
+        "evidence": "PoC B2-02 in packages/server/test/b2-audit-poc.test.ts: 6 ballot entries, first import stall 959-1034 ms, duplicate (refused) stall 794-1304 ms via perf_hooks.monitorEventLoopDelay.",
+        "known_ref": "",
+        "suggested_fix": "Check electionAny(manifest.election_id) and quota before verifyElection; verify in a worker with CPU budget; per-org import rate; correct NOTES.md:144."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed duplicate refusal before verification, off-thread event-loop measurement, bounded worker timeout and queue saturation. Serial isolated retry passed; initial concurrent test process was killed.",
+      "source_paths": [
+        "packages/server/test/b2-fixes.test.ts"
+      ],
+      "execution_log": "b2-isolated-retry.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-03",
+      "historical": {
+        "id": "B2-03",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "AuthN/AuthZ",
+        "spec_ids": [
+          "QV-08-REQ-019",
+          "QV-12 \u00a75",
+          "QV-09 \u00a73.6",
+          "ADR-001"
+        ],
+        "location": "packages/server/src/app.ts:69, packages/server/src/controldb.ts:236-238, packages/server/src/app.ts:265-276",
+        "summary": "instance_admin keys, once seeded, can never be revoked; removing them from adminKeys leaves them active and no API revokes them.",
+        "scenario": "Operator removes a compromised admin key from config and restarts; the key still gets 200 on /admin/status and can mint org_owner keys in any org.",
+        "evidence": "PoC B2-03 in packages/server/test/b2-audit-poc.test.ts: after removal GET /admin/status -> 200; POST /orgs/<org>/keys (org_owner) -> 201.",
+        "known_ref": "",
+        "suggested_fix": "At start, revoke every instance_admin key not in adminKeys with an operator_audit row; document rotation."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed removal of configured administrator followed by restart; old administrator loses access.",
+      "source_paths": [
+        "packages/server/test/consolidation.test.ts"
+      ],
+      "execution_log": "b2-regressions.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-04",
+      "historical": {
+        "id": "B2-04",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "Board / witness integrity",
+        "spec_ids": [
+          "QV-18-REQ-020",
+          "QV-18-REQ-023",
+          "QV-18 \u00a79.4",
+          "QV-18-REQ-053"
+        ],
+        "location": "packages/server/src/app.ts:62, packages/server/src/app.ts:67, packages/server/src/election.ts:254-256, packages/server/src/election.ts:890, packages/server/src/election.ts:1098, packages/server/src/admin.ts (clearQuarantine)",
+        "summary": "The server evaluates witness quorum with operator config witnesses and ignores manifest bb.witnesses.",
+        "scenario": "Manifest names w1 with key W, server config maps w1 to operator key O; W's cosignature is dropped while O's opens the election, gates the aggregate, yields witnessed:true/integrity:ok and clears quarantine.",
+        "evidence": "PoC B2-04 in packages/server/test/b2-audit-poc.test.ts: manifest witness cosig accepted=[]; operator key accepted=[\"w1\"]; open=201; manifest-policy witnessed=false.",
+        "known_ref": "",
+        "suggested_fix": "Derive per-election policy from manifest bb.witnesses; refuse manifests whose witnesses mismatch config keys; use same policy in clearQuarantine."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed manifest witness identity/open-gate regression; manifest keys override operator fallback keys.",
+      "source_paths": [
+        "packages/server/test/consolidation.test.ts"
+      ],
+      "execution_log": "b2-regressions.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-05",
+      "historical": {
+        "id": "B2-05",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "AuthZ / lifecycle",
+        "spec_ids": [
+          "QV-ADR-022",
+          "QV-12-REQ-003",
+          "T-100"
+        ],
+        "location": "packages/server/src/election.ts:741-746, packages/server/src/election.ts:897-930, packages/server/src/records.ts:33",
+        "summary": "m-of-k control records (pause/resume/security-notice) have no freshness binding, so a single earlier signer can replay an old record.",
+        "scenario": "Coordinators A and B (m=2) pause then resume; A alone re-wraps the old pause record in a new entry header and the OPEN election is paused, ballots refused with 409 (up to maxHalts).",
+        "evidence": "PoC B2-05+B2-06 in packages/server/test/b2-audit-poc.test.ts: solo pause -> 422 E_SIG; replayed 2-of-3 pause -> 201; ballot while paused -> 409.",
+        "known_ref": "",
+        "suggested_fix": "Bind control bodies to state (after_seq or nonce) and reject bodies whose JCS bytes are already on the log; needs spec definition (G-17)."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "still reproducible",
+      "evidence": "Synthetic current-code HTTP recheck reproduces reuse of an old signed control record. The approved control_seq migration is absent. No new public exploit is asserted; this is the already-published historical finding.",
+      "source_paths": [
+        "packages/server/src/election.ts",
+        "packages/server/src/records.ts"
+      ],
+      "execution_log": "b2-current-reproduction.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-06",
+      "historical": {
+        "id": "B2-06",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "Lifecycle / conformance",
+        "spec_ids": [
+          "QV-03 \u00a75.5",
+          "QV-16 \u00a75.14.3",
+          "T-100"
+        ],
+        "location": "packages/server/src/election.ts:837-844",
+        "summary": "election_close is accepted at any time in OPEN/PAUSED with no time check against voting_close.",
+        "scenario": "m coordinators close the election 7.5 days before voting_close; voters planning to vote later are disenfranchised.",
+        "evidence": "PoC B2-05+B2-06 in packages/server/test/b2-audit-poc.test.ts: election_close accepted 7.5 days before voting_close (201); repo's fullElection helper relies on it.",
+        "known_ref": "",
+        "suggested_fix": "Reject election_close while now < voting_close - clock_skew_s."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed early election_close refusal with 409 before voting_close while valid later close remains supported.",
+      "source_paths": [
+        "packages/server/src/election.ts",
+        "packages/server/test/consolidation.test.ts"
+      ],
+      "execution_log": "b2-current-reproduction.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-07",
+      "historical": {
+        "id": "B2-07",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "Board / equivocation",
+        "spec_ids": [
+          "QV-18-REQ-012",
+          "QV-18-REQ-053",
+          "QV-12 \u00a77",
+          "QV-28-REQ-011"
+        ],
+        "location": "packages/server/src/election.ts:128-166, packages/board/src/log.ts:51-80, packages/server/src/admin.ts (backupWork)",
+        "summary": "Restoring an older election DB is not detected and the server signs a second, different root for a size it already signed.",
+        "scenario": "Operator restores yesterday's DB (e.g. /admin/backups copy); server appends at already-signed sequence numbers, producing valid fork evidence against its own log key while reporting integrity ok.",
+        "evidence": "PoC B2-07 in packages/server/test/b2-audit-poc.test.ts: restored DB accepted (integrity=ok); second checkpoint for size 2 signed; checkFork ok=true.",
+        "known_ref": "",
+        "suggested_fix": "Persist last signed (size, root) per election in control.sqlite and optionally poll witnesses at start; refuse append when behind, quarantine."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "partially fixed",
+      "evidence": "Offline backup security floors exist. Synthetic direct election-DB replacement still reproduces the historical runtime rollback issue. Runtime high-water anchor and independent startup evidence remain absent.",
+      "source_paths": [
+        "packages/server/src/offline-backup.ts",
+        "packages/server/src/backup-security-floor.ts",
+        "packages/server/src/election.ts"
+      ],
+      "execution_log": "b2-current-reproduction.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-08",
+      "historical": {
+        "id": "B2-08",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "Trustee custody",
+        "spec_ids": [
+          "QV-17-REQ-070",
+          "QV-17 \u00a711.2",
+          "QV-06-REQ-006",
+          "ADR-013"
+        ],
+        "location": "packages/trustee/src/trustee.ts:759, packages/trustee/src/trustee.ts:824, packages/trustee/src/cli.ts (guardOut)",
+        "summary": "backup --to stores a relative path verbatim and destroy resolves it against the current cwd, missing the real backup and shredding an unrelated file.",
+        "scenario": "backup --to share-backup.qvtb in /x, later destroy from another directory: real sealed backup survives, signed destruction attestation claims backups_removed, and a same-named file in cwd is overwritten and unlinked.",
+        "evidence": "PoC B2-08 in packages/trustee/test/b2-audit-poc.test.ts: backups_removed:[\"share-backup.qvtb\"]; real backup still present: true; unrelated file present: false.",
+        "known_ref": "",
+        "suggested_fix": "Store resolve(dest)/realpath at backup; lstat and verify bundle magic/header id before shredding; report not found otherwise."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed custody tests covering relative backup paths, directory changes, parent symlink changes, wrong/replaced files, and safe cleanup.",
+      "source_paths": [
+        "packages/trustee/test/custody.test.ts"
+      ],
+      "execution_log": "custody-server-audit.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-09",
+      "historical": {
+        "id": "B2-09",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "Abuse / quotas",
+        "spec_ids": [
+          "QV-29 \u00a76.4",
+          "QV-29-REQ-010"
+        ],
+        "location": "packages/server/src/app.ts:459",
+        "summary": "Invite cap compares registered voters rather than invites, so invites are effectively unbounded.",
+        "scenario": "With maxVotersPerElection=2, 24 live invites can be created; invite rows unbounded per organizer (60 req/min x 1000).",
+        "evidence": "PoC B2-09 in packages/server/test/b2-audit-poc.test.ts: maxVotersPerElection=2, invites created=24.",
+        "known_ref": "",
+        "suggested_fix": "Count voter_invite rows in issued|sent and cap total rows per election."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed invitation quota regression; cap counts invitation rows rather than only registered voters.",
+      "source_paths": [
+        "packages/server/test/consolidation.test.ts"
+      ],
+      "execution_log": "b2-regressions.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-10",
+      "historical": {
+        "id": "B2-10",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "Conformance (invites)",
+        "spec_ids": [
+          "QV-04-REQ-004",
+          "QV-29-REQ-008",
+          "QV-09 \u00a74.4"
+        ],
+        "location": "packages/server/src/app.ts:452-456, packages/server/src/app.ts:521-529",
+        "summary": "Invites without expires_at never expire, unknown vs used codes answer differently, and a used code with another registered key answers 201.",
+        "scenario": "Invite used 400 days later -> 201; unknown -> 422 INVITE_EXPIRED vs used -> 409 INVITE_USED (oracle); cross-invite replay -> 201 instead of 409.",
+        "evidence": "PoC B2-10 in packages/server/test/b2-audit-poc.test.ts: unknown -> 422; used -> 409; +400d -> 201; cross-invite replay -> 201.",
+        "known_ref": "",
+        "suggested_fix": "Default TTL per rules (owner pick, G-10); one generic failure for unknown/used/expired/revoked; decide \u00a74.4 semantics (G-12)."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Current new invitations default to 14 days; registration errors and modern invite-bound PoP are covered. Historical schema8 null-expiry invitations explicitly retain their contract. Existing registration suite and executed review cases support the boundary.",
+      "source_paths": [
+        "packages/server/src/app.ts",
+        "packages/server/test/registration.test.ts",
+        "packages/server/test/registration-review.test.ts"
+      ],
+      "execution_log": "b2-isolated-retry.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-11",
+      "historical": {
+        "id": "B2-11",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "Privacy / retention",
+        "spec_ids": [
+          "QV-28 \u00a711",
+          "QV-28-REQ-013",
+          "QV-06-REQ-004",
+          "QV-09 \u00a77.1",
+          "T-099"
+        ],
+        "location": "packages/server/src/electiondb.ts:388-395, packages/server/src/app.ts:446-470, packages/server/src/app.ts:499",
+        "summary": "P2 invite data (labels, contacts) is never purged except a registered invite's contact; no retention job exists.",
+        "scenario": "30 days later, registered invites still have labels and revoked invites still have label and contact; contacts are stored although delivery is unsupported.",
+        "evidence": "PoC B2-11 in packages/server/test/b2-audit-poc.test.ts (DB read after 30 days): registered has_label 1; revoked has_label 1, has_contact 1.",
+        "known_ref": "",
+        "suggested_fix": "Retention job per QV-28 \u00a711; refuse contact until delivery exists; NULL label and contact on revoke."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed scheduled and lazy data-retention tests, exact grace boundaries and configuration bounds.",
+      "source_paths": [
+        "packages/server/test/b2-fixes.test.ts"
+      ],
+      "execution_log": "b2-isolated-retry.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-12",
+      "historical": {
+        "id": "B2-12",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "Board / receipts",
+        "spec_ids": [
+          "QV-18-REQ-013"
+        ],
+        "location": "packages/server/src/election.ts:142, packages/server/src/election.ts:577-581, packages/board/src/log.ts:141",
+        "summary": "IMPORTED mirrors and keyless ARCHIVED runtimes sign duplicate-submission receipts with an all-zero-seed placeholder key.",
+        "scenario": "A client retries an entry against a mirror and gets a receipt that never verifies under the log key, raising false broken-promise alarms.",
+        "evidence": "PoC B2-12 in packages/server/test/b2-audit-poc.test.ts: verifies under election log key: false; under zero-seed key: true.",
+        "known_ref": "",
+        "suggested_fix": "Never sign without the real key; return entry and inclusion proof without promise signature (or 409)."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed archive-reopen and imported-mirror HTTP receipt refusal; authentic existing evidence remains readable.",
+      "source_paths": [
+        "packages/server/test/keyless-receipts.test.ts"
+      ],
+      "execution_log": "b2-regressions.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-13",
+      "historical": {
+        "id": "B2-13",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "Linkage (ordering)",
+        "spec_ids": [
+          "QV-28 \u00a78.2",
+          "QV-04 \u00a74.2"
+        ],
+        "location": "packages/server/src/electiondb.ts:410-412, packages/server/src/app.ts:539-550",
+        "summary": "Anonymous GET /roll lists voters in enrolment order (ORDER BY rowid), defeating hour-rounding of registered_at.",
+        "scenario": "Anyone knowing relative enrolment timing can map a person's position in the roll to their voter key.",
+        "evidence": "PoC B2-13 in packages/server/test/b2-audit-poc.test.ts: listing equals enrolment order and differs from key order.",
+        "known_ref": "",
+        "suggested_fix": "List by pk (or roll_index after commit) with an opaque cursor."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed real HTTP public roll paging in public-key order; current DB query no longer exposes enrollment row order.",
+      "source_paths": [
+        "packages/server/src/electiondb.ts",
+        "packages/server/test/consolidation.test.ts"
+      ],
+      "execution_log": "b2-regressions.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-14",
+      "historical": {
+        "id": "B2-14",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "Validation / cache",
+        "spec_ids": [
+          "QV-09 \u00a78",
+          "QV-09 \u00a713"
+        ],
+        "location": "packages/server/src/app.ts:713-727",
+        "summary": "Junk cosignature lines get 200 with empty accepted/rejected and still bump the export generation, invalidating the .qvb cache.",
+        "scenario": "Anonymous junk POST /cosignatures invalidates the cached export each time; rejected[] is always empty.",
+        "evidence": "PoC B2-14 in packages/server/test/b2-audit-poc.test.ts: ETag \"1:...:0\" -> \"1:...:1\" after a junk line.",
+        "known_ref": "",
+        "suggested_fix": "Bump exportGen only on acceptance; list rejected lines."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed B2-04 HTTP regression includes malformed/unknown witness refusal, rejection list, unchanged export generation on invalid/duplicate cosignatures and correct manifest witness acceptance.",
+      "source_paths": [
+        "packages/server/src/election.ts",
+        "packages/server/test/consolidation.test.ts"
+      ],
+      "execution_log": "b2-regressions.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-15",
+      "historical": {
+        "id": "B2-15",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "Conformance (status inflation)",
+        "spec_ids": [
+          "COMPLETION C5",
+          "QV-24 honest-status rule"
+        ],
+        "location": "docs/audit/README.md:13, docs/audit/README.md:20, packages/server/NOTES.md:50, packages/server/NOTES.md:74, packages/server/NOTES.md:80, packages/server/NOTES.md:144, packages/server/src/ratelimit.ts:105",
+        "summary": "In-tree audit index lists SRV-001 as fixed and CP-01/TR-01 and trustees-mode spoil endpoint as closed though fixes are not in this SHA; NOTES contain stale and new inaccurate statements.",
+        "scenario": "Readers trust the index that SRV-001 and TR-01 are fixed while PoCs show the server crash and counted-vote recovery still present; NOTES claim import yields to event loop and the /64 vs /56 comment is inverted.",
+        "evidence": "KNOWN SRV-001 and TR-01 PoCs (server and trustee b2-audit-poc.test.ts) pass at this SHA; git merge-base --is-ancestor shows PRs #8/#9/#10/#14 unmerged.",
+        "known_ref": "",
+        "suggested_fix": "Mark items 'fixed on PR #n (unmerged)' until merged; correct NOTES.md and ratelimit.ts comment."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "partially fixed",
+      "evidence": "Current consolidation reports distinguish source-specific implementation from qualification and identify historical claims. Several older NOTES/TODO paragraphs still require reading later superseding sections; no blanket current closure asserted.",
+      "source_paths": [
+        "docs/reports/consolidation-publication-20261117.md",
+        "packages/server/NOTES.md",
+        "docs/plan/TODO.md"
+      ],
+      "execution_log": null,
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-16",
+      "historical": {
+        "id": "B2-16",
+        "severity": "Low",
+        "confidence": "LIKELY",
+        "category": "Telemetry / conformance",
+        "spec_ids": [
+          "QV-31-REQ-001",
+          "QV-31-REQ-008",
+          "QV-31 \u00a74.2-4.3",
+          "QV-06-REQ-007"
+        ],
+        "location": "packages/server/src/logger.ts:35, packages/server/src/http.ts:448-452, packages/server/src/election.ts:679, packages/server/src/records.ts:33",
+        "summary": "Request logs use second timestamps and fields outside the QV-31 allowlist, undoing minute rounding of ballot append events; control records carry free-text reason into the public log.",
+        "scenario": "The sequential counter ties the minute-rounded append line to the adjacent second-precision request line with election_id, latency_ms, bytes_in, seq.",
+        "evidence": "Code inspection (no PoC).",
+        "known_ref": "",
+        "suggested_fix": "Restrict log fields to the QV-31 allowlist with minute timestamps; disallow free-text reason."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "partially fixed",
+      "evidence": "Executed allowlist and minute-rounding tests pass. New public control reason remains bounded free text; approved catalog-only generation/admission remains unimplemented.",
+      "source_paths": [
+        "packages/server/test/b2-fixes.test.ts",
+        "packages/server/src/records.ts",
+        "packages/cli/src/cmd-packet.ts"
+      ],
+      "execution_log": "b2-isolated-retry.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B2-17",
+      "historical": {
+        "id": "B2-17",
+        "severity": "Low",
+        "confidence": "LIKELY",
+        "category": "DoS (export)",
+        "spec_ids": [
+          "QV-09 \u00a713"
+        ],
+        "location": "packages/server/src/app.ts:831-838",
+        "summary": "GET /export.json re-parses and re-serialises the whole log on every request including 304 and Range requests.",
+        "scenario": "Repeated If-None-Match or Range requests each rebuild the full export (bounded by class X 2/hour/bucket).",
+        "evidence": "Code inspection (no PoC).",
+        "known_ref": "",
+        "suggested_fix": "Cache like cachedQvb."
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Executed cached JSON export, conditional 304 and Range regression with log rescanning disabled.",
+      "source_paths": [
+        "packages/server/test/consolidation.test.ts"
+      ],
+      "execution_log": "b2-regressions.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "KNOWN TR-07/TR-08",
+      "historical": {
+        "id": "KNOWN TR-07/TR-08",
+        "severity": "Low",
+        "confidence": "LIKELY",
+        "category": "Custody",
+        "spec_ids": [
+          "QV-17 \u00a711"
+        ],
+        "location": "packages/trustee/src/trustee.ts:938, packages/trustee/src/fsutil.ts (shred)",
+        "summary": "Public debugPlaintext() remains and shred follows symlinks (compounds B2-08); report says unchanged and names no fix branch.",
+        "scenario": "shred on a symlinked backup path destroys the symlink target rather than the intended file.",
+        "evidence": "Code inspection.",
+        "known_ref": "TR-07, TR-08",
+        "suggested_fix": ""
+      },
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "evidence": "Current production source no longer exposes debugPlaintext (source search). Executed custody tests confirm symlink/hardlink/nonregular and replaced-backup refusal. This closes the recorded mechanisms, not all secret-lifetime guarantees.",
+      "source_paths": [
+        "packages/trustee/test/custody.test.ts",
+        "packages/trustee/src/trustee.ts"
+      ],
+      "execution_log": "custody-server-audit.log",
+      "review_lane": "server/board/trustee"
+    },
+    {
+      "id": "B3-01",
+      "historical_severity": "High",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "The web registration request (PoP layout and hashed invite_code) is refused by the reference server, and no test could notice.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Current web enrollment uses the approved shared hashed-pop-v1 contract and succeeds against the real server.",
+      "evidence": [
+        "packages/web/src/flow/onboarding.ts:134-144 shares registrationMessage and sends inviteHash(token).",
+        "packages/web/src/ui/app.ts:430-435 checks advertised enrollment scheme before pre-manifest enrollment.",
+        "packages/server/test/registration.test.ts:47-66 drives registrationBody and ApiClient.register against the HTTP server, asserts one approved voter and idempotent same-key result."
+      ],
+      "verification": [
+        "Executed registration.test.ts as part of 17/17 interop/build checks."
+      ],
+      "remaining_or_limit": "",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-01",
+        "severity": "High",
+        "confidence": "CONFIRMED",
+        "category": "interop / conformance",
+        "spec_ids": [
+          "QV-04-REQ-005",
+          "QV-19 \u00a76.1",
+          "QV-19-REQ-010",
+          "QV-09 \u00a74"
+        ],
+        "location": "packages/web/src/flow/onboarding.ts:117-127, packages/web/src/ui/app.ts:382, packages/server/src/app.ts:520-521",
+        "summary": "The web registration request (PoP layout and hashed invite_code) is refused by the reference server, and no test could notice.",
+        "scenario": "Voter opens /e/<id>#inv=<code> and creates a key; the page posts invite_code=b64u(SHA-256(token)) with PoP over (id, H(token), pk); the server answers 401 BAD_SIGNATURE (422 INVITE_EXPIRED if only PoP fixed); the voter sees a generic error and cannot register.",
+        "evidence": "PoC interop-server.poc.test.ts (test B3-F1): node --test --test-reporter=spec packages/web/audit-b3/interop-server.poc.test.ts -> (a) 401 BAD_SIGNATURE, (b) 422 INVITE_EXPIRED, (c) control with raw code accepted. FakeBoard.register only checks shape.",
+        "known_ref": "",
+        "suggested_fix": "Owner picks the contract (QV-19/QV-04 vs QV-09); change one side and add a cross-package test driving registrationBody against the server World."
+      }
+    },
+    {
+      "id": "B3-02",
+      "historical_severity": "High",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "The Results page shows a coordinator-signed tally without verifying it, though the protocol verifier FAILs the same log.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Results are gated by proof verification and authenticated board evidence; a coordinator signature alone cannot expose forged counts.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:843-865 verifies the loaded snapshot before rendering charts/counts.",
+        "packages/web/src/flow/verification.ts:13-31 passes actual records/roll/board to verifyElection and requires PASS plus tally aggregate/decrypt/rule checks.",
+        "packages/web/test/verification.test.ts:10 tests forged coordinator-signed tally and missing evidence."
+      ],
+      "verification": [
+        "Executed verification.test.ts, including forged-count negative controls, as part of 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "This is shared-implementation validation, not an external cryptographic audit.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-02",
+        "severity": "High",
+        "confidence": "CONFIRMED",
+        "category": "conformance / integrity",
+        "spec_ids": [
+          "QV-16 \u00a75.19.1",
+          "QV-10 \u00a76.2 V10",
+          "QV-10 \u00a71(1)",
+          "QV-10-REQ-013"
+        ],
+        "location": "packages/web/src/flow/election.ts:134-149, packages/web/src/ui/app.ts:576-604",
+        "summary": "The Results page shows a coordinator-signed tally without verifying it, though the protocol verifier FAILs the same log.",
+        "scenario": "A holder of a manifest coordinator key posts a correctly signed tally with forged counts/outcome; the SPA derives phase=tallied and shows the forged winner with no verification status.",
+        "evidence": "PoC unit.poc.test.ts (B3-F7): verifyElection verdict FAIL (E_DLOG_RANGE) while SPA shows winners [cy]; ui-observer.poc.ts (B3-F7b) shows no verified/disclaimer text.",
+        "known_ref": "W5 (related, fixed; residual)",
+        "suggested_fix": "Run the shared protocol verifier in resultsView before drawing numbers, render itemized checks, show E-VER-FAIL on failure."
+      }
+    },
+    {
+      "id": "B3-03",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "verifier.html does not run when served with the build's own _headers or the reference server's static CSP, because the header CSP blocks its hashed inline script/style.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Generated headers permit the exact standalone verifier script/style hashes and the reference server serves a verifier-specific CSP.",
+      "evidence": [
+        "packages/web/src/build/site.ts:35-46 adds exact hashes to common matching headers and a verifier-specific policy.",
+        "packages/server/src/static.ts:50-72 checks actual verifier HTML and derives its CSP.",
+        "packages/server/src/http.ts:281 applies static-file CSP.",
+        "packages/web/e2e/verifier.ts:86-106 exercises both generated-header and real-server paths."
+      ],
+      "verification": [
+        "Executed build.test.ts in 17/17 interop/build checks.",
+        "Browser scenario inspected, not rerun in this lane."
+      ],
+      "remaining_or_limit": "Fresh browser qualification must refer to the tested candidate head.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-03",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "supply-chain / availability",
+        "spec_ids": [
+          "QV-19 \u00a77",
+          "QV-19 \u00a78.1",
+          "QV-19-REQ-016",
+          "QV-19-REQ-018"
+        ],
+        "location": "packages/web/src/build/site.ts:35-46, packages/web/src/build/site.ts:84-107, packages/web/src/build/site.ts:148, packages/server/src/http.ts:106, packages/server/src/http.ts:277",
+        "summary": "verifier.html does not run when served with the build's own _headers or the reference server's static CSP, because the header CSP blocks its hashed inline script/style.",
+        "scenario": "Operator deploys dist/ with _headers or behind @quietvote/server; a user opens /verifier.html, selects a bundle, presses Run checks, and nothing happens.",
+        "evidence": "node packages/web/audit-b3/verifier-headers.poc.ts (no output after 60 s, CSP violations), verifier-server.poc.ts, node --test server-static.poc.test.ts (CSP script-src 'self'). e2e never loads verifier.html.",
+        "known_ref": "WV-10 (related, not covering this break)",
+        "suggested_fix": "Emit a verifier.html-specific header block matching its meta CSP, per-file CSP in the reference server, and a Chromium test loading verifier.html under generated headers."
+      }
+    },
+    {
+      "id": "B3-04",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "SRI covers only the entry module and CSS; statically imported chunks execute without integrity, so claims C-12 and T-189 \"SRI yes\" are overstated.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "The historical static-import integrity gap is repaired: the build traverses static dependencies and emits integrity-bearing modulepreloads.",
+      "evidence": [
+        "packages/web/src/build/site.ts:150-159 traverses non-external import-statement dependencies.",
+        "packages/web/src/build/site.ts:77-83 emits SHA-384 integrity for entry, static modules and stylesheet.",
+        "packages/web/test/build.test.ts:34 verifies pinned static imports.",
+        "packages/web/e2e/verifier.ts:269-278 tampers a static shared chunk and requires its code not to execute."
+      ],
+      "verification": [
+        "Executed build.test.ts in 17/17 interop/build checks.",
+        "Tampering browser scenario inspected, not rerun in this lane."
+      ],
+      "remaining_or_limit": "Dynamic imports and sealing-worker integrity remain the separately tracked W15 boundary. No W15 candidate was reviewed here.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-04",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "supply-chain / conformance (status inflation: C-12, T-189 \"SRI yes\")",
+        "spec_ids": [
+          "QV-19 \u00a78.1",
+          "QV-19-REQ-020"
+        ],
+        "location": "packages/web/src/build/site.ts:59-82, packages/web/src/build/site.ts:131-137",
+        "summary": "SRI covers only the entry module and CSS; statically imported chunks execute without integrity, so claims C-12 and T-189 \"SRI yes\" are overstated.",
+        "scenario": "CDN/object-store tamper of assets/chunk-RFRBNNRD.js: entry hash still matches and the modified chunk runs with page privileges (passphrase, signer, choices).",
+        "evidence": "ui-observer.poc.ts step B3-F24: tampered static chunk executed true; sri-preload.poc.ts shows modulepreload+integrity blocks it. build.test.ts:12 cannot see chunks.",
+        "known_ref": "W15 (not fixed at this SHA), WV-10",
+        "suggested_fix": "Emit <link rel=modulepreload integrity crossorigin> for every statically imported chunk and extend the HTML test to require integrity for every imported module."
+      }
+    },
+    {
+      "id": "B3-05",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "A revote built from the cached log is rejected with E_SUPERSEDES and the screen tells the voter a newer ballot is recorded, the opposite of what happened.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "medium-high",
+      "assessment": "Entering Vote now refreshes all entries before deriving supersedes, and a rejected link is described as failure to replace an earlier ballot.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:416-423 refreshes records and re-derives the context on entering Vote.",
+        "packages/web/src/ui/app.ts:609 derives the last own verified ballot from refreshed records.",
+        "packages/web/src/i18n/en.ts:468-469 explicitly says the earlier ballot may still be current.",
+        "packages/web/src/flow/ballot-controller.ts:193-195 maps explicit rejected links to REJECTED, not a claim of replacement."
+      ],
+      "verification": [
+        "Source review of refresh, signature binding, outcome and copy."
+      ],
+      "remaining_or_limit": "The original SSE-disabled full browser revote scenario was not rerun in this lane; concurrent changes can still cause a legitimate refusal.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-05",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "bug",
+        "spec_ids": [
+          "QV-10 \u00a78.1 E-VOT-SUPERSEDED-LOST",
+          "QV-10 \u00a77.1 g4"
+        ],
+        "location": "packages/web/src/ui/app.ts:231-251, packages/web/src/ui/app.ts:440-445, packages/web/src/ui/app.ts:502-506, packages/web/src/api/errors.ts:42",
+        "summary": "A revote built from the cached log is rejected with E_SUPERSEDES and the screen tells the voter a newer ballot is recorded, the opposite of what happened.",
+        "scenario": "max_per_voter>1, SSE down; voter casts A, goes Receipt->Vote, casts B with stale supersedes; B refused, A stays counted, screen says 'Replaced by a newer ballot'.",
+        "evidence": "interop-server.poc.test.ts: ballot B (stale cache) -> SUPERSEDED, voter ballots in log 1; live-refresh.poc.test.ts shows SSE refresh after 337 ms. FakeBoard does not enforce supersedes.",
+        "known_ref": "W3 (related, fixed; different path)",
+        "suggested_fix": "Re-read the log tail on entering Vote/before sealing, append own recorded entry on ACCEPTED_RECORDED, on E_SUPERSEDES refresh and offer to seal again."
+      }
+    },
+    {
+      "id": "B3-06",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Late/paused/refused ballot screens fall back to 'Something went wrong' (missing message args), show receipt-proof text for unrecorded ballots, report PAUSED as closed, and the vote form is not phase-gated.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "partially fixed",
+      "confidence": "high",
+      "assessment": "Missing error arguments, incorrect refusal mapping and false receipt-proof copy are repaired. Signed pause controls are still absent from web phase derivation.",
+      "evidence": [
+        "packages/web/src/api/errors.ts:42 maps PAUSED-style WRONG_PHASE to E-API-UNAVAILABLE.",
+        "packages/web/src/api/errors.ts:68-74 supplies required time/rate placeholders.",
+        "packages/web/src/ui/app.ts:672-674 shows recorded proof text only for ACCEPTED_RECORDED.",
+        "packages/web/src/flow/election.ts:13,75-115,155 has no paused phase or control-record processing.",
+        "packages/web/src/ui/app.ts:607 gates on derived phase, so a paused log still reaches the open form."
+      ],
+      "verification": [
+        "Executed error-args.test.ts in 38/38 checks.",
+        "Executed b3-pause-reproduction.mjs against a synthetic real HTTP server: pause accepted 201; server PAUSED; web phase open; error mapping E-API-UNAVAILABLE."
+      ],
+      "remaining_or_limit": "Implement the approved signed-control authority/freshness contract before claiming paused-state UX completion. Do not treat old generic approval holds as current policy.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-06",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "bug / conformance",
+        "spec_ids": [
+          "QV-10 \u00a78.1",
+          "QV-10 \u00a78.2",
+          "QV-10-REQ-006",
+          "QV-13-REQ-094"
+        ],
+        "location": "packages/web/src/ui/app.ts:138-148, packages/web/src/ui/app.ts:500-509, packages/web/src/api/errors.ts:40",
+        "summary": "Late/paused/refused ballot screens fall back to 'Something went wrong' (missing message args), show receipt-proof text for unrecorded ballots, report PAUSED as closed, and the vote form is not phase-gated.",
+        "scenario": "Steward pauses the election; voter seals and sends; server 409 WRONG_PHASE 'PAUSED' is classified as E-VOT-CLOSED, rendered as generic error alongside 'This receipt proves your ballot was received and recorded'.",
+        "evidence": "unit.poc.test.ts (B3-F9) missing argument errors; interop-server.poc.test.ts (B3-F4, B3-F4b) PAUSED -> AFTER_CLOSE E-VOT-CLOSED; ui-voter.poc.ts (B3-F21) closed election screen text.",
+        "known_ref": "",
+        "suggested_fix": "Pass message arguments from manifest times; choose receipt paragraph by outcome; classify WRONG_PHASE from manifest times/machine reason; gate vote view on phase."
+      }
+    },
+    {
+      "id": "B3-07",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "The 'Test this ballot' result never shows what the device sealed yet asks 'Do these match what you picked?'.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "medium-high",
+      "assessment": "The audit view now shows contest selections from the decrypted audit result and offers an audit-package download for another device.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:659-667 renders a contest/choice table, match controls, download and second-device help.",
+        "packages/web/src/flow/ballot-controller.ts:257-273 checks the audit package and retains the exact text for download."
+      ],
+      "verification": [
+        "Source review."
+      ],
+      "remaining_or_limit": "No new browser execution of the audit table in this lane. A QR/link affordance is not claimed.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-07",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-10-REQ-008",
+          "QV-10 \u00a76.2 V8",
+          "QV-19 \u00a76.2",
+          "QV-13 C-BENALOH"
+        ],
+        "location": "packages/web/src/ui/app.ts:492-499",
+        "summary": "The 'Test this ballot' result never shows what the device sealed yet asks 'Do these match what you picked?'.",
+        "scenario": "Voter spoils a ballot to audit it; screen shows automatic checks and the match question but no contest->selection table, randomness, or qv-audit link/QR, so the human comparison cannot be made.",
+        "evidence": "ui-voter.poc.ts (B3-F12): tables on the screen 0; no selection text.",
+        "known_ref": "",
+        "suggested_fix": "Render the V8 table from ctl.lastAudit, keep the radio group, add the second-device link."
+      }
+    },
+    {
+      "id": "B3-08",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "'Clear this device' deletes the only copy of the key in one click with no confirmation.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "medium-high",
+      "assessment": "Clearing the device requires an explicit modal confirmation; Cancel resolves without clearing.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:138-158 prompts with cancel/confirm and returns before clearAll on cancellation.",
+        "packages/web/e2e/run.ts:254-283 covers Cancel preserving the key and confirmed clear removing keys/receipts."
+      ],
+      "verification": [
+        "Source review; existing browser tests inspected."
+      ],
+      "remaining_or_limit": "Browser confirmation scenario not rerun in this lane.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-08",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "bug / usability",
+        "spec_ids": [
+          "QV-13 C-DIALOG",
+          "QV-10-REQ-011"
+        ],
+        "location": "packages/web/src/ui/app.ts:97-107, packages/web/src/ui/app.ts:435, packages/web/src/ui/app.ts:508",
+        "summary": "'Clear this device' deletes the only copy of the key in one click with no confirmation.",
+        "scenario": "Voter who never exported the key taps the button on the key or receipt page; wrapped key is wiped; after freeze there is no recovery.",
+        "evidence": "ui-voter.poc.ts (B3-F13): IndexedDB keys 1 -> 0; browser dialogs 0; in-page dialog elements 0.",
+        "known_ref": "",
+        "suggested_fix": "Native <dialog> confirmation using existing qv.key.forgetConfirm/forgetBody strings."
+      }
+    },
+    {
+      "id": "B3-09",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Key backup is offered only once at creation and the displayed recovery code cannot be imported (restoreFromRecovery has no caller).",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "medium-high",
+      "assessment": "Backups are available after unlocking and before registration succeeds; recovery codes have a reachable import form.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:502-507 builds download/recovery actions before registration at 509-518.",
+        "packages/web/src/ui/app.ts:529-532 invokes finish after normal unlock.",
+        "packages/web/src/ui/app.ts:537-549 exposes recovery mode and calls restoreFromRecovery.",
+        "packages/web/src/flow/onboarding.ts:81-88 decodes and persists the recovered seed, wiping the temporary seed."
+      ],
+      "verification": [
+        "Source review."
+      ],
+      "remaining_or_limit": "No fresh full-browser recovery import performed. Backup-confirmation/waiver qualification is a separate UX requirement.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-09",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-10-REQ-021",
+          "QV-19-REQ-008",
+          "QV-04-REQ-006"
+        ],
+        "location": "packages/web/src/ui/app.ts:378-396, packages/web/src/ui/app.ts:429, packages/web/src/flow/onboarding.ts:69",
+        "summary": "Key backup is offered only once at creation and the displayed recovery code cannot be imported (restoreFromRecovery has no caller).",
+        "scenario": "Registration fails or voter leaves before downloading; key page never offers export again; eviction or clear loses the key. A written recovery code has nowhere to be entered.",
+        "evidence": "ui-voter.poc.ts (B3-F15): backup buttons after failure 0, after reload+unlock 0; grep restoreFromRecovery only definition.",
+        "known_ref": "",
+        "suggested_fix": "Offer download/show recovery code on the unlocked key page, add recovery import form, add QV-04-REQ-006 restore check/waiver."
+      }
+    },
+    {
+      "id": "B3-10",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "'Your key is registered.' is shown with no invitation and for HTTP 409 INVITE_USED.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Registration success requires an approved or pending response tied to the client request; an invite conflict is shown as an error, and no-invite state is neutral/on-roll.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:508-523 sets registered only after successful ApiClient.register and uses notYetRoll/onRoll when no registration occurred.",
+        "packages/web/src/api/client.ts register() validates identity metadata and response fields.",
+        "packages/web/test/audit2.test.ts:225-233 guards against treating arbitrary 409 as success.",
+        "packages/server/test/registration.test.ts:92-107 exercises a consumed invite against another key."
+      ],
+      "verification": [
+        "Executed registration.test.ts in 17/17 interop/build checks.",
+        "UI outcome paths reviewed."
+      ],
+      "remaining_or_limit": "",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-10",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "bug",
+        "spec_ids": [
+          "QV-10 \u00a71(1)",
+          "QV-09 \u00a74"
+        ],
+        "location": "packages/web/src/ui/app.ts:380-395",
+        "summary": "'Your key is registered.' is shown with no invitation and for HTTP 409 INVITE_USED.",
+        "scenario": "(a) link without #inv: no POST yet success text; (b) forwarded invite already consumed by another key: server 409 INVITE_USED reported as success.",
+        "evidence": "ui-voter.poc.ts (B3-F14): POST /registrations sent 0, success shown; interop-server.poc.test.ts (B3-F31): key 2 -> 409 INVITE_USED treated as success.",
+        "known_ref": "W6 (marked fixed, incomplete)",
+        "suggested_fix": "Treat 409 as success only when server confirms same key; error on INVITE_USED; neutral text when no registration attempted."
+      }
+    },
+    {
+      "id": "B3-11",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Auto-lock is announced only in a live region, leaves Seal/Send offered (sealing with a zeroed hedge key, send failing generically), the hidden>2min rule cannot fire if timers are suspended, and there is no pre-lock warning.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Auto-lock checks hidden duration before clearing it, provides warning/extend controls, redraws ballot state, and prevents sealing or a new cast with a wiped signer.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:95-118 checks elapsed hidden/idle time and calls ballotLock.",
+        "packages/web/src/ui/app.ts:614-615 redraws locked ballot sessions.",
+        "packages/web/src/flow/ballot-controller.ts:88-105 rejects locked sealing and discards late results.",
+        "packages/web/src/flow/ballot-controller.ts:130 rejects a new cast with locked signer."
+      ],
+      "verification": [
+        "Executed B3-11 controller regression in audit3.test.ts, part of 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "Hidden-tab suspension behavior on real Tor/Firefox/mobile was not rerun; source ordering is corrected.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-11",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "bug / conformance",
+        "spec_ids": [
+          "QV-19 \u00a75.3",
+          "QV-13-REQ-007",
+          "QV-10 \u00a78.1 E-KEY-LOCKED"
+        ],
+        "location": "packages/web/src/ui/app.ts:79-93, packages/web/src/key/lock.ts:19-29, packages/web/src/key/signer.ts:56-61, packages/web/src/flow/ballot-controller.ts:231-235",
+        "summary": "Auto-lock is announced only in a live region, leaves Seal/Send offered (sealing with a zeroed hedge key, send failing generically), the hidden>2min rule cannot fire if timers are suspended, and there is no pre-lock warning.",
+        "scenario": "Voter idles 10 min on review; lock fires silently; seal succeeds with zero nonceKey; Send shows 'Something went wrong', 0 POSTs. A tab hidden 5 min with suspended timers returns unlocked.",
+        "evidence": "autolock.poc.ts (fake clock +11 min), hidden-lock.poc.ts (+5 min hidden, not locked), unit.poc.test.ts (nonceKey all zero, sealed, cast PENDING_UNCONFIRMED E-GEN-UNKNOWN).",
+        "known_ref": "W4 (marked fixed; controller part holds)",
+        "suggested_fix": "Evaluate shouldLock before clearing hiddenSince; redraw to locked screen after lock; seal() refuses locked signer; wire warningMsRemaining."
+      }
+    },
+    {
+      "id": "B3-12",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "If IndexedDB cannot be opened, every election page including rules and results shows 'Something went wrong'.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "partially fixed",
+      "confidence": "high",
+      "assessment": "Rules/results and startup no longer depend on successful settings storage. Key creation/import, voting recovery and stored receipts still require IndexedDB; there is no session-only fallback.",
+      "evidence": [
+        "packages/web/src/i18n/preference.ts:4-9 catches storage failure during startup.",
+        "packages/web/src/ui/app.ts:440 catches overview settings failure; rules/results do not require that read.",
+        "packages/web/e2e/verifier.ts:233-240 asserts rules/results remain readable with blocked IndexedDB.",
+        "packages/web/src/key/storage.ts:144-157 throws when IndexedDB fails and has no fallback adapter selection.",
+        "packages/web/src/ui/app.ts:527 and packages/web/src/flow/onboarding.ts:65-78 require key storage."
+      ],
+      "verification": [
+        "Source review and blocked-storage browser scenario inspection; browser scenario not rerun."
+      ],
+      "remaining_or_limit": "Do not claim complete storage-free client use. Key form startup rejection and session-only key workflows need focused browser qualification.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-12",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "availability",
+        "spec_ids": [
+          "QV-26-REQ-011",
+          "QV-07-REQ-064",
+          "QV-10 \u00a78.1 E-KEY-STORAGE"
+        ],
+        "location": "packages/web/src/ui/app.ts:336, packages/web/src/main.ts:9",
+        "summary": "If IndexedDB cannot be opened, every election page including rules and results shows 'Something went wrong'.",
+        "scenario": "Browser where indexedDB.open fails (private modes, storage blocked): overview, rules, key, vote, results all show the generic error; no key file can be created.",
+        "evidence": "storage-blocked.poc.ts (indexedDB.open made to fire onerror in Chromium): all five pages generic error, 0 forms on key page.",
+        "known_ref": "",
+        "suggested_fix": "Make storage optional with try/catch and in-memory fallback; show E-KEY-STORAGE only on key operations; allow session-only key from imported file."
+      }
+    },
+    {
+      "id": "B3-13",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "A 'sequenced' answer's signed promise is not stored or re-checkable, and a 5xx after a recorded ballot reads 'has not been sent'.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Signed promise-only responses are retained as downloadable receipts; ambiguous POST failures remain pending and do not claim the ballot was unsent.",
+      "evidence": [
+        "packages/web/src/flow/ballot-controller.ts:166-179 constructs/saves a receipt regardless of immediate inclusion.",
+        "packages/web/src/flow/ballot-controller.ts:187-198 maps 5xx/network/bad-response to E-NET-TIMEOUT and pending delivery.",
+        "packages/web/src/ui/app.ts:673,676,681-683 displays pending copy and save/retry actions.",
+        "packages/web/test/audit3.test.ts:41 confirms promise-only receipt storage and signed sequenced time."
+      ],
+      "verification": [
+        "Executed audit3.test.ts in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "Receipt integrity remains checked by verifyAppendResult; this does not equate a promise with verified inclusion.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-13",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "bug / conformance",
+        "spec_ids": [
+          "QV-10 \u00a78.1 E-NET-TIMEOUT",
+          "QV-10 \u00a78.2",
+          "QV-10 \u00a710.2",
+          "QV-19 \u00a76.2",
+          "QV-26-REQ-043"
+        ],
+        "location": "packages/web/src/flow/ballot-controller.ts:144-153, packages/web/src/flow/ballot-controller.ts:158-178, packages/web/src/flow/receipt.ts:58",
+        "summary": "A 'sequenced' answer's signed promise is not stored or re-checkable, and a 5xx after a recorded ballot reads 'has not been sent'.",
+        "scenario": "Board with checkpoint cadence answers sequenced: no receipt stored, promise lost on tab close. Board records ballot but returns 500: voter told ballot not sent while it is in the log.",
+        "evidence": "pending.poc.test.ts: PENDING_UNCONFIRMED, receipts stored 0; ui-voter.poc.ts (B3-F20): entries recorded 1, generic error text; errmap-server.poc.test.ts control idempotent retry.",
+        "known_ref": "W1 (related, fixed)",
+        "suggested_fix": "Persist signed promise as a receipt file and allow re-check; show pending title/body and E-NET-TIMEOUT copy for 5xx/timeouts."
+      }
+    },
+    {
+      "id": "B3-14",
+      "historical_severity": "Medium",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "In one-ballot elections the UI promises revoting, and the REVOTE_LIMIT refusal is forced retryable, retried 4 times and reported as E-API-RATE.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "partially fixed",
+      "confidence": "high",
+      "assessment": "REVOTE_LIMIT is no longer retried and the immediate ballot note is conditional. The guarantee panel still promises revoting unconditionally.",
+      "evidence": [
+        "packages/web/src/api/client.ts:259 respects an explicit retryable flag.",
+        "packages/web/src/api/errors.ts:43,80 maps REVOTE_LIMIT and prohibits retry.",
+        "packages/web/src/ui/app.ts:685 chooses oneBallot vs revoteNote by max_per_voter.",
+        "packages/web/src/ui/app.ts:394 always renders qv.privacy.g4.",
+        "packages/web/src/i18n/en.ts:116 states that the voter can vote again without a one-ballot condition."
+      ],
+      "verification": [
+        "Executed B3-14 no-retry regression in 38/38 targeted checks.",
+        "Confirmed remaining copy path by source review."
+      ],
+      "remaining_or_limit": "Apply approved conditional guarantee wording for max_per_voter=1. General limit exhaustion above one ballot also deserves accurate copy; do not lower the cap.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-14",
+        "severity": "Medium",
+        "confidence": "CONFIRMED",
+        "category": "bug",
+        "spec_ids": [
+          "QV-10 \u00a78.1 E-VOT-ONEBALLOT",
+          "QV-09 \u00a74.3",
+          "QV-10-REQ-001"
+        ],
+        "location": "packages/web/src/api/client.ts:234, packages/web/src/flow/ballot-controller.ts:160, packages/web/src/i18n/en.ts:207, packages/web/src/ui/app.ts:510",
+        "summary": "In one-ballot elections the UI promises revoting, and the REVOTE_LIMIT refusal is forced retryable, retried 4 times and reported as E-API-RATE.",
+        "scenario": "Voter over max_per_voter seals and sends: four POSTs (429), state failed with retry button, generic error; intended change silently not applied.",
+        "evidence": "ui-copy.poc.ts (B3-F26): revote claim shown with max_per_voter=1; errmap-server.poc.test.ts (B3-F30): 4 attempts 429, outcome PENDING_UNCONFIRMED E-API-RATE.",
+        "known_ref": "",
+        "suggested_fix": "Honour problem body retryable; map REVOTE_LIMIT to E-VOT-ONEBALLOT; show revote note per manifest."
+      }
+    },
+    {
+      "id": "B3-15",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Cast and Test buttons differ in fill, size and weight, contrary to the equal-prominence requirement.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Cast and Test now share the primary style and equal-width layout rules.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:646-651 marks both buttons primary and places both inside row equal.",
+        "packages/web/static/styles.css:20-21 assigns equal flex sizing and full-width matching button heights."
+      ],
+      "verification": [
+        "Source review."
+      ],
+      "remaining_or_limit": "No new screenshot or computed-style comparison in this lane.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-15",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-10-REQ-007",
+          "QV-19-REQ-011",
+          "QV-10 \u00a76.2 V6"
+        ],
+        "location": "packages/web/src/ui/app.ts:479-480, packages/web/static/styles.css:13-14",
+        "summary": "Cast and Test buttons differ in fill, size and weight, contrary to the equal-prominence requirement.",
+        "scenario": "Voter sees a filled primary 'Send my vote' and an outlined 'Double-check this vote', nudging away from auditing.",
+        "evidence": "ui-copy.poc.ts (B3-F27): computed styles differ (bg, width 160 vs 241).",
+        "known_ref": "",
+        "suggested_fix": "Render both with the same class; keep Cast first and focused."
+      }
+    },
+    {
+      "id": "B3-16",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Verifier headline says 'All checks passed' under an Election-ID mismatch and with 3 of 14 checks not run.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Anchor mismatch forces visible FAIL; successful headings say Supplied checks passed and list skipped checks.",
+      "evidence": [
+        "packages/web/src/flow/verification.ts:6-9 overrides visible verdict on anchor mismatch.",
+        "packages/web/src/ui/app.ts:913-919 uses verificationSummary for the SPA report.",
+        "packages/web/src/verifier/page.ts:108-129 includes anchor mismatch in heading and live announcement.",
+        "packages/web/src/i18n/en.ts:315 uses Supplied checks passed rather than All checks passed."
+      ],
+      "verification": [
+        "Executed verification.test.ts and offline-verifier.test.ts in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "A PASS can still have explicitly optional not_run checks; the UI no longer asserts all checks ran.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-16",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "bug",
+        "spec_ids": [
+          "QV-10 \u00a71(1)",
+          "QV-10 \u00a78.1 E-VER-ANCHOR",
+          "QV-10 \u00a711"
+        ],
+        "location": "packages/web/src/ui/app.ts:617-625, packages/web/src/verifier/page.ts:53-74",
+        "summary": "Verifier headline says 'All checks passed' under an Election-ID mismatch and with 3 of 14 checks not run.",
+        "scenario": "User types the wrong Election ID; both SPA /verify and verifier.html print the mismatch warning followed by 'All checks passed'.",
+        "evidence": "verifier-anchor.poc.ts: SPA and standalone show mismatch + 'All checks passed | 11 of 14'.",
+        "known_ref": "WV-6 (related, fixed live-region part)",
+        "suggested_fix": "Suppress PASS heading on anchor failure; do not headline 'All checks passed' with checks not run."
+      }
+    },
+    {
+      "id": "B3-17",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "route() has no staleness guard, so a slow earlier view overwrites a later navigation.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Navigation and result generations reject stale awaited work before rendering.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:326-346 maintains routeEpoch and rejects late error rendering.",
+        "packages/web/src/ui/app.ts:409-423 checks epochs after election load, entries and derived context.",
+        "packages/web/src/ui/app.ts:577-581,692-694,843-864 checks epochs/generations for vote, receipts and results.",
+        "packages/web/e2e/verifier.ts:222-231 preserves Help after a delayed earlier election load."
+      ],
+      "verification": [
+        "Source review; existing browser stale-navigation scenario inspected."
+      ],
+      "remaining_or_limit": "No fresh browser navigation-race execution in this lane.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-17",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "bug",
+        "spec_ids": [
+          "QV-13 C-STEPPER",
+          "QV-10-REQ-020"
+        ],
+        "location": "packages/web/src/ui/app.ts:253-268, packages/web/src/ui/app.ts:326-364",
+        "summary": "route() has no staleness guard, so a slow earlier view overwrites a later navigation.",
+        "scenario": "Click Results (slow chart chunk) then Check a receipt: URL says receipt but page shows Results and focus moves.",
+        "evidence": "nav-race.poc.ts and nav-race2.poc.ts: url=receipt h1=Results; url=/help h1=election title.",
+        "known_ref": "",
+        "suggested_fix": "Monotonic navigation id checked after each await."
+      }
+    },
+    {
+      "id": "B3-18",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Pages have 2-3 live regions and the assertive anti-phishing announcement is truncated at 140 chars mid-word.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Announcements are not truncated and phishing has a short dedicated announcement key; local status nodes do not add competing live roles.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:82-83 creates the polite and assertive live regions.",
+        "packages/web/src/ui/dom.ts:25-36 assigns the complete message without slicing.",
+        "packages/web/src/ui/app.ts:455,458 uses qv.phish.announce.",
+        "packages/web/test/audit3-ui.test.ts:42-69 checks announcement retention and region wiring."
+      ],
+      "verification": [
+        "Executed audit3-ui.test.ts in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "Manual screen-reader acceptance remains outside this source/DOM review.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-18",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "a11y",
+        "spec_ids": [
+          "QV-13-REQ-021"
+        ],
+        "location": "packages/web/src/ui/dom.ts:33-37, packages/web/src/ui/app.ts:273, packages/web/src/ui/app.ts:341, packages/web/src/ui/app.ts:368, packages/web/src/ui/app.ts:519, packages/web/src/ui/app.ts:609, packages/web/src/ui/app.ts:630",
+        "summary": "Pages have 2-3 live regions and the assertive anti-phishing announcement is truncated at 140 chars mid-word.",
+        "scenario": "Voter reports an Election ID mismatch; the assertive region announces a 213-char message cut at 'Tell your organiz'.",
+        "evidence": "live-regions.poc.ts (3 live regions per page); phish-announce.poc.ts (140-char truncation).",
+        "known_ref": "WV-11 (info, did not count extra containers)",
+        "suggested_fix": "Short (<=140) assertive announcement key; drop extra live containers."
+      }
+    },
+    {
+      "id": "B3-19",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Unlock field uses autocomplete=new-password and a non-key file is reported as 'This browser won't store your key'.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "The unlock form uses current-password; key-format/parameter/checksum errors are presented as import errors instead of storage failure.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:529-531 sets autocomplete=current-password when an existing key is unlocked.",
+        "packages/web/src/ui/app.ts:496-500 separates KeyError import/recovery errors from storage errors."
+      ],
+      "verification": [
+        "Source review."
+      ],
+      "remaining_or_limit": "Browser password-manager behavior was not exercised.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-19",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "a11y / bug",
+        "spec_ids": [
+          "QV-13 C-KEY",
+          "WCAG 3.3.8",
+          "QV-10 \u00a78.1 E-KEY-STORAGE"
+        ],
+        "location": "packages/web/src/ui/app.ts:370, packages/web/src/ui/app.ts:374-377",
+        "summary": "Unlock field uses autocomplete=new-password and a non-key file is reported as 'This browser won't store your key'.",
+        "scenario": "Voter imports a wrong file; sees storage error; password manager not offered on unlock.",
+        "evidence": "ui-voter.poc.ts B3-F17 (autocomplete new-password), B3-F16 (alert text E-KEY-STORAGE).",
+        "known_ref": "",
+        "suggested_fix": "Choose autocomplete by mode; map E_KEY_FORMAT/PARAMS/CHECKSUM to qv.key.importBad."
+      }
+    },
+    {
+      "id": "B3-20",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "The transparent re-wrap predicate is inverted so fast devices never re-wrap a floor-parameter key.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Fast below-default unlocks now rewrap with stronger parameters.",
+      "evidence": [
+        "packages/web/src/flow/onboarding.ts:118-125 upgrades when needsRewrap and elapsedMs < 3000.",
+        "packages/web/test/audit3.test.ts:65-78 forces a 100 ms unlock and asserts increased memory plus rewrapped=true."
+      ],
+      "verification": [
+        "Executed fast-unlock regression in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-20",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "bug",
+        "spec_ids": [
+          "QV-19 \u00a75.3",
+          "QV-19-REQ-005"
+        ],
+        "location": "packages/web/src/flow/onboarding.ts:104-113, packages/web/src/key/keystore.ts:199-209",
+        "summary": "The transparent re-wrap predicate is inverted so fast devices never re-wrap a floor-parameter key.",
+        "scenario": "Fast device unlocks floor container in 100 ms; rewrapped=false, m stays 19456.",
+        "evidence": "unit.poc.test.ts: fast rewrapped=false m=19456; mid rewrapped=true m=38912.",
+        "known_ref": "",
+        "suggested_fix": "Re-wrap when adapted target exceeds stored m and unlock time is within range."
+      }
+    },
+    {
+      "id": "B3-21",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Header link 'Privacy and limits' goes to /e, which renders 'not found'.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "medium-high",
+      "assessment": "The broken /e privacy-link target is absent. Election navigation provides a Rules and privacy tab and that page renders the guarantee panel.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:427-428 builds valid per-election rules links.",
+        "packages/web/src/ui/app.ts:462 renders guaranteePanel(L) on rules.",
+        "packages/web/src/ui/app.ts:1099-1100 constructs header/footer without the historical /e link."
+      ],
+      "verification": [
+        "Source review."
+      ],
+      "remaining_or_limit": "First-entry/versioned privacy acknowledgement remains part of B3-27; this row closes the specific dead-link defect only.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-21",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "conformance (self-reported)",
+        "spec_ids": [
+          "QV-10-REQ-002"
+        ],
+        "location": "packages/web/src/ui/app.ts:712",
+        "summary": "Header link 'Privacy and limits' goes to /e, which renders 'not found'.",
+        "scenario": "Voter clicks Privacy and limits and sees 'We could not find this election on this server.'",
+        "evidence": "ui-voter.poc.ts B3-F18: href /e -> not found text.",
+        "known_ref": "Self-reported in docs/handoffs (not a prior audit id)",
+        "suggested_fix": "Link to a real guarantee panel route; wire rulesSeen first-entry display."
+      }
+    },
+    {
+      "id": "B3-22",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Prototype-named ids (constructor, __proto__) from a manifest or tally crash the vote/results view.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Selection lookup uses a null-prototype map; ICU and message lookups reject prototype aliases, and malformed tally results cannot bypass the verification gate.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:618 copies selections into Object.create(null).",
+        "packages/web/src/ui/app.ts:858-865 rejects unverified results before accessing outcome presentation.",
+        "packages/web/src/i18n/icu.ts uses own-property selector checks; packages/web/src/i18n/index.ts rejects unknown message IDs.",
+        "packages/web/test/audit3.test.ts:80 tests constructor/__proto__/toString selector inputs."
+      ],
+      "verification": [
+        "Executed prototype-name ICU regression and forged-result gate tests in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "The original full manifest-ID browser PoC was not rerun; current source removes the reported inherited-property lookup.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-22",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "bug (availability)",
+        "spec_ids": [
+          "QV-07-REQ-062"
+        ],
+        "location": "packages/web/src/flow/ballot-machine.ts:6, packages/web/src/ui/app.ts:451-459, packages/web/src/ui/app.ts:599-600, packages/web/src/i18n/icu.ts:229-231, packages/web/src/i18n/index.ts:33",
+        "summary": "Prototype-named ids (constructor, __proto__) from a manifest or tally crash the vote/results view.",
+        "scenario": "Manifest with contest id 'constructor' (accepted by validateManifest) makes the vote view show 'Something went wrong'; tally with outcome.kind '__proto__' crashes results.",
+        "evidence": "proto-id.poc.ts; unit.poc.test.ts (B3-F8).",
+        "known_ref": "",
+        "suggested_fix": "Use Object.hasOwn/Map for lookups; id charset check in manifest validation."
+      }
+    },
+    {
+      "id": "B3-23",
+      "historical_severity": "Low",
+      "historical_confidence": "LIKELY",
+      "historical_summary": "Organizer 'Invitation links' list shows bare codes with no link or copy button, and selection yields garbled text.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Invitation rows contain complete usable links and copy the clean underlying string.",
+      "evidence": [
+        "packages/web/src/ui/invites.ts:9-11 constructs origin/election/#inv links.",
+        "packages/web/src/ui/invites.ts:21-25 renders code text and a per-row Copy action.",
+        "packages/web/test/audit3-ui.test.ts:70-89 checks round-trip parsing, clean copied text and malformed-token handling."
+      ],
+      "verification": [
+        "Executed invitation-row DOM regressions in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-23",
+        "severity": "Low",
+        "confidence": "LIKELY",
+        "category": "usability",
+        "spec_ids": [
+          "QV-10 \u00a76.1 O4/O6",
+          "T-183"
+        ],
+        "location": "packages/web/src/ui/app.ts:133, packages/web/src/ui/app.ts:666-667",
+        "summary": "Organizer 'Invitation links' list shows bare codes with no link or copy button, and selection yields garbled text.",
+        "scenario": "Organizer copies invite codes and gets spelled-out duplicates mixed in; no full #inv link composed.",
+        "evidence": "code-select.poc.ts selection garbled for Election ID helper; publish-server.poc.test.ts exercised publish, not the DOM list (hence LIKELY).",
+        "known_ref": "",
+        "suggested_fix": "Render full links and a copy button copying clean text."
+      }
+    },
+    {
+      "id": "B3-24",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "'Election ID confirmed' is stored per URL/API id, not per Election ID hash.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Confirmation is keyed by the signed manifest hash, not the route/API election identifier.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:444 reads settings.confirmed[ctx.manifestHashHex].",
+        "packages/web/src/ui/app.ts:446 writes confirmation under ctx.manifestHashHex.",
+        "packages/web/src/ui/app.ts:420 pins refreshed records to the existing manifest hash."
+      ],
+      "verification": [
+        "Source review."
+      ],
+      "remaining_or_limit": "No fresh manifest-swap browser execution; old URL-keyed booleans no longer satisfy the current lookup.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-24",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-10-REQ-012",
+          "QV-10 \u00a79"
+        ],
+        "location": "packages/web/src/ui/app.ts:340-353",
+        "summary": "'Election ID confirmed' is stored per URL/API id, not per Election ID hash.",
+        "scenario": "Operator later serves a different manifest under the same path; page still says 'Election ID confirmed on this device.'",
+        "evidence": "ui-voter.poc.ts (B3-F19): after manifest swap, confirmed text persists.",
+        "known_ref": "",
+        "suggested_fix": "Store confirmed Election ID string and compare on each load."
+      }
+    },
+    {
+      "id": "B3-25",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Word passphrases are canonicalised by the web client but not by the CLI, so a typed-back passphrase unlocks in only one.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "CLI and web use the same canonical passphrase function with bounded legacy fallback and immutable old-container fixtures.",
+      "evidence": [
+        "packages/cli/src/keyfile.ts:6,45-52 uses canonicalKeyPassphrase/keyPassphraseUnlockCandidates.",
+        "packages/web/src/key/keystore.ts:195-213 tries bounded shared candidate inputs.",
+        "packages/cli/test/keyfile-compatibility.test.ts:41-69 verifies legacy files and new cross-client containers."
+      ],
+      "verification": [
+        "Executed keyfile-compatibility.test.ts in 17/17 interop/build checks, including both implementations."
+      ],
+      "remaining_or_limit": "Existing accepted legacy containers remain readable; no new container protocol introduced.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-25",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "interop",
+        "spec_ids": [
+          "QV-19 \u00a75.3",
+          "QV-04 \u00a74.1"
+        ],
+        "location": "packages/web/src/key/passphrase.ts:89-94, packages/cli/src/keyfile.ts:21-22",
+        "summary": "Word passphrases are canonicalised by the web client but not by the CLI, so a typed-back passphrase unlocks in only one.",
+        "scenario": "Voter types 'LOBE-kuga-...' for a web-made key file: unlocks in web, fails in CLI.",
+        "evidence": "keyfile-interop.poc.ts: web unlocks, CLI fails with typed form, CLI unlocks with canonical form.",
+        "known_ref": "",
+        "suggested_fix": "One shared canonicalisation, or show the canonical form for CLI use."
+      }
+    },
+    {
+      "id": "B3-26",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED (blocking, no progress) / LIKELY (10,000-ballot time)",
+      "historical_summary": "The offline verifier runs on the main thread with no Worker pool, progress or resumability.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "partially fixed",
+      "confidence": "high",
+      "assessment": "Approved cooperative option A now supplies progress, cancellation, stale-run invalidation and task yielding in the standalone verifier. It does not provide worker execution or resume-from-checkpoint, and parsing/individual operations remain synchronous.",
+      "evidence": [
+        "packages/web/src/verifier/page.ts:36-103 handles cancellation/progress and yields tasks at checkpoints.",
+        "packages/web/src/flow/verification.ts:21-27 forwards cooperative scheduling.",
+        "packages/web/src/ui/app.ts:945 calls the SPA verifier without cooperative options.",
+        "packages/web/NOTES.md:250-256 documents the accepted cooperative implementation and synchronous limits.",
+        "docs/plan/DECISIONS-2026-11-04.md:359-367 selects cooperative yielding without widening offline CSP."
+      ],
+      "verification": [
+        "Executed offline-verifier.test.ts in 38/38 checks: cancel/retry, delayed reads, anchor/page invalidation."
+      ],
+      "remaining_or_limit": "Do not reintroduce a worker/CSP relaxation merely to match the historical suggested fix. Large-election responsiveness and any resumability claim need separate evidence; remaining limits are not reported as a newly reproduced vulnerability.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-26",
+        "severity": "Low",
+        "confidence": "CONFIRMED (blocking, no progress) / LIKELY (10,000-ballot time)",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-19 \u00a77"
+        ],
+        "location": "packages/web/src/verifier/page.ts:35-49",
+        "summary": "The offline verifier runs on the main thread with no Worker pool, progress or resumability.",
+        "scenario": "Verifying a large bundle freezes the tab; 10,000 ballots extrapolated to ~7 min frozen.",
+        "evidence": "N=24/96/192 node packages/web/audit-b3/verifier-perf-browser.poc.ts: frame gap ~ run time; no new Worker or <progress>.",
+        "known_ref": "",
+        "suggested_fix": "Run the shared verifier in a Worker pool and report progress."
+      }
+    },
+    {
+      "id": "B3-27",
+      "historical_severity": "Low",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Library code and catalog copy exist with unit tests but no UI call site (11 symbols, 115 of 487 messages, 8 UX codes never produced).",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "partially fixed",
+      "confidence": "high",
+      "assessment": "Several formerly unreachable capabilities are now wired, but significant library-only/settings/copy gaps remain.",
+      "evidence": [
+        "packages/web/src/ui/app.ts:107,521,546 wires lock warning, roll checking and recovery import.",
+        "packages/web/src/ui/app.ts:763 adds bounded receipt-file reading; organizer admin now prepares roll commitment through its own route.",
+        "packages/web/src/i18n/datetime.ts:57,80 still has zonedLocalToUtc/offsetText with no production call outside the definition file.",
+        "packages/web/src/flow/invite.ts:32,40 parses board origin, while app.ts:307 still uses env.apiBase without using frag.board.",
+        "packages/web/src/key/storage.ts:31-39 retains sharedDevice/rulesSeen; no UI setter exists.",
+        "qv.ballot.undervote and qv.ballot.closingSoon still have catalog definitions without production UI call sites."
+      ],
+      "verification": [
+        "Targeted symbol/call-site source inspection across web/src; no historical unused-message count reused."
+      ],
+      "remaining_or_limit": "Do not carry forward 115/487 as a current count. Complete or explicitly scope away remaining contracts, including timezone, split-origin configuration, privacy settings and countdown/undervote UX.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-27",
+        "severity": "Low",
+        "confidence": "CONFIRMED",
+        "category": "conformance",
+        "spec_ids": [
+          "QV-19-REQ-008",
+          "QV-19-REQ-022",
+          "QV-19-REQ-035",
+          "QV-10-REQ-010",
+          "QV-10-REQ-011",
+          "QV-13-REQ-007",
+          "QV-13-REQ-092",
+          "QV-13-REQ-093",
+          "QV-13-REQ-094"
+        ],
+        "location": "packages/web/src/flow/onboarding.ts:69, packages/web/src/flow/election.ts:154, packages/web/src/key/lock.ts:29, packages/web/src/i18n/datetime.ts:57, packages/web/src/i18n/datetime.ts:80, packages/web/src/flow/invite.ts:40, packages/web/src/key/storage.ts:21-25",
+        "summary": "Library code and catalog copy exist with unit tests but no UI call site (11 symbols, 115 of 487 messages, 8 UX codes never produced).",
+        "scenario": "Readers of COPY.md/catalog/tests assume features like recovery import, roll check, lock warning, undervote warning exist, but users cannot reach them.",
+        "evidence": "grep loop over src for each symbol (only defining file); node packages/web/scripts/i18n-check.ts --json plus literal search (Appendix C).",
+        "known_ref": "Partly self-reported in NOTES.md and TODO N-36/N-37",
+        "suggested_fix": "Wire or remove the unreachable code/messages; track them in plan rows."
+      }
+    },
+    {
+      "id": "B3-28",
+      "historical_severity": "Info",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "A crafted key file within the accepted KDF ceiling costs ~9-30 s per unlock attempt.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Approved mitigation preserves stronger compatible key files but requires an explicit cost confirmation before above-default KDF work; cancellation performs no derivation.",
+      "evidence": [
+        "packages/web/src/key/keystore.ts:82-83 computes above-default cost.",
+        "packages/web/src/key/keystore.ts:188-192 checks confirmCost before KDF.",
+        "packages/web/src/ui/app.ts:120-136 creates a modal with the actual memory/passes/lanes and passes the callback.",
+        "packages/web/test/kdf-cost-confirm.test.ts:31-110 verifies defaults, all elevated parameters, cancellation and unchanged floor/ceiling."
+      ],
+      "verification": [
+        "Executed kdf-cost-confirm.test.ts in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "The expensive cost itself is intentionally retained after consent. Headless callers without confirmCost retain their documented behavior; no claim that Argon2 cost disappeared.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-28",
+        "severity": "Info",
+        "confidence": "CONFIRMED",
+        "category": "security (DoS, user-initiated)",
+        "spec_ids": [
+          "QV-19-REQ-004"
+        ],
+        "location": "packages/web/src/key/keystore.ts:18, packages/web/src/key/keystore.ts:63-70",
+        "summary": "A crafted key file within the accepted KDF ceiling costs ~9-30 s per unlock attempt.",
+        "scenario": "User selects a crafted key file at m=256 MiB t=10; tab stalls or low-end phone runs out of memory.",
+        "evidence": "unit.poc.test.ts timings: 256 MiB t=3 9365 ms.",
+        "known_ref": "",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "B3-29",
+      "historical_severity": "Info",
+      "historical_confidence": "LIKELY",
+      "historical_summary": "SPA /verify reads the chosen file with no size bound, unlike the standalone page and verifier loader.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "SPA verification rejects files larger than 64 MiB before calling File.text().",
+      "evidence": [
+        "packages/web/src/ui/app.ts:942-943 checks f.size before reading.",
+        "packages/web/src/verifier/page.ts:65 enforces the same standalone bound.",
+        "packages/web/e2e/verifier.ts:261-267 exercises a sparse 64 MiB + 1 file on both pages."
+      ],
+      "verification": [
+        "Source review; existing oversized-file browser test inspected."
+      ],
+      "remaining_or_limit": "Browser scenario not rerun in this lane. The bound still permits bounded memory use up to the configured maximum.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-29",
+        "severity": "Info",
+        "confidence": "LIKELY",
+        "category": "robustness",
+        "spec_ids": [
+          "QV-07-REQ-062"
+        ],
+        "location": "packages/web/src/ui/app.ts:615-616",
+        "summary": "SPA /verify reads the chosen file with no size bound, unlike the standalone page and verifier loader.",
+        "scenario": "A very large file passed to /verify is read wholly into memory (not exercised).",
+        "evidence": "Code reading; verify-garbage.poc.ts shows malformed inputs fail fast; huge file not tested.",
+        "known_ref": "",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "B3-30",
+      "historical_severity": "Info",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "Browser checks (CSP/TT, a11y, key flow) are not run by CI and no E2E loads verifier.html.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "CI now installs pinned Chromium and runs browser, CSP, standalone verifier and accessibility journeys with fail-closed browser requirements.",
+      "evidence": [
+        ".github/workflows/ci.yml:167-189 defines the browser job and QV_REQUIRE_BROWSER=1.",
+        ".github/scripts/run-browser-journeys.sh runs run/help/a11y/verifier/spoil-shares/server/registration and preserves failures.",
+        "packages/web/e2e/verifier.ts:86-106 explicitly opens verifier.html on both serving configurations."
+      ],
+      "verification": [
+        "Source review of workflow and runner."
+      ],
+      "remaining_or_limit": "This confirms workflow coverage, not protected-branch enforcement or a new hosted run. Root must cite exact-head CI separately.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-30",
+        "severity": "Info",
+        "confidence": "CONFIRMED",
+        "category": "test gap",
+        "spec_ids": [
+          "QV-19-REQ-016",
+          "QV-19-REQ-018",
+          "QV-13-REQ-001"
+        ],
+        "location": ".github/workflows/ci.yml, packages/web/e2e/run.ts:45-48",
+        "summary": "Browser checks (CSP/TT, a11y, key flow) are not run by CI and no E2E loads verifier.html.",
+        "scenario": "Regressions like B3-03 pass CI because e2e scripts exit 0 without Playwright and are not in the workflow.",
+        "evidence": "ci.yml runs only npm run check and claims lint; e2e/run.ts serves verifier.html but never opens it.",
+        "known_ref": "",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "B3-31",
+      "historical_severity": "Info",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "The receipt screen prints the browser's current time as 'Logged' instead of the log's sequenced_at.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Logged time comes from the verified receipt promise, not Date.now().",
+      "evidence": [
+        "packages/web/src/flow/ballot-controller.ts:163-166 verifies the append receipt then retains promise.sequenced_at.",
+        "packages/web/src/ui/app.ts:672 renders new Date(rep.sequencedAt * 1000).",
+        "packages/web/test/audit3.test.ts:49 asserts the reported time equals the stored promise time."
+      ],
+      "verification": [
+        "Executed promise/timestamp regression in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "No fresh browser-clock spoofing experiment; the source of the rendered time is directly verified.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-31",
+        "severity": "Info",
+        "confidence": "CONFIRMED",
+        "category": "correctness",
+        "spec_ids": [
+          "QV-10 \u00a76.2 V7",
+          "QV-10-REQ-009"
+        ],
+        "location": "packages/web/src/ui/app.ts:504",
+        "summary": "The receipt screen prints the browser's current time as 'Logged' instead of the log's sequenced_at.",
+        "scenario": "Page clock set to 2030 shows 'Logged 1/1/2030' while the board logged it in 2026.",
+        "evidence": "logged-time.poc.ts.",
+        "known_ref": "",
+        "suggested_fix": ""
+      }
+    },
+    {
+      "id": "B3-32",
+      "historical_severity": "Info",
+      "historical_confidence": "CONFIRMED",
+      "historical_summary": "axe-core 4.13 reports region (moderate) on every page and aria-allowed-role (minor) on chart figure role=group.",
+      "historical_source": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "current_source": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "current_status": "already fixed",
+      "confidence": "high",
+      "assessment": "Notices now sit inside the header landmark and the chart figure uses its caption without role=group.",
+      "evidence": [
+        "packages/web/src/ui/shell.ts:4-5 nests banners in header.",
+        "packages/web/src/ui/app.ts:1099 uses buildHeader.",
+        "packages/web/src/ui/charts.ts:34 uses figure with aria-labelledby and no role override.",
+        "packages/web/test/audit3-ui.test.ts:91-103 checks the two repaired structures."
+      ],
+      "verification": [
+        "Executed audit3-ui.test.ts in 38/38 targeted checks."
+      ],
+      "remaining_or_limit": "This closes the named DOM defects; it does not claim full/manual accessibility qualification or a fresh axe sweep.",
+      "review_lane": "web",
+      "historical_record": {
+        "id": "B3-32",
+        "severity": "Info",
+        "confidence": "CONFIRMED",
+        "category": "a11y (automated, info only)",
+        "spec_ids": [
+          "QV-13 C-SHELL",
+          "QV-13 C-CHART"
+        ],
+        "location": "packages/web/src/ui/app.ts:715, packages/web/src/ui/charts.ts:34",
+        "summary": "axe-core 4.13 reports region (moderate) on every page and aria-allowed-role (minor) on chart figure role=group.",
+        "scenario": "Experimental banner sits outside landmarks; chart figure uses disallowed role.",
+        "evidence": "ui-observer.poc.ts step B3-A1 and axe-results.poc.ts.",
+        "known_ref": "",
+        "suggested_fix": ""
+      }
+    }
+  ]
+}
