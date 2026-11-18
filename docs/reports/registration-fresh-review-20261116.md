@@ -84,7 +84,7 @@ security/protocol and human/platform release gates remain separate.
 
 ## Integrator review of refusal/expiry follow-up
 
-The integrator independently reviewed `894a94d` after the original lane freeze:
+The integrator reviewed the source changes in `894a94d` after the original lane freeze:
 unknown/revoked/consumed invitation failures now share the same public problem
 body and voter lookup shape, and redemption refuses at `now >= expires_at`.
 The existing registered-key retry and deliberately absent invite-to-voter

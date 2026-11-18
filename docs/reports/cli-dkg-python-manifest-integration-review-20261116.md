@@ -1,6 +1,6 @@
 # CLI DKG and Python manifest integration review — 2026-11-16
 
-The integrator independently reviewed the production deltas in `73d293c` and
+The integrator performed a source review of the production deltas in `73d293c` and
 `5a73bcd`; their root aliases are `8a66c0e` and `e60783e`.
 
 The CLI adapter validates the public DKG vector transport before invoking the

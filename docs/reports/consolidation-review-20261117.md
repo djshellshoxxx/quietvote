@@ -4,6 +4,18 @@ This report records the requested repository review and selective integration.
 Dates use America/Los_Angeles. QuietVote remains an experimental implementation;
 consolidation does not establish complete product scope or release qualification.
 
+## Completed outcome
+
+The reviewed source was merged through [#56](https://github.com/djshellshoxxx/quietvote/pull/56)
+as `38192a5498a7b6fdc612c8e6c240a8596626d579`, after exact candidate `8686e62`
+passed **11/11 main CI jobs**, including **1,425 workspace tests on each of Node
+22 and Node 24**. The initial **49 open PRs are reduced to 2**: #43 is the
+canonical cumulative draft and #27 holds the concrete residuals. Forty-five
+superseded/obsolete PRs were closed with checked-head dispositions; #47 and #54
+were merged during the earlier baseline step. All source branches are retained.
+See the [publication receipt](consolidation-publication-20261117.md) for final
+source, tests, closure accounting and the documentation-only follow-up.
+
 ## Source and scope
 
 - Default branch at discovery: `019f4e789be2ff38a5fb2d348c3b225cc87cf296`.
@@ -38,8 +50,8 @@ passed all 11 jobs, including Node 22/24 workspaces, browser journeys,
 conformance, build and supply-chain checks. The resulting history preserves the
 separate T01 historical receipt.
 
-The following changes are combined on `integration/quietvote-reviewed-20261117`
-for integration into that same canonical branch:
+The following changes were combined on `integration/quietvote-reviewed-20261117`
+and merged into that same canonical branch through #56:
 
 | Change | Why it matters | Evidence/provenance |
 |---|---|---|
@@ -93,7 +105,10 @@ does not match their sole DCO sign-off. A full history check at `4b93752` found
 507 commits beyond main: 264 with a matching author sign-off, 211 with none, and
 32 with sign-offs but no matching author. These are recorded deficiencies,
 including the existing D-100 work; consolidation does not invent attestation.
-New repair/merge/documentation commits use matching author sign-offs.
+The original local repair/merge/documentation commits use matching author
+sign-offs, as does the published checkpoint `8686e62`. Readback of the first
+hosted merge, `44f73ca` (#54), shows no sign-off; that omission is recorded here
+without rewriting history or inventing a retrospective attestation.
 
 No new dependency, cryptographic primitive, receipt encoding, database migration,
 test-vector expectation, comparator relaxation or size-budget change was needed
@@ -144,7 +159,11 @@ are recovered here. The original branch must not be merged wholesale:
    verifiers retain valid legacy free-text signed records. New-generation and
    admission restrictions must preserve documented legacy verification.
 4. Lazy module integrity must fit the current build graph and unchanged size
-   limits and pass real browser tampering checks before inclusion. The sealing
+   limits and pass real browser tampering checks before inclusion. The prepared
+   port `e421221` is preserved in a separate source bundle and excluded: its
+   204,814-byte result fails the strict `<204,800` test, and its proposed browser
+   scenarios have not passed. The [port receipt](consolidation-w15-residual-20261117.md)
+   records the two corrected preload hangs and remaining gates. The sealing
    worker remains a separate integrity boundary.
 5. Its rejected web-ballot WIP failed its own body-binding and stale-state review;
    it remains unapplied evidence.
@@ -174,9 +193,11 @@ green runs are not represented as later-source evidence.
 | Dependency advisory check | `npm audit --audit-level=high`: zero vulnerabilities reported |
 | Links and traceability | Links pass; trace checks pass. Link coverage is not requirement satisfaction |
 
-Once the exact combined source passes review and CI, integrate it into
-`integration/quietvote-completion`, retain #43 as the authoritative cumulative
-draft against main and retain #27 for the genuine residuals above. Close
-source-subsumed drafts and obsolete #2/#21 with explicit dispositions. Preserve
-the source branches, original reviews and old receipt snapshots. Main, release
-and deployment qualification remain separate from this prototype consolidation.
+The exact combined source passed review and CI and is merged into
+`integration/quietvote-completion`. #43 remains the authoritative cumulative draft
+against main, and #27 retains the genuine residuals above. Forty-five redundant
+PRs, including obsolete #2/#21, are closed with explicit dispositions. Source
+branches, source hashes and historical findings are preserved. The documentation
+follow-up corrects stale completion states and misleading source/agent-review
+wording: claims lint now reports zero findings under the unchanged rules. Main,
+release and deployment qualification remain separate from this prototype consolidation.

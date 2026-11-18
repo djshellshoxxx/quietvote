@@ -56,7 +56,7 @@ Start with the [specification index](docs/SPEC-INDEX.md), which tracks each spec
 
 Web translation contributors can use the [translation workflow and review checklist](docs/TRANSLATING.md).
 
-For the latest continuation, see [the parallel teams checkpoint](docs/handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md), its [feature and branch ledger](docs/reports/quietvote-teams-feature-ledger-20261116.md) and milestone review handoffs. The [earlier 2026-11-16 checkpoint](docs/handoffs/QUIETVOTE-RESUME-20261116.md) preserves prior evidence. The previous checkpoint is [the 2026-11-11 consolidation and discovery handoff](docs/handoffs/QUIETVOTE-COMPLETION-20261111.md). An earlier checkpoint is [the 2026-11-09 integration checkpoint](docs/handoffs/QUIETVOTE-MILESTONE-20261109.md). For earlier source refs, branch/PR accounting, validation and remaining gates, use the [consolidation handoff](docs/handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md) and [integration ledger](docs/plan/CONSOLIDATION.md). The [restart entry](docs/handoffs/QUIETVOTE-NEXT.md) preserves earlier checkpoint receipts. These status documents are not approved specifications or an independent audit.
+For the current consolidation and next work, use the [November 17 review](docs/reports/consolidation-review-20261117.md) and its [publication receipt](docs/reports/consolidation-publication-20261117.md). Earlier implementation evidence is in [the parallel teams checkpoint](docs/handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md), its [feature and branch ledger](docs/reports/quietvote-teams-feature-ledger-20261116.md) and milestone review handoffs. The [earlier 2026-11-16 checkpoint](docs/handoffs/QUIETVOTE-RESUME-20261116.md) preserves prior evidence. The previous checkpoint is [the 2026-11-11 consolidation and discovery handoff](docs/handoffs/QUIETVOTE-COMPLETION-20261111.md). An earlier checkpoint is [the 2026-11-09 integration checkpoint](docs/handoffs/QUIETVOTE-MILESTONE-20261109.md). For earlier source refs, branch/PR accounting, validation and remaining gates, use the [consolidation handoff](docs/handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md) and [integration ledger](docs/plan/CONSOLIDATION.md). The [restart entry](docs/handoffs/QUIETVOTE-NEXT.md) preserves earlier checkpoint receipts. These status documents are not approved specifications or an independent audit.
 
 The [wiki](wiki/) provides voter, organizer, trustee, auditor and developer guides. Screenshots are not included here; the production web build and reproducible browser checks are described in the handoff.
 
@@ -64,7 +64,9 @@ The [wiki](wiki/) provides voter, organizer, trustee, auditor and developer guid
 
 The [November 17 consolidation review](docs/reports/consolidation-review-20261117.md)
 accounts for every branch and PR, records recovered fixes and verification, and
-identifies the remaining core and integration work.
+identifies the remaining core and integration work. Its [publication receipt](docs/reports/consolidation-publication-20261117.md)
+records the completed integration, exact-commit CI and reduction from 49 open PRs
+to the canonical draft #43 and residual draft #27.
 
 **Stage:** Experimental prototype; core workflows and qualification remain incomplete<br>
 **Implementation:** Code exists in all eight packages (`crypto`, `protocol`, `board`, `server`, `trustee`, `verifier`, `cli`, `web`) and in `verifier-py/`. Modern web/API/CLI voter enrollment, the connected organizer ceremony/open/close/tally console, executable election workflows and offline recovery are implemented. The accepted ADR-027/028 decisions supersede the old registration and report-parity holds. The [continuation handoff](docs/handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md) records source-specific validation and its limits.<br>

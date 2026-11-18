@@ -28,3 +28,20 @@ git fetch docs/provenance/quietvote-review-20261117.bundle \
 The verification receipt and PR name the published source and CI separately.
 The historical D-100 contribution-provenance gaps remain recorded; preservation
 does not certify or repair missing attestations in older source history.
+
+## Excluded W15 source archive
+
+`quietvote-w15-residual-20261117.bundle` preserves the unmerged local port
+`e4212219635291a002b68d6b27a9714df23d7df2`. It is evidence and follow-up source,
+not active application code. It requires local base `25d26aa`, which is contained
+in `quietvote-review-20261117.bundle`. Fetch the main archive as above first,
+then inspect this separate branch:
+
+```sh
+git bundle verify docs/provenance/quietvote-w15-residual-20261117.bundle
+git fetch docs/provenance/quietvote-w15-residual-20261117.bundle \
+  HEAD:refs/remotes/review-archive/w15-residual-20261117
+```
+
+The [residual receipt](../reports/consolidation-w15-residual-20261117.md) records
+the unchanged failing size gate and uncompleted browser qualification.

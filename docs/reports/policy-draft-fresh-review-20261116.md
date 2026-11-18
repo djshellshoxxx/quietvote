@@ -79,7 +79,7 @@ reads. Output creation refuses existing destinations; this review does not claim
 power-loss atomicity or mid-write filesystem-failure recovery for draft files.
 No remote writes or live-election operations were performed by this reviewer.
 
-The original author independently reviewed exact repair `5d0c067` and found no
+The original author reviewed the source of exact repair `5d0c067` and found no
 scoped blocker. All four fresh regressions passed again in a separate worktree.
 The signed [cross-review receipt](policy-draft-repair-cross-review-20261116.md)
 is `40620c1`; this closes the requested author review of these repairs.

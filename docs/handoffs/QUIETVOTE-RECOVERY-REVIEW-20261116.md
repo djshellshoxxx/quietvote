@@ -1,7 +1,7 @@
 # Fresh recovery review and second-crash repair — 2026-11-16
 
 Reviewed server append/event/archive work at `aae6196` and operation-response work finalized
-as `36ff4a7`. This worker independently reviewed those authors' changes, then authored the
+as `36ff4a7`. This worker reviewed the other authors' changes, then authored the
 replay/projection correction `f190a6b`. The correction therefore needs another worker's review;
 this record is internal engineering evidence, not an external audit or release approval.
 
@@ -49,8 +49,8 @@ this record is internal engineering evidence, not an external audit or release a
   rollback and post-commit process exit preserve their pairing. Retention waits for pending
   append completions and unsuccessful durable webhook forwarding.
 - Operation receipts bind principal, idempotency key, method, path, request hash and the original
-  marker expiry. Only an unexpired pending/interrupted exact generation can promote. Audited
-  promotions commit their control audit and replay cache together.
+  marker expiry. Only an unexpired pending/interrupted exact generation can promote. Promotions
+  with a control audit commit that audit and the replay cache together.
 - Link-election read keys and invitation codes/labels/contact values are absent from durable
   replay receipts. Retries recover only the original redacted identifiers and results.
 - Pre-commit receipt failure rolls back election-owned effects. Internal uncertain outcomes stay

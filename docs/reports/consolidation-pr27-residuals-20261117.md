@@ -1,8 +1,8 @@
 # QuietVote PR #27 residual integration review — 2026-11-17
 
-> Follow-up: the /56 and keyless receipt slices were integrated as `fffa143` and `4b93752`; combined typecheck and 26 focused tests passed. Remaining schema, rollback, export and control compatibility findings below are unchanged.
+> Consolidation update: the /56 and keyless receipt slices are included in published candidate `8686e625270826bc0776596a1bbaf434832f4afd`, preserving the reviewed local repairs `fffa143` and `4b93752`. Combined typecheck and 26 focused tests passed. The sections below retain the original source audit; completion statuses and the W15 disposition are updated here.
 
-Read-only source audit against current consolidation candidate `25d26aa3dc35127015100ace20419c57509ed338`, with the original `66dcfafa885bdbd82cae808c33cebe0d7f8a21ab` checked for provenance. The reviewed paths have the same relevant behavior at both commits. The separately prepared IPv6 repair is `d6c3be005b09c4299cbd7a906dc9d81a6276ccc9`; the keyless-receipt repair is being handled independently and is not assessed as completed here.
+Read-only source audit against current consolidation candidate `25d26aa3dc35127015100ace20419c57509ed338`, with the original `66dcfafa885bdbd82cae808c33cebe0d7f8a21ab` checked for provenance. The reviewed paths have the same relevant behavior at both commits. The separately reviewed IPv6 repair is `d6c3be005b09c4299cbd7a906dc9d81a6276ccc9`. The keyless repair is covered by its [separate verification receipt](keyless-receipts-consolidation-20261117.md); both are included in the published candidate.
 
 Sources: PR #27 head `2aaf0a01816afb256a804c23dd45de86eca2a993`, especially `13b86c2` and `07fd61c`; current source, tests, migration arrays, QV-ADR-027 and the accepted decision register. This report is static review, not a new test-execution receipt or external security qualification.
 
@@ -12,7 +12,7 @@ Sources: PR #27 head `2aaf0a01816afb256a804c23dd45de86eca2a993`, especially `13b
 |---|---|---|---|
 | Default invitation expiry / B2-10 | New invites default to 14 days; explicit deadline retained; current enrollment enforces expiry and uniform unknown/used/revoked refusal | **Already implemented through other history** | No PR #27 runtime port; retain current modern/legacy enrollment and tests |
 | Invitation PII retention / B2-11 | Purge after register/revoke/expiry/open plus configured grace; scheduled and lazy sweeps; expiry SQL repaired for Node 22 | **Already implemented** | No historical retention replacement |
-| IPv6 /56 / N-32(a) | Selective recovery prepared as `d6c3be0` | **Ready for integration** | Integrate that reviewed commit; do not merge the rest of `07fd61c` with it |
+| IPv6 /56 / N-32(a) | Selective recovery `d6c3be0`, integrated as `fffa143` and included in `8686e62` | **Recovered** | Preserve the regression coverage; the rest of `07fd61c` remains separate |
 | Recorded public export and deletion acknowledgement / N-32(b) | Ad hoc QVB/JSON downloads exist; no persistent export record or acknowledgement; deletion checks lifecycle state only | **Absent** | Add election migration **10**, recorded export lifecycle, acknowledgement/grace gate in current deletion paths, and crash/retry tests |
 | Runtime rollback anchor / B2-07 | Offline restore has public-history and private-security floors; gossip can detect evidence after opening; no independent runtime high-water floor | **Partially covered by different mechanisms; runtime anchor absent** | Add control migration **8**, monotonic local floor, startup/receipt gating and current recovery integration; then bounded witness/peer acquisition |
 | Request log privacy / B2-16 A | Minute rounding, allowlist, duration bucket, field drops and tests already exist | **Already implemented** | Preserve current logger behavior |
@@ -89,14 +89,18 @@ Historical `13b86c2` restricts only server admission to 14 QV-07 catalog codes. 
 
 ## Checklist justifying retention of PR #27
 
-- [x] Historical implementation ancestry included in the canonical candidate.
+- [x] Shared historical implementation ancestry is included; PR27's unique head remains separate and is recovered only by reviewed slices.
 - [x] Default 14-day invitation expiry and retention recovered through newer history.
 - [x] Existing signed-request/rate-header/logging work accounted for.
-- [x] IPv6 /56 slice recovered independently as `d6c3be0` (integration handled by lead).
-- [ ] Independently reviewed keyless receipt fix integrated and qualified (separate active lane).
+- [x] IPv6 /56 slice recovered as `d6c3be0`, integrated as `fffa143` and included in `8686e62`.
+- [x] Keyless receipt fix `8d77883` received separate agent review and was integrated as `4b93752`, with board 78/78, server 290/290 and combined focused 26/26 tests passing; included in `8686e62`.
 - [ ] Additive runtime rollback anchor with complete signing-path/startup recovery coverage.
 - [ ] Recorded export/acknowledgement lifecycle and archived-deletion gate preserving current recovery semantics.
 - [ ] Catalog control reasons for new operations with explicit legacy verification compatibility.
 - [ ] Lazy module integrity/preload recovery qualified against the current build and real browser tampering checks (separate remaining #27 slice, outside this focused audit).
 
 Keep the original #27 branch as provenance and recovery material. Its old pause language and blanket approval holds are not the current blocker. Its rejected web-ballot WIP remains historical, unapplied evidence and should not be treated as an available implementation patch.
+
+## Preserved W15 follow-up
+
+The prepared port `e4212219635291a002b68d6b27a9714df23d7df2` is archived, not applied. It fixes two independently reproduced preload hangs, but its aggregate JavaScript gzip size is 204,814 bytes against the unchanged strict `<204,800` test, and the proposed browser tampering scenarios have not passed. It needs at least 15 bytes reduction and an actual successful browser run on its future exact source. The current consolidation browser pass does not qualify this excluded port. See the [port receipt](consolidation-w15-residual-20261117.md) and [independent source review](consolidation-w15-security-review-20261117.md).

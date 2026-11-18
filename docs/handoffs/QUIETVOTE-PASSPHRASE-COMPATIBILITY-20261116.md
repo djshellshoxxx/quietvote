@@ -76,7 +76,7 @@ unlock, expensive-KDF prompt count, invalid metadata, AES import/encryption
 cleanup and signer-import failure. The reviewer reports those six plus the 14
 existing key tests passing, with typecheck/build passing.
 
-The compatibility author independently reviewed `9e4c74f` and executed the
+The compatibility author reviewed the source changes in `9e4c74f` and executed the
 failed-WebCrypto-import regression: **1/1 passed**, no failure/skip. The correction
 preserves the working fallback signer and erases its transient import copy on
 both outcomes. No scoped blocker remains. This is reciprocal agent review,
@@ -85,7 +85,7 @@ not the project's required external cryptographic/security approval.
 ## Next integration
 
 Integrate the signed implementation once, followed by this validation handoff and
-any independently reviewed correction. Re-run exact-candidate hosted checks after
+any correction reviewed by another agent. Re-run exact-candidate hosted checks after
 combining other protocol/CLI/web changes. Preserve existing independent-security,
 browser, native accessibility and release-governance gates; this feature does not
 qualify the entire project.
