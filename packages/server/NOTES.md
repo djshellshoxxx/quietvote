@@ -487,3 +487,18 @@ This supersedes the historical B2-12 open entry for the approved interim refusal
 Persisting original promise signatures for later replay remains separate work.
 An already loaded archived runtime still retains its actual in-memory keys until
 eviction; this change does not claim immediate memory erasure at archive time.
+
+## Test harness: fresh connections in the HTTP e2e (2026-11-18)
+
+`test/e2e.test.ts` (22-voter full election) failed twice on Node 24 CI (jobs 134564744091, 134599231351) with
+`fetch failed: read ECONNRESET`; Node 22 and the base branch passed. The failing runs took 72-77 s against about 46 s
+for passing ones. The test blocks the event loop for many seconds between requests: four full in-process
+verifications plus `spawnSync` of the CLI verifier. On a slow runner that block can outlast the 30 s test keep-alive
+window, and the next `fetch` can then pick the pooled idle socket before timers run while the server's expired
+keep-alive timer destroys it. This is a hypothesis consistent with the evidence, not a local reproduction (a
+standalone Node 22 reproduction did not trigger; Node 24 was not available locally).
+
+Change (test-only; production code and defaults are unchanged): `WorldOpts.freshConnections` sends
+`connection: close` on every World request, and the e2e enables it and closes its direct `export.qvb` fetch. Every
+World request failure now names the method, path and idle time, so a recurrence is diagnosable from the CI log.
+No assertion, timeout or test was removed. Server suite 294/294 locally (Node 22).

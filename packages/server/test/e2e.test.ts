@@ -14,7 +14,9 @@ import { World } from './helpers/world.ts';
 const H = bytesToHex;
 
 test('full election over HTTP: 3-of-5 trustees, 22 voters, revotes, spoils, close, tally, export, evidence-gated verification', { timeout: 900_000 }, async () => {
-  const w = new World({ seed: 'e2e-http', n: 5, t: 3, voters: 22 });
+  // freshConnections: this test blocks the loop for many seconds (four full verifications, spawnSync of the CLI verifier)
+  // between requests; see WorldOpts.freshConnections.
+  const w = new World({ seed: 'e2e-http', n: 5, t: 3, voters: 22, freshConnections: true });
   // This positive log-verification fixture uses the existing coordinator header authority.
   w.owner = w.coord[0]!;
   const manifest = w.buildManifest.bind(w);
@@ -140,7 +142,8 @@ test('full election over HTTP: 3-of-5 trustees, 22 voters, revotes, spoils, clos
     assert.deepEqual(Object.values(rep.checks).filter((c) => c === 'fail'), []);
 
     // ---- .qvb: tar integrity + board-level verification
-    const tarRes = await fetch(`${w.base}/api/v1/elections/${w.electionId}/export.qvb`);
+    // First request after the spawnSync block above: never reuse a possibly stale pooled socket.
+    const tarRes = await fetch(`${w.base}/api/v1/elections/${w.electionId}/export.qvb`, { headers: { connection: 'close' } });
     assert.equal(tarRes.headers.get('content-type'), 'application/x-tar');
     const files = readTar(new Uint8Array(await tarRes.arrayBuffer()));
     const sums = new TextDecoder().decode(files.get('SHA256SUMS')!).trim().split('\n');
