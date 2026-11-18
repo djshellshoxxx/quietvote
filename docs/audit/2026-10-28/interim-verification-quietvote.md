@@ -1,8 +1,13 @@
-# Interim verification results: quietvote
+# Verification results: quietvote (pass stopped before completion)
 
-Backup of the independent verification pass as of 2026-10-29 03:15 UTC. The pass stopped twice on a usage limit and is being resumed; the consolidated report supersedes this file.
+Final state of the independent verification pass at `424110d` (recorded 2026-11-18). The pass stopped on usage limits and was not resumed, because the reviewed consolidation (#56, `integration/quietvote-completion`) has since moved the code on. What did and did not run:
 
-Findings extracted: 72; batch-verified: 52; findings with extra lens results: 0.
+- An independent verifier re-reproduced 56 of the 72 extracted findings and confirmed all 56; none was disproved. 16 B3 findings (verifier batches 5 to 8) are still **pending**.
+- 33 items the first-wave reports labelled KNOWN, with fixes on earlier unmerged PRs, were listed and not re-verified.
+- The extra checks for the High findings (B2-01, B3-01, B3-02), the Medium skeptic for unconfirmed findings, the coverage critic and the consolidated synthesis did **not** run.
+- Verdicts apply to `424110d`. Re-check any finding against the current consolidation before acting on it; some may already be fixed there.
+
+Findings extracted: 72; batch-verified: 56; findings with extra lens results: 0.
 
 | ID | Auditor severity | Verifier verdict | Verifier severity | Extra checks | Summary |
 |---|---|---|---|---|---|
@@ -11,14 +16,14 @@ Findings extracted: 72; batch-verified: 52; findings with extra lens results: 0.
 | B2-03 | Medium | confirmed | Medium | - | instance_admin keys, once seeded, can never be revoked; removing them from adminKeys leaves them active and no API revokes them. |
 | B2-04 | Medium | confirmed | Medium | - | The server evaluates witness quorum with operator config witnesses and ignores manifest bb.witnesses. |
 | B2-05 | Medium | confirmed | Medium | - | m-of-k control records (pause/resume/security-notice) have no freshness binding, so a single earlier signer can replay an old record. |
-| B2-06 | Medium | confirmed | Medium | - | election_close is accepted at any time in OPEN/PAUSED with no time check against voting_close. |
+| B2-06 | Medium | confirmed | Low | - | election_close is accepted at any time in OPEN/PAUSED with no time check against voting_close. |
 | B2-07 | Medium | confirmed | Medium | - | Restoring an older election DB is not detected and the server signs a second, different root for a size it already signed. |
-| B2-08 | Medium | confirmed | Low | - | backup --to stores a relative path verbatim and destroy resolves it against the current cwd, missing the real backup and shredding an unrelated file. |
+| B2-08 | Medium | confirmed | Medium | - | backup --to stores a relative path verbatim and destroy resolves it against the current cwd, missing the real backup and shredding an unrelated file. |
 | B2-09 | Low | confirmed | Low | - | Invite cap compares registered voters rather than invites, so invites are effectively unbounded. |
 | B2-10 | Low | confirmed | Low | - | Invites without expires_at never expire, unknown vs used codes answer differently, and a used code with another registered key answers 201. |
 | B2-11 | Low | confirmed | Low | - | P2 invite data (labels, contacts) is never purged except a registered invite's contact; no retention job exists. |
 | B2-12 | Low | confirmed | Low | - | IMPORTED mirrors and keyless ARCHIVED runtimes sign duplicate-submission receipts with an all-zero-seed placeholder key. |
-| B2-13 | Low | confirmed | Low | - | Anonymous GET /roll lists voters in enrolment order (ORDER BY rowid), defeating hour-rounding of registered_at. |
+| B2-13 | Low | confirmed | Info | - | Anonymous GET /roll lists voters in enrolment order (ORDER BY rowid), defeating hour-rounding of registered_at. |
 | B2-14 | Low | confirmed | Low | - | Junk cosignature lines get 200 with empty accepted/rejected and still bump the export generation, invalidating the .qvb cache. |
 | B2-15 | Medium | confirmed | Low | - | In-tree audit index lists SRV-001 as fixed and CP-01/TR-01 and trustees-mode spoil endpoint as closed though fixes are not in this SHA; NOTES contain stale and  |
 | B2-16 | Low | confirmed | Low | - | Request logs use second timestamps and fields outside the QV-31 allowlist, undoing minute rounding of ballot append events; control records carry free-text reas |
@@ -32,24 +37,24 @@ Findings extracted: 72; batch-verified: 52; findings with extra lens results: 0.
 | B1-06 | Medium | confirmed | Medium | - | qv-verify without --manifest-hash compares the manifest with the bundle's own manifest_hash, reports V1 PASS and exits 0 with no caveat and without printing the |
 | B1-07 | Medium | confirmed | Medium | - | Open spec questions recorded in errata now produce verdict-level disagreement between the TS and Python verifiers on honest elections. |
 | B1-08 | Low | confirmed | Low | - | verifier-py manifest validation accepts manifests the reference rejects (time ordering, impossible dates, yes-no without rule, small-order/non-canonical keys, w |
-| B1-09 | Info | pending |  | - | COMPLETION C3 says verifier-py does not reject binding fields on non-open markers, but it rejects them fatally; the real gap is the class mismatch. |
-| B1-10 | Info | pending |  | - | T-028 'Exponential ElGamal encrypt/decrypt-to-point, rerandomize' is marked Done but no rerandomize function exists. |
-| B1-11 | Low | pending |  | - | Negative corpus does not cover every Appendix C check and Ed25519/DKG edge cases, and a mutation sweep leaves 3 real survivors (Ed25519 small-order R, late DKG  |
-| B1-12 | Info | pending |  | - | The test claiming decryption nonces never repeat with a failed RNG varies only oid; with same (ctx,cid,oid) and different aggregate the nonce repeats and s_j is |
+| B1-09 | Info | confirmed | Info | - | COMPLETION C3 says verifier-py does not reject binding fields on non-open markers, but it rejects them fatally; the real gap is the class mismatch. |
+| B1-10 | Info | confirmed | Info | - | T-028 'Exponential ElGamal encrypt/decrypt-to-point, rerandomize' is marked Done but no rerandomize function exists. |
+| B1-11 | Low | confirmed | Low | - | Negative corpus does not cover every Appendix C check and Ed25519/DKG edge cases, and a mutation sweep leaves 3 real survivors (Ed25519 small-order R, late DKG  |
+| B1-12 | Info | confirmed | Info | - | The test claiming decryption nonces never repeat with a failed RNG varies only oid; with same (ctx,cid,oid) and different aggregate the nonce repeats and s_j is |
 | B1-13 | Low | confirmed | Low | - | The manifest record envelope {body, sigs} and its signature objects are not checked against a closed schema, so unknown members pass in TS while verifier-py FAI |
 | B1-14 | Low | confirmed | Low | - | verifier-py neither requires the dkg-open marker nor checks DKG marker order, passing a bundle the reference (and its own canary) rejects. |
 | CP-01 (verifier-py residual) | Medium | confirmed | Medium | - | Counted ballot re-wrapped under another supersedes with published reveal passes; the verifier-py side has no fix on any branch. |
-| CP-04 (verifier-py residual) | Medium | confirmed | Medium | - | Even after PR #10's TS fix, verifier-py still accepts mixed-order public keys and 1/8 of signatures, so acceptance sets differ. |
+| CP-04 (verifier-py residual) | Medium | confirmed | Low | - | Even after PR #10's TS fix, verifier-py still accepts mixed-order public keys and 1/8 of signatures, so acceptance sets differ. |
 | TSV-04 | Info | confirmed | Info | - | A throwing board layer only sets boardSkipped; PASS stays reachable. |
 | TSV-06 | Info | confirmed | Info | - | Canary self-test never compares expect.verdict. |
 | PY-01 | Info | confirmed | Info | - | verifier-py has no trustee-mode spoils; manifests with spoil_trustee_decrypt are rejected. |
 | PY-02 | Info | confirmed | Info | - | verifier-py verdict is PASS/FAIL only. |
 | WV-9 | Info | confirmed | Info | - | Test-vector corpus is unsigned. |
 | N-13, N-24, N-25, N-27 | Info | confirmed | Info | - | Tracked TODO gaps still present: V13 not run, no vendoring, no secret types/constant-time discipline beyond noble, no rule basis roll. |
-| B3-01 | High | confirmed | High | - | The web registration request (PoP layout and hashed invite_code) is refused by the reference server, and no test could notice. |
+| B3-01 | High | confirmed | Medium | - | The web registration request (PoP layout and hashed invite_code) is refused by the reference server, and no test could notice. |
 | B3-02 | High | confirmed | Medium | - | The Results page shows a coordinator-signed tally without verifying it, though the protocol verifier FAILs the same log. |
-| B3-03 | Medium | confirmed | Low | - | verifier.html does not run when served with the build's own _headers or the reference server's static CSP, because the header CSP blocks its hashed inline scrip |
-| B3-04 | Medium | confirmed | Low | - | SRI covers only the entry module and CSS; statically imported chunks execute without integrity, so claims C-12 and T-189 "SRI yes" are overstated. |
+| B3-03 | Medium | confirmed | Medium | - | verifier.html does not run when served with the build's own _headers or the reference server's static CSP, because the header CSP blocks its hashed inline scrip |
+| B3-04 | Medium | confirmed | Medium | - | SRI covers only the entry module and CSS; statically imported chunks execute without integrity, so claims C-12 and T-189 "SRI yes" are overstated. |
 | B3-05 | Medium | confirmed | Medium | - | A revote built from the cached log is rejected with E_SUPERSEDES and the screen tells the voter a newer ballot is recorded, the opposite of what happened. |
 | B3-06 | Medium | confirmed | Medium | - | Late/paused/refused ballot screens fall back to 'Something went wrong' (missing message args), show receipt-proof text for unrecorded ballots, report PAUSED as  |
 | B3-07 | Medium | confirmed | Medium | - | The 'Test this ballot' result never shows what the device sealed yet asks 'Do these match what you picked?'. |
@@ -57,7 +62,7 @@ Findings extracted: 72; batch-verified: 52; findings with extra lens results: 0.
 | B3-09 | Medium | confirmed | Medium | - | Key backup is offered only once at creation and the displayed recovery code cannot be imported (restoreFromRecovery has no caller). |
 | B3-10 | Medium | confirmed | Medium | - | 'Your key is registered.' is shown with no invitation and for HTTP 409 INVITE_USED. |
 | B3-11 | Medium | confirmed | Medium | - | Auto-lock is announced only in a live region, leaves Seal/Send offered (sealing with a zeroed hedge key, send failing generically), the hidden>2min rule cannot  |
-| B3-12 | Medium | confirmed | Low | - | If IndexedDB cannot be opened, every election page including rules and results shows 'Something went wrong'. |
+| B3-12 | Medium | confirmed | Medium | - | If IndexedDB cannot be opened, every election page including rules and results shows 'Something went wrong'. |
 | B3-13 | Medium | confirmed | Low | - | A 'sequenced' answer's signed promise is not stored or re-checkable, and a 5xx after a recorded ballot reads 'has not been sent'. |
 | B3-14 | Medium | confirmed | Medium | - | In one-ballot elections the UI promises revoting, and the REVOTE_LIMIT refusal is forced retryable, retried 4 times and reported as E-API-RATE. |
 | B3-15 | Low | confirmed | Low | - | Cast and Test buttons differ in fill, size and weight, contrary to the equal-prominence requirement. |
