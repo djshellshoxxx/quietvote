@@ -66,6 +66,8 @@ Define assets, adversaries, abuse cases, mitigations, residual risks, and releas
 - Supply-chain compromise or vulnerable dependency
 - Accidental misconfiguration and human error
 
+For each, document capability, motivation, access, likely impact, and out-of-scope assumptions.
+
 | Adversary | Capability and access | Motivation | Likely impact | Out-of-scope assumption |
 |---|---|---|---|---|
 | Curious/malicious admin | Admin UI, group settings, roster tools | See votes or shift outcome | Rule or roster change; metadata access | Admin does not hold operator database access |

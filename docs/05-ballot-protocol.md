@@ -85,6 +85,8 @@ Requirements use IDs QV-05-REQ-NNN. Each has a verification method. Items marked
 
 ### 4.1 Guarantees to define separately
 
+For each guarantee, specify the adversary, assumptions, and evidence:
+
 - Ballot secrecy from other members
 - Ballot secrecy from organizers and platform operators
 - Eligibility enforcement
@@ -179,6 +181,10 @@ Specify ballot definition/versioning, eligibility setup, open/close events, ball
 - API/event/schema contracts: manifest, encrypted ballot, validity proof, receipt, checkpoint, and tally evidence formats. Not yet specified; required in QV-09.
 - Versioning and compatibility: protocol version in every manifest and ballot. Incompatible changes need a new version and a decision log entry.
 - Failure and retry behavior: submission is idempotent per eligibility proof and decision. Submissions after close are rejected. Trustee failure holds the tally (section 3).
+
+### Threat-model dependencies
+
+Protocol selection must follow decisions in QV-03, QV-04, and QV-07. Include a cryptographic review plan and reference primary protocol literature before implementation. Record algorithm and library choices in an ADR; do not invent cryptography.
 
 ## 8. UX, accessibility, and localization
 
