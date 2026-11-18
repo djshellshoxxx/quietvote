@@ -71,11 +71,11 @@ export async function cmdBoardVerify(argv: string[], io: Io): Promise<number> {
     opts.resolveAuthorKey = (h) => keys.get(Buffer.from(h.author).toString('hex'));
   }
   const v = verifyLog(b.value, opts);
-  // The log key inside a bundle is attacker-controlled: whoever forged the log also ships the key that verifies it.
-  // Without --log-key (from the manifest-verified source) a clean result is only PARTIAL, never a pass.
-  if (logKey === undefined && v.integrity === 'VERIFIED') {
+  // ADR-027 BC-02: the bundle's own log key and witness policy are self-attested.
+  // A clean standalone result needs both caller-trusted anchors to qualify as VERIFIED.
+  // verifyLog retains the specific missing-anchor warnings and any actual failure.
+  if ((logKey === undefined || opts.witnessPolicy === undefined) && v.integrity === 'VERIFIED') {
     v.integrity = 'PARTIAL';
-    if (!v.warnings.some((w) => /self-attested/.test(w))) v.warnings.push('log key taken from bundle (self-attested); pass --log-key');
   }
   if (p.has('json')) printJson(io, v);
   else io.out(boardText(v.integrity, v.treeSize, v.witnessed, v.redacted, v.failures, v.warnings));
@@ -113,6 +113,6 @@ function boardText(
   const L = [`BOARD INTEGRITY: ${integrity}`, `entries: ${size}, witnesses on latest checkpoint: ${w.have}/${w.k}${w.latest ? ' (quorum met)' : ''}, redacted bodies: ${redacted}`];
   for (const f of failures) L.push(`failure ${f.rule}${f.seq === undefined ? '' : ` @${f.seq}`}: ${f.detail}`);
   for (const x of warnings) L.push(`warning: ${x}`);
-  if (integrity === 'PARTIAL') L.push('PARTIAL means some inputs were absent (author keys, redacted bodies): it is not a pass.');
+  if (integrity === 'PARTIAL') L.push('PARTIAL means some inputs were absent (trust anchors, author keys, redacted bodies): it is not a pass.');
   return L.join('\n') + '\n';
 }
