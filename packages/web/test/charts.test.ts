@@ -75,7 +75,7 @@ test('chart labels exist and format correctly in every locale (plural, percent, 
 
 test('wiring: charts are a lazy chunk, the data table stays as the text alternative, CSS has forced-colors and logical rules', () => {
   const app = readFileSync(new URL('../src/ui/app.ts', import.meta.url), 'utf8');
-  assert.ok(/await import\('\.\/charts\.ts'\)/.test(app), 'dynamic import');
+  assert.ok(/await pinnedPreloads\(\);\s*return import\('\.\/charts\.ts'\);/.test(app), 'dynamic import only follows the awaited integrity gate');
   assert.ok(!/from '\.\/charts\.ts'/.test(app), 'no static import of the chart code');
   assert.ok(/h\('table'/.test(app) && app.includes("h('caption'"), 'table with caption kept');
   assert.ok(app.includes('.catch(() => undefined)'), 'chart chunk failure degrades to the table');
