@@ -17,7 +17,8 @@ import { nonceKey, type BoardStore, type StoredEntry } from './store.ts';
 export interface BoardLogOptions {
   origin: string;
   store: BoardStore;
-  secretKey: Uint8Array;
+  /** Omit for mirrors or erased keys; keyless logs serve evidence but never sign. */
+  secretKey?: Uint8Array;
   publicKey: Uint8Array;
   /** Unix seconds. */
   clock: () => number;
@@ -101,6 +102,8 @@ export class BoardLog {
   append(headerBytes: Uint8Array, body: Uint8Array): Result<{ receipt: Receipt; duplicate: boolean }> {
     if (this.state !== 'ok') return err('QV_BOARD_QUARANTINE', 'log is quarantined');
     if (this.store.isReadOnly()) return err('QV_BOARD_READ_ONLY', 'log is read-only');
+    const secretKey = this.o.secretKey;
+    if (secretKey === undefined) return err('QV_BOARD_READ_ONLY', 'log has no signing key');
     const seq = this.tree.size;
     const resolve = this.o.resolveAuthorKey;
     if (!resolve && this.o.allowUnverifiedSignatures !== true) {
@@ -112,7 +115,7 @@ export class BoardLog {
     const prior = this.store.findByNonce(key);
     if (prior !== undefined) {
       const e = this.store.getEntry(prior);
-      if (e && bytesEqual(e.headerBytes, headerBytes)) return ok({ receipt: this.receiptFor(e), duplicate: true });
+      if (e && bytesEqual(e.headerBytes, headerBytes)) return ok({ receipt: this.receiptFor(e, secretKey), duplicate: true });
       return err('QV_BOARD_NONCE_REUSE', 'nonce reused with different entry');
     }
     const c = checkEntry(headerBytes, body, this.origin, resolve, seq);
@@ -133,26 +136,30 @@ export class BoardLog {
     }
     this.tree.appendLeafHash(leafHash);
     this.grammar = g;
-    return ok({ receipt: this.receiptFor(stored), duplicate: false });
+    return ok({ receipt: this.receiptFor(stored, secretKey), duplicate: false });
   }
 
   /** Promise receipt (deterministic: Ed25519 signatures are deterministic); inclusion attached when covered by a checkpoint. */
-  private receiptFor(e: StoredEntry): Receipt {
-    const r = signPromise(this.o.secretKey, this.origin, e.seq, e.leafHash, e.sequencedAt);
+  private receiptFor(e: StoredEntry, secretKey: Uint8Array): Receipt {
+    const r = signPromise(secretKey, this.origin, e.seq, e.leafHash, e.sequencedAt);
     const cp = this.store.latestCheckpoint();
     if (cp && cp.size > e.seq) r.inclusion = { treeSize: cp.size, path: this.tree.inclusionProof(e.seq, cp.size), checkpointNote: cp.note };
     return r;
   }
 
   getReceipt(seq: number): Result<Receipt> {
+    const secretKey = this.o.secretKey;
+    if (secretKey === undefined) return err('QV_BOARD_READ_ONLY', 'log has no signing key');
     const e = this.store.getEntry(seq);
-    return e ? ok(this.receiptFor(e)) : err('QV_BOARD_NOT_FOUND', 'no such entry');
+    return e ? ok(this.receiptFor(e, secretKey)) : err('QV_BOARD_NOT_FOUND', 'no such entry');
   }
 
   /** Signs a checkpoint for the current tree. Never signs a smaller size or a conflicting root. */
   checkpoint(): Result<string> {
     if (this.state !== 'ok') return err('QV_BOARD_QUARANTINE', 'log is quarantined');
     if (this.store.isReadOnly()) return err('QV_BOARD_READ_ONLY', 'log is read-only');
+    const secretKey = this.o.secretKey;
+    if (secretKey === undefined) return err('QV_BOARD_READ_ONLY', 'log has no signing key');
     const size = this.tree.size;
     const root = this.tree.root();
     const last = this.store.latestCheckpoint();
@@ -163,7 +170,7 @@ export class BoardLog {
       }
       if (last.size === size) return bytesEqual(last.root, root) ? ok(last.note) : err('QV_BOARD_FORK', 'root differs from signed checkpoint');
     }
-    const note = signCheckpoint(this.origin, size, root, this.o.secretKey, this.o.publicKey);
+    const note = signCheckpoint(this.origin, size, root, secretKey, this.o.publicKey);
     this.store.putCheckpoint({ size, root, note });
     return ok(note);
   }

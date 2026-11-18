@@ -1,6 +1,7 @@
 // Real shared verifier with a small DOM and a deterministic task queue. Browser coverage lives in e2e/verifier.ts.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { supplementalAuthorFixture } from './helpers/supplemental-author.ts';
 import { test } from 'node:test';
 
 class Element {
@@ -23,7 +24,7 @@ class Element {
   focus(): void { focused = this; }
 }
 let focused: Element | undefined;
-const nodes = new Map(['file', 'anchor', 'run', 'cancel', 'progress', 'progress-detail', 'out', 'live'].map((id) => [id, new Element()]));
+const nodes = new Map(['file', 'anchor', 'author-keys', 'run', 'cancel', 'progress', 'progress-detail', 'out', 'live'].map((id) => [id, new Element()]));
 const node = (id: string): Element => nodes.get(id)!;
 const windowEvents = new Element();
 Object.defineProperty(globalThis, 'document', { configurable: true, value: { getElementById: node, createElement: () => new Element() } });
@@ -121,4 +122,21 @@ test('public offline page keeps missing board evidence incomplete despite an inj
   assert.equal(pass(), false);
   assert.equal(fail(), false);
   assert.match(node('out').textContent, /Incomplete: more evidence is needed/);
+});
+
+
+test('offline public keys require an explicit run and edits discard pending work', async () => {
+  const fixture = await supplementalAuthorFixture();
+  select(async () => fixture.untrustedText); node('run').dispatch('click');
+  await until(finished); assert.equal(fail(), true, 'transported keys are never trusted');
+  node('author-keys').value = fixture.key; node('author-keys').dispatch('input');
+  assert.equal(pass(), false); assert.equal(fail(), false);
+  node('run').dispatch('click'); await until(finished); assert.equal(pass(), true);
+  const old = deferred(); select(() => old.promise); node('run').dispatch('click');
+  node('author-keys').value = 'ab'.repeat(32); node('author-keys').dispatch('input');
+  old.resolve(fixture.text); await settle(); assert.equal(pass(), false);
+  node('run').dispatch('click'); await until(finished); assert.equal(fail(), true);
+  node('author-keys').value = 'bad'; node('author-keys').dispatch('input');
+  node('run').dispatch('click'); await until(finished); assert.equal(fail(), true);
+  node('author-keys').value = ''; node('author-keys').dispatch('input');
 });

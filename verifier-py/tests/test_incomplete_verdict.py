@@ -75,7 +75,11 @@ class TestIncompleteVerdict(unittest.TestCase):
                 body["proto"] = "qv2-unsupported"
             with self.subTest(mutation=mutation):
                 report = verify_bundle(bundle)
-                self.assertEqual(report["verdict"], "FAIL")
+                # ADR-027 B1-02: unsupported protocol versions are class-L;
+                # no current-suite tally was supplied. Malformed current-suite
+                # tally bodies remain fatal, rather than being counted.
+                self.assertEqual(report["verdict"], "FAIL" if mutation == "unknown_field" else "INCOMPLETE")
+                self.assertEqual(any(f["fatal"] for f in report["findings"]), mutation == "unknown_field")
                 self.assertEqual(report["checks"]["chk.encoding.canonical"], "fail")
                 self.assertIn("E_SCHEMA" if mutation == "unknown_field" else "E_VERSION", report["codes"])
                 self.assertEqual(report["checks"]["chk.tally.decrypt"], "not_run")
@@ -88,8 +92,12 @@ class TestIncompleteVerdict(unittest.TestCase):
         bundle["log"].append({"seq": bundle["log"][-1]["seq"] + 1, "entry": duplicate})
         report = verify_bundle(bundle)
         self.assertEqual(report["verdict"], "FAIL")
-        self.assertEqual(report["checks"]["chk.tally.aggregate"], "fail")
-        self.assertIn("E_SCHEMA", report["codes"])
+        # The first tally still verifies, but a later distinct result is a fatal
+        # conflict independent of that valid computation (ADR-027 B1-02).
+        self.assertEqual(report["checks"]["chk.tally.aggregate"], "pass")
+        self.assertEqual(report["checks"]["chk.tally.decrypt"], "pass")
+        self.assertIn("E_RESULT", report["codes"])
+        self.assertTrue(any(f["code"] == "E_RESULT" and f["fatal"] for f in report["findings"]))
 
     def test_actual_cli_distinguishes_pending_complete_and_invalid(self):
         invalid = pending()

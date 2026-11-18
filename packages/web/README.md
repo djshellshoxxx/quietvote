@@ -3,9 +3,12 @@
 See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
 
 Run `QV_REQUIRE_BROWSER=1 npm run e2e:server -w @quietvote/web` from the repository root after `npm ci --ignore-scripts` and `npx playwright install --with-deps chromium`.
-This bounded acceptance test serves a fresh production build from the actual HTTP server. It runs the existing trustee ceremony and voter enrollment fixture, imports that enrolled key into Chromium without registering again, casts one ballot, and checks its receipt against the server's signed checkpoint and inclusion proof. It also tests the web signed-request adapter against real management endpoints, accepting the correct audience and rejecting another audience. No API responses are stubbed; the race check pauses an unchanged server response. Registration fixture bytes are unchanged; this does not qualify the held browser registration flow.
+This bounded acceptance test serves a fresh production build from the actual HTTP server. It runs the existing trustee ceremony and voter enrollment fixture, imports that enrolled key into Chromium without registering again, casts one ballot, and checks its receipt against the server's signed checkpoint and inclusion proof. It also tests the web signed-request adapter against real management endpoints, accepting the correct audience and rejecting another audience, and exercises coordinator co-signing and lifecycle actions in the organizer console. No API responses are stubbed; the race check pauses an unchanged server response. The separate `e2e/registration.ts` journey exercises actual browser enrollment before the ceremony.
 
-The required browser CI runner includes this journey alongside the five existing journeys. `QV_CHROMIUM` can select an installed Chromium binary. Missing tooling fails when `QV_REQUIRE_BROWSER=1`; browser launch failures always fail. To run only the HTTP signed-adapter acceptance without launching Chromium: `node --test --test-name-pattern="signed client" packages/web/e2e/server.ts`.
+The required browser CI runner runs all seven journeys: app, help, automated accessibility, verifier, spoil shares, real server and registration. `QV_CHROMIUM` can select an installed Chromium binary. Missing tooling fails when `QV_REQUIRE_BROWSER=1`; browser launch failures always fail. To run only the HTTP signed-adapter acceptance without launching Chromium: `node --test --test-name-pattern="signed client" packages/web/e2e/server.ts`.
+
+## Organizer setup and lifecycle
+
 The `/new` organizer page can create or import a QVKEY1 organizer key, unlock it
 for its fingerprint and public key, and download its encrypted key file. It
 installs new organizer keys atomically, so concurrent tabs cannot replace each
@@ -33,11 +36,37 @@ and publish continuation state live only in memory. Reloading the page loses
 that continuation; retrieve an uncertain organization ID through the server's
 operator before attempting a new enrollment.
 
-The registration wire-contract and pinned-roll policy decisions remain open;
-this page does not make web voter enrollment interoperable with the reference
-server. Connected ceremony/open/close/tally administration remains unfinished.
+Modern voter enrollment uses the accepted hashed invitation and invite-bound
+proof contract. New elections record this scheme; existing legacy elections keep
+their original scheme. The server exposes a migration preview without converting
+or invalidating legacy invitations. Pinned-roll membership/absent-member handling
+and full group membership remain separate unfinished work.
+
+After publication, `/e/:id/admin` supports pinned-manifest ceremony/open/close/tally
+preparation, public trustee packet relay, coordinator co-signing, and explicit
+review before Send. It authenticates acknowledgments and retains an uncertain
+packet for download and an explicit identical-byte retry. Save that packet before
+leaving; restore can recover it after reload without unlocking a key. The console
+does not implement governed proposals, membership changes or dispute finality.
 New organizer setup copy in non-English catalogs remains machine-drafted and
 unreviewed, and no locale review state is changed.
+
+## Supplemental author keys
+
+The upload verifier, offline verifier, and live results page accept optional
+additional public signing keys obtained separately from a trusted source. Enter
+one 64-character lower-case hexadecimal key per line, up to 32 keys, then choose
+**Run checks**. Editing the keys clears the previous result and invalidates pending
+work. Live refreshes and route changes do not carry pins into a new automatic
+verification. Server metadata and bundle fields never populate this input; keys
+are not persisted. Witness and record-author role requirements still apply.
+
+Default verification requires authenticated append and witness evidence. These
+author pins cannot supply witness quorum or turn a content-only result into a
+fully evidenced result. The [current continuation handoff](../../docs/handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md)
+separates exact-source browser results from external security, native translation,
+manual accessibility and operational qualification.
+
 ## Uncertain cast recovery
 
 Before a CAST POST, the client commits a small public recovery marker to

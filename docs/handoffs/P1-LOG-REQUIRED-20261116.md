@@ -124,4 +124,4 @@ exclusions unchanged and explicitly reported as exclusions. Typecheck passed.
 Committed vectors and embedded corpus have no diff from the pre-migration base.
 Chromium launch remains blocked by this host (`socket() failed: Operation not
 permitted`); the new browser assertions have not been executed here. Real-clock
-executable and final Python runs are pending a final receipt.
+executable and final Python runs subsequently completed; the [final author receipt](../reports/P1-LOG-REQUIRED-FINAL-RECEIPT-20261116.md) supersedes these intermediate counts and records exact source, outcomes and remaining review boundaries.

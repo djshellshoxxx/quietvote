@@ -1,0 +1,92 @@
+{
+  "source": {
+    "local": "28d9e23f8914f4572f33a80982e1715899299668",
+    "remote": "8f53c83152a2e96552a52f382081745ba1835d41",
+    "tree": "a4bd89d21281adbe32840a3611ad8e8fcfadf4d4"
+  },
+  "run": 43970368151,
+  "url": "https://github.com/djshellshoxxx/quietvote/actions/runs/43970368151",
+  "jobs": [
+    {
+      "id": 133660627783,
+      "name": "vectors, Python verifier and production build",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133660628205,
+      "name": "production browser journeys, CSP and automated a11y",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133660628286,
+      "name": "test protocol+verifier (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 133660628296,
+      "name": "test cli+board (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 133660628298,
+      "name": "typecheck and supply-chain gates",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133660628388,
+      "name": "test trustee+crypto (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133660628391,
+      "name": "test trustee+crypto (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133660628496,
+      "name": "test cli+board (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 133660628499,
+      "name": "test protocol+verifier (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133660628516,
+      "name": "test server+web (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133660629150,
+      "name": "test server+web (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "failures": [
+    {
+      "scope": "verifier fresh exception probes on Node22",
+      "cause": "Test mock option 'exports' is unavailable on Node22; namedExports is supported on both Node22 and24.",
+      "repair_local": "ff5c0d094d41b6f147cb1bb0eba91071bbeb1e83",
+      "focused_result": "7/7 on local Node24; hosted Node22 rerun pending."
+    },
+    {
+      "scope": "CLI online test on Node22 and24",
+      "cause": "Old bare-export expectation required PASS despite newly approved default witnessed-evidence requirement.",
+      "repair_local": "85b8f1b9027bcc04502e41b3a43948cdecb67d16",
+      "focused_result": "5/5; now asserts strict INCOMPLETE and explicit content-only comparison."
+    }
+  ],
+  "scope": "Includes P1 evidence default, CLI DKG vectors and Python manifest compatibility; predates supplemental-author pins, Python JSONL adapter, parity and governance. All browser journeys passed; this checkpoint is not green."
+}

@@ -3,7 +3,7 @@
 import { hexToBytes } from '@quietvote/crypto';
 import { verifyElectionText, type VerificationProgress } from '@quietvote/protocol';
 import { createTranslator, type MessageKey } from '../i18n/index.ts';
-import { verificationSummary, verifyPublicBundleText } from '../flow/verification.ts';
+import { parseAuthorKeyInput, verificationSummary, verifyPublicBundleText } from '../flow/verification.ts';
 import { electionIdOf, sameElectionId } from '../util/crockford.ts';
 
 const t = createTranslator('en').t;
@@ -73,9 +73,10 @@ async function run(): Promise<void> {
   let lastYield = 0;
   let lastStage: VerificationProgress['stage'] | undefined;
   try {
+    const extraAuthorKeys = parseAuthorKeyInput(($('author-keys') as HTMLTextAreaElement).value);
     const text = await f.text();
     if (active !== scope) return;
-    const rep = await verifyPublicBundleText(text, { cooperative: { signal: scope.signal, checkpoint: async (p) => {
+    const rep = await verifyPublicBundleText(text, { extraAuthorKeys, cooperative: { signal: scope.signal, checkpoint: async (p) => {
       if (active !== scope) return;
       const progress = $('progress') as HTMLProgressElement;
       progress.max = Math.max(1, p.total);
@@ -133,3 +134,5 @@ $('cancel').addEventListener('click', () => { stop('Verification cancelled. No r
 $('file').addEventListener('change', () => stop('File changed. Run checks to verify it.'));
 $('anchor').addEventListener('input', () => stop('Election ID changed. Run checks to verify it.'));
 window.addEventListener('pagehide', () => stop('Verification stopped. Run checks to start again.'));
+
+$('author-keys').addEventListener('input', () => stop('Signing keys changed. Run checks to verify again.'));

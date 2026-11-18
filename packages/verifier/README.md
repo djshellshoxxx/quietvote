@@ -16,3 +16,13 @@ allows absent evidence, or a verified append-only log whose signed manifest
 explicitly requires zero witnesses. Supplied malformed, failed, skipped,
 interrupted or otherwise unverified append evidence never qualifies; required
 witnesses cannot be bypassed. Missing tallies remain incomplete in either mode.
+
+For supplemental log authors, both `qv verify` and `qv-verify` accept repeated
+`--extra-author-key <hex>` options (up to 32 public keys, each exactly 64 lower-case
+hexadecimal digits). Obtain these keys separately from a trusted source. Keys
+inside bundle metadata or unsigned server responses do not establish trust.
+For example: `qv verify with-board.json --extra-author-key PUBLIC_KEY_HEX --json`.
+A pin allows matching supplemental author signatures to be checked; it does not
+grant coordinator, trustee, voter, or control authority and does not replace
+witness evidence. `verifyWithSelfTest` accepts the same keys as its trusted caller
+option `extraAuthorKeys`.

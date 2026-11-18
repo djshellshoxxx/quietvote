@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-17",
+  "timezone": "America/Los_Angeles",
+  "runtime_baseline": "4c2051e4d174fd97cac9cead4be69cd6912d8c71",
+  "baseline_docs_tip_at_completion": "23c180bd6f1a85ec5f803f0273a38c459c0ac0d8",
+  "baseline_workspace_tests": {
+    "board": 76,
+    "cli": 113,
+    "crypto": 93,
+    "protocol": 370,
+    "server": 287,
+    "trustee": 113,
+    "verifier": 38,
+    "web": 326,
+    "total": 1416,
+    "failed": 0,
+    "skipped": 0
+  },
+  "baseline_typecheck": "passed",
+  "python_units": 221,
+  "cli_vectors": {
+    "passed": 420,
+    "failed": 0,
+    "unrun_files": 0
+  },
+  "python_corpus": {
+    "passed": 282,
+    "failed": 0,
+    "unsupported": 0
+  },
+  "shared_report_comparison": {
+    "agreed": 27,
+    "different": 0,
+    "excluded_capabilities": [
+      "chk.board.append_only",
+      "chk.board.witness",
+      "chk.receipts.sample"
+    ]
+  },
+  "tooling_tests": 55,
+  "build": "passed unchanged budgets",
+  "dependency_boundaries": "passed with existing documented deviations",
+  "lockfile": "passed",
+  "npm_audit_vulnerabilities_reported": 0,
+  "combined_repair_source": "4b93752e6e8f1f5cff14474576d6a3d6265502a2",
+  "combined_repair_focused": {
+    "passed": 26,
+    "failed": 0,
+    "skipped": 0
+  },
+  "combined_repair_typecheck": "passed",
+  "prior_qualified_integration_run": 43982203881,
+  "prior_failed_milestones_run": 43983217985,
+  "hosted_final_candidate": "pending; see consolidation PR and publication receipt",
+  "release_qualified": false
+}

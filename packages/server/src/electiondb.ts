@@ -497,9 +497,9 @@ export class ElectionDb {
     const cutoff = nowMs - graceMs;
     const r = run(this.db,
       `UPDATE voter_invite SET label_enc=NULL, contact_enc=NULL WHERE (label_enc IS NOT NULL OR contact_enc IS NOT NULL) AND (
-         (closed_at IS NOT NULL AND closed_at <= ?1)
-         OR (state IN ('issued','sent') AND expires_at IS NOT NULL AND expires_at <= ?1)
-         OR EXISTS (SELECT 1 FROM log_entry WHERE type='election_open' AND received_at <= ?1))`, cutoff);
+         (closed_at IS NOT NULL AND closed_at <= ?)
+         OR (state IN ('issued','sent') AND expires_at IS NOT NULL AND expires_at <= ?)
+         OR EXISTS (SELECT 1 FROM log_entry WHERE type='election_open' AND received_at <= ?))`, cutoff, cutoff, cutoff);
     return Number(r.changes);
   }
   /** Marks an invite used and purges contact data; deliberately stores no link to the voter row (QV-28 §8.2). */

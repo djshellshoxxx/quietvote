@@ -213,8 +213,8 @@ def validate(m: Any, roll_size: int | None = None) -> None:
             if q["basis"] != "roll" or den <= 0 or not 0 <= num <= den:
                 _bad("quorum fraction invalid")
         elif qt == "count":
-            _obj(q, {"type", "n"}, set(), "quorum")
-            if _int(q["n"], "quorum.n") < 0:
+            _obj(q, {"type", "value"}, set(), "quorum")
+            if _int(q["value"], "quorum.value") < 0:
                 _bad("quorum count negative")
         else:
             _bad(f"unknown quorum type {qt!r}")
@@ -224,9 +224,13 @@ def validate(m: Any, roll_size: int | None = None) -> None:
         _bad("roll scheme/weights not supported in Phase 1")
     if "root" in roll:
         _hex(roll["root"], HEX32, "roll.root")
+    # QV-16 §7 max sizes: suite-v1 roll is at most 2^20, whether pinned in
+    # the signed manifest or supplied with the election export.
+    if roll_size is not None and _int(roll_size, "supplied roll size") > 1 << 20:
+        _bad("supplied roll size exceeds 2^20")
     if "size" in roll:
-        if _int(roll["size"], "roll.size") < 1:
-            _bad("roll.size < 1")
+        if not 1 <= _int(roll["size"], "roll.size") <= 1 << 20:
+            _bad("roll.size must be in 1..2^20")
         if roll_size is not None and roll["size"] != roll_size:
             _bad("roll.size differs from the roll")
 

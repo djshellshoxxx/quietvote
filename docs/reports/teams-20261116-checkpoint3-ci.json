@@ -1,0 +1,100 @@
+{
+  "source": {
+    "local": "840c2692635477b3e45ab3e1e9d61fc4f80b65fb",
+    "remote": "d2ffcc02ed4f00564e2d6295d37f7d192b3f7d17",
+    "tree": "e02b1892faf00f2548ae9fa25659d1336972e6c8"
+  },
+  "run_id": 43968056629,
+  "url": "https://github.com/djshellshoxxx/quietvote/actions/runs/43968056629",
+  "status": "all jobs successful",
+  "jobs": [
+    {
+      "id": 133652603749,
+      "name": "vectors, Python verifier and production build",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604078,
+      "name": "test trustee+crypto (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604131,
+      "name": "test trustee+crypto (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604179,
+      "name": "production browser journeys, CSP and automated a11y",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604204,
+      "name": "typecheck and supply-chain gates",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604236,
+      "name": "test cli+board (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604270,
+      "name": "test protocol+verifier (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604305,
+      "name": "test cli+board (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604307,
+      "name": "test server+web (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604319,
+      "name": "test protocol+verifier (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133652604510,
+      "name": "test server+web (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "scope": "Modern enrollment, private invitations, policy drafting and Python no-tally changes. Predates P1 default-evidence changes, full CLI DKG vector coverage, Python manifest compatibility and follow-on author pins, adapter, parity, governance.",
+  "workspace_counts_one_node_version": {
+    "cli": 103,
+    "board": 76,
+    "trustee": 113,
+    "crypto": 93,
+    "protocol": 274,
+    "verifier": 25,
+    "server": 287,
+    "web": 318
+  },
+  "python_units": 150,
+  "python_vectors": {
+    "passed": 282,
+    "failed": 0,
+    "unsupported": 0
+  },
+  "strict_comparator": {
+    "agree": 27,
+    "disagree": 0
+  },
+  "required_browser_journeys": 7
+}

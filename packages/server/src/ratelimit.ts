@@ -81,12 +81,13 @@ export class FailureCounter {
 }
 
 /**
- * First four 16-bit groups of an IPv6 text address, after expanding `::`. Node prints zero runs compressed, so taking the first
- * four colon-separated tokens of the text would mix host bits into the "network" part (e.g. 2001:db8::1:2:3:4) and hand one /64
- * an almost unlimited number of buckets. Unparseable input falls back to the whole string (a finer bucket cannot be chosen by a
- * client: the socket address is set by the kernel).
+ * The /56 network prefix of an IPv6 text address (QV-29 §6.1; QV-ADR-027 N-32(a)): the first three 16-bit groups plus the high
+ * byte of the fourth, after expanding `::`. Node prints zero runs compressed, so taking colon-separated tokens of the text would
+ * mix host bits into the "network" part (e.g. 2001:db8::1:2:3:4) and hand one network an almost unlimited number of buckets.
+ * Unparseable input falls back to the whole string (a finer bucket cannot be chosen by a client: the socket address is set by
+ * the kernel).
  */
-export function v6Prefix64(addr: string): string {
+export function v6Prefix56(addr: string): string {
   let s = addr.toLowerCase();
   const z = s.indexOf('%');
   if (z >= 0) s = s.slice(0, z);
@@ -104,7 +105,8 @@ export function v6Prefix64(addr: string): string {
   if (halves.length === 1 ? fill !== 0 : fill < 1) return addr;
   const groups = [...head, ...Array<string>(halves.length === 2 ? fill : 0).fill('0'), ...tail];
   if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return addr;
-  return groups.slice(0, 4).map((g) => parseInt(g, 16).toString(16)).join(':');
+  const g = groups.map((x) => parseInt(x, 16));
+  return `${g.slice(0, 3).map((x) => x.toString(16)).join(':')}:${(g[3]! >> 8).toString(16)}/56`;
 }
 
 /**
@@ -129,7 +131,7 @@ export class BucketKeyer {
     if (proxyId === undefined && address !== undefined) {
       const a = address.startsWith('::ffff:') ? address.slice(7) : address;
       if (a.includes('.')) prefix = a.split('.').slice(0, 3).join('.');
-      else prefix = v6Prefix64(a); // IPv6: /64 (coarser than the spec's /56 but never finer; see NOTES)
+      else prefix = v6Prefix56(a); // IPv6: /56 (QV-29 §6.1, QV-ADR-027 N-32(a))
     }
     return createHmac('sha256', this.key).update(prefix).digest('base64url').slice(0, 22);
   }

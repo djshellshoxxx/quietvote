@@ -307,6 +307,8 @@ export const EN = {
   'qv.verify.sourceServer': n('This server', 'Radio.'),
   'qv.verify.file': n('Election bundle file (JSON)', 'File input label.'),
   'qv.verify.anchor': n('Election ID you were told (from your organizer, not from this page)', 'Field label.'),
+  'qv.verify.authorKeys': n("Additional public signing keys (optional)", 'Independent public author key input.'),
+  'qv.verify.authorKeysHint': n("Use keys obtained separately from a trusted source. Enter up to 32 keys, one per line, each with 64 lower-case hexadecimal digits.", 'Independent public author key input.'),
   'qv.verify.anchorHint': n('Optional but strongly recommended. Without it, a copy of a different election would also pass.', 'Hint.'),
   'qv.verify.run': n('Run checks', 'Button.'),
   'qv.verify.running': n('Running checks…', 'Status.'),

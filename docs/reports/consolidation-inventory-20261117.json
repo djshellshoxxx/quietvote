@@ -1,0 +1,1231 @@
+{
+  "candidate": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+  "integration": "f895b1a3f895595d62fc3ecd29dad496296e3672",
+  "branches": [
+    {
+      "branch": "chatgpt/quietvote-ci-action-pin-guard-20261104",
+      "sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "254",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114",
+      "sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "143",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/quietvote-trustee-fixture-paths-20261102",
+      "sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "289",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/quietvote-visual-ci-repair-20261102",
+      "sha": "980a5cd72c9b05bc8ce28a588376462ce85f8206",
+      "ancestor_of_candidate": false,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "338",
+        "1"
+      ],
+      "cherry": [
+        "- 980a5cd72c9b05bc8ce28a588376462ce85f8206 fix(ci): repair pseudo-locale browser workflow YAML"
+      ],
+      "unique_files": ".github/workflows/pseudo-locale-visual.yml | 3 ++-\n 1 file changed, 2 insertions(+), 1 deletion(-)",
+      "disposition": "Patch-equivalent to signed 06e0898 already integrated; trees of repair tips are identical.",
+      "contained_in_combined_source": false
+    },
+    {
+      "branch": "chatgpt/quietvote-visual-ci-signed-20261102",
+      "sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "337",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex-continuation-spec-20261109",
+      "sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+      "ancestor_of_candidate": false,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "494",
+        "1"
+      ],
+      "cherry": [
+        "+ d5c79981870646cb79feee75f87bd68333bf5159 docs: specify isolated ChatGPT-only QuietVote continuation"
+      ],
+      "unique_files": "docs/CHATGPT_ZERO_CODEX_CONTINUATION.md | 36 +++++++++++++++++++++++++++++++++\n 1 file changed, 36 insertions(+)",
+      "disposition": "Archive as historical lane plan with source SHA and superseded-holds banner; close #31 after preservation.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/audit-rate-config-20261110",
+      "sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "232",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/board-reader-lengths-20261110",
+      "sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "245",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/crockford-display-grouping-20261110",
+      "sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "244",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/docs-wiki-sections-20261110",
+      "sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "213",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/election-inspect-counters-20261110",
+      "sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "245",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/import-preabort-20261110",
+      "sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "245",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/job-start-recovery-20261110",
+      "sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "245",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/pool-delete-diagnostic-20261110",
+      "sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "245",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/seal-worker-lifecycle-20261110",
+      "sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "245",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "chatgpt/zero-codex/verifier-triage-20261110",
+      "sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "229",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "checkpoint/quietvote-ordinary-ux-20261024",
+      "sha": "1b531b8f83eea607de07da847c4044c861964056",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "338",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/clever-gates-uqd5p1",
+      "sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "280",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/dazzling-cerf-n8ha3g",
+      "sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "460",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/docs-screenshots",
+      "sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+      "ancestor_of_candidate": false,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "494",
+        "1"
+      ],
+      "cherry": [
+        "+ e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d Docs: refresh README status, note no UI, clarify spec index"
+      ],
+      "unique_files": "README.md          | 8 ++++++--\n docs/SPEC-INDEX.md | 5 +++++\n 2 files changed, 11 insertions(+), 2 deletions(-)",
+      "disposition": "Obsolete documentation only; close #21 without merging stale no-UI and spec-index assertions.",
+      "contained_in_combined_source": false
+    },
+    {
+      "branch": "claude/exciting-hawking-r0evza",
+      "sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "125",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/haiku-T01-baseline",
+      "sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+      "ancestor_of_candidate": false,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "247",
+        "1"
+      ],
+      "cherry": [
+        "+ 5c63db82979e7ba1647bdddea6dbef432da95177 docs: add haiku baseline qualification receipt (T01)"
+      ],
+      "unique_files": "docs/reports/haiku-baseline-2026-11-14.md | 62 +++++++++++++++++++++++++++++++\n 1 file changed, 62 insertions(+)",
+      "disposition": "Exact source already in integration; preserve historical receipt by merging integration; close #45 as subsumed.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/laughing-volta-61srfa",
+      "sha": "2aaf0a01816afb256a804c23dd45de86eca2a993",
+      "ancestor_of_candidate": false,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "256",
+        "9"
+      ],
+      "cherry": [
+        "+ 13b86c22f973aee91453090b2ec5bcff104e8804 fix(board,server): rollback anchor, no zero-seed receipts, control reason enum (QV-ADR-027 B2-07, B2-12, B2-16)",
+        "+ 07fd61c83c89dd220403fe8df5dab4b3533b79de feat(server): invite expiry default, rate-limit headers, signed-request auth only, IPv6 /56 buckets, export ack before archive delete (QV-ADR-027 B2-10 partial, N-16, N-20, N-32 a/b, N-21)",
+        "+ b2f043e0b9e648d3c85503ee40ccf4b6f0278c83 feat(web): integrity-pinned preloads for lazy chunks, trustee steps stay CLI-only (QV-ADR-027 W15, N-37c)",
+        "+ 80c3a17d59cd2c9d87d9afef7a82684a818aa9c3 docs: report-only traceability script, historical claims markers, empty-state maintainer/key/licence notes, REQ-063 client scope (QV-ADR-027 N-23c, CLAIMS-LINT-HISTORICAL, N-08b, RECON-REQ063-SERVER)",
+        "+ 2aaf0a01816afb256a804c23dd45de86eca2a993 docs(handoff): pause handoff for claude/laughing-volta-61srfa; preserve rejected web-ballot work as a patch"
+      ],
+      "unique_files": "MAINTAINERS.md                                     |   31 +\n docs/07-threat-model-security.md                   |    2 +\n docs/09-api-data-contracts.md                      |   95 +-\n docs/10-user-experience.md                         |    2 +\n docs/13-accessibility-localization.md              |    4 +-\n docs/17-key-ceremony-trustees.md                   |    2 +-\n docs/19-client-supply-chain.md                     |    4 +-\n docs/24-traceability-matrix.md                     |    2 +\n docs/28-data-model-storage.md                      |    2 +-\n docs/LICENSE-NOTE.md                               |   21 +\n docs/RELEASE-KEYS.md                               |   25 +\n .../2026-10-28/B1-quietvote-crypto-protocol.md     |    2 +-\n docs/audit/2026-10-28/B3-quietvote-web.md          |    4 +-\n docs/audit/consolidation-2026-10-30.md             |   18 +-\n docs/audit/web-second-wave.md                      |    2 +-\n docs/errata/spec-errata-log.md                     |    9 +\n docs/handoffs/2026-11-11-laughing-volta-handoff.md |   47 +\n ...lot-adr027-B3-06-B3-14-B3-11a-B3-28-B3-25.patch | 1392 ++++++++++++++++++++\n docs/plan/COMPLETION.md                            |    2 +-\n docs/plan/OPEN-DECISIONS.md                        |    6 +-\n docs/plan/TODO.md                                  |   12 +-\n docs/reports/security-review-2026-10-21.md         |    2 +-\n docs/reports/traceability-matrix.md                |  138 ++\n docs/research/outstanding-research.md              |    4 +-\n docs/research/security-speculative.md              |    2 +-\n docs/research/ui-security-ux.md                    |   10 +-\n packages/board/NOTES.md                            |   14 +\n packages/board/src/log.ts                          |   34 +-\n packages/board/test/log.test.ts                    |   76 ++\n packages/server/NOTES.md                           |   91 +-\n packages/server/src/admin.ts                       |   14 +-\n packages/server/src/app.ts                         |   72 +-\n packages/server/src/controldb.ts                   |   35 +\n packages/server/src/election.ts                    |   55 +-\n packages/server/src/electiondb.ts                  |   42 +\n packages/server/src/env.ts                         |    3 +\n packages/server/src/export.ts                      |    9 +-\n packages/server/src/ext-routes.ts                  |    8 +-\n packages/server/src/gossip.ts                      |   16 +\n packages/server/src/http.ts                        |    2 +-\n packages/server/src/pool.ts                        |   21 +\n packages/server/src/problem.ts                     |    3 +-\n packages/server/src/ratelimit.ts                   |   16 +-\n packages/server/src/records.ts                     |   15 +-\n packages/server/test/admin.test.ts                 |    2 +-\n packages/server/test/adr027-anchor.test.ts         |  332 +++++\n packages/server/test/adr027-c2.test.ts             |  205 +++\n packages/server/test/audit.test.ts                 |   10 +-\n packages/server/test/e2e.test.ts                   |    2 +-\n packages/server/test/events.test.ts                |    3 +\n packages/web/NOTES.md                              |   87 +-\n packages/web/e2e/verifier.ts                       |   34 +-\n packages/web/src/api/client.ts                     |   23 +-\n packages/web/src/api/types.ts                      |   12 -\n packages/web/src/build/site.ts                     |   42 +-\n packages/web/src/i18n/runtime.ts                   |   12 +-\n packages/web/src/ui/app.ts                         |   11 +-\n packages/web/src/util/pinned-preload.ts            |   44 +\n packages/web/test/i18n-catalogs.test.ts            |    3 +\n packages/web/test/lazy.test.ts                     |   29 +-\n packages/web/test/locale-preference.test.ts        |    3 +\n packages/web/test/n20-auth.test.ts                 |   59 +\n packages/web/test/pinned-preload.test.ts           |   82 ++\n packages/web/test/trustee-scope.test.ts            |   66 +\n scripts/trace.mjs                                  |  371 ++++++\n scripts/trace.test.mjs                             |   77 ++\n 66 files changed, 3682 insertions(+), 193 deletions(-)",
+      "disposition": "Retain #27 for five unique patches. Narrow reviewed ports allowed under ADR-027; stale schema migrations and rejected WIP prohibit wholesale merge.",
+      "contained_in_combined_source": false
+    },
+    {
+      "branch": "claude/quietvote-audit-board-cli-1",
+      "sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "408",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-audit-crypto-protocol-1",
+      "sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "405",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-audit-qa-1",
+      "sha": "563eec8659184e32771244088d59acc5035fa798",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "411",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-audit-server-1",
+      "sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "405",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-audit-trustee-1",
+      "sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "406",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-audit-web-verifier-1",
+      "sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "407",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-board-cli-1",
+      "sha": "c69473f242c9848847c3e899016c562e51a325e4",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "430",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-ci-gates-1",
+      "sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "411",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-cli-spoil-collect-1",
+      "sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "407",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-complete-1",
+      "sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "418",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-docs-1",
+      "sha": "5341f6f66d237e0bba6a6d68efcc11ace5c8ac6c",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "451",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-finish-1",
+      "sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "425",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-security-fixes-k616wx",
+      "sha": "5382d5f89226a7464025480c3a6be606da79859a",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "147",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-spoil-wiring-1",
+      "sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "397",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-trustee-hardening-1",
+      "sha": "f0423305cb4571b584a7b9454ed774d006663613",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "405",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-ui-locale-a11y-sltfb3",
+      "sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "382",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quietvote-web-triage-1",
+      "sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "404",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/quirky-curie-n5pxf5",
+      "sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "494",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/sharp-archimedes-tu76rh",
+      "sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "378",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/tender-maxwell-93ctiw",
+      "sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "125",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "claude/wonderful-hypatia-9yszin",
+      "sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "147",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-completion-20261116",
+      "sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "80",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-consolidation-audit-20261104",
+      "sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "493",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-continue-20261116",
+      "sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "86",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-finish-20261116",
+      "sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "84",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-milestone-20261109",
+      "sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "247",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-resume-20261116",
+      "sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "91",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-reviewed-milestones-20261116",
+      "sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "0",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-teams-20261116",
+      "sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "2",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "codex/quietvote-trustee-acceptance-20261116",
+      "sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "88",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "docs/readme-and-wiki",
+      "sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+      "ancestor_of_candidate": false,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "495",
+        "1"
+      ],
+      "cherry": [
+        "+ 29313c369aeda4f1ab2503ca3437c5bd22025a09 Add wiki pages and README wiki section"
+      ],
+      "unique_files": "README.md                         |  4 ++++\n docs/wiki/Codebase-Map.md         | 15 +++++++++++++++\n docs/wiki/Decisions-and-Status.md |  8 ++++++++\n docs/wiki/Home.md                 | 11 +++++++++++\n docs/wiki/Specification-Map.md    | 10 ++++++++++\n docs/wiki/_Sidebar.md             |  6 ++++++\n 6 files changed, 54 insertions(+)",
+      "disposition": "Obsolete docs/wiki tree with no-application assertions; current wiki provides richer navigation. Close #2 as superseded.",
+      "contained_in_combined_source": false
+    },
+    {
+      "branch": "integration/qualified-stack-20261116",
+      "sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "2",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "integration/quietvote-completion",
+      "sha": "f895b1a3f895595d62fc3ecd29dad496296e3672",
+      "ancestor_of_candidate": false,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "147",
+        "2"
+      ],
+      "cherry": [
+        "+ 5c63db82979e7ba1647bdddea6dbef432da95177 docs: add haiku baseline qualification receipt (T01)"
+      ],
+      "unique_files": "docs/reports/haiku-baseline-2026-11-14.md | 62 +++++++++++++++++++++++++++++++\n 1 file changed, 62 insertions(+)",
+      "disposition": "Canonical merge target; contains T01 historical receipt absent from candidate. Retain #43 as cumulative draft for main.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "integration/quietvote-consolidated-20261030",
+      "sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "291",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "main",
+      "sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "ancestor_of_candidate": true,
+      "ancestor_of_integration": true,
+      "candidate_only_branch_only": [
+        "494",
+        "0"
+      ],
+      "disposition": "Exact ancestor of candidate; no additional source merge needed. Preserve branch; close matching superseded PR after integration.",
+      "contained_in_combined_source": true
+    },
+    {
+      "branch": "planning/future-cli-specs-20261110",
+      "sha": "85a7d3e0a898adec0fba9b07ef492ff5d5c5ed20",
+      "ancestor_of_candidate": false,
+      "ancestor_of_integration": false,
+      "candidate_only_branch_only": [
+        "494",
+        "1"
+      ],
+      "cherry": [
+        "+ 85a7d3e0a898adec0fba9b07ef492ff5d5c5ed20 docs: propose future command-line interface specification"
+      ],
+      "unique_files": "docs/future-cli-spec.md | 37 +++++++++++++++++++++++++++++++++++++\n 1 file changed, 37 insertions(+)",
+      "disposition": "Recover draft CLI proposal with explicit historical provenance and updated current-status note. No executable implementation.",
+      "contained_in_combined_source": true
+    }
+  ],
+  "branch_count": 59,
+  "candidate_contained_branches": 51,
+  "integration_contained_branches": 41,
+  "pull_requests": [
+    {
+      "number": 1,
+      "title": "Complete spec set, security research, plan, and first implementation",
+      "base": "main",
+      "head": "claude/dazzling-cerf-n8ha3g",
+      "head_sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 2,
+      "title": "Add wiki pages and README wiki section",
+      "base": "main",
+      "head": "docs/readme-and-wiki",
+      "head_sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+      "action": "close_obsolete",
+      "reason": "Documentation describes no application/no UI and old spec filenames; current README/wiki/spec index supersede its useful navigation."
+    },
+    {
+      "number": 3,
+      "title": "Finish remaining engineering work (wave 1+)",
+      "base": "claude/dazzling-cerf-n8ha3g",
+      "head": "claude/quietvote-finish-1",
+      "head_sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 6,
+      "title": "feat(protocol): spoil-share record, collectSpoilShares, private-audit vectors",
+      "base": "claude/quietvote-board-cli-1",
+      "head": "claude/quietvote-audit-qa-1",
+      "head_sha": "563eec8659184e32771244088d59acc5035fa798",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 7,
+      "title": "fix(web,verifier): security audit findings WV-1..WV-7",
+      "base": "claude/quietvote-audit-qa-1",
+      "head": "claude/quietvote-audit-web-verifier-1",
+      "head_sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 8,
+      "title": "fix(trustee): security audit TR-01/TR-02 (spoil relay cast-ciphertext refusal)",
+      "base": "claude/quietvote-audit-qa-1",
+      "head": "claude/quietvote-audit-trustee-1",
+      "head_sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 9,
+      "title": "fix(server): security audit SRV-001..007",
+      "base": "claude/quietvote-audit-qa-1",
+      "head": "claude/quietvote-audit-server-1",
+      "head_sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 10,
+      "title": "fix(crypto,protocol): audit CP-01 re-wrapped spoils, CP-03, CP-04",
+      "base": "claude/quietvote-audit-qa-1",
+      "head": "claude/quietvote-audit-crypto-protocol-1",
+      "head_sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 11,
+      "title": "fix(board,cli): security audit BC-01..BC-10 + fuzz/mutation tests",
+      "base": "claude/quietvote-audit-qa-1",
+      "head": "claude/quietvote-audit-board-cli-1",
+      "head_sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 12,
+      "title": "Restore base typecheck/test green; port QV-ADR-015 election-open binding to verifier-py",
+      "base": "claude/quietvote-board-cli-1",
+      "head": "claude/quietvote-complete-1",
+      "head_sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 13,
+      "title": "fix(web): second-wave audit W1-W14",
+      "base": "claude/quietvote-audit-web-verifier-1",
+      "head": "claude/quietvote-web-triage-1",
+      "head_sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 14,
+      "title": "feat(server): trustees-mode spoil shares (QV-ADR-020) wired into tally",
+      "base": "claude/quietvote-audit-server-1",
+      "head": "claude/quietvote-spoil-wiring-1",
+      "head_sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 15,
+      "title": "ci: lockfile lint + npm audit gates (DEP-02), cli verifier dep (DEP-01)",
+      "base": "claude/quietvote-audit-qa-1",
+      "head": "claude/quietvote-ci-gates-1",
+      "head_sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 16,
+      "title": "feat(cli): qv election spoil-collect (offline trustee spoil-share gathering)",
+      "base": "claude/quietvote-audit-board-cli-1",
+      "head": "claude/quietvote-cli-spoil-collect-1",
+      "head_sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 17,
+      "title": "fix(trustee): TR-03 bundle lock, TR-04 fork refusal at release",
+      "base": "claude/quietvote-audit-trustee-1",
+      "head": "claude/quietvote-trustee-hardening-1",
+      "head_sha": "f0423305cb4571b584a7b9454ed774d006663613",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 20,
+      "title": "docs(audit): 2026-10-28 code audit evidence (in progress)",
+      "base": "claude/quietvote-ui-locale-a11y-sltfb3",
+      "head": "claude/sharp-archimedes-tu76rh",
+      "head_sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 21,
+      "title": "Docs: refresh README status and spec index notes",
+      "base": "main",
+      "head": "claude/docs-screenshots",
+      "head_sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+      "action": "close_obsolete",
+      "reason": "Documentation describes no application/no UI and old spec filenames; current README/wiki/spec index supersede its useful navigation."
+    },
+    {
+      "number": 22,
+      "title": "Consolidate QuietVote prototype and retain protocol review blockers",
+      "base": "main",
+      "head": "integration/quietvote-consolidated-20261030",
+      "head_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 24,
+      "title": "fix(ci): repair pseudo-locale workflow YAML parsing",
+      "base": "checkpoint/quietvote-ordinary-ux-20261024",
+      "head": "chatgpt/quietvote-visual-ci-signed-20261102",
+      "head_sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 25,
+      "title": "test(trustee): use canonical temporary fixture paths",
+      "base": "integration/quietvote-consolidated-20261030",
+      "head": "chatgpt/quietvote-trustee-fixture-paths-20261102",
+      "head_sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 26,
+      "title": "Continue QuietVote integration: Windows trustee fixtures, remaining decision-free work",
+      "base": "integration/quietvote-consolidated-20261030",
+      "head": "claude/clever-gates-uqd5p1",
+      "head_sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 27,
+      "title": "Integrate checkpoint, faster CI, audit fixes and QV-ADR-027 C/D items (PAUSED)",
+      "base": "claude/clever-gates-uqd5p1",
+      "head": "claude/laughing-volta-61srfa",
+      "head_sha": "2aaf0a01816afb256a804c23dd45de86eca2a993",
+      "action": "retain_unique_residual",
+      "reason": "Five unique patches remain; recover reviewed approved slices separately. No wholesale merge of stale migrations, rejected WIP or claims exemptions."
+    },
+    {
+      "number": 28,
+      "title": "fix(ci): detect unpinned step uses in action-pin validator",
+      "base": "claude/laughing-volta-61srfa",
+      "head": "chatgpt/quietvote-ci-action-pin-guard-20261104",
+      "head_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 29,
+      "title": "Audit QuietVote cumulative branches and consolidation sequence",
+      "base": "main",
+      "head": "codex/quietvote-consolidation-audit-20261104",
+      "head_sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 30,
+      "title": "QuietVote: import availability, cooperative verification and recovery checkpoint",
+      "base": "main",
+      "head": "codex/quietvote-milestone-20261109",
+      "head_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 31,
+      "title": "docs: ChatGPT-only zero-Codex continuation for QuietVote",
+      "base": "main",
+      "head": "chatgpt/zero-codex-continuation-spec-20261109",
+      "head_sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+      "action": "archive_then_close",
+      "reason": "Historical scheduled-lane blueprint; archive with source/date and superseded-holds notice, not an active directive."
+    },
+    {
+      "number": 32,
+      "title": "feat(verifier): read-only mismatch triage without relaxing strict comparator",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/verifier-triage-20261110",
+      "head_sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 33,
+      "title": "fix(server): reject non-finite rate configuration (randomized audit)",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/audit-rate-config-20261110",
+      "head_sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 34,
+      "title": "docs(wiki): separate User Guide and Developer Guide, repair draft status",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/docs-wiki-sections-20261110",
+      "head_sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 35,
+      "title": "fix(server): reject pre-aborted import before archive scan",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/import-preabort-20261110",
+      "head_sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 36,
+      "title": "fix(server): contain job-start storage failures without stranding queue",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/job-start-recovery-20261110",
+      "head_sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 37,
+      "title": "fix(web): settle sealing Worker failures and release worker resources",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/seal-worker-lifecycle-20261110",
+      "head_sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 38,
+      "title": "fix(server): make deletion-state conflict diagnostic match existing policy",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/pool-delete-diagnostic-20261110",
+      "head_sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 39,
+      "title": "fix(board): validate byte-reader lengths before advancing",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/board-reader-lengths-20261110",
+      "head_sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 40,
+      "title": "fix(web): bound human-readable code grouping input",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/crockford-display-grouping-20261110",
+      "head_sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 41,
+      "title": "fix(cli): count prototype-named election log types safely",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "chatgpt/zero-codex/election-inspect-counters-20261110",
+      "head_sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 42,
+      "title": "Consolidate open zero-codex PRs, add inventory and tooling (paused by owner)",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "claude/wonderful-hypatia-9yszin",
+      "head_sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 43,
+      "title": "QuietVote completion integration: consolidated prototype plus reviewed fixes",
+      "base": "main",
+      "head": "integration/quietvote-completion",
+      "head_sha": "f895b1a3f895595d62fc3ecd29dad496296e3672",
+      "action": "retain_canonical_draft",
+      "reason": "Retain as sole cumulative main-target review; update obsolete body after integration. Main merge requires separate readiness review."
+    },
+    {
+      "number": 44,
+      "title": "QuietVote integration (draft, not for main): consolidated #43, PR #42 work, and Haiku lane fixes",
+      "base": "main",
+      "head": "claude/exciting-hawking-r0evza",
+      "head_sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 45,
+      "title": "docs: haiku baseline qualification receipt (T01)",
+      "base": "codex/quietvote-milestone-20261109",
+      "head": "claude/haiku-T01-baseline",
+      "head_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+      "action": "close_subsumed",
+      "reason": "Exact T01 source is already an ancestor of integration f895b1a; preserve report through integration."
+    },
+    {
+      "number": 46,
+      "title": "fix(server): reject casts reusing previously spoiled ciphertexts (S1-02)",
+      "base": "claude/wonderful-hypatia-9yszin",
+      "head": "chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114",
+      "head_sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 47,
+      "title": "Continue QuietVote consolidation, security repairs and online operations",
+      "base": "integration/quietvote-completion",
+      "head": "codex/quietvote-resume-20261116",
+      "head_sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 48,
+      "title": "feat(trustee): export saved ceremony and tally outputs for online relay",
+      "base": "codex/quietvote-resume-20261116",
+      "head": "codex/quietvote-trustee-acceptance-20261116",
+      "head_sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 49,
+      "title": "Bound trustee KDF costs and add independent receipt CLI",
+      "base": "codex/quietvote-trustee-acceptance-20261116",
+      "head": "codex/quietvote-continue-20261116",
+      "head_sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 50,
+      "title": "feat: prepare trustee archives and persist gossip health",
+      "base": "codex/quietvote-continue-20261116",
+      "head": "codex/quietvote-finish-20261116",
+      "head_sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 51,
+      "title": "Add offline recovery and extend QuietVote client workflows",
+      "base": "codex/quietvote-finish-20261116",
+      "head": "codex/quietvote-completion-20261116",
+      "head_sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 52,
+      "title": "Complete election workflows, durable recovery and evidence verification",
+      "base": "codex/quietvote-completion-20261116",
+      "head": "codex/quietvote-teams-20261116",
+      "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "action": "close_after_integration",
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+    },
+    {
+      "number": 54,
+      "title": "Consolidate the reviewed historical implementation stack into integration",
+      "base": "integration/quietvote-completion",
+      "head": "integration/qualified-stack-20261116",
+      "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "action": "merge_into_integration",
+      "reason": "Green cumulative baseline c6a4df5, preserving integration-only T01 receipt. Fresh ref/CI check required before merge."
+    },
+    {
+      "number": 55,
+      "title": "Consolidate reviewed author pins, Python verifier parity, and signed-governance milestones",
+      "base": "codex/quietvote-teams-20261116",
+      "head": "codex/quietvote-reviewed-milestones-20261116",
+      "head_sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+      "action": "repair_then_integrate",
+      "reason": "Cumulative latest reviewed milestones; current CI server/web shards fail. Repair, re-review and qualify, then retarget/merge or supersede through canonical integration PR."
+    }
+  ],
+  "authorization_note": "ADR-027 accepts recommended A-D defaults. Historical generic holds are not fresh owner approval blocks. Implementation must still preserve contracts, migrations, review and evidence.",
+  "scope_note": "Ancestry and patch-equivalence accounting; no fresh execution or independent security qualification implied. No remote mutations performed by this audit.",
+  "selected_port": {
+    "commit": "d6c3be005b09c4299cbd7a906dc9d81a6276ccc9",
+    "source": "07fd61c83c89dd220403fe8df5dab4b3533b79de",
+    "branch": "codex/quietvote-rate-consolidation-20261117",
+    "scope": "Approved N-32(a) IPv6 /56 rate grouping only",
+    "focused_tests": {
+      "pass": 21,
+      "fail": 0,
+      "skipped": 0
+    },
+    "typecheck": "pass",
+    "regressions_before_fix": {
+      "pass": 1,
+      "fail": 3
+    },
+    "remote_writes": false
+  },
+  "residual_review": {
+    "report": "remaining-pr27.md",
+    "candidate": "25d26aa3dc35127015100ace20419c57509ed338",
+    "invitation_default_expiry": "Already implemented at 66dcfaf through 62d8292; current tests cover deadline and legacy null-expiry contract.",
+    "control_next_migration": 8,
+    "election_next_migration": 10
+  },
+  "review_date": "2026-11-17",
+  "review_timezone": "America/Los_Angeles",
+  "combined_source_before_report": "4b93752e6e8f1f5cff14474576d6a3d6265502a2",
+  "merged_pr54": "44f73ca8c52511d8587d8381ef7a5c589c4626af",
+  "canonical_integration_branch": "integration/quietvote-completion",
+  "candidate_branch": "integration/quietvote-reviewed-20261117",
+  "source_branches_retained": true,
+  "remaining_integration_pr": 27,
+  "canonical_main_draft_pr": 43
+}

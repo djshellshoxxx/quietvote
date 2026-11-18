@@ -144,7 +144,7 @@ export class ElectionRuntime {
     this.srvPk = new Uint8Array(row.srv_pk);
     this.srvKeys = srvSk ? { secretKey: srvSk, publicKey: this.srvPk } : undefined;
     this.log = new BoardLog({
-      origin: row.origin, store: edb.store, secretKey: logSk ?? new Uint8Array(32), publicKey: this.logPk,
+      origin: row.origin, store: edb.store, ...(logSk === undefined ? {} : { secretKey: logSk }), publicKey: this.logPk,
       clock: () => env.nowSec(), resolveAuthorKey: (h) => this.resolveAuthor(h), maxClockSkew: 86400,
     });
   }
@@ -686,6 +686,7 @@ export class ElectionRuntime {
 
   outcomeFor(seq: number, duplicate: boolean): AppendOutcome {
     const r = this.log.getReceipt(seq);
+    if (!r.ok && r.error.code === 'QV_BOARD_READ_ONLY') throw this.mapBoardErr(r.error.code, r.error.message);
     if (!r.ok) throw new ApiError(500, 'INTERNAL', 'receipt unavailable');
     return { status: r.value.inclusion ? 'included' : 'sequenced', receipt: r.value, duplicate, seq };
   }
