@@ -16,7 +16,7 @@ This is the entry point for product and engineering specifications. Specs are in
 | ID | Document | Scope | Depends on | Status |
 |---|---|---|---|---|
 | QV-00 | [Project charter](00-project-charter.md) | Mission, users, boundaries, success | — | Draft |
-| QV-01 | [Capability map](01-capability-map.md) | Modules, interfaces, proposed order | QV-00 | Framework |
+| QV-01 | [Capability map](01-capability-map.md) | Modules, interfaces, proposed order | QV-00 | Draft |
 | QV-02 | [Product requirements](02-product-requirements.md) | User journeys, MVP boundary, functional requirements | QV-00, QV-01 | Framework |
 | QV-03 | [Governance and policy](03-governance-and-policy.md) | Group rules, decision lifecycle, dispute policy | QV-02 | Framework |
 | QV-04 | [Identity and eligibility](04-identity-eligibility.md) | Membership, eligibility proofs, duplicate prevention, recovery | QV-03 | Framework |
@@ -31,7 +31,7 @@ This is the entry point for product and engineering specifications. Specs are in
 | QV-13 | [Accessibility and localization](13-accessibility-localization.md) | Accessibility, language, device and network support | QV-10 | Framework |
 | QV-14 | [Business and sustainability](14-business-sustainability.md) | Funding model, pricing, governance, sustainability | QV-00, QV-08, QV-12 | Framework |
 | QV-15 | [Decision log](decision-log.md) | Durable record of accepted decisions | All | Active |
-| QV-16 | [Cryptography and technical design](15-cryptography-and-technical-design.md) | Candidate protocol flow, cryptographic components, supporting technologies, assumptions, and open decisions | QV-03–QV-09 | Draft |
+| QV-16 | [Cryptography and technical design](15-cryptography-and-technical-design.md) | Candidate protocol flow, cryptographic components, supporting technologies, assumptions, and open decisions | QV-03–QV-09 | Framework |
 | QV-17 | [Portable membership credentials](17-portable-membership-credentials.md) | Privacy-preserving eligibility credentials, nullifiers, revocation, recovery | QV-04–QV-07, QV-16 | Draft |
 | QV-18 | [Federated governance](18-federated-governance.md) | Opt-in decisions and signed records across independent groups | QV-03, QV-06–QV-09, QV-16–QV-17 | Draft |
 | QV-19 | [Delegation, exit, and governance forks](19-delegation-exit-fork.md) | Bounded revocable delegation, portable export, rule forks | QV-03–QV-09, QV-16–QV-18 | Draft |
