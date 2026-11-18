@@ -1,0 +1,64 @@
+# B1 audit: mutation sweep over a SCRATCH COPY of packages/{crypto,protocol}. Never touches the worktree.
+import subprocess, sys, pathlib, json, time
+D = pathlib.Path(sys.argv[1])
+C = D / 'packages/crypto/src'
+P = D / 'packages/protocol/src'
+M = [
+ ('M01 cp-dh challenge omits pt(Ej)', C/'proofs.ts', "hs('cp-dh', mh, u8(i), u8(j), pt(Ej), pt(R)", "hs('cp-dh', mh, u8(i), u8(j), pt(R)"),
+ ('M02 cp-dh challenge omits pt(S)', C/'proofs.ts', "pt(R), pt(S), pt(a1), pt(a2))", "pt(R), pt(a1), pt(a2))"),
+ ('M03 pok-share challenge omits pt(Yj)', C/'proofs.ts', "hs('pok-share', ctx, u8(j), pt(Yj), pt(R))", "hs('pok-share', ctx, u8(j), pt(R))"),
+ ('M04 cp-dec-spoil challenge omits ballotCode', C/'proofs.ts', "    st.ctx,\n    st.ballotCode,\n", "    st.ctx,\n"),
+ ('M05 cp-limit challenge omits u32(L)', C/'proofs.ts', "utf8(st.cid), u32(st.L), pt(st.K)", "utf8(st.cid), pt(st.K)"),
+ ('M06 cp-dec challenge omits pt(B)', C/'proofs.ts', "pt(st.A), pt(st.B), pt(st.M)", "pt(st.A), pt(st.M)"),
+ ('M07 cds01 challenge omits pt(K)', C/'proofs.ts', "utf8(st.oid), pt(st.K), pt(st.ct.A)", "utf8(st.oid), pt(st.ct.A)"),
+ ('M08 pok challenge omits u16(k)', C/'proofs.ts', "hs('pok', manifestHash, u8(i), u16(k), pt(A), pt(R))", "hs('pok', manifestHash, u8(i), pt(A), pt(R))"),
+ ('M09 cdsVerify drops identity checks', C/'proofs.ts', "    if (isIdentity(st.ct.A) || isIdentity(st.ct.B) || isIdentity(st.K)) return false;\n", ""),
+ ('M10 hs_nz counter first', C/'transcript.ts', "frame(label, [...fields, u32(c)])", "frame(label, [u32(c), ...fields])"),
+ ('M11 ed25519Verify zip215 true', C/'ed25519.ts', "{ zip215: false }", "{ zip215: true }"),
+ ('M12 strict point: small-order allowed', C/'ed25519.ts', "return !P.isSmallOrder();", "return true;"),
+ ('M13 strict point: no canonical re-encode check', C/'ed25519.ts', "for (let i = 0; i < 32; i++) if (re[i] !== bytes[i]) return false;", ""),
+ ('M14 ed25519Verify skips strict R check', C/'ed25519.ts', " || !ed25519IsStrictPoint(signature.subarray(0, 32))", ""),
+ ('M15 scalarFromBytes reduces instead of rejecting', C/'ristretto.ts', "if (x >= ORDER) throw new QvCryptoError('E_SCALAR_RANGE', 'scalar >= l');\n  return x;", "return x % ORDER;"),
+ ('M16 dlogSolve skips re-verification', C/'dlog.ts', "return baseMul(BigInt(T)).equals(D) ? T : null;", "return T;"),
+ ('M17 dlogSolve skips bound check', C/'dlog.ts', "if (T > table.bound) return null;", ""),
+ ('M18 pokVerify allows identity A', C/'proofs.ts', "if (isIdentity(A) || !inRange(proof.c) || !inRange(proof.s)) return false;", "if (!inRange(proof.c) || !inRange(proof.s)) return false;"),
+ ('M19 shareKeyVerify allows identity Yj', C/'proofs.ts', "if (isIdentity(Yj) || !inRange(proof.c) || !inRange(proof.s)) return false;", "if (!inRange(proof.c) || !inRange(proof.s)) return false;"),
+ ('M20 frame drops field count u32(m)', C/'transcript.ts', "lp(utf8(label)), u32(fields.length)]", "lp(utf8(label))]"),
+ ('M21 binder omits ctx', P/'ballot.ts', "return h256('binder-roll', ctx, voterPk);", "return h256('binder-roll', voterPk);"),
+ ('M22 verifyEnvelope skips voter strict-point check', P/'ballot.ts', "if (!roll.has(body.voter) || !ed25519IsStrictPoint(voter)) return err('E_VOTER_NOT_ELIGIBLE');", "if (!roll.has(body.voter)) return err('E_VOTER_NOT_ELIGIBLE');"),
+ ('M23 analyzeBallotLog: spoiled-set check removed', P/'ballotlog.ts', "    if (spoiled.has(code)) {\n      cf.benaloh = false;", "    if (false) {\n      cf.benaloh = false;"),
+ ('M24 window check off-by-one (seq >= open)', P/'ballotlog.ts', "if (!(seq > open && seq < close)) {", "if (!(seq >= open && seq <= close)) {"),
+ ('M25 decryptAggregates uses all valid shares (no t-subset)', P/'tally.ts', "const S = valid.slice(0, t);", "const S = valid.slice(0, valid.length);"),
+ ('M26 DKG: complaints ignore late bound', P/'dkg.ts', "if (!between(c.seq, mk['dkg-r2-close'], mk['dkg-r3-close'])) continue;", "if (!(c.seq > mk['dkg-r2-close'])) continue;"),
+ ('M27 DKG: duplicate A_0 rule removed', P/'dkg.ts', "    if (group.length > 1) {", "    if (false) {"),
+ ('M28 verify: E_AGG_IDENTITY check removed', P/'verify.ts', "if (V > 0 && a !== undefined && (a.A.is0() || a.B.is0())) failCheck('chk.tally.aggregate', 'E_AGG_IDENTITY', `${mc.id}/${to.id}`);", ""),
+ ('M29 verify: published T not compared', P/'verify.ts', "if (published !== counts.get(mc.id)!.get(o.id)) failCheck(", "if (false) failCheck("),
+ ('M30 verify: keyconf timeliness ignored', P/'verify.ts', "if (!(k.seq > mk['dkg-r3-close'] && k.seq < mk['dkg-final'])) continue;", ""),
+ ('M31 rules: strict comparison becomes non-strict', P/'rules.ts', "if (r.strict ? lhs > rhs : lhs >= rhs)", "if (lhs >= rhs)"),
+ ('M32 sum bound L*V check removed', P/'tally.ts', "if (sum > mc.selection_limit * V) return err('E_DLOG_RANGE', `sum bound exceeded in ${cid}`);", ""),
+]
+def run(cmd, cwd):
+    t = time.time()
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=900)
+    out = r.stdout + r.stderr
+    fails = [l for l in out.splitlines() if l.startswith('# fail')]
+    return r.returncode, (fails[-1] if fails else '?'), round(time.time() - t)
+CRY = ['node', '--test', 'test/']
+PRO = ['node', '--test', 'test/vectors.test.ts', 'test/attacks.test.ts', 'test/dkg.test.ts', 'test/ballot.test.ts', 'test/tally.test.ts', 'test/verify.test.ts', 'test/manifest-rules.test.ts']
+results = []
+only = set(sys.argv[2:])
+for name, f, old, new in M:
+    if only and name.split()[0] not in only: continue
+    src = f.read_text()
+    if src.count(old) < 1:
+        results.append({'m': name, 'error': f'pattern count {src.count(old)}'}); print(name, 'PATTERN MISMATCH', src.count(old), flush=True); continue
+    f.write_text(src.replace(old, new))  # all occurrences: prover and verifier mutated consistently
+    try:
+        rc1, f1, t1 = run(['node', '--test'] + [str(p) for p in sorted((D/'packages/crypto/test').glob('*.test.ts'))], D/'packages/crypto')
+        rc2, f2, t2 = run(PRO, D/'packages/protocol')
+    finally:
+        f.write_text(src)
+    res = {'m': name, 'crypto': 'KILLED' if rc1 else 'survived', 'crypto_fail': f1, 'protocol': 'KILLED' if rc2 else 'survived', 'protocol_fail': f2, 'secs': t1 + t2}
+    results.append(res)
+    print(f"{name:55} crypto={res['crypto']:8} ({f1})  protocol-subset={res['protocol']:8} ({f2})  {t1+t2}s", flush=True)
+json.dump(results, open(D / ('mutation-results-%s.json' % ('-'.join(sorted(only)) if only else 'all')), 'w'), indent=2)

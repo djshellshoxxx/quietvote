@@ -1,0 +1,54 @@
+name: web pseudo-locale visual checks
+
+# The app fixture bundles other workspaces and uses root-locked build tooling.
+# Schedule on those inputs too; a web-source-only filter misses their regressions.
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - '.github/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - '.github/**'
+  merge_group:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pseudo-locale-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pseudo-locale-visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Install temporary pinned Playwright runner
+        run: npm install --ignore-scripts --prefix "$RUNNER_TEMP/qv-playwright" --no-save --no-package-lock playwright@1.62.0
+      - name: Install Chromium for the pinned Playwright runner
+        run: |
+          "$RUNNER_TEMP/qv-playwright/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Check pseudo locales, responsive layout, and saved language
+        run: node packages/web/e2e/pseudo-locale-visual-ci.mjs
+        env:
+          QV_PLAYWRIGHT_MODULE_ROOT: ${{ runner.temp }}/qv-playwright/node_modules

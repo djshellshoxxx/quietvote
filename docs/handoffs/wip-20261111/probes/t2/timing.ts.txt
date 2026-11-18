@@ -1,0 +1,24 @@
+import { World } from '/home/user/qv-wt/t2-concurrency/packages/server/test/helpers/world.ts';
+import { verifyElectionText, signRecord } from '/home/user/qv-wt/t2-concurrency/packages/protocol/src/index.ts';
+
+const t = (label: string, t0: number) => console.log(label.padEnd(28), (performance.now() - t0).toFixed(0), 'ms');
+const w = new World({ seed: 'timing', n: 3, t: 2, voters: 6 });
+let t0 = performance.now();
+await w.start(); t('start', t0);
+t0 = performance.now(); await w.setupOrgAndElection(); t('org+election', t0);
+t0 = performance.now(); await w.registerVoters(); t('register 6', t0);
+t0 = performance.now(); await w.publishManifest(); t('manifest', t0);
+t0 = performance.now(); await w.ceremony(); t('ceremony', t0);
+t0 = performance.now(); await w.open(); t('open', t0);
+t0 = performance.now(); const b = w.build(0, { budget: ['yes'], chair: ['ann'] }); t('build ballot', t0);
+t0 = performance.now(); for (let i = 0; i < 6; i++) { const r = await w.cast(i, { budget: ['yes'], chair: ['ann'] }); if (r.status !== 201) throw new Error(r.text); } t('cast x6', t0);
+t0 = performance.now(); const c = await w.close(); t('close(+aggregate)', t0); if (c.status !== 201) throw new Error(c.text);
+t0 = performance.now(); for (const j of [1, 3]) { const r = await w.trusteeShares(j); if (r.status !== 201) throw new Error(r.text); w.tick(); } t('trustee shares x2', t0);
+t0 = performance.now(); const draft = await w.get(`/api/v1/elections/${w.electionId}/tally/draft?decrypters=1,3`); t('draft', t0);
+const c0 = w.coord[0]!;
+t0 = performance.now(); const tr = await w.post('tally_result', c0, signRecord(c0.secretKey, c0.publicKey, w.params.ctx, draft.json.body)); t('tally_result', t0); if (tr.status !== 201) throw new Error(tr.text);
+t0 = performance.now(); const ex = await w.get(`/api/v1/elections/${w.electionId}/export.json`); t('export.json', t0);
+t0 = performance.now(); const rep = await verifyElectionText(ex.text); t('verifyElectionText', t0);
+console.log(rep.verdict, rep.counts);
+await w.stop();
+void b;

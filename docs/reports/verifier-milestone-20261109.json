@@ -1,0 +1,860 @@
+{
+  "status": "Unaudited prototype; not for real elections. Diagnostic evidence only; strict gate remains failing.",
+  "recorded_at": "2026-11-09T11:13:13.739208+00:00",
+  "source_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+  "historical_source_sha": "324a278fc27cd6ec4bec74260c414fc6d186b5a8",
+  "existing_report_semantics_fix_sha": "e858b9e10ab3d2d219338895813f0bf174e98865",
+  "corpus_git_tree": "70c3d44d5d49785d78caff57ea9c7952f5bda6bf",
+  "comparator_sha256": "ed79d2b298877739c1210fa7bdb7dc490a8c35353bd99104dfb0e9f8e8d94ed3",
+  "runtime": {
+    "node": "v24.22.1",
+    "python": "Python 3.12.14"
+  },
+  "command": "node scripts/compare-verifiers.ts --json",
+  "historical_summary": {
+    "ok": false,
+    "cases": 27,
+    "verdict_agreements": 27,
+    "failures": 12,
+    "exit_code": 1
+  },
+  "current_summary": {
+    "ok": false,
+    "cases": 27,
+    "verdict_agreements": 27,
+    "failures": 3,
+    "exit_code": 1,
+    "field_differences": 17
+  },
+  "historical_rows_equal_consolidation_receipt": true,
+  "compared": [
+    "verdict",
+    "chk.manifest.hash",
+    "chk.manifest.sig",
+    "chk.keys.trustees",
+    "chk.ballots.valid",
+    "chk.ballots.latest",
+    "chk.tally.aggregate",
+    "chk.tally.decrypt",
+    "chk.result.rules",
+    "chk.benaloh.spoiled",
+    "chk.encoding.canonical",
+    "chk.time.window",
+    "counts.cast",
+    "counts.spoiled",
+    "counts.counted",
+    "ctx_prefix",
+    "results"
+  ],
+  "excluded_capabilities": [
+    "chk.board.append_only: Python not implemented",
+    "chk.board.witness: Python not implemented",
+    "chk.receipts.sample: Python not implemented"
+  ],
+  "cases": [
+    {
+      "id": "elections/log-layer-4v",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "historical_differences": [],
+      "current_differences": []
+    },
+    {
+      "id": "elections/small-approval-20v",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "historical_differences": [],
+      "current_differences": []
+    },
+    {
+      "id": "elections/tiny-yesno-3v",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "historical_differences": [],
+      "current_differences": []
+    },
+    {
+      "id": "mutations/aggregate-altered",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.tally.aggregate"
+        ],
+        "codes": [
+          "E_AGG_MISMATCH"
+        ]
+      },
+      "input_sha256": "6a4020aeb4b6e44db1a956e1a60cefb314cae91ff539ba091a01ac3f14982937"
+    },
+    {
+      "id": "mutations/ballot-replayed",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "PASS",
+        "failed_checks": [
+          "chk.ballots.latest"
+        ],
+        "codes": [
+          "E_SUPERSEDES"
+        ]
+      },
+      "input_sha256": "d65dde6a6cade1c687e9b1fa2727e7fad721bdfd4ae9f5c245c352a82142690e"
+    },
+    {
+      "id": "mutations/ciphertext-bit-flip",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.ballots.valid",
+          "chk.tally.aggregate"
+        ],
+        "codes": [
+          "E_SIG",
+          "E_COUNTED_ROOT"
+        ]
+      },
+      "input_sha256": "c1244253390d19e0cc144a807d70442b1ecedcceff2e8a4809636ca222434e36"
+    },
+    {
+      "id": "mutations/count-altered",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.result.rules: TS=\"not_run\" Python=\"pass\"",
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ],
+      "current_differences": [
+        "chk.result.rules: TS=\"not_run\" Python=\"pass\"",
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.tally.decrypt"
+        ],
+        "codes": [
+          "E_DLOG_RANGE"
+        ]
+      },
+      "input_sha256": "5bbd365fc8409f0ad37914f53e810220c4e448f082373eef2aa7613830acbe6d"
+    },
+    {
+      "id": "mutations/counted-ballot-dropped",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.tally.aggregate"
+        ],
+        "codes": [
+          "E_COUNTED_ROOT",
+          "E_AGG_MISMATCH"
+        ]
+      },
+      "input_sha256": "66578690cc1f13355b603158a0de985602f0b653c26bae6f97a75d943f9aaf34"
+    },
+    {
+      "id": "mutations/fewer-than-t-partials",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.tally.decrypt"
+        ],
+        "codes": [
+          "E_TALLY_INSUFFICIENT"
+        ]
+      },
+      "input_sha256": "0608c08156899f8f3aa3b414e8dc9c676a3b3136e1ebdec6802238bb55beb2bf"
+    },
+    {
+      "id": "mutations/manifest-field-flip",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.manifest.hash"
+        ],
+        "codes": [
+          "E_MANIFEST_HASH"
+        ]
+      },
+      "input_sha256": "467c6a20af59877382ce260c10da6f71146b0c434476b9a5e22efdcff9dcb3ff"
+    },
+    {
+      "id": "mutations/manifest-signature-removed",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.keys.trustees: TS=\"not_run\" Python=\"pass\"",
+        "chk.ballots.valid: TS=\"not_run\" Python=\"pass\"",
+        "chk.ballots.latest: TS=\"not_run\" Python=\"pass\"",
+        "chk.tally.aggregate: TS=\"not_run\" Python=\"pass\"",
+        "chk.tally.decrypt: TS=\"not_run\" Python=\"pass\"",
+        "chk.result.rules: TS=\"not_run\" Python=\"pass\"",
+        "chk.benaloh.spoiled: TS=\"not_run\" Python=\"pass\"",
+        "chk.encoding.canonical: TS=\"not_run\" Python=\"pass\"",
+        "chk.time.window: TS=\"not_run\" Python=\"pass\"",
+        "counts.cast: TS=0 Python=4",
+        "counts.spoiled: TS=0 Python=1",
+        "counts.counted: TS=0 Python=4",
+        "ctx_prefix: TS=undefined Python=\"bb914d504e8e9247\"",
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ],
+      "current_differences": [
+        "chk.keys.trustees: TS=\"not_run\" Python=\"pass\"",
+        "chk.ballots.valid: TS=\"not_run\" Python=\"pass\"",
+        "chk.ballots.latest: TS=\"not_run\" Python=\"pass\"",
+        "chk.tally.aggregate: TS=\"not_run\" Python=\"pass\"",
+        "chk.tally.decrypt: TS=\"not_run\" Python=\"pass\"",
+        "chk.result.rules: TS=\"not_run\" Python=\"pass\"",
+        "chk.benaloh.spoiled: TS=\"not_run\" Python=\"pass\"",
+        "chk.encoding.canonical: TS=\"not_run\" Python=\"pass\"",
+        "chk.time.window: TS=\"not_run\" Python=\"pass\"",
+        "counts.cast: TS=0 Python=4",
+        "counts.spoiled: TS=0 Python=1",
+        "counts.counted: TS=0 Python=4",
+        "ctx_prefix: TS=undefined Python=\"bb914d504e8e9247\"",
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.manifest.sig"
+        ],
+        "codes": [
+          "E_MANIFEST_SIG"
+        ]
+      },
+      "input_sha256": "7fb6fd8ee3ee883f6f956f240b3192a697aa006da913392c2a19c34663f468b0"
+    },
+    {
+      "id": "mutations/non-canonical-hex",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.ballots.valid",
+          "chk.encoding.canonical",
+          "chk.tally.aggregate"
+        ],
+        "codes": [
+          "E_SCHEMA",
+          "E_COUNTED_ROOT"
+        ]
+      },
+      "input_sha256": "71f2290a306620cf362c1df0df61f22d22050baaa7b90ccf3f594ad0186b358c"
+    },
+    {
+      "id": "mutations/open-binding-fields-absent",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.time.window"
+        ],
+        "codes": [
+          "E_MARKERS"
+        ]
+      },
+      "input_sha256": "a55aeafb046666152db4a19b220c253fe43da13e74a98bfd7247eb079af281e6"
+    },
+    {
+      "id": "mutations/open-joint-key-ref-forward",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.time.window"
+        ],
+        "codes": [
+          "E_MARKERS"
+        ]
+      },
+      "input_sha256": "ee0ec6979a1222cdf7423b15d0753331dfa40756104e7e37d3c942574ed365fa"
+    },
+    {
+      "id": "mutations/open-joint-key-ref-mismatch",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.time.window"
+        ],
+        "codes": [
+          "E_MARKERS"
+        ]
+      },
+      "input_sha256": "ae7f21c4bd4d908e64ddbb1a7d0839b2e1b778b3762a66cee502f0d91bca387a"
+    },
+    {
+      "id": "mutations/open-manifest-hash-mismatch",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.time.window"
+        ],
+        "codes": [
+          "E_MARKERS"
+        ]
+      },
+      "input_sha256": "37c8859897ae2c5846179e03401db3df1f0b6620ea6f99a5d52827c83ae5779f"
+    },
+    {
+      "id": "mutations/open-roll-ref-absent",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.time.window"
+        ],
+        "codes": [
+          "E_MARKERS"
+        ]
+      },
+      "input_sha256": "201a110487479525a1c33bcee32c3b1e9588144027df7ca923b90974575cdf1f"
+    },
+    {
+      "id": "mutations/open-roll-ref-forward",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.time.window"
+        ],
+        "codes": [
+          "E_MARKERS"
+        ]
+      },
+      "input_sha256": "6609efa498eccbfe0b59a77712210289dad1e218e54f95fe383e438e2815d93a"
+    },
+    {
+      "id": "mutations/open-roll-ref-nonexistent",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.time.window"
+        ],
+        "codes": [
+          "E_MARKERS"
+        ]
+      },
+      "input_sha256": "ebad425a91c2811b95a2d616281a89620a15e6f17b878d6b340bfefae3bb1bc8"
+    },
+    {
+      "id": "mutations/open-roll-ref-wrong-record",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.manifest.sig: TS=\"pass\" Python=\"not_run\"",
+        "chk.keys.trustees: TS=\"pass\" Python=\"not_run\"",
+        "chk.encoding.canonical: TS=\"pass\" Python=\"not_run\""
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.time.window"
+        ],
+        "codes": [
+          "E_MARKERS"
+        ]
+      },
+      "input_sha256": "f21a7db9379386de0dfb50348e2aa3ec17f9beb498a34e5442fb190b2b70f3b5"
+    },
+    {
+      "id": "mutations/partial-decryption-wrong",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.tally.decrypt"
+        ],
+        "codes": [
+          "E_TALLY_INSUFFICIENT"
+        ]
+      },
+      "input_sha256": "138e003d54df3678ceabcdc920d200bf370e869a69c6a8425002f0014463a006"
+    },
+    {
+      "id": "mutations/result-flipped",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ],
+      "current_differences": [
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.result.rules"
+        ],
+        "codes": [
+          "E_RESULT"
+        ]
+      },
+      "input_sha256": "5306242a6b041abfbbf43ddac764c9542242d75d802a783e7b0570dc7bcfaef6"
+    },
+    {
+      "id": "mutations/spoil-wrong-plaintext",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "PASS",
+        "failed_checks": [
+          "chk.benaloh.spoiled"
+        ],
+        "codes": [
+          "E_SPOIL_MISMATCH"
+        ]
+      },
+      "input_sha256": "d7fe8a648dc4a66735d569ce2e393b0012550b775e58d44b55421baaa85bab6a"
+    },
+    {
+      "id": "mutations/spoiled-also-cast",
+      "ts_verdict": "PASS",
+      "python_verdict": "PASS",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "PASS",
+        "failed_checks": [
+          "chk.benaloh.spoiled"
+        ],
+        "codes": [
+          "E_SPOILED_CODE_CAST"
+        ]
+      },
+      "input_sha256": "0213fc35ea2f825575aa9561c739393161c3733c7d041fa42dfc8381525c880c"
+    },
+    {
+      "id": "mutations/tally-wrong-ctx",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.tally.aggregate"
+        ],
+        "codes": [
+          "E_CTX"
+        ]
+      },
+      "input_sha256": "e609ce10a5ea5ea04c6c6a8d275b36b3bb8934b32fc2a29d3d094142991efc7d"
+    },
+    {
+      "id": "mutations/unknown-field-in-tally",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [
+        "chk.tally.aggregate: TS=\"not_run\" Python=\"pass\"",
+        "chk.tally.decrypt: TS=\"not_run\" Python=\"pass\"",
+        "chk.result.rules: TS=\"not_run\" Python=\"pass\"",
+        "results: TS=[] Python=[{\"contest\":\"budget\",\"participation\":4,\"quorum_met\":true,\"outcome\":{\"kind\":\"passed\"}}]"
+      ],
+      "current_differences": [],
+      "vector_expect": {
+        "verdict": "FAIL",
+        "failed_checks": [
+          "chk.encoding.canonical"
+        ],
+        "codes": [
+          "E_SCHEMA"
+        ]
+      },
+      "input_sha256": "e3120f715823b358a3cb600c69721cf5bc0b833e0c58c89ae6487da818781820"
+    },
+    {
+      "id": "canary/canary-election",
+      "ts_verdict": "FAIL",
+      "python_verdict": "FAIL",
+      "historical_differences": [],
+      "current_differences": []
+    }
+  ],
+  "current_failure_reports": [
+    {
+      "id": "mutations/count-altered",
+      "ts_report": {
+        "verdict": "FAIL",
+        "checks": {
+          "chk.manifest.hash": "pass",
+          "chk.manifest.sig": "pass",
+          "chk.keys.trustees": "pass",
+          "chk.board.append_only": "not_run",
+          "chk.board.witness": "not_run",
+          "chk.ballots.valid": "pass",
+          "chk.ballots.latest": "pass",
+          "chk.tally.aggregate": "pass",
+          "chk.tally.decrypt": "fail",
+          "chk.result.rules": "not_run",
+          "chk.benaloh.spoiled": "pass",
+          "chk.receipts.sample": "not_run",
+          "chk.encoding.canonical": "pass",
+          "chk.time.window": "pass"
+        },
+        "counts": {
+          "cast": 4,
+          "spoiled": 1,
+          "counted": 4,
+          "ignored": {}
+        },
+        "ctxPrefix": "bb914d504e8e9247",
+        "findings": [
+          {
+            "code": "E_SIG",
+            "cls": "I",
+            "seq": 27,
+            "detail": "tally convenience signature invalid or not a coordinator key"
+          },
+          {
+            "code": "E_DLOG_RANGE",
+            "cls": "F",
+            "detail": "published T differs for budget/yes"
+          }
+        ]
+      },
+      "python_report": {
+        "verdict": "FAIL",
+        "checks": {
+          "chk.manifest.hash": "pass",
+          "chk.manifest.sig": "pass",
+          "chk.keys.trustees": "pass",
+          "chk.board.append_only": "not_run",
+          "chk.board.witness": "not_run",
+          "chk.ballots.valid": "pass",
+          "chk.ballots.latest": "pass",
+          "chk.tally.aggregate": "pass",
+          "chk.tally.decrypt": "fail",
+          "chk.result.rules": "pass",
+          "chk.benaloh.spoiled": "pass",
+          "chk.receipts.sample": "not_run",
+          "chk.encoding.canonical": "pass",
+          "chk.time.window": "pass"
+        },
+        "counts": {
+          "cast": 4,
+          "spoiled": 1,
+          "counted": 4
+        },
+        "ctx_prefix": "bb914d504e8e9247",
+        "results": [
+          {
+            "contest": "budget",
+            "participation": 4,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "passed"
+            }
+          }
+        ],
+        "findings": [
+          {
+            "check": "chk.tally.decrypt",
+            "code": "E_DLOG_RANGE",
+            "fatal": true,
+            "detail": "budget/yes: published T 4 != recovered 3"
+          }
+        ],
+        "codes": [
+          "E_DLOG_RANGE"
+        ]
+      }
+    },
+    {
+      "id": "mutations/manifest-signature-removed",
+      "ts_report": {
+        "verdict": "FAIL",
+        "checks": {
+          "chk.manifest.hash": "pass",
+          "chk.manifest.sig": "fail",
+          "chk.keys.trustees": "not_run",
+          "chk.board.append_only": "not_run",
+          "chk.board.witness": "not_run",
+          "chk.ballots.valid": "not_run",
+          "chk.ballots.latest": "not_run",
+          "chk.tally.aggregate": "not_run",
+          "chk.tally.decrypt": "not_run",
+          "chk.result.rules": "not_run",
+          "chk.benaloh.spoiled": "not_run",
+          "chk.receipts.sample": "not_run",
+          "chk.encoding.canonical": "not_run",
+          "chk.time.window": "not_run"
+        },
+        "counts": {
+          "cast": 0,
+          "spoiled": 0,
+          "counted": 0,
+          "ignored": {}
+        },
+        "findings": [
+          {
+            "code": "E_MANIFEST_SIG",
+            "cls": "F",
+            "detail": "fewer than m valid coordinator signatures"
+          }
+        ]
+      },
+      "python_report": {
+        "verdict": "FAIL",
+        "checks": {
+          "chk.manifest.hash": "pass",
+          "chk.manifest.sig": "fail",
+          "chk.keys.trustees": "pass",
+          "chk.board.append_only": "not_run",
+          "chk.board.witness": "not_run",
+          "chk.ballots.valid": "pass",
+          "chk.ballots.latest": "pass",
+          "chk.tally.aggregate": "pass",
+          "chk.tally.decrypt": "pass",
+          "chk.result.rules": "pass",
+          "chk.benaloh.spoiled": "pass",
+          "chk.receipts.sample": "not_run",
+          "chk.encoding.canonical": "pass",
+          "chk.time.window": "pass"
+        },
+        "counts": {
+          "cast": 4,
+          "spoiled": 1,
+          "counted": 4
+        },
+        "ctx_prefix": "bb914d504e8e9247",
+        "results": [
+          {
+            "contest": "budget",
+            "participation": 4,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "passed"
+            }
+          }
+        ],
+        "findings": [
+          {
+            "check": "chk.manifest.sig",
+            "code": "E_MANIFEST_SIG",
+            "fatal": true,
+            "detail": "fewer than m valid coordinator signatures"
+          }
+        ],
+        "codes": [
+          "E_MANIFEST_SIG"
+        ]
+      }
+    },
+    {
+      "id": "mutations/result-flipped",
+      "ts_report": {
+        "verdict": "FAIL",
+        "checks": {
+          "chk.manifest.hash": "pass",
+          "chk.manifest.sig": "pass",
+          "chk.keys.trustees": "pass",
+          "chk.board.append_only": "not_run",
+          "chk.board.witness": "not_run",
+          "chk.ballots.valid": "pass",
+          "chk.ballots.latest": "pass",
+          "chk.tally.aggregate": "pass",
+          "chk.tally.decrypt": "pass",
+          "chk.result.rules": "fail",
+          "chk.benaloh.spoiled": "pass",
+          "chk.receipts.sample": "not_run",
+          "chk.encoding.canonical": "pass",
+          "chk.time.window": "pass"
+        },
+        "counts": {
+          "cast": 4,
+          "spoiled": 1,
+          "counted": 4,
+          "ignored": {}
+        },
+        "ctxPrefix": "bb914d504e8e9247",
+        "findings": [
+          {
+            "code": "E_SIG",
+            "cls": "I",
+            "seq": 27,
+            "detail": "tally convenience signature invalid or not a coordinator key"
+          },
+          {
+            "code": "E_RESULT",
+            "cls": "F",
+            "detail": "published results differ from exact evaluation"
+          }
+        ]
+      },
+      "python_report": {
+        "verdict": "FAIL",
+        "checks": {
+          "chk.manifest.hash": "pass",
+          "chk.manifest.sig": "pass",
+          "chk.keys.trustees": "pass",
+          "chk.board.append_only": "not_run",
+          "chk.board.witness": "not_run",
+          "chk.ballots.valid": "pass",
+          "chk.ballots.latest": "pass",
+          "chk.tally.aggregate": "pass",
+          "chk.tally.decrypt": "pass",
+          "chk.result.rules": "fail",
+          "chk.benaloh.spoiled": "pass",
+          "chk.receipts.sample": "not_run",
+          "chk.encoding.canonical": "pass",
+          "chk.time.window": "pass"
+        },
+        "counts": {
+          "cast": 4,
+          "spoiled": 1,
+          "counted": 4
+        },
+        "ctx_prefix": "bb914d504e8e9247",
+        "results": [
+          {
+            "contest": "budget",
+            "participation": 4,
+            "quorum_met": true,
+            "outcome": {
+              "kind": "passed"
+            }
+          }
+        ],
+        "findings": [
+          {
+            "check": "chk.result.rules",
+            "code": "E_RESULT",
+            "fatal": true,
+            "detail": "published results differ from evaluation"
+          }
+        ],
+        "codes": [
+          "E_RESULT"
+        ]
+      }
+    }
+  ],
+  "report_capture_note": "Current failure reports contain unmodified verifier fields selected from a separate rerun of the same corpus. Optional absent members remain absent. The strict comparator normalizes absent results to []; it does not normalize ctx_prefix.",
+  "tests": [
+    {
+      "command": "node --test packages/protocol/test/report-semantics.test.ts",
+      "cwd": "repository root",
+      "exit_code": 0,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "python3 -I -m unittest",
+      "cwd": "verifier-py",
+      "exit_code": 0,
+      "passed": 58
+    },
+    {
+      "command": "python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet --report <scratch-report.json>",
+      "cwd": "repository root",
+      "exit_code": 0,
+      "total": 282,
+      "pass": 229,
+      "fail": 0,
+      "not_implemented": 53,
+      "manifest_hashes_matched": 79,
+      "manifest_hashes_mismatched": 0,
+      "manifest_files_missing": 0
+    }
+  ],
+  "pr28": {
+    "url": "https://github.com/djshellshoxxx/quietvote/pull/28",
+    "head_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+    "created_at": "2026-11-04T17:17:08Z",
+    "updated_at_observed": "2026-11-09T11:10:48Z",
+    "state": "open",
+    "draft": true,
+    "held_decisions": [
+      "D-92",
+      "D-93",
+      "D-94"
+    ],
+    "observation": "Body requires strict TS/Python differential to remain failing until owner decisions D-92\u2013D-94."
+  }
+}

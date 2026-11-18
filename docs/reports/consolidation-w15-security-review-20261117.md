@@ -1,0 +1,37 @@
+# QuietVote W15 independent source review
+
+## Final disposition
+
+**Keep W15 out of this integration candidate.** The preserved port commit is `e4212219635291a002b68d6b27a9714df23d7df2`. It emits 204,814 bytes of aggregate compressed JavaScript against the unchanged strict requirement of less than 204,800 bytes, and actual browser qualification remains blocked. The author reports 14 focused tests passing and the size test failing; typecheck and diff check pass. Neither gate was weakened.
+
+Beyond the stated size and browser qualification gates, no further runtime defect was found within the inspected scope. A future focused port can be considered after satisfying the existing size gate and obtaining the exact candidate's required hosted browser evidence. This is a source review with bounded reproductions, not cross-browser qualification or an independent professional cryptographic audit. The recoverable source and full author evidence are recorded in the [port receipt](consolidation-w15-residual-20261117.md).
+
+Reviewed the changes in `/workspace/scratch/5c31c15d58c9/qv-lazy-integrity`: `packages/web/src/build/site.ts`, `packages/web/src/util/pinned-preload.ts`, `packages/web/src/i18n/runtime.ts`, and the chart import in `packages/web/src/ui/app.ts`. Also read the final helper/build tests and the final browser-test diff at `e421221`. The historical source is `b2f043e0b9e648d3c85503ee40ccf4b6f0278c83`; this recovery is selective.
+
+## Findings caught and corrected during review
+
+1. **Unsupported modulepreload could leave the promise pending forever.** An unsupported link relation produces neither of the events awaited by the original helper. After successful election verification, the results view had already cleared its output and could never reach the table fallback. With a reviewed catalog, application startup could also remain pending. This matters to the extended browser floor in QV-13-REQ-044: Mozilla added modulepreload in Firefox 115 and WebKit in Safari 17. The revised helper rejects when `link.relList.supports(link.rel)` is false, allowing the existing fallback behavior.
+
+2. **A compaction changed raw href validation into a resolved-property check.** `link.href` is a resolved URL for an empty href attribute, so testing `!link.href` did not reject `href=""`. The HTML modulepreload fetch algorithm returns immediately for that empty attribute, with no event to settle the promise. The revised helper validates `link.getAttribute('href')` before appending the clone.
+
+Both were reproduced with fresh-module fake-document calls that modeled the relevant browser behavior: the broken helper appended one link and remained pending; the revised helper rejected promptly with zero appended links. The empty-href reproduction used a positive modulepreload support result, so the two corrected guards were checked independently. Broken helper SHA-256: `e373050ef0ccbb9aa24c0b65e172e5b5386f2bfc4b530e6402e7d3e75b66583d`. Revised helper checked: `5de303432f977869ed03278f8782584f2b18965e941f9856c69b9d078c283250`.
+
+Primary compatibility references: [Mozilla Firefox 115 developer release notes](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/115) and [WebKit Safari 17 beta release notes](https://webkit.org/blog/14205/news-from-wwdc23-webkit-features-in-safari-17-beta/). The relevant fetch/event rules are in the [HTML modulepreload processing model](https://html.spec.whatwg.org/multipage/links.html#link-type-modulepreload).
+
+## Invariants checked
+
+- **Trust starts in the build HTML.** The helper reuses those immutable build pins; it does not authenticate an independently hostile document. A nonempty partial set cannot be distinguished from a complete set by the helper alone, so completeness is a build invariant and needs graph coverage tests. This is consistent with QV-19's existing partial asset-compromise scope for SRI.
+- **Current import graph is covered and ordered.** An independent build plus TypeScript AST inspection found two pinned shared chunks, then the pinned chart, then the application entry. Each static dependency appeared earlier than its importer. The five unreviewed catalog chunks were emitted but absent from the preload list. The chart's dependency is already shared with the application. The revised traversal also rejects cycles rather than recursing indefinitely.
+- **Failure remains closed.** A rejected preload promise is cached in the module instance, so another attempt in the same document cannot reach `import()` after the failed integrity check. Successful preloads populate the browser module map. One promise per module realm is adequate for the production calls, which use only the ambient document. Fresh fake documents must use fresh module instances in tests; the optional document parameter is not an independent cache boundary. The no-document tooling path remains explicit.
+- **Author-pin lifecycle guards remain after the new await.** `resultsView` still checks route, view, and input generation after the preload/import boundary, then rechecks the signed-record snapshot length. Editing supplemental author keys, navigation, or live records must not permit stale results to repaint. Locale load failure retains empty messages and leaves the locale unoffered.
+- **Worker scope is unchanged.** This recovery does not supply integrity for the seal-worker URL, and does not authenticate replacement HTML or an actively hostile operator serving both HTML and its hashes.
+
+The HTML Standard permits a failed module fetch to remove its module-map entry and permits optional descendant fetching. Consequently preload order alone is not universal proof that all static descendants can never be retried without integrity; existing static SRI behavior also needs actual browser evidence. The current graph's lazy dependencies are already app-shared. No cross-browser guarantee should be inferred from a Chromium result. See [fetching module scripts](https://html.spec.whatwg.org/multipage/webappapis.html#fetch-a-single-module-script).
+
+## Evidence and remaining gates
+
+Independent completed checks: current build graph inspection; both before/after fake-document reproductions; source analysis of promise caching, failure propagation, build pins, locale gating, and author-pin lifecycle boundaries.
+
+An independent isolated helper Chromium harness was written at `/workspace/scratch/5c31c15d58c9/lazy-integrity-review-browser.ts`. Browser startup failed before any assertion at Chromium's process-singleton socket creation (`Operation not permitted`). No browser success is claimed and no alternate execution path was attempted.
+
+Before any future integration, retain the unchanged 200 KiB compressed-JavaScript cap and rerun the final authored helper/build tests. The required hosted `e2e/verifier.ts` must exercise actual lazy-byte tampering with a nonexecution sentinel, retain static shared-chunk tampering, and prove lifecycle safety during a pending preload. The final browser source now includes the lazy tamper sentinel, chart positive control, table fallback, unsupported-preload behavior and an explicit duplicate-preload milestone before the live append. That milestone proves the normal build's result verification has reached its pending gate; a mere chart request would now occur too early during navigation. These authored cases remain unqualified until actual execution succeeds. Modulepreload itself does not delay the document load event, so no load-event deadlock is asserted here.

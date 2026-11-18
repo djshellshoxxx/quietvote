@@ -1,0 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { verifyBundle, formatReport } from '/home/user/qv-wt/t5-fuzz/packages/verifier/src/index.ts';
+const ROOT = '/home/user/qv-wt/t5-fuzz/test-vectors/v1/';
+const rd = (p: string): any => JSON.parse(readFileSync(ROOT + p, 'utf8'));
+const v = rd('elections/log-layer-4v/vectors.json');
+const honest = v.vectors.find((x: any) => x.id === 'log-honest-witnessed');
+const bundle = rd(honest.input.bundle.path);
+const board = rd(honest.input.board.path);
+const hexToB64 = (h: string): string => Buffer.from(h, 'hex').toString('base64');
+console.log(JSON.stringify(bundle.manifest.body.bb));
+board.policy.witness_policy = { quorum: bundle.manifest.body.bb.witness_quorum, none_acknowledged: false, witnesses: bundle.manifest.body.bb.witnesses.map((w: any) => ({ name: w.name, alg: 'ed25519', pk_b64: hexToB64(w.pk) })) };
+const full = { ...bundle, board };
+const text = JSON.stringify(full);
+console.log('bytes', text.length);
+for (const [name, opts] of [['bare', {}], ['receipts+observed', { receipts: honest.input.receipts, observedCheckpoints: honest.input.observed }], ['pinned', { pinnedCheckpoint: board.checkpoints[0], pinnedManifestHash: bundle.manifest_hash }]] as const) {
+  const t0 = performance.now();
+  const r = await verifyBundle(text, opts as any);
+  console.log(name, r.verdict, (performance.now() - t0).toFixed(0) + 'ms', 'V4', r.checks.V4.status, JSON.stringify(r.checks.V4.notes), JSON.stringify(r.log), JSON.stringify(r.board), JSON.stringify(r.findings), r.warnings, r.caveats);
+}
+console.log(formatReport(await verifyBundle(text, { receipts: honest.input.receipts, observedCheckpoints: honest.input.observed })));

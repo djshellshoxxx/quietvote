@@ -1,0 +1,2589 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-11-18T09:09:02.675496+00:00",
+  "repository": "djshellshoxxx/quietvote",
+  "scope": "AI-assisted engineering execution receipts; not formal approvals or production/election qualification.",
+  "evidence_paths": "session-evidence identifiers refer to scratch execution records, not repository download links. Available log hashes and result excerpts are retained here.",
+  "command_note": "reproduction_command gives the same named suite or checker and applicable scheduling/resource settings. Component review receipts preserve their recorded exact invocations. Empty successful logs are supported by the observed process exit, not by absence of diagnostics alone.",
+  "environment": {
+    "os": "Linux",
+    "node": "v24.22.1",
+    "npm": "11.9.0",
+    "python": "3.12.14",
+    "dependencies": "npm ci --ignore-scripts --offline; no lockfile change",
+    "browser": "Local Chromium failed at startup with socket EPERM; hosted browser evidence is recorded separately."
+  },
+  "initial_and_final_main": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+  "initial_and_final_canonical": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+  "canonical_ahead_main": 502,
+  "canonical_behind_main": 0,
+  "remote_merges_during_execution": [],
+  "source_publications": [
+    {
+      "key": "w15",
+      "pr": 60,
+      "published_sha": "754c586aa65735d50514b543a62a5e3c96a4d138",
+      "local_sha": "df064156727a0bb79400c0c636ddcc1801188f4a",
+      "tree": "0db87c6933db0ba9123bd583083a2a98faeee2a6",
+      "parent": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "base_tree": "7775a2d439e04bf6d011e32ffdcc3ff48ad4b34c",
+      "files": [
+        "packages/web/e2e/verifier.ts",
+        "packages/web/src/build/site.ts",
+        "packages/web/src/i18n/extract.ts",
+        "packages/web/src/i18n/runtime.ts",
+        "packages/web/src/ui/app.ts",
+        "packages/web/src/util/pinned-preload.ts",
+        "packages/web/test/charts.test.ts",
+        "packages/web/test/i18n-lint.test.ts",
+        "packages/web/test/lazy.test.ts",
+        "packages/web/test/pinned-preload.test.ts"
+      ],
+      "published_author_dco_verified": true,
+      "tree_identity_verified": true
+    },
+    {
+      "key": "py_tie",
+      "pr": 61,
+      "published_sha": "04171611e8c8d836ede49c30f0c6f0acc9d0da05",
+      "local_sha": "1ddd3f2089b1afb88decd803e7d124f7e94a092e",
+      "tree": "e937d8ec4af92af1f9076342d9ef84aab505c145",
+      "parent": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "base_tree": "7775a2d439e04bf6d011e32ffdcc3ff48ad4b34c",
+      "files": [
+        "verifier-py/qv_verifier/manifest.py",
+        "verifier-py/tests/test_manifest_tie_methods.py"
+      ],
+      "published_author_dco_verified": true,
+      "tree_identity_verified": true
+    },
+    {
+      "key": "board_policy",
+      "pr": 62,
+      "published_sha": "6875cd36c65427dbc0b877b356727a396b7f9581",
+      "local_sha": "dcce09e794fbb15d303d380d610fd8cc5c0249c1",
+      "tree": "dd86a0b5129560f888c9e1b97914fa11e9d4eea6",
+      "parent": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "base_tree": "7775a2d439e04bf6d011e32ffdcc3ff48ad4b34c",
+      "files": [
+        "packages/cli/README.md",
+        "packages/cli/src/cmd-board.ts",
+        "packages/cli/src/main.ts",
+        "packages/cli/test/audit.test.ts",
+        "packages/cli/test/board-policy-regressions.test.ts",
+        "packages/cli/test/cli.test.ts"
+      ],
+      "published_author_dco_verified": true,
+      "tree_identity_verified": true
+    },
+    {
+      "key": "p11",
+      "pr": 63,
+      "published_sha": "0042967a76ef871d01f3726d1ff9331293e9a255",
+      "local_sha": "20a1932c109a773bf2944f6c58e621c73cb9e856",
+      "tree": "311b4a68e8c41957470cfa43a7cd37f835ddce69",
+      "parent": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "base_tree": "7775a2d439e04bf6d011e32ffdcc3ff48ad4b34c",
+      "files": [
+        "docs/16-crypto-protocol.md",
+        "verifier-py/qv_verifier/election.py",
+        "verifier-py/tests/test_tally_decrypters.py"
+      ],
+      "published_author_dco_verified": true,
+      "tree_identity_verified": true
+    },
+    {
+      "key": "p10",
+      "pr": 64,
+      "published_sha": "4b88209afb5a6c8fba1df06e0af8d1c1ac21d15f",
+      "local_sha": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+      "tree": "266c5a41a87802fc3d512982002f01eb93a03516",
+      "parent": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "base_tree": "7775a2d439e04bf6d011e32ffdcc3ff48ad4b34c",
+      "files": [
+        "docs/16-crypto-protocol.md",
+        "docs/errata/spec-errata-log.md",
+        "packages/protocol/src/verify.ts",
+        "packages/protocol/test/marker-equivocation.test.ts",
+        "verifier-py/qv_verifier/election.py",
+        "verifier-py/tests/test_marker_equivocation.py"
+      ],
+      "published_author_dco_verified": true,
+      "tree_identity_verified": true
+    },
+    {
+      "key": "b3_copy",
+      "pr": 65,
+      "published_sha": "0653163a3cee2b230398a572723a028c0dda6d7d",
+      "local_sha": "676376024b33bbbee6a34dc11f9e169d7d49d4c6",
+      "tree": "66472438d182cf27a1e0b69deec4d5bd299363ef",
+      "parent": "754c586aa65735d50514b543a62a5e3c96a4d138",
+      "base_tree": "0db87c6933db0ba9123bd583083a2a98faeee2a6",
+      "files": [
+        "docs/10-user-experience.md",
+        "docs/reports/revote-guarantee-copy-20261118.md",
+        "packages/web/COPY.md",
+        "packages/web/src/i18n/catalogs/ar.ts",
+        "packages/web/src/i18n/catalogs/de.ts",
+        "packages/web/src/i18n/catalogs/es.ts",
+        "packages/web/src/i18n/catalogs/fr.ts",
+        "packages/web/src/i18n/catalogs/pt-BR.ts",
+        "packages/web/src/i18n/en.ts"
+      ],
+      "published_author_dco_verified": true,
+      "tree_identity_verified": true
+    },
+    {
+      "key": "web_checks",
+      "pr": 66,
+      "published_sha": "ae17bd0c2a33427a77b2d71673ed55787c463c6c",
+      "local_sha": "26e06edddbd953a1ebd86a927372a232d54a572b",
+      "tree": "ac3735480e347226e2d4a9dda228d2e3cf10868e",
+      "parent": "754c586aa65735d50514b543a62a5e3c96a4d138",
+      "base_tree": "0db87c6933db0ba9123bd583083a2a98faeee2a6",
+      "files": [
+        "packages/web/test/app-precompile.test.ts",
+        "packages/web/test/no-bearer.test.ts"
+      ],
+      "published_author_dco_verified": true,
+      "tree_identity_verified": true
+    }
+  ],
+  "publication_verification": "Every published candidate tree was compared to its locally tested tree; raw Git commit tree/parent/author and author-matching DCO were read back before publishing the branch. API-created commit IDs differ from local commit IDs because metadata differs.",
+  "nonce_source": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+  "nonce_execution": {
+    "tested_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+    "records": [
+      {
+        "file": "corpus-check.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tail": []
+      },
+      {
+        "file": "crypto-tests.log",
+        "sha256": "914ad6c88d2f1701143d815c55b656f19bfacb142bc2d8b3fe500f8f7775e2ca",
+        "tail": [
+          "ℹ tests 101",
+          "ℹ suites 0",
+          "ℹ pass 101",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 2189.81505"
+        ]
+      },
+      {
+        "file": "protocol-tests.log",
+        "sha256": "1bd16a7bef662fe855decd5f179daecd12ff928b93b6b2054007ffe00b8cc4e4",
+        "tail": [
+          "ℹ tests 373",
+          "ℹ suites 0",
+          "ℹ pass 373",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 47619.915583"
+        ]
+      },
+      {
+        "file": "python-units.log",
+        "sha256": "da336235d299283e61be4fd163dbccb51442acab6d67f950a3cf95eb8632c092",
+        "tail": [
+          "..............................................................................................................................................................................................................................",
+          "----------------------------------------------------------------------",
+          "Ran 222 tests in 106.746s",
+          "",
+          "OK"
+        ]
+      },
+      {
+        "file": "python-vectors.log",
+        "sha256": "852508587356062c55db50693c3fb302165075fd54678611a5eafb9875e14a14",
+        "tail": [
+          "py-qv-verify 0.1.0 -- vector tree test-vectors/v1",
+          "INFO  MANIFEST test-vectors/MANIFEST.json: 79 file hashes match, 0 mismatch, 0 missing (signature: 'unsigned (release job signs)'; Merkle root not recomputed)",
+          "INFO  25 non-vector input files skipped (bundles without an expected-report.json, board files, other referenced inputs)",
+          "",
+          "SUMMARY total=285 pass=285 fail=0 not_implemented=0"
+        ]
+      },
+      {
+        "file": "ts-vectors.log",
+        "sha256": "9fef1f77978fbd4d462601ee989f446918d6c48c3fcb60726c9f1379e976b7dc",
+        "tail": [
+          "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+          "",
+          "> vectors:check",
+          "> node packages/cli/bin/qv.ts vectors check",
+          "",
+          "vectors: 423/423 passed, 0 failed, 0 file(s) not run"
+        ]
+      },
+      {
+        "file": "typecheck.log",
+        "sha256": "686c88560ab99dda8729b120b1248a3cbd301d4b8a84cae90e027e401143d3c7",
+        "tail": [
+          "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+          "",
+          "> typecheck",
+          "> tsc -p tsconfig.json --noEmit",
+          ""
+        ]
+      },
+      {
+        "file": "verifier-tests.log",
+        "sha256": "b13da4aca5b8c1fdc3a45653b560f83cdac67062920b2c86d597a10642cbfa53",
+        "tail": [
+          "ℹ tests 38",
+          "ℹ suites 0",
+          "ℹ pass 38",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 15469.513191"
+        ]
+      },
+      {
+        "file": "verifiers-compare.log",
+        "sha256": "463c56d54462c3d0a0c35521a9a25a880dc7b7096987762dbd0b09a2f0ed64af",
+        "tail": [
+          "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+          "",
+          "> verifiers:compare",
+          "> node scripts/compare-verifiers.ts --strict",
+          "",
+          "cross-verifier: 27/27 agree within shared capabilities; 0 disagree",
+          "Verdicts agree on 27/27; report differences remain failures pending the documented errata decisions.",
+          "Excluded capabilities (not agreement): chk.board.append_only, chk.board.witness, chk.receipts.sample"
+        ]
+      }
+    ]
+  },
+  "candidate_execution": [
+    {
+      "tested_sha": "1ddd3f2089b1afb88decd803e7d124f7e94a092e",
+      "reproduction_command": "cd verifier-py && python3 -I -m unittest",
+      "observed_result": {
+        "passed": 225,
+        "failed": 0,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/python-tie-full.log",
+        "sha256": "e6cb3d32c6ae574f54ba8891bf886ad4d41e0de896b3f802b002e8c7d3fb857d",
+        "bytes": 327,
+        "last_lines": [
+          ".................................................................................................................................................................................................................................",
+          "----------------------------------------------------------------------",
+          "Ran 225 tests in 101.384s",
+          "",
+          "OK"
+        ]
+      }
+    },
+    {
+      "tested_sha": "1ddd3f2089b1afb88decd803e7d124f7e94a092e",
+      "reproduction_command": "node --test --test-reporter=spec packages/protocol/test/manifest.test.ts",
+      "observed_result": {
+        "passed": 48,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/python-tie-ts-reference.log",
+        "sha256": "947d4867c9b27e843a712b21ff9d9107f972a3cd894bf1538dc8eea1b8f401da",
+        "bytes": 2981,
+        "last_lines": [
+          "✔ quorum: fraction and count boundaries; failing quorum overrides (3.369518ms)",
+          "✔ plurality / approval / k-of-n winners and tie handling (1.247953ms)",
+          "ℹ tests 48",
+          "ℹ suites 0",
+          "ℹ pass 48",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 528.164475"
+        ]
+      }
+    },
+    {
+      "tested_sha": "1ddd3f2089b1afb88decd803e7d124f7e94a092e",
+      "reproduction_command": "python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet",
+      "observed_result": {
+        "passed": 282,
+        "failed": 0,
+        "not_implemented": 0,
+        "hashes_match": 79,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/python-tie-vectors.log",
+        "sha256": "6e8e8fae9c854caa792c2758aedaab409874cf71cf909c8313832dd12b3ea4ee",
+        "bytes": 382,
+        "last_lines": [
+          "py-qv-verify 0.1.0 -- vector tree test-vectors/v1",
+          "INFO  MANIFEST test-vectors/MANIFEST.json: 79 file hashes match, 0 mismatch, 0 missing (signature: 'unsigned (release job signs)'; Merkle root not recomputed)",
+          "INFO  25 non-vector input files skipped (bundles without an expected-report.json, board files, other referenced inputs)",
+          "",
+          "SUMMARY total=282 pass=282 fail=0 not_implemented=0"
+        ]
+      }
+    },
+    {
+      "tested_sha": "dcce09e794fbb15d303d380d610fd8cc5c0249c1",
+      "reproduction_command": "cd packages/cli && node --test --test-concurrency=1 --test-reporter=spec \"test/**/*.test.ts\"",
+      "observed_result": {
+        "passed": 115,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "duration_ms": 838716.913102,
+        "real_clock_executable_election_included": true
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/board-policy-cli-full.log",
+        "sha256": "a7ee4ced7c5a93ffcfc0411035baa907d89a932b29d8edd971cae3b4b3b9e052",
+        "bytes": 11590,
+        "last_lines": [
+          "✔ packet for another election: records are rejected, exit 1 (942.403803ms)",
+          "✔ both executable verifier CLIs accept only explicit independently obtained supplemental public keys (20961.265307ms)",
+          "ℹ tests 115",
+          "ℹ suites 0",
+          "ℹ pass 115",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 838716.913102"
+        ]
+      }
+    },
+    {
+      "tested_sha": "19983c6c28e421fcf7050bde2e0c578ab1df397f",
+      "reproduction_command": "cd verifier-py && python3 -I -m unittest",
+      "observed_result": {
+        "passed": 223,
+        "failed": 0,
+        "exit_code": 0,
+        "final_local_commit": "20a1932c109a773bf2944f6c58e621c73cb9e856",
+        "final_delta": "One specification sentence; runtime and tests byte-identical."
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/python-decrypters-full.log",
+        "sha256": "aa70b9822778c7d3b44dcbe74c2a5e2842bde17d8f69ff76a05d8cb9fb14e73b",
+        "bytes": 325,
+        "last_lines": [
+          "...............................................................................................................................................................................................................................",
+          "----------------------------------------------------------------------",
+          "Ran 223 tests in 102.356s",
+          "",
+          "OK"
+        ]
+      }
+    },
+    {
+      "tested_sha": "20a1932c109a773bf2944f6c58e621c73cb9e856",
+      "reproduction_command": "python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet",
+      "observed_result": {
+        "passed": 282,
+        "failed": 0,
+        "not_implemented": 0,
+        "hashes_match": 79,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/python-decrypters-vectors.log",
+        "sha256": "6e8e8fae9c854caa792c2758aedaab409874cf71cf909c8313832dd12b3ea4ee",
+        "bytes": 382,
+        "last_lines": [
+          "py-qv-verify 0.1.0 -- vector tree test-vectors/v1",
+          "INFO  MANIFEST test-vectors/MANIFEST.json: 79 file hashes match, 0 mismatch, 0 missing (signature: 'unsigned (release job signs)'; Merkle root not recomputed)",
+          "INFO  25 non-vector input files skipped (bundles without an expected-report.json, board files, other referenced inputs)",
+          "",
+          "SUMMARY total=282 pass=282 fail=0 not_implemented=0"
+        ]
+      }
+    },
+    {
+      "tested_sha": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+      "reproduction_command": "cd packages/protocol && node --test --test-concurrency=1 --test-reporter=spec \"test/**/*.test.ts\"",
+      "observed_result": {
+        "passed": 377,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/p10-protocol-full.log",
+        "sha256": "361d79dbac6f5dfa4ae5e26f3abbd6851d570b211fe3e4f46bad85f691452f01",
+        "bytes": 31420,
+        "last_lines": [
+          "✔ a spoiled code that is later cast is excluded and the chain does not advance (156.626296ms)",
+          "✔ CP-05: a validly signed roll-commit replayed after election-open is fatal (67.537427ms)",
+          "ℹ tests 377",
+          "ℹ suites 0",
+          "ℹ pass 377",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 151767.703286"
+        ]
+      }
+    },
+    {
+      "tested_sha": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+      "reproduction_command": "cd verifier-py && python3 -I -m unittest",
+      "observed_result": {
+        "passed": 225,
+        "failed": 0,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/p10-python-full.log",
+        "sha256": "c047a6cacd66c0c1694ccdf7304c0192ebc741f7a02d5f379d8531bf7d447087",
+        "bytes": 327,
+        "last_lines": [
+          ".................................................................................................................................................................................................................................",
+          "----------------------------------------------------------------------",
+          "Ran 225 tests in 115.215s",
+          "",
+          "OK"
+        ]
+      }
+    },
+    {
+      "tested_sha": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+      "reproduction_command": "node --max-old-space-size=512 node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+      "observed_result": {
+        "exit_code": 0,
+        "after_fresh_offline_dependency_install": true,
+        "note": "Empty output; exit observed in tool session. Prior killed attempts retained below."
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/p10-root-typecheck-fresh-deps.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "last_lines": []
+      }
+    },
+    {
+      "tested_sha": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+      "reproduction_command": "node --max-old-space-size=512 node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+      "observed_result": {
+        "exit_code": 0,
+        "note": "Empty output; exit observed in tool session."
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-typecheck.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "last_lines": []
+      }
+    },
+    {
+      "tested_sha": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+      "reproduction_command": "cd verifier-py && python3 -I -m unittest",
+      "observed_result": {
+        "passed": 232,
+        "failed": 0,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-python-full.log",
+        "sha256": "a55360e52d1ee4d646ae23a4de0fb1cc8a67292a7e221cc4e07f7120eee39bb4",
+        "bytes": 334,
+        "last_lines": [
+          "........................................................................................................................................................................................................................................",
+          "----------------------------------------------------------------------",
+          "Ran 232 tests in 109.406s",
+          "",
+          "OK"
+        ]
+      }
+    },
+    {
+      "tested_sha": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+      "reproduction_command": "npm run vectors:check",
+      "observed_result": {
+        "passed": 423,
+        "failed": 0,
+        "files_not_run": 0,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-ts-vectors.log",
+        "sha256": "9fef1f77978fbd4d462601ee989f446918d6c48c3fcb60726c9f1379e976b7dc",
+        "bytes": 214,
+        "last_lines": [
+          "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+          "",
+          "> vectors:check",
+          "> node packages/cli/bin/qv.ts vectors check",
+          "",
+          "vectors: 423/423 passed, 0 failed, 0 file(s) not run"
+        ]
+      }
+    },
+    {
+      "tested_sha": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+      "reproduction_command": "python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet",
+      "observed_result": {
+        "passed": 285,
+        "failed": 0,
+        "not_implemented": 0,
+        "hashes_match": 79,
+        "exit_code": 0
+      },
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-python-vectors.log",
+        "sha256": "852508587356062c55db50693c3fb302165075fd54678611a5eafb9875e14a14",
+        "bytes": 382,
+        "last_lines": [
+          "py-qv-verify 0.1.0 -- vector tree test-vectors/v1",
+          "INFO  MANIFEST test-vectors/MANIFEST.json: 79 file hashes match, 0 mismatch, 0 missing (signature: 'unsigned (release job signs)'; Merkle root not recomputed)",
+          "INFO  25 non-vector input files skipped (bundles without an expected-report.json, board files, other referenced inputs)",
+          "",
+          "SUMMARY total=285 pass=285 fail=0 not_implemented=0"
+        ]
+      }
+    }
+  ],
+  "independent_m7": {
+    "commit": "1ddd3f2089b1afb88decd803e7d124f7e94a092e",
+    "tree": "e937d8ec4af92af1f9076342d9ef84aab505c145",
+    "baseline": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+    "regression_tests": {
+      "command": "python3 -I -m unittest discover -s . -p test_manifest_tie_methods.py -v",
+      "cwd": "session-evidence/quietvote-py-tie/verifier-py",
+      "tests": 4,
+      "failures": 0,
+      "skips": 0
+    },
+    "independent_baseline_comparison": [
+      {
+        "method": "single-choice",
+        "baseline": "accepted",
+        "patched": [
+          {
+            "operation": "validate",
+            "error": "E_MANIFEST",
+            "detail": "E_MANIFEST: contests[0]: status-quo requires a yes-no contest"
+          },
+          {
+            "operation": "op_manifest",
+            "error": "E_MANIFEST",
+            "detail": "E_MANIFEST: contests[0]: status-quo requires a yes-no contest"
+          }
+        ]
+      },
+      {
+        "method": "approval",
+        "baseline": "accepted",
+        "patched": [
+          {
+            "operation": "validate",
+            "error": "E_MANIFEST",
+            "detail": "E_MANIFEST: contests[0]: status-quo requires a yes-no contest"
+          },
+          {
+            "operation": "op_manifest",
+            "error": "E_MANIFEST",
+            "detail": "E_MANIFEST: contests[0]: status-quo requires a yes-no contest"
+          }
+        ]
+      },
+      {
+        "method": "k-of-n",
+        "baseline": "accepted",
+        "patched": [
+          {
+            "operation": "validate",
+            "error": "E_MANIFEST",
+            "detail": "E_MANIFEST: contests[0]: status-quo requires a yes-no contest"
+          },
+          {
+            "operation": "op_manifest",
+            "error": "E_MANIFEST",
+            "detail": "E_MANIFEST: contests[0]: status-quo requires a yes-no contest"
+          }
+        ]
+      }
+    ],
+    "review": "No blocking source issue found. Two-line guard follows QV-03 section 7.3 yes/no-only restriction under ADR-027 B1-08 and existing TypeScript validation. Review is source/test evidence, not human security-group approval."
+  },
+  "independent_p11": {
+    "review_type": "independent focused execution and source review; not formal approval",
+    "head": "19983c6c28e421fcf7050bde2e0c578ab1df397f",
+    "tree": "2aeae6b60d62534418ff249464736648fe12aa5f",
+    "parent": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+    "started_utc": "2026-11-18T08:12:22Z",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_tally_decrypters.py",
+      "-v"
+    ],
+    "cwd": "session-evidence/quietvote-py-decrypters/verifier-py",
+    "exit_code": 0,
+    "log": "session-evidence/analysis/crypto_review/p11-focused-final.log",
+    "log_sha256": "3d2c146c5d78fe2ea3d82174a10d52773ab6db2abc30c736581de8363a9b041b",
+    "worktree_clean": true,
+    "final_documentation_followup": {
+      "reviewed_at_utc": "2026-11-18T08:15:27Z",
+      "head": "20a1932c109a773bf2944f6c58e621c73cb9e856",
+      "tree": "311b4a68e8c41957470cfa43a7cd37f835ddce69",
+      "parent": "19983c6c28e421fcf7050bde2e0c578ab1df397f",
+      "changed_paths_since_executed_head": [
+        "docs/16-crypto-protocol.md"
+      ],
+      "runtime_and_tests_byte_identical_to_executed_head": true,
+      "new_test_run": false,
+      "diff_check_passed": true,
+      "worktree_clean": true,
+      "source_review_result": "No blocking issue in the sentence clarifying fatal decrypter-list mismatch behavior; wording matches reviewed implementation and existing TS behavior.",
+      "broader_python_suite": {
+        "status": "reported by parent workstream",
+        "tests": 223,
+        "passed": 223,
+        "executed_head": "19983c6c28e421fcf7050bde2e0c578ab1df397f",
+        "independently_rerun_here": false
+      },
+      "formal_approval": false
+    }
+  },
+  "independent_p10": {
+    "review_type": "independent AI source review and selected exact-head execution; no formal approval",
+    "reviewed_at_utc": "2026-11-18T08:27:39Z",
+    "head": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+    "tree": "266c5a41a87802fc3d512982002f01eb93a03516",
+    "parent": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+    "worktree": "session-evidence/quietvote-p10",
+    "clean_worktree": true,
+    "changed_paths": [
+      "docs/16-crypto-protocol.md",
+      "docs/errata/spec-errata-log.md",
+      "packages/protocol/src/verify.ts",
+      "packages/protocol/test/marker-equivocation.test.ts",
+      "verifier-py/qv_verifier/election.py",
+      "verifier-py/tests/test_marker_equivocation.py"
+    ],
+    "diff_check_passed": true,
+    "unchanged_scopes": [
+      "test-vectors",
+      "packages/crypto",
+      "scripts",
+      "packages/protocol/src/schema.ts",
+      "packages/protocol/src/records.ts",
+      "verifier-py/qv_verifier/proofs.py",
+      "verifier-py/qv_verifier/recordfields.py",
+      "docs/audit",
+      "package-lock.json",
+      "package.json",
+      ".github"
+    ],
+    "unchanged_scope_discrepancies": [],
+    "test_vectors_tree": {
+      "parent": "70c3d44d5d49785d78caff57ea9c7952f5bda6bf",
+      "candidate": "70c3d44d5d49785d78caff57ea9c7952f5bda6bf"
+    },
+    "crypto_tree": {
+      "parent": "c32598e04712215fc84fe1fcc2be6fa899f2b434",
+      "candidate": "c32598e04712215fc84fe1fcc2be6fa899f2b434"
+    },
+    "independent_execution": [
+      {
+        "source_sha": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+        "source_tree": "266c5a41a87802fc3d512982002f01eb93a03516",
+        "started_utc": "2026-11-18T08:24:50Z",
+        "node": "v24.22.1",
+        "command": [
+          "node",
+          "--test",
+          "--test-concurrency=1",
+          "--test-reporter=spec",
+          "--test-name-pattern=P10:|approved non-ballot classification|^P3:",
+          "packages/protocol/test/marker-equivocation.test.ts",
+          "packages/protocol/test/approved-semantic-parity.test.ts",
+          "packages/protocol/test/second-wave.test.ts"
+        ],
+        "cwd": "session-evidence/quietvote-p10",
+        "exit_code": 0,
+        "log": "session-evidence/analysis/crypto_review/p10-typescript-focused.log",
+        "log_sha256": "63785f20ae66a796dc423c4b47616fed757221266ad0d294f52310b5bc8432dc",
+        "worktree_clean": true
+      },
+      {
+        "source_sha": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+        "source_tree": "266c5a41a87802fc3d512982002f01eb93a03516",
+        "started_utc": "2026-11-18T08:25:45Z",
+        "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+          "-m",
+          "unittest",
+          "tests.test_marker_equivocation",
+          "tests.test_approved_semantic_parity.ApprovedSemanticParity.test_non_ballot_noise_never_replaces_valid_evidence",
+          "tests.test_approved_semantic_parity.ApprovedSemanticParity.test_forged_dkg_and_roll_markers_do_not_veto_honest_records",
+          "tests.test_approved_semantic_parity.ApprovedSemanticParity.test_no_authenticated_close_is_incomplete_not_a_fabricated_tally",
+          "tests.test_report_semantics",
+          "-v"
+        ],
+        "cwd": "session-evidence/quietvote-p10/verifier-py",
+        "exit_code": 0,
+        "log": "session-evidence/analysis/crypto_review/p10-python-focused.log",
+        "log_sha256": "73ed845c729f7c335b7321bcad1d118115eaf6224c645cc2254559c89acb1efd",
+        "worktree_clean": true
+      }
+    ],
+    "independent_results": {
+      "typescript": {
+        "tests": 11,
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0
+      },
+      "python": {
+        "tests": 15,
+        "passed": 15,
+        "failed": 0
+      }
+    },
+    "source_review_result": "No blocking issue found within reviewed P10 delta. Canonical JCS body equality is gated by existing authenticated coordinator threshold; conflicts fail time-window and stop ballot/tally/rule dependents; original valid/noise behavior preserved.",
+    "limits": [
+      "One-of-one coordinator fixtures test allowed invalid signatures and valid outsider signatures; unchanged general threshold implementation was source-inspected, not exhaustively retested.",
+      "Focused tests use absent board evidence in default and content-only modes; supplied-log finalization was source-inspected, not fully exercised here.",
+      "No full protocol/Python suite, full root typecheck, cross-implementation comparator or vector execution was rerun by this review lane. Root owns those gates.",
+      "Original exit-137 root typecheck attempts do not count as passing.",
+      "P11 and other candidate branches are separate; this is not a combined integration review.",
+      "AI review supplies no required human/CODEOWNER/security-reviewer-group approval."
+    ]
+  },
+  "b3_copy": {
+    "base": "754c586aa65735d50514b543a62a5e3c96a4d138",
+    "node": "v24.22.1",
+    "buildId": "63c62a5f7a6b",
+    "allJsGzip": 200274,
+    "budget": 204800,
+    "assets": [
+      {
+        "path": "assets/app.1c872af9cb45.js",
+        "raw": 287527,
+        "gzip": 98912
+      },
+      {
+        "path": "assets/ar-2W5C3DCN.js",
+        "raw": 53346,
+        "gzip": 14086
+      },
+      {
+        "path": "assets/charts-MZTVLZAT.js",
+        "raw": 2358,
+        "gzip": 1193
+      },
+      {
+        "path": "assets/chunk-6RNCUXXM.js",
+        "raw": 658,
+        "gzip": 419
+      },
+      {
+        "path": "assets/chunk-ZBFNXTMR.js",
+        "raw": 44439,
+        "gzip": 14393
+      },
+      {
+        "path": "assets/de-RGBKPT3H.js",
+        "raw": 43854,
+        "gzip": 13388
+      },
+      {
+        "path": "assets/es-N7JVM7KK.js",
+        "raw": 40623,
+        "gzip": 12495
+      },
+      {
+        "path": "assets/fr-WZ6V33EQ.js",
+        "raw": 43652,
+        "gzip": 13147
+      },
+      {
+        "path": "assets/pt-BR-SHUGSRLU.js",
+        "raw": 40401,
+        "gzip": 12547
+      },
+      {
+        "path": "assets/seal-worker.e15b27f73ce0.js",
+        "raw": 49236,
+        "gzip": 19694
+      }
+    ],
+    "copyGeneration": {
+      "command": "UPDATE_COPY=1 node --test --test-reporter=spec test/copy.test.ts",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focusedTests": {
+      "command": "node --test --test-concurrency=1 --test-reporter=spec test/copy.test.ts test/ui-logic.test.ts test/i18n-catalogs.test.ts test/audit3.test.ts test/lazy.test.ts",
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0
+    },
+    "i18n": {
+      "initialCommand": "npm run i18n:check",
+      "initialExit": 137,
+      "retryCommand": "NODE_OPTIONS=--max-old-space-size=512 npm run i18n:check",
+      "retryExit": 0,
+      "static": 360,
+      "resolvedDynamic": 21,
+      "unresolvedDynamic": 1,
+      "translatorForwarders": 1,
+      "exclusions": 1
+    },
+    "domProbe": {
+      "receipt": "analysis/branch_inventory/b3-copy-render-results.json",
+      "sourceHashesMatched": true,
+      "scope": "Actual startApp, authenticated manifest/context, MemoryStorage and FakeBoard; minimal DOM; key unlock and LiveElection transport startup mocked. No browser/native review or casting/KDF qualification.",
+      "modes": [
+        {
+          "maxPerVoter": 1,
+          "rulesRendered": true,
+          "ballotRendered": true,
+          "noteKey": "qv.ballot.oneBallot",
+          "noOppositeNote": true,
+          "postRequests": 0
+        },
+        {
+          "maxPerVoter": 8,
+          "rulesRendered": true,
+          "ballotRendered": true,
+          "noteKey": "qv.ballot.revoteNote",
+          "noOppositeNote": true,
+          "postRequests": 0
+        }
+      ]
+    },
+    "commit": "676376024b33bbbee6a34dc11f9e169d7d49d4c6",
+    "tree": "66472438d182cf27a1e0b69deec4d5bd299363ef",
+    "branch": "codex/quietvote-revote-copy-20261118",
+    "linkCheck": {
+      "command": "node scripts/check-links.mjs",
+      "links": 1399,
+      "files": 279,
+      "broken": 0
+    },
+    "diffCheck": {
+      "command": "git diff --cached --check",
+      "exit": 0
+    },
+    "cleanAfterCommit": true,
+    "remoteMutations": false
+  },
+  "combined_initial": {
+    "sha": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+    "tree": "9fe4efb1753f9ffbbe94aa8379663654aa722a15",
+    "kind": "Detached local composition only; no redundant remote integration branch.",
+    "independent_source_review": {
+      "review_type": "read-only independent AI source integration review; no combined suite executed here; no formal approval",
+      "observed_at_utc": "2026-11-18T08:42:55Z",
+      "worktree": "session-evidence/quietvote-combined",
+      "head": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+      "tree": "9fe4efb1753f9ffbbe94aa8379663654aa722a15",
+      "canonical": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "nonce_head": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "nonce_head_is_ancestor": true,
+      "detached": true,
+      "worktree_clean": true,
+      "unmerged_entries": "",
+      "diff_check_passed": true,
+      "component_patch_bindings": [
+        {
+          "component": "W15 final app integrity gate",
+          "source_base": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "source_head": "df064156727a0bb79400c0c636ddcc1801188f4a",
+          "applied_base": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "applied_head": "4a16a394c3ebba98f86d03b6e09d71764cd648d7",
+          "source_patch_id": "2676dac25cb25f7685d5af8612710053eb352552",
+          "applied_patch_id": "2676dac25cb25f7685d5af8612710053eb352552",
+          "patch_id_match": true,
+          "exact_changed_lines_match_ignoring_only_index_hashes_and_hunk_positions": true,
+          "source_changed_lines_sha256": "20dec813560a547c142fb181f07865047a7836ca41d3d31c793cf0ff7f4863b2",
+          "applied_changed_lines_sha256": "20dec813560a547c142fb181f07865047a7836ca41d3d31c793cf0ff7f4863b2",
+          "same_changed_paths": true,
+          "changed_paths": [
+            "packages/web/e2e/verifier.ts",
+            "packages/web/src/build/site.ts",
+            "packages/web/src/i18n/extract.ts",
+            "packages/web/src/i18n/runtime.ts",
+            "packages/web/src/ui/app.ts",
+            "packages/web/src/util/pinned-preload.ts",
+            "packages/web/test/charts.test.ts",
+            "packages/web/test/i18n-lint.test.ts",
+            "packages/web/test/lazy.test.ts",
+            "packages/web/test/pinned-preload.test.ts"
+          ]
+        },
+        {
+          "component": "M7 manifest tie restriction",
+          "source_base": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "source_head": "1ddd3f2089b1afb88decd803e7d124f7e94a092e",
+          "applied_base": "4a16a394c3ebba98f86d03b6e09d71764cd648d7",
+          "applied_head": "cae4e2a12cf6d7781c4ddc180e55eb587e410f84",
+          "source_patch_id": "75fb4952783a0f80ff46df1443e3051b4dd90828",
+          "applied_patch_id": "75fb4952783a0f80ff46df1443e3051b4dd90828",
+          "patch_id_match": true,
+          "exact_changed_lines_match_ignoring_only_index_hashes_and_hunk_positions": true,
+          "source_changed_lines_sha256": "b8c9476d2ab7f199bcccd88510e4d87c1bdf7991ae13019e0ad312558c315df7",
+          "applied_changed_lines_sha256": "b8c9476d2ab7f199bcccd88510e4d87c1bdf7991ae13019e0ad312558c315df7",
+          "same_changed_paths": true,
+          "changed_paths": [
+            "verifier-py/qv_verifier/manifest.py",
+            "verifier-py/tests/test_manifest_tie_methods.py"
+          ]
+        },
+        {
+          "component": "BC02 witness trust anchor",
+          "source_base": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "source_head": "dcce09e794fbb15d303d380d610fd8cc5c0249c1",
+          "applied_base": "cae4e2a12cf6d7781c4ddc180e55eb587e410f84",
+          "applied_head": "43ac1463215810df4085bc7b727cb04d09ef5d0b",
+          "source_patch_id": "7875da12fe20ef8eb8c89f60b3c102638daa3aaa",
+          "applied_patch_id": "7875da12fe20ef8eb8c89f60b3c102638daa3aaa",
+          "patch_id_match": true,
+          "exact_changed_lines_match_ignoring_only_index_hashes_and_hunk_positions": true,
+          "source_changed_lines_sha256": "d1cb9b1b89457873d5e92dddee3a7898551f3d8e54ea8a9a677242b0b4165f35",
+          "applied_changed_lines_sha256": "d1cb9b1b89457873d5e92dddee3a7898551f3d8e54ea8a9a677242b0b4165f35",
+          "same_changed_paths": true,
+          "changed_paths": [
+            "packages/cli/README.md",
+            "packages/cli/src/cmd-board.ts",
+            "packages/cli/src/main.ts",
+            "packages/cli/test/audit.test.ts",
+            "packages/cli/test/board-policy-regressions.test.ts",
+            "packages/cli/test/cli.test.ts"
+          ]
+        },
+        {
+          "component": "P11 runtime and tests",
+          "source_base": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "source_head": "19983c6c28e421fcf7050bde2e0c578ab1df397f",
+          "applied_base": "43ac1463215810df4085bc7b727cb04d09ef5d0b",
+          "applied_head": "ff9d7966adefabcfb8228a9d8d8c279d9b6508be",
+          "source_patch_id": "a5645622472cc2d5f107c0b6f71c825cabc1a3f7",
+          "applied_patch_id": "a5645622472cc2d5f107c0b6f71c825cabc1a3f7",
+          "patch_id_match": true,
+          "exact_changed_lines_match_ignoring_only_index_hashes_and_hunk_positions": true,
+          "source_changed_lines_sha256": "e66302bdb0e21ff4457aac47aa56c70d8fc3d1f7a5a3f5619014aebfb9cc7911",
+          "applied_changed_lines_sha256": "e66302bdb0e21ff4457aac47aa56c70d8fc3d1f7a5a3f5619014aebfb9cc7911",
+          "same_changed_paths": true,
+          "changed_paths": [
+            "verifier-py/qv_verifier/election.py",
+            "verifier-py/tests/test_tally_decrypters.py"
+          ]
+        },
+        {
+          "component": "P11 normative clarification",
+          "source_base": "19983c6c28e421fcf7050bde2e0c578ab1df397f",
+          "source_head": "20a1932c109a773bf2944f6c58e621c73cb9e856",
+          "applied_base": "ff9d7966adefabcfb8228a9d8d8c279d9b6508be",
+          "applied_head": "8f3671a185e5db95bcba17b4b0c4bc78b21723f7",
+          "source_patch_id": "46bbdc6e88ea142313c92f5f4db57090b811bc40",
+          "applied_patch_id": "46bbdc6e88ea142313c92f5f4db57090b811bc40",
+          "patch_id_match": true,
+          "exact_changed_lines_match_ignoring_only_index_hashes_and_hunk_positions": true,
+          "source_changed_lines_sha256": "5660536fe446157b6403b0be9c67644ee0d6057cece79f2569a16f8de7c37c9e",
+          "applied_changed_lines_sha256": "5660536fe446157b6403b0be9c67644ee0d6057cece79f2569a16f8de7c37c9e",
+          "same_changed_paths": true,
+          "changed_paths": [
+            "docs/16-crypto-protocol.md"
+          ]
+        },
+        {
+          "component": "P10 authenticated marker conflicts",
+          "source_base": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "source_head": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+          "applied_base": "8f3671a185e5db95bcba17b4b0c4bc78b21723f7",
+          "applied_head": "f94604816c12c50383d152b9a6975e28dc4bcae9",
+          "source_patch_id": "95a6b84fe1a2426f7098b729db38f14e39508fd6",
+          "applied_patch_id": "95a6b84fe1a2426f7098b729db38f14e39508fd6",
+          "patch_id_match": true,
+          "exact_changed_lines_match_ignoring_only_index_hashes_and_hunk_positions": true,
+          "source_changed_lines_sha256": "abbd3c6b18bc24911c7aedbf41133119cfe1786bf9be25e6ee76e3d7a996f7c4",
+          "applied_changed_lines_sha256": "abbd3c6b18bc24911c7aedbf41133119cfe1786bf9be25e6ee76e3d7a996f7c4",
+          "same_changed_paths": true,
+          "changed_paths": [
+            "docs/16-crypto-protocol.md",
+            "docs/errata/spec-errata-log.md",
+            "packages/protocol/src/verify.ts",
+            "packages/protocol/test/marker-equivocation.test.ts",
+            "verifier-py/qv_verifier/election.py",
+            "verifier-py/tests/test_marker_equivocation.py"
+          ]
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "source_base": "754c586aa65735d50514b543a62a5e3c96a4d138",
+          "source_head": "676376024b33bbbee6a34dc11f9e169d7d49d4c6",
+          "applied_base": "f94604816c12c50383d152b9a6975e28dc4bcae9",
+          "applied_head": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+          "source_patch_id": "e62d1c2d8d8d75ee32bdc4f1fd8fc58fac687bda",
+          "applied_patch_id": "e62d1c2d8d8d75ee32bdc4f1fd8fc58fac687bda",
+          "patch_id_match": true,
+          "exact_changed_lines_match_ignoring_only_index_hashes_and_hunk_positions": true,
+          "source_changed_lines_sha256": "70a38e864991fe6ee08a79a0dd2e206b89a1ec96babaf91c3e9b26437721173b",
+          "applied_changed_lines_sha256": "70a38e864991fe6ee08a79a0dd2e206b89a1ec96babaf91c3e9b26437721173b",
+          "same_changed_paths": true,
+          "changed_paths": [
+            "docs/10-user-experience.md",
+            "docs/reports/revote-guarantee-copy-20261118.md",
+            "packages/web/COPY.md",
+            "packages/web/src/i18n/catalogs/ar.ts",
+            "packages/web/src/i18n/catalogs/de.ts",
+            "packages/web/src/i18n/catalogs/es.ts",
+            "packages/web/src/i18n/catalogs/fr.ts",
+            "packages/web/src/i18n/catalogs/pt-BR.ts",
+            "packages/web/src/i18n/en.ts"
+          ]
+        }
+      ],
+      "protected_paths_identical_to_reviewed_nonce_head": [
+        {
+          "path": "packages/crypto",
+          "nonce_head_object": "c6fc89b55aa9f4e0aca84e88083776565bada6a8",
+          "combined_object": "c6fc89b55aa9f4e0aca84e88083776565bada6a8",
+          "identical": true
+        },
+        {
+          "path": "test-vectors",
+          "nonce_head_object": "407336a0aa031b422b755848f986050cbe55eaee",
+          "combined_object": "407336a0aa031b422b755848f986050cbe55eaee",
+          "identical": true
+        },
+        {
+          "path": "packages/verifier/canary",
+          "nonce_head_object": "5906de9542f97c5a37a54d13744b4fb6682f367a",
+          "combined_object": "5906de9542f97c5a37a54d13744b4fb6682f367a",
+          "identical": true
+        },
+        {
+          "path": "verifier-py/qv_verifier/framed_hash.py",
+          "nonce_head_object": "093c91833fe308d7ce3645b1838a630db72e4f3f",
+          "combined_object": "093c91833fe308d7ce3645b1838a630db72e4f3f",
+          "identical": true
+        },
+        {
+          "path": "packages/protocol/src/schema.ts",
+          "nonce_head_object": "44ccb8726aebfa57d105ff3c59d231b788658904",
+          "combined_object": "44ccb8726aebfa57d105ff3c59d231b788658904",
+          "identical": true
+        },
+        {
+          "path": "packages/protocol/src/records.ts",
+          "nonce_head_object": "093e0178e98c1e60fcfee1a7b42f4f947576275d",
+          "combined_object": "093e0178e98c1e60fcfee1a7b42f4f947576275d",
+          "identical": true
+        },
+        {
+          "path": "verifier-py/qv_verifier/proofs.py",
+          "nonce_head_object": "a012d8bfccab4e74363449c2513e7936945bc01c",
+          "combined_object": "a012d8bfccab4e74363449c2513e7936945bc01c",
+          "identical": true
+        },
+        {
+          "path": "verifier-py/qv_verifier/recordfields.py",
+          "nonce_head_object": "baab68e0d78fdbf06c9ea5a3109ed9ad5b193ae0",
+          "combined_object": "baab68e0d78fdbf06c9ea5a3109ed9ad5b193ae0",
+          "identical": true
+        },
+        {
+          "path": "scripts",
+          "nonce_head_object": "abb975bb6c3a462cb6fb9181ad8fa70b6529a805",
+          "combined_object": "abb975bb6c3a462cb6fb9181ad8fa70b6529a805",
+          "identical": true
+        },
+        {
+          "path": ".github",
+          "nonce_head_object": "5ef53e52521a22df00e667fcd66bc29cca704239",
+          "combined_object": "5ef53e52521a22df00e667fcd66bc29cca704239",
+          "identical": true
+        },
+        {
+          "path": "package.json",
+          "nonce_head_object": "6c3341cdce679d084a1198c37fbab7c9d31a7fe0",
+          "combined_object": "6c3341cdce679d084a1198c37fbab7c9d31a7fe0",
+          "identical": true
+        },
+        {
+          "path": "package-lock.json",
+          "nonce_head_object": "29e40a19ee3738e0ffd9319f9abc519f4a49ef87",
+          "combined_object": "29e40a19ee3738e0ffd9319f9abc519f4a49ef87",
+          "identical": true
+        }
+      ],
+      "no_new_tests_run": true,
+      "final_blob_checks_outside_three_composed_files": [
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/e2e/verifier.ts",
+          "source_blob": "22b95c36c314a6e778a2e01c93c74d93db4e7aca",
+          "combined_blob": "22b95c36c314a6e778a2e01c93c74d93db4e7aca",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/src/build/site.ts",
+          "source_blob": "1769653ec60585d7b557a7aab4d3d0f67c62a022",
+          "combined_blob": "1769653ec60585d7b557a7aab4d3d0f67c62a022",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/src/i18n/extract.ts",
+          "source_blob": "eda88ff58cec694cb2ded6bf4a3efd059cc69378",
+          "combined_blob": "eda88ff58cec694cb2ded6bf4a3efd059cc69378",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/src/i18n/runtime.ts",
+          "source_blob": "008d322187ff278d17f54521549514fda72dccd3",
+          "combined_blob": "008d322187ff278d17f54521549514fda72dccd3",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/src/ui/app.ts",
+          "source_blob": "e9b5ab7e8ffd4790b3ca95b99e05d7e9ba109a02",
+          "combined_blob": "e9b5ab7e8ffd4790b3ca95b99e05d7e9ba109a02",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/src/util/pinned-preload.ts",
+          "source_blob": "ffd4f35e1fa4ef56ad484d5478ec909338c5bc0f",
+          "combined_blob": "ffd4f35e1fa4ef56ad484d5478ec909338c5bc0f",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/test/charts.test.ts",
+          "source_blob": "a093aa47bf062e4d7a1b37a2dbdd9180591f1734",
+          "combined_blob": "a093aa47bf062e4d7a1b37a2dbdd9180591f1734",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/test/i18n-lint.test.ts",
+          "source_blob": "fcdb0536bfcead29221770ee576527e9e59fb470",
+          "combined_blob": "fcdb0536bfcead29221770ee576527e9e59fb470",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/test/lazy.test.ts",
+          "source_blob": "9bcd2bb62261175e6072eaf4644db45273935f53",
+          "combined_blob": "9bcd2bb62261175e6072eaf4644db45273935f53",
+          "identical": true
+        },
+        {
+          "component": "W15 final app integrity gate",
+          "path": "packages/web/test/pinned-preload.test.ts",
+          "source_blob": "9417556df2ba5ed1eb4bea768e0af844e05889c4",
+          "combined_blob": "9417556df2ba5ed1eb4bea768e0af844e05889c4",
+          "identical": true
+        },
+        {
+          "component": "M7 manifest tie restriction",
+          "path": "verifier-py/qv_verifier/manifest.py",
+          "source_blob": "0c7405f7a7103a0eba92734715b3706beb9fb94f",
+          "combined_blob": "0c7405f7a7103a0eba92734715b3706beb9fb94f",
+          "identical": true
+        },
+        {
+          "component": "M7 manifest tie restriction",
+          "path": "verifier-py/tests/test_manifest_tie_methods.py",
+          "source_blob": "7669110976e58e360b36613ed64a6c5ccf91c9f7",
+          "combined_blob": "7669110976e58e360b36613ed64a6c5ccf91c9f7",
+          "identical": true
+        },
+        {
+          "component": "BC02 witness trust anchor",
+          "path": "packages/cli/README.md",
+          "source_blob": "824ddb1387ea7fd3d68aa448c3d40000f8d014bf",
+          "combined_blob": "824ddb1387ea7fd3d68aa448c3d40000f8d014bf",
+          "identical": true
+        },
+        {
+          "component": "BC02 witness trust anchor",
+          "path": "packages/cli/src/cmd-board.ts",
+          "source_blob": "585c613bf859ca41b00709621857e6157a9db05a",
+          "combined_blob": "585c613bf859ca41b00709621857e6157a9db05a",
+          "identical": true
+        },
+        {
+          "component": "BC02 witness trust anchor",
+          "path": "packages/cli/src/main.ts",
+          "source_blob": "9f1dd54fb6f86525ced6d7d1eb266ac0ddc1f2d6",
+          "combined_blob": "9f1dd54fb6f86525ced6d7d1eb266ac0ddc1f2d6",
+          "identical": true
+        },
+        {
+          "component": "BC02 witness trust anchor",
+          "path": "packages/cli/test/audit.test.ts",
+          "source_blob": "000e3510254b0d6b8f832c72a3bd093a51a4bfde",
+          "combined_blob": "000e3510254b0d6b8f832c72a3bd093a51a4bfde",
+          "identical": true
+        },
+        {
+          "component": "BC02 witness trust anchor",
+          "path": "packages/cli/test/board-policy-regressions.test.ts",
+          "source_blob": "e6d3263f9b2cc92aa390c7a9406358f081aa8877",
+          "combined_blob": "e6d3263f9b2cc92aa390c7a9406358f081aa8877",
+          "identical": true
+        },
+        {
+          "component": "BC02 witness trust anchor",
+          "path": "packages/cli/test/cli.test.ts",
+          "source_blob": "6d82fd07c395c3f2d02830e4c85886b1888f2ed9",
+          "combined_blob": "6d82fd07c395c3f2d02830e4c85886b1888f2ed9",
+          "identical": true
+        },
+        {
+          "component": "P11 runtime and tests",
+          "path": "verifier-py/tests/test_tally_decrypters.py",
+          "source_blob": "d86a9c34aff85c1458a9875c3c3ce9ccb6fed65b",
+          "combined_blob": "d86a9c34aff85c1458a9875c3c3ce9ccb6fed65b",
+          "identical": true
+        },
+        {
+          "component": "P10 authenticated marker conflicts",
+          "path": "packages/protocol/src/verify.ts",
+          "source_blob": "d8e84388ad60ab65e3dd80399be895b153a86b4b",
+          "combined_blob": "d8e84388ad60ab65e3dd80399be895b153a86b4b",
+          "identical": true
+        },
+        {
+          "component": "P10 authenticated marker conflicts",
+          "path": "packages/protocol/test/marker-equivocation.test.ts",
+          "source_blob": "b13debb50e448e784e1decf82fff7a34f40335bb",
+          "combined_blob": "b13debb50e448e784e1decf82fff7a34f40335bb",
+          "identical": true
+        },
+        {
+          "component": "P10 authenticated marker conflicts",
+          "path": "verifier-py/tests/test_marker_equivocation.py",
+          "source_blob": "97b4091be328202a872e5ba24d75e0e164cca6d9",
+          "combined_blob": "97b4091be328202a872e5ba24d75e0e164cca6d9",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "docs/10-user-experience.md",
+          "source_blob": "d804d2749885e3c1553789f6a6ca42674f3f3c77",
+          "combined_blob": "d804d2749885e3c1553789f6a6ca42674f3f3c77",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "docs/reports/revote-guarantee-copy-20261118.md",
+          "source_blob": "bf7a593be72ca5d2b6046fb4ee2e07f5762d0f4a",
+          "combined_blob": "bf7a593be72ca5d2b6046fb4ee2e07f5762d0f4a",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "packages/web/COPY.md",
+          "source_blob": "081dd1924db8197f8e67a39181335cad00ab9646",
+          "combined_blob": "081dd1924db8197f8e67a39181335cad00ab9646",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "packages/web/src/i18n/catalogs/ar.ts",
+          "source_blob": "0e11114c1547de93fcee8bc89a51e57b27add628",
+          "combined_blob": "0e11114c1547de93fcee8bc89a51e57b27add628",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "packages/web/src/i18n/catalogs/de.ts",
+          "source_blob": "3d927502e4bbed093d0f4614b5db3f2d1906a464",
+          "combined_blob": "3d927502e4bbed093d0f4614b5db3f2d1906a464",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "packages/web/src/i18n/catalogs/es.ts",
+          "source_blob": "fb1b1b72cc1f3e1272d8d0aa3086701834ed277c",
+          "combined_blob": "fb1b1b72cc1f3e1272d8d0aa3086701834ed277c",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "packages/web/src/i18n/catalogs/fr.ts",
+          "source_blob": "6e354044b84cbcfbb0dff4587d8870662d2f91ef",
+          "combined_blob": "6e354044b84cbcfbb0dff4587d8870662d2f91ef",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "packages/web/src/i18n/catalogs/pt-BR.ts",
+          "source_blob": "8f8d7cd3497c226ce26cb76c590ad56e5270279e",
+          "combined_blob": "8f8d7cd3497c226ce26cb76c590ad56e5270279e",
+          "identical": true
+        },
+        {
+          "component": "B3 revote guarantee copy",
+          "path": "packages/web/src/i18n/en.ts",
+          "source_blob": "929c52c6ca8aa9ea49367de7c10a1738eb5d310c",
+          "combined_blob": "929c52c6ca8aa9ea49367de7c10a1738eb5d310c",
+          "identical": true
+        }
+      ],
+      "composed_files_reviewed_in_source": [
+        "docs/16-crypto-protocol.md",
+        "docs/errata/spec-errata-log.md",
+        "verifier-py/qv_verifier/election.py"
+      ],
+      "source_review_result": "No blocking integration source issue found. Critical guards retained, constituent exact changed lines preserved, no extra crypto/vector mutation beyond reviewed #57.",
+      "interaction_findings": [
+        {
+          "area": "Python M7/P10/P11 sequencing",
+          "result": "Manifest validation occurs before authenticated marker conflict detection; P10 stops before ballot/tally work; P11 blocks rules/results after an otherwise admitted tally. Fatal precedence and earlier completed checks remain intact."
+        },
+        {
+          "area": "W15 with nonce/marker code and B3 catalogs",
+          "result": "Build dependency pins and lazy gates are unchanged source; altered chunk bytes are hashed from actual build output. B3 changes two existing keys, keeps all native-review maps empty, and does not bypass locale eligibility or failed-preload closure."
+        },
+        {
+          "area": "BC02 with core verifier changes",
+          "result": "Standalone CLI downgrade only applies to an otherwise VERIFIED board result lacking an external log key or witness policy. FAILED results remain FAILED. Election-bundle route retains manifest-bound policy; board-integrity status must not be conflated with the full election verdict."
+        },
+        {
+          "area": "Nonce and vectors",
+          "result": "Reviewed #57 is an exact ancestor; crypto, cross-language registry, vector and canary objects match it exactly. No subsequent acceptance expectation or comparator change."
+        }
+      ],
+      "limits": [
+        "No combined runtime suite, browser scenario, build or benchmark was executed by this review lane.",
+        "Root reports combined root typecheck, TS423 vectors and Python232 tests passing; these are attributed root results and not independently rerun here.",
+        "Root reports combined i18n/strict-comparison processes killed without a diagnostic; those attempts remain incomplete, not passes, until root completes or supersedes them.",
+        "Earlier W15 browser launch was blocked before assertions locally; reported hosted candidate passes do not by themselves qualify this exact combined tree.",
+        "Build size, changed-bundle integrity behavior and cross-language report parity require exact combined execution receipts, owned by root.",
+        "This is a detached local candidate, not a remote integration branch, main merge, deployment or release.",
+        "Candidate-only repairs do not close canonical residuals or broader KNOWN/mutation/validation/governance scope.",
+        "Required human/CODEOWNER/security-reviewer-group approvals remain outstanding; no formal approval is supplied here."
+      ]
+    },
+    "node_validation": {
+      "commit": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+      "tree": "9fe4efb1753f9ffbbe94aa8379663654aa722a15",
+      "source_clean": true,
+      "node": "v24.22.1",
+      "node_options": "--max-old-space-size=512 --max-semi-space-size=4",
+      "i18n": {
+        "exit_code": 0,
+        "static": 360,
+        "resolved_dynamic": 21,
+        "unresolved_dynamic": 1,
+        "forwarders": 1,
+        "exclusions": 1
+      },
+      "full_web_serial": {
+        "tests": 338,
+        "passed": 337,
+        "failed": 1,
+        "skipped": 0,
+        "exit_code": 1,
+        "failure": {
+          "test": "ordinary app build precompiles ICU deterministically within gzip budgets",
+          "path": "packages/web/test/app-precompile.test.ts",
+          "assertion_line": 62,
+          "measured_gzip": 204903,
+          "strict_cap": 204800,
+          "diagnosis": "The independent appOptions omit charset and produce ASCII output, while the production app invocation in site.ts150 explicitly uses UTF-8. No test/source/budget edits were made."
+        }
+      },
+      "production_build": {
+        "exit_code": 0,
+        "build_id": "a5bdf07e2d70",
+        "all_js_gzip": 200345,
+        "entry_gzip": 98974,
+        "strict_cap": 204800,
+        "headroom": 4455
+      },
+      "strict_shared_comparison": {
+        "exit_code": 0,
+        "ok": true,
+        "cases": 27,
+        "verdict_agreements": 27,
+        "failures": 0,
+        "excluded_capabilities": [
+          "chk.board.append_only: Python not implemented",
+          "chk.board.witness: Python not implemented",
+          "chk.receipts.sample: Python not implemented"
+        ]
+      },
+      "receipts": {
+        "i18n": {
+          "log": "session-evidence/analysis/recovery_review/combined-i18n.log",
+          "log_sha256": "ada5ef6b80305888161b85f029854e45516ef21ee3b8e9b267d7dc0969f99032",
+          "exit_code": 0,
+          "elapsed_seconds": 1.8639800429991737,
+          "max_rss_kib": 331176
+        },
+        "web-serial": {
+          "log": "session-evidence/analysis/recovery_review/combined-web-serial.log",
+          "log_sha256": "6055c7ca967189c587a7356bb4332b758db1ba2427275e32af5a8af0fdb57294",
+          "exit_code": 1,
+          "elapsed_seconds": 65.44340609500068,
+          "max_rss_kib": 315844
+        },
+        "production-build": {
+          "log": "session-evidence/analysis/recovery_review/combined-production-build.log",
+          "log_sha256": "6d90dbf2543a956ca21dbf346b34114817042f060f57a12e6a3de12c6266b780",
+          "exit_code": 0,
+          "elapsed_seconds": 0.4568801450004685,
+          "max_rss_kib": 88308
+        },
+        "gzip": {
+          "log": "session-evidence/analysis/recovery_review/combined-gzip.log",
+          "log_sha256": "fc7f52461e836d048bdc78a2baeed65838b5f8bb2bd52f3deb0a4f2e5a7d0546",
+          "exit_code": 0,
+          "elapsed_seconds": 0.057281969999166904,
+          "max_rss_kib": 36992
+        },
+        "strict-compare": {
+          "log": "session-evidence/analysis/recovery_review/combined-strict-compare.log",
+          "log_sha256": "f850624391b7d021c72245af3c1b9b4669a4c2ca27c9827c5ea5558e1a406a12",
+          "exit_code": 0,
+          "elapsed_seconds": 12.058423097998457,
+          "max_rss_kib": 92000
+        }
+      },
+      "prior_killed_receipts": "Root workstream logs preserved separately; no killed attempt is relabeled as passing.",
+      "source_edits": false,
+      "remote_mutations": false
+    },
+    "full_web_result": "337/338 passed; ASCII-vs-production-UTF8 test configuration mismatch retained as a failure."
+  },
+  "incomplete_or_failed_attempts": [
+    {
+      "observation": "Initial P10 root typecheck killed with exit137.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/p10-root-typecheck.log",
+        "sha256": "317d0ea0f4723ddebaf9cfc0c1e3ef54fd97510c6b2ba660de343e6cd79643ee",
+        "bytes": 152,
+        "last_lines": [
+          "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+          "",
+          "> typecheck",
+          "> tsc -p tsconfig.json --noEmit",
+          "",
+          "Killed"
+        ]
+      }
+    },
+    {
+      "observation": "Isolated P10 typecheck retry killed; not a pass.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/p10-root-typecheck-isolated.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "last_lines": []
+      }
+    },
+    {
+      "observation": "Bounded P10 typecheck retry killed; not a pass.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/p10-root-typecheck-bounded.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "last_lines": []
+      }
+    },
+    {
+      "observation": "Combined i18n terminated137 before web tests.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-web-initial-killed.log",
+        "sha256": "8cc08da4ab9117dced384ea9966cc100303f73a7c0a893a7ea54bb92d45a85bf",
+        "bytes": 528,
+        "last_lines": [
+          "> node scripts/i18n-check.ts",
+          "",
+          "Killed",
+          "npm error Lifecycle script `i18n:check` failed with error:",
+          "npm error code 137",
+          "npm error path session-evidence/quietvote-combined/packages/web",
+          "npm error workspace @quietvote/web@0.0.0",
+          "npm error location session-evidence/quietvote-combined/packages/web",
+          "npm error command failed",
+          "npm error command sh -c node scripts/i18n-check.ts"
+        ]
+      }
+    },
+    {
+      "observation": "Unchanged combined i18n retry terminated137.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-i18n-retry.log",
+        "sha256": "8cc08da4ab9117dced384ea9966cc100303f73a7c0a893a7ea54bb92d45a85bf",
+        "bytes": 528,
+        "last_lines": [
+          "> node scripts/i18n-check.ts",
+          "",
+          "Killed",
+          "npm error Lifecycle script `i18n:check` failed with error:",
+          "npm error code 137",
+          "npm error path session-evidence/quietvote-combined/packages/web",
+          "npm error workspace @quietvote/web@0.0.0",
+          "npm error location session-evidence/quietvote-combined/packages/web",
+          "npm error command failed",
+          "npm error command sh -c node scripts/i18n-check.ts"
+        ]
+      }
+    },
+    {
+      "observation": "256MiB attempt killed without a source diagnostic.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-i18n-256.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "last_lines": []
+      }
+    },
+    {
+      "observation": "Isolated child returned-9 after13.76s; maxRSS90356KiB; cause not established.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-i18n-isolated.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "last_lines": []
+      }
+    },
+    {
+      "observation": "First strict-comparison attempt killed137.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-compare.log",
+        "sha256": "f3e4666cc5927a6b5c8045dcccd3a715915aed8f7ec094ca04103c7399b19e3a",
+        "bytes": 173,
+        "last_lines": [
+          "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+          "",
+          "> verifiers:compare",
+          "> node scripts/compare-verifiers.ts --strict",
+          "",
+          "Killed"
+        ]
+      }
+    },
+    {
+      "observation": "Interrupted offline install was killed and left incomplete dependencies.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-deps-refresh.log",
+        "sha256": "7125f194612fcff2f454c05d848e7cb71facc1967b4d5017e25b34fdee3ba74f",
+        "bytes": 99,
+        "last_lines": [
+          "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm."
+        ]
+      }
+    },
+    {
+      "observation": "Dependent i18n invocation failed because interrupted install omitted TypeScript.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-i18n-fresh-deps.log",
+        "sha256": "bc0c97d49e8041d7c44cee47943421a0ca6bc4f9004f017940dae2e3769da393",
+        "bytes": 1649,
+        "last_lines": [
+          "}",
+          "",
+          "Node.js v24.22.1",
+          "npm error Lifecycle script `i18n:check` failed with error:",
+          "npm error code 1",
+          "npm error path session-evidence/quietvote-combined/packages/web",
+          "npm error workspace @quietvote/web@0.0.0",
+          "npm error location session-evidence/quietvote-combined/packages/web",
+          "npm error command failed",
+          "npm error command sh -c node scripts/i18n-check.ts"
+        ]
+      }
+    },
+    {
+      "observation": "Final npm typecheck launcher failed ENOSPC before the compiler; direct unchanged compiler later passed with a writable task-local npm cache.",
+      "log": {
+        "evidence_id": "session-evidence/analysis/combined-final-typecheck-launch-enospc.log",
+        "sha256": "8e637c44cd69f0c18d5e3b90a4e5b830df9c2c66d7d0bcdd8b6f9fa6bd081f9b",
+        "bytes": 471,
+        "last_lines": [
+          "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+          "npm error code ENOSPC",
+          "npm error syscall write",
+          "npm error errno -28",
+          "npm error nospc ENOSPC: no space left on device, write",
+          "npm error nospc There appears to be insufficient space on your system to finish.",
+          "npm error nospc Clear up some disk space and try again.",
+          "npm error A complete log of this run can be found in: /home/agent/.npm/_logs/2026-11-18T08_56_23_695Z-debug-0.log"
+        ]
+      }
+    }
+  ],
+  "dependency_recovery": {
+    "result": "Succeeded; 17 packages installed in3s with128MiB heap and4MiB semi-space.",
+    "log": {
+      "evidence_id": "session-evidence/analysis/combined-deps-bounded.log",
+      "sha256": "386f581c3698031a957a62ba36d3109ac19c6225692621accc90a3073d1e87b2",
+      "bytes": 124,
+      "last_lines": [
+        "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.",
+        "",
+        "added 17 packages in 3s"
+      ]
+    },
+    "limitation": "No root cause is inferred solely from a successful retry."
+  },
+  "review_gate": {
+    "formal_approvals_observed": 0,
+    "crypto_protocol_vectors": "Two formal approvals including a designated security reviewer, under QV-30 section10 and REQ018.",
+    "ordinary_changes": "Second-person and CODEOWNER review requirements remain; intermediate integration is not assumed exempt.",
+    "historical_pr58": "Original author DCO missing; no substitute attestation or history rewrite."
+  },
+  "limitations": [
+    "Test totals from distinct suites, languages and source commits must not be summed into a single coverage or corpus count.",
+    "Shared report comparison excludes board append-only, witness and receipt-sample capabilities; those exclusions are not agreements.",
+    "A passing individual candidate browser run does not qualify the detached combined tree.",
+    "The expanded Windows CI failure remains distinct from an earlier canceled run, and from later candidate repairs.",
+    "Manual accessibility, native-language review, deployment/platform operations and independent protocol/election qualification remain open."
+  ],
+  "web_checks_candidate": {
+    "commit": "26e06edddbd953a1ebd86a927372a232d54a572b",
+    "tree": "ac3735480e347226e2d4a9dda228d2e3cf10868e",
+    "branch": "codex/quietvote-web-checks-20261117",
+    "base": "754c586aa65735d50514b543a62a5e3c96a4d138",
+    "root_path_fix_original": "fc72bc1d1139ba0ff64f65f60896e71dc6fc07c8",
+    "root_path_fix_cherry_pick": "ff354100b1df6066d311350511391f21f10fab82",
+    "changed_files": [
+      "packages/web/test/app-precompile.test.ts",
+      "packages/web/test/no-bearer.test.ts"
+    ],
+    "diff_numstat": "1\t0\tpackages/web/test/app-precompile.test.ts\n1\t1\tpackages/web/test/no-bearer.test.ts",
+    "runtime_source_unchanged": true,
+    "shared_worker_build_options_unchanged": true,
+    "strict_size_assertions_unchanged": true,
+    "tests": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "receipt": "analysis/recovery_review/web-checks-focused.json",
+      "execution_state": "Executed with charset line in the working tree after the path-fix cherry-pick; final committed test/build hashes match those receipts exactly."
+    },
+    "production_build": {
+      "build": "32fdc00ba3c1",
+      "gzip_all_js": 200263,
+      "entry_gzip": 98912,
+      "strict_cap": 204800,
+      "priorW15BuildIdAndEveryJsFilenameGzipIdentical": true,
+      "receipt": "analysis/recovery_review/web-checks-build-comparison.json"
+    },
+    "clean_after_commit": true,
+    "original_combined_failure_log_sha256_unchanged": "6055c7ca967189c587a7356bb4332b758db1ba2427275e32af5a8af0fdb57294",
+    "full_web_suite": "Not repeated here per root instruction; root will run once on final combined source.",
+    "scope_limits": "Linux Node24 focused execution and source review; no Windows execution claim or formal approval.",
+    "remote_mutations": false
+  },
+  "independent_web_checks": {
+    "schema_version": 1,
+    "reviewer": "branch_inventory (independent agent review; not formal GitHub approval)",
+    "reviewed_at_utc": "2026-11-18 08:56:41 UTC",
+    "worktree": "session-evidence/quietvote-web-checks",
+    "head": "26e06edddbd953a1ebd86a927372a232d54a572b",
+    "tree": "ac3735480e347226e2d4a9dda228d2e3cf10868e",
+    "parent": "ff354100b1df6066d311350511391f21f10fab82",
+    "comparison_base": "754c586aa65735d50514b543a62a5e3c96a4d138",
+    "worktree_clean_before_and_after": true,
+    "scope": {
+      "changed_files": [
+        "packages/web/test/no-bearer.test.ts",
+        "packages/web/test/app-precompile.test.ts"
+      ],
+      "insertions": 2,
+      "deletions": 1,
+      "runtime_changes": false,
+      "remote_changes": false,
+      "reviewer_product_edits": false
+    },
+    "findings": [],
+    "blocking_findings": 0,
+    "reviewed_semantics": [
+      {
+        "path": "packages/web/test/no-bearer.test.ts",
+        "line": 11,
+        "conclusion": "Return the file URL object directly; both readFileSync consumers accept it. Removes URL.pathname conversion that produced malformed D:\\D:\\... on Windows. Assertion contents and authorization-call test are unchanged.",
+        "evidence": [
+          "readFileSync consumers at lines 19 and 21",
+          "node_modules/@types/node/fs.d.ts:30 defines PathLike as string | Buffer | URL",
+          "focused execution passed on Linux"
+        ]
+      },
+      {
+        "path": "packages/web/test/app-precompile.test.ts",
+        "line": 30,
+        "conclusion": "App-only charset utf8 matches production site.ts:150. The repeated app build uses the same option. Common options, worker build, standalone catalog parity, deterministic comparison and strict entry/whole-JS gzip limits remain unchanged.",
+        "evidence": [
+          "production src/build/site.ts unchanged from base",
+          "worker still uses common options at test line41",
+          "strict caps remain entry <110*1024 and app+worker total <200*1024 at test lines62-63",
+          "both precompile tests passed"
+        ]
+      }
+    ],
+    "source_hashes": {
+      "packages/web/test/no-bearer.test.ts": {
+        "sha256": "c606fd0a48a41a47b5c6dbbccdf70ca0f2991c9728226e0303ff9938ae25bf33",
+        "matches_head": true,
+        "unchanged_from_base": false
+      },
+      "packages/web/test/app-precompile.test.ts": {
+        "sha256": "db75917e6cb1e86e1974d68e996ebfb31469349081f506f16169415d8f916cb0",
+        "matches_head": true,
+        "unchanged_from_base": false
+      },
+      "packages/web/src/build/site.ts": {
+        "sha256": "d31fa6f31ad341eb067adb1ef757d629cb5ed3232c0cf5070c99d589c70edf67",
+        "matches_head": true,
+        "unchanged_from_base": true
+      }
+    },
+    "executed_validation": {
+      "command": "node --test --test-reporter=spec packages/web/test/no-bearer.test.ts packages/web/test/app-precompile.test.ts",
+      "cwd": "session-evidence/quietvote-web-checks",
+      "node": "v24.22.1",
+      "platform": "Linux",
+      "exit_code": 0,
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "log": "session-evidence/analysis/branch_inventory/qa-web-checks-focused.log",
+      "tests_named": [
+        "ordinary app build precompiles ICU deterministically within gzip budgets",
+        "indexed production catalogs preserve every message and review gate",
+        "N-20: ApiClient has no session-token or challenge/session methods and no export with those names",
+        "N-20: no request ever carries an Authorization: Bearer header (reads, voter calls, signed calls)"
+      ]
+    },
+    "qualification_limits": [
+      "No broad 338-test web rerun or Windows execution was performed by this reviewer.",
+      "This focused result is bound to the exact candidate head/tree above; final combined-tree full-suite qualification belongs to root.",
+      "Production build was not rerun independently in this review. Implementer reported unchanged W15 build ID 32fdc00ba3c1 and total gzip 200263 bytes; this report is not represented as an independently measured result.",
+      "Earlier combined candidate 6f7 had a reported 337-pass/1-ASCII-budget-failure result at 204903 bytes. Its failure receipt is preserved; this passing focused candidate does not rewrite it.",
+      "The independent precompile gzip assertions passed, but this test log does not print precise gzip sizes.",
+      "No claim is made that Windows server recovery/process failures in full-matrix run44263515558 were repaired.",
+      "Agent review is not required human/security-group approval and no GitHub review was submitted."
+    ]
+  },
+  "combined_final_web": {
+    "sha": "cf53e694483ccb45466b19f27cf8c642800b6c85",
+    "tree": "316c490b46a2062556360c3c0201f1a1c6ae105c",
+    "runtime_tested_parent": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+    "delta_files": [
+      "packages/web/test/app-precompile.test.ts",
+      "packages/web/test/no-bearer.test.ts"
+    ],
+    "production_source_unchanged_from_parent": true,
+    "started_at_utc": "2026-11-18T08:58:55.444541+00:00",
+    "node_options": "--max-old-space-size=512 --max-semi-space-size=4",
+    "npm_cache_override": "Task-local writable cache; the home filesystem was full. No product/config source change.",
+    "checks": [
+      {
+        "name": "typecheck",
+        "command": [
+          "node",
+          "node_modules/typescript/bin/tsc",
+          "-p",
+          "tsconfig.json",
+          "--noEmit"
+        ],
+        "cwd": "session-evidence/quietvote-combined",
+        "exit_code": 0,
+        "elapsed_seconds": 4.672490598000877,
+        "log": "session-evidence/analysis/combined-final-typecheck.log",
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "i18n",
+        "command": [
+          "node",
+          "scripts/i18n-check.ts"
+        ],
+        "cwd": "session-evidence/quietvote-combined/packages/web",
+        "exit_code": 0,
+        "elapsed_seconds": 1.5432695859999512,
+        "log": "session-evidence/analysis/combined-final-i18n.log",
+        "log_sha256": "d7a098797b394fb2376be4df218d77de5d098c417512967b95d162897f9937ec"
+      },
+      {
+        "name": "web",
+        "command": [
+          "node",
+          "--test",
+          "--test-concurrency=1",
+          "--test-reporter=spec",
+          "test/**/*.test.ts"
+        ],
+        "cwd": "session-evidence/quietvote-combined/packages/web",
+        "exit_code": 0,
+        "elapsed_seconds": 64.21377496599962,
+        "log": "session-evidence/analysis/combined-final-web.log",
+        "log_sha256": "4f9474e6eb816c2fe5dc84e808acd9c85db93c65d8ab0987e059c29f049b0782",
+        "counts": {
+          "tests": 338,
+          "pass": 338,
+          "fail": 0,
+          "skipped": 0,
+          "cancelled": 0
+        }
+      }
+    ],
+    "source_clean": true,
+    "finished_at_utc": "2026-11-18T09:00:05.899446+00:00"
+  },
+  "windows_triage": {
+    "review_kind": "Independent AI read-only Windows CI triage and exact-source web fixture path review; not a formal approving review",
+    "reviewed_at_utc": "2026-11-18T08:57:35.462514+00:00",
+    "ci": {
+      "run_id": 44263515558,
+      "job_id": 134662337870,
+      "url": "https://github.com/djshellshoxxx/quietvote/actions/runs/44263515558/job/134662337870",
+      "log": "session-evidence/analysis/branch_inventory/pr60-run44263515558-job134662337870.log",
+      "log_sha256": "ed86188a67760135d6003d32268cff9dd4377aadbc7b5eef6fafc828d545ec62",
+      "os": "Windows Server 2025 10.0.26100",
+      "image": "windows-2025-vs2026 20261103.298.1",
+      "node": "22.23.4",
+      "npm": "10.9.9",
+      "observed_checkout": "d2ccc322ba3c7381357627272e47fcfb8e49c84b",
+      "merge_head": "754c586aa65735d50514b543a62a5e3c96a4d138",
+      "merge_base": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "checkout_provenance": "Full checkout SHA and parent/head names read from CI log. Merge object is not available locally; no claim of independently rehashed hosted merge tree. Source comparisons use the named PR head Git objects.",
+      "server": {
+        "tests": 294,
+        "pass": 272,
+        "fail": 15,
+        "skip": 7
+      },
+      "web": {
+        "tests": 338,
+        "pass": 337,
+        "fail": 1,
+        "skip": 0
+      }
+    },
+    "category_counts": {
+      "confirmed_file_url_conversion_bug": 1,
+      "windows_signal_assumption": 2,
+      "transport_reset_after_blocking_verification": 1,
+      "unresolved_recovery": 12
+    },
+    "source_identity": {
+      "refs": {
+        "canonical": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+        "pr57": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+        "pr60": "754c586aa65735d50514b543a62a5e3c96a4d138"
+      },
+      "paths": [
+        {
+          "path": "packages/web/test/no-bearer.test.ts",
+          "blobs": {
+            "canonical": "c59a91e3d446025fed45bfe19ad0a0b58104184e",
+            "pr57": "c59a91e3d446025fed45bfe19ad0a0b58104184e",
+            "pr60": "c59a91e3d446025fed45bfe19ad0a0b58104184e"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/src/pool.ts",
+          "blobs": {
+            "canonical": "7d1b3e4df7adad56ce14e4f55824ca78e607ebe5",
+            "pr57": "7d1b3e4df7adad56ce14e4f55824ca78e607ebe5",
+            "pr60": "7d1b3e4df7adad56ce14e4f55824ca78e607ebe5"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/src/webhooks.ts",
+          "blobs": {
+            "canonical": "776c35f6c152e6aa4c5c1e7f03799bebaf74ffa9",
+            "pr57": "776c35f6c152e6aa4c5c1e7f03799bebaf74ffa9",
+            "pr60": "776c35f6c152e6aa4c5c1e7f03799bebaf74ffa9"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/src/data-lock.ts",
+          "blobs": {
+            "canonical": "9703464c042610bff32d9ee893b336522386edf9",
+            "pr57": "9703464c042610bff32d9ee893b336522386edf9",
+            "pr60": "9703464c042610bff32d9ee893b336522386edf9"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "blobs": {
+            "canonical": "330790b1d09a3b127239ab8ba886a7d677882960",
+            "pr57": "330790b1d09a3b127239ab8ba886a7d677882960",
+            "pr60": "330790b1d09a3b127239ab8ba886a7d677882960"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/bin/qv-server.ts",
+          "blobs": {
+            "canonical": "c98701e08256a23095616b188180d4218830d242",
+            "pr57": "c98701e08256a23095616b188180d4218830d242",
+            "pr60": "c98701e08256a23095616b188180d4218830d242"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/test/data-lock.test.ts",
+          "blobs": {
+            "canonical": "a6f948801cc1e5567f67aee7291c1fb45d09845c",
+            "pr57": "a6f948801cc1e5567f67aee7291c1fb45d09845c",
+            "pr60": "a6f948801cc1e5567f67aee7291c1fb45d09845c"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/test/launcher.test.ts",
+          "blobs": {
+            "canonical": "dc2db550608d4914a9900d21f344664e69c95fd0",
+            "pr57": "dc2db550608d4914a9900d21f344664e69c95fd0",
+            "pr60": "dc2db550608d4914a9900d21f344664e69c95fd0"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/test/idempotency-recovery.test.ts",
+          "blobs": {
+            "canonical": "7fb427aac199344c10a720be2aa33b4c4fc90b79",
+            "pr57": "7fb427aac199344c10a720be2aa33b4c4fc90b79",
+            "pr60": "7fb427aac199344c10a720be2aa33b4c4fc90b79"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/test/operation-response-recovery.test.ts",
+          "blobs": {
+            "canonical": "8c0c29fc79e7937e9193995a4ee8c7d5864bbcc8",
+            "pr57": "8c0c29fc79e7937e9193995a4ee8c7d5864bbcc8",
+            "pr60": "8c0c29fc79e7937e9193995a4ee8c7d5864bbcc8"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/test/replay-completion-review.test.ts",
+          "blobs": {
+            "canonical": "b684749f98a3385edc0c107013f818be87324d1e",
+            "pr57": "b684749f98a3385edc0c107013f818be87324d1e",
+            "pr60": "b684749f98a3385edc0c107013f818be87324d1e"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/test/supplemental-event-recovery.test.ts",
+          "blobs": {
+            "canonical": "1bba317d72c5ea23903bac8ec94f0c19a3ea7609",
+            "pr57": "1bba317d72c5ea23903bac8ec94f0c19a3ea7609",
+            "pr60": "1bba317d72c5ea23903bac8ec94f0c19a3ea7609"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/test/webhook-bridge-recovery.test.ts",
+          "blobs": {
+            "canonical": "f304b0df4f0982cec97109a5a402ec9107e0e1fc",
+            "pr57": "f304b0df4f0982cec97109a5a402ec9107e0e1fc",
+            "pr60": "f304b0df4f0982cec97109a5a402ec9107e0e1fc"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": true
+        },
+        {
+          "path": "packages/server/test/e2e.test.ts",
+          "blobs": {
+            "canonical": "34ae85c4656e746844ed96b08b987dc2e82017d7",
+            "pr57": "ad43b9dcf0d6436eb3fd073986ebbfbfe428faee",
+            "pr60": "34ae85c4656e746844ed96b08b987dc2e82017d7"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": false
+        },
+        {
+          "path": "packages/server/test/helpers/world.ts",
+          "blobs": {
+            "canonical": "4f7d60d344563bfebabf3f264b71453293ee49f8",
+            "pr57": "e2d50f65e39ef3625427df4afa28b00d05ec8d78",
+            "pr60": "4f7d60d344563bfebabf3f264b71453293ee49f8"
+          },
+          "pr60_matches_canonical": true,
+          "pr60_matches_pr57": false
+        }
+      ]
+    },
+    "source_identity_conclusion": "All 15 reviewed paths match canonical 72bccc6 at the PR60 head. All also match #57 except server e2e.test.ts and helpers/world.ts, which #57 changes for fresh HTTP connections. Unchanged source does not establish a historical Windows failure or eliminate a current defect.",
+    "failures": [
+      {
+        "source_log_line": 561,
+        "test_at": "test\\data-lock.test.ts:85:1",
+        "name": "another process cannot open a live server data directory",
+        "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:",
+        "actual": "actual: [ null, 'SIGTERM' ],",
+        "expected": "expected: [ 0, null ],",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/data-lock.test.ts:105:12)",
+        "id": "WIN-01",
+        "category": "windows_signal_assumption",
+        "assessment": "Observed child exit [null, SIGTERM], expected [0, null]; test sends child.kill(SIGTERM) and assumes its JavaScript cleanup handler runs.",
+        "cause_status": "Observed exit matches documented Windows child.kill(SIGTERM) behavior; graceful cleanup is not demonstrated."
+      },
+      {
+        "source_log_line": 584,
+        "test_at": "test\\e2e.test.ts:16:1",
+        "name": "full election over HTTP: 3-of-5 trustees, 22 voters, revotes, spoils, close, tally, export, evidence-gated verification",
+        "failure": "TypeError: fetch failed",
+        "actual": null,
+        "expected": null,
+        "failure_location": null,
+        "id": "WIN-02",
+        "category": "transport_reset_after_blocking_verification",
+        "assessment": "Direct export.qvb fetch at e2e.test.ts:143 failed with read ECONNRESET after synchronous verifier subprocesses; #57 already changes this exact request to a fresh connection.",
+        "cause_status": "Observed transport reset; stale pooled connection after event-loop blocking is consistent with the exact #57 repair, but not independently reproduced on Windows."
+      },
+      {
+        "source_log_line": 599,
+        "test_at": "test\\idempotency-recovery.test.ts:8:1",
+        "name": "committed election with a lost response stays reserved while storage fails and recovers after restart",
+        "failure": "AssertionError [ERR_ASSERTION]: {\"type\":\"urn:quietvote:problem:STATE_CONFLICT\",\"title\":\"State conflict\",\"status\":409,\"code\":\"STATE_CONFLICT\",\"detail\":\"this request outcome was not recorded; inspect the resource or job before submitting another request\",\"retryable\":false,\"request_id\":\"PfNDP84dO7qdXTGf\",\"reason\":\"IDEMPOTENCY_INTERRUPTED\"}",
+        "actual": "actual: 409,",
+        "expected": "expected: 201,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/idempotency-recovery.test.ts:33:12)",
+        "id": "WIN-03",
+        "category": "unresolved_recovery",
+        "assessment": "Retry after restart returned 409 IDEMPOTENCY_INTERRUPTED instead of 201.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 617,
+        "test_at": "test\\launcher.test.ts:66:1",
+        "name": "launcher starts actual server, answers readiness and stops on SIGTERM",
+        "failure": "AssertionError [ERR_ASSERTION]: (node:2644) ExperimentalWarning: SQLite is an experimental feature and might change at any time",
+        "actual": "actual: null,",
+        "expected": "expected: 0,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/launcher.test.ts:89:12)",
+        "id": "WIN-04",
+        "category": "windows_signal_assumption",
+        "assessment": "Readiness succeeded; after child.kill(SIGTERM), exit code was null instead of 0. SQLite warning in the assertion message is not the failing condition.",
+        "cause_status": "Observed exit matches documented Windows child.kill(SIGTERM) behavior; graceful cleanup is not demonstrated."
+      },
+      {
+        "source_log_line": 638,
+        "test_at": "test\\operation-response-recovery.test.ts:32:3",
+        "name": "process exit after create commit recovers its redacted original result and audit exactly once at startup",
+        "failure": "AssertionError [ERR_ASSERTION]: startup itself must reconcile the committed result",
+        "actual": "actual: -1,",
+        "expected": "expected: 201,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/operation-response-recovery.test.ts:40:14)",
+        "id": "WIN-05",
+        "category": "unresolved_recovery",
+        "assessment": "Startup left the committed create response at status -1 instead of 201.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 656,
+        "test_at": "test\\operation-response-recovery.test.ts:32:3",
+        "name": "process exit after invites commit recovers its redacted original result and audit exactly once at startup",
+        "failure": "AssertionError [ERR_ASSERTION]: startup itself must reconcile the committed result",
+        "actual": "actual: -1,",
+        "expected": "expected: 201,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/operation-response-recovery.test.ts:40:14)",
+        "id": "WIN-06",
+        "category": "unresolved_recovery",
+        "assessment": "Startup left the committed invites response at status -1 instead of 201.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 674,
+        "test_at": "test\\operation-response-recovery.test.ts:32:3",
+        "name": "process exit after clear commit recovers its redacted original result and audit exactly once at startup",
+        "failure": "AssertionError [ERR_ASSERTION]: startup itself must reconcile the committed result",
+        "actual": "actual: -1,",
+        "expected": "expected: 200,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/operation-response-recovery.test.ts:40:14)",
+        "id": "WIN-07",
+        "category": "unresolved_recovery",
+        "assessment": "Startup left the committed clear response at status -1 instead of 200.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 692,
+        "test_at": "test\\operation-response-recovery.test.ts:77:1",
+        "name": "failure after committed election initialization retains its binding and recovers on same-process retry",
+        "failure": "AssertionError [ERR_ASSERTION]: {\"type\":\"urn:quietvote:problem:STATE_CONFLICT\",\"title\":\"State conflict\",\"status\":409,\"code\":\"STATE_CONFLICT\",\"detail\":\"this request outcome was not recorded; inspect the resource or job before submitting another request\",\"retryable\":false,\"request_id\":\"SoOvRBXRadWh6xzz\",\"reason\":\"IDEMPOTENCY_INTERRUPTED\"}",
+        "actual": "actual: 409,",
+        "expected": "expected: 201,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/operation-response-recovery.test.ts:97:12)",
+        "id": "WIN-08",
+        "category": "unresolved_recovery",
+        "assessment": "Same-process retry returned 409 IDEMPOTENCY_INTERRUPTED instead of recovering 201.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 710,
+        "test_at": "test\\operation-response-recovery.test.ts:175:3",
+        "name": "startup leaves a committed response pending when its election storage has missing damage",
+        "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "actual": "actual: -1,",
+        "expected": "expected: 201,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/operation-response-recovery.test.ts:206:14)",
+        "id": "WIN-09",
+        "category": "unresolved_recovery",
+        "assessment": "After the missing storage was restored, startup still left response status -1 instead of 201; the damage-rejection assertions had passed.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 728,
+        "test_at": "test\\operation-response-recovery.test.ts:175:3",
+        "name": "startup leaves a committed response pending when its election storage has symlink damage",
+        "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "actual": "actual: -1,",
+        "expected": "expected: 201,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/operation-response-recovery.test.ts:206:14)",
+        "id": "WIN-10",
+        "category": "unresolved_recovery",
+        "assessment": "After the symlink was removed and original storage restored, startup still left response status -1 instead of 201; the damage-rejection assertions had passed.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 746,
+        "test_at": "test\\operation-response-recovery.test.ts:175:3",
+        "name": "startup leaves a committed response pending when its election storage has identity damage",
+        "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "actual": "actual: -1,",
+        "expected": "expected: 201,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/operation-response-recovery.test.ts:206:14)",
+        "id": "WIN-11",
+        "category": "unresolved_recovery",
+        "assessment": "After the original database identity was restored, startup still left response status -1 instead of 201; the damage-rejection assertions had passed.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 764,
+        "test_at": "test\\replay-completion-review.test.ts:19:64",
+        "name": "second crash during registry recovery preserves lifecycle projections and retention timestamp",
+        "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "actual": "actual: 1,",
+        "expected": "expected: 0,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/replay-completion-review.test.ts:33:14)",
+        "id": "WIN-12",
+        "category": "unresolved_recovery",
+        "assessment": "An append-completion intent remained pending (1 instead of 0) after the second restart.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 782,
+        "test_at": "test\\supplemental-event-recovery.test.ts:29:1",
+        "name": "process exit after append commit reconstructs its phase exactly once at startup",
+        "failure": "AssertionError [ERR_ASSERTION]: startup resolves the intent without a client runtime request",
+        "actual": "actual: 1,",
+        "expected": "expected: 0,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/supplemental-event-recovery.test.ts:35:14)",
+        "id": "WIN-13",
+        "category": "unresolved_recovery",
+        "assessment": "An append-completion intent remained pending (1 instead of 0); startup did not reconstruct the phase.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 800,
+        "test_at": "test\\webhook-bridge-recovery.test.ts:26:1",
+        "name": "startup forwards committed events lost before the control outbox without requiring a client to reopen the election",
+        "failure": "AssertionError [ERR_ASSERTION]: startup itself must forward the backlog",
+        "actual": "actual: 0,",
+        "expected": "expected: 3,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/webhook-bridge-recovery.test.ts:41:12)",
+        "id": "WIN-14",
+        "category": "unresolved_recovery",
+        "assessment": "Startup delivered zero of the three expected committed webhook events.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 818,
+        "test_at": "test\\webhook-bridge-recovery.test.ts:77:1",
+        "name": "cursor failure after pending delivery insertion cannot send uncommitted deliveries or lose the source event",
+        "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "actual": "actual: 0,",
+        "expected": "expected: 3,",
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/server/test/webhook-bridge-recovery.test.ts:90:12)",
+        "id": "WIN-15",
+        "category": "unresolved_recovery",
+        "assessment": "After cursor-failure recovery, zero of the three expected webhook events were delivered.",
+        "cause_status": "Unconfirmed; shared canonical-path guard is the leading source-based hypothesis. This log omits the caught underlying error and resolved paths."
+      },
+      {
+        "source_log_line": 1204,
+        "test_at": "test\\no-bearer.test.ts:13:1",
+        "name": "N-20: ApiClient has no session-token or challenge/session methods and no export with those names",
+        "failure": "Error: ENOENT: no such file or directory, open 'D:\\D:\\a\\quietvote\\quietvote\\packages\\web\\src\\api\\types.ts'",
+        "actual": null,
+        "expected": null,
+        "failure_location": "at TestContext.<anonymous> (file:///D:/a/quietvote/quietvote/packages/web/test/no-bearer.test.ts:19:17)",
+        "id": "WIN-16",
+        "category": "confirmed_file_url_conversion_bug",
+        "assessment": "readFileSync received the URL pathname as a filesystem string and attempted D:\\D:\\a\\quietvote\\quietvote\\packages\\web\\src\\api\\types.ts.",
+        "cause_status": "Confirmed source-level pathname misuse and matching malformed drive path in CI."
+      }
+    ],
+    "recovery_hypothesis": {
+      "status": "Unconfirmed source-based hypothesis; no Windows execution in this review",
+      "source_chain": [
+        "packages/server/src/data-lock.ts:14 canonicalizes data root using non-native realpathSync",
+        "packages/server/src/app.ts:63-64 assigns the returned canonical root to cfg.dataDir",
+        "packages/server/src/pool.ts:147-157 requires registry path shape, regular file, realpathSync.native(path) === path, and database identity before receipt/append recovery; catch hides specific cause",
+        "packages/server/src/webhooks.ts:125-136 uses the same canonical-path and identity conditions before webhook recovery; catch hides specific cause"
+      ],
+      "hypothesis": "A Windows path spelling/casing/short-name discrepancy between non-native root canonicalization and native child-file canonicalization can fail strict equality and leave all recovery work pending. The source chain explains the common symptoms, but the log does not show the actual paths or the rejected condition.",
+      "required_next_evidence": "On the failing Windows fixture, capture the non-native and native root, constructed file path, native resolved file path, and caught error without changing assertions or outcomes. Then rerun the narrow recovery cases on Windows.",
+      "conditional_repair": "If canonicalizer mismatch is confirmed, consistently native-canonicalize the owned root while retaining strict registry path, regular-file, canonical-file, database-identity and fail-closed checks. Do not simply remove equality or apply an unconditional case-insensitive comparison."
+    },
+    "minimal_actions": [
+      "Use the reviewed fc72bc1 URL-preserving web test helper; keep both existing no-bearer assertions.",
+      "Keep portable exclusivity/cleanup assertions. The child data-lock fixture can request graceful server.stop over its existing IPC channel; separately retain a platform-specific POSIX signal contract. A real Windows launcher shutdown contract requires an explicit supported mechanism, not acceptance of abrupt termination as graceful success.",
+      "Carry the already reviewed #57 fresh-connections fixture change into combined verification and rerun the exact Windows e2e case. Do not increase timeouts, add blind retries, or label it fixed from source inspection alone.",
+      "Diagnose the 12 recovery failures on Windows before repair. Do not skip them or weaken storage-damage, exactly-once, pending-intent or outbox assertions."
+    ],
+    "web_test_path_review": {
+      "commit": "fc72bc1d1139ba0ff64f65f60896e71dc6fc07c8",
+      "tree": "d90e35d19d2401a405feeb288d2e4a18d08c2e12",
+      "parent": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "worktree": "session-evidence/quietvote-web-test-path",
+      "clean": true,
+      "diff_check": "pass",
+      "changed_files": [
+        "packages/web/test/no-bearer.test.ts"
+      ],
+      "change": "here(p) now returns new URL(p, import.meta.url) directly, typed URL, instead of returning its pathname string. Both readFileSync callers already accept URL.",
+      "finding": "No blocking source-review finding. Fixes the confirmed conversion misuse without changing assertions, timeouts, runtime or server code.",
+      "formal_approval": false,
+      "tests_attribution": "Root-executed logs independently read; no test rerun by this reviewer.",
+      "tests": [
+        {
+          "log": "session-evidence/analysis/web-test-path-focused.log",
+          "sha256": "e97afda09e30694478d46ac1998b70ff989a4eb1eaae5462f2733e55cfff461d",
+          "result": "existing no-bearer 2/2 pass"
+        },
+        {
+          "log": "session-evidence/analysis/web-test-path-url-regression.log",
+          "sha256": "a9641604c4b3a90ff74bff7dd145142c5d2cc36b6d7179488c864d9c40faf961",
+          "result": "temporary encoded-path negative control and URL positive control pass; Windows drive URL conversion probe passes"
+        }
+      ],
+      "limit": "No native Windows filesystem or hosted-CI rerun of this candidate observed. Passing Linux probes are not Windows qualification."
+    },
+    "primary_documentation": [
+      {
+        "url": "https://nodejs.org/download/release/v22.23.3/docs/api/child_process.html#subprocesskillsignal",
+        "source_ref": "turn294963881search5",
+        "supports": "On Windows child.kill(SIGTERM) forcibly terminates rather than delivering a catchable POSIX signal. Adjacent Node 22 patch documentation; CI ran 22.23.4."
+      },
+      {
+        "url": "https://nodejs.org/docs/latest-v22.x/api/fs.html#file-url-paths",
+        "source_ref": "turn382227902view2",
+        "supports": "Node fs accepts file URL objects and performs Windows drive-path conversion."
+      },
+      {
+        "url": "https://nodejs.org/docs/latest-v22.x/api/fs.html#fsrealpathpath-options-callback",
+        "source_ref": "turn382227902view0",
+        "supports": "Non-native realpath does not perform case conversion on case-insensitive file systems; this alone does not prove the CI mismatch."
+      }
+    ],
+    "limits": [
+      "No local Windows runtime was available.",
+      "No production or test files were edited by this reviewer.",
+      "No broad suite was rerun.",
+      "This record does not declare Windows CI green or satisfy formal review/merge requirements."
+    ]
+  },
+  "public_composition": {
+    "schema_version": 1,
+    "repository": "djshellshoxxx/quietvote",
+    "started_at_utc": "2026-11-18 09:04:27 UTC",
+    "completed_at_utc": "2026-11-18 09:06:08 UTC",
+    "worktree": "session-evidence/quietvote-public-composition",
+    "mode": "fresh detached local worktree; source composition only",
+    "inputs": [
+      {
+        "order": 0,
+        "pr": 57,
+        "pr_url": "https://github.com/djshellshoxxx/quietvote/pull/57",
+        "input_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+        "role": "starting head",
+        "remote_ref": "refs/heads/claude/clever-gates-uqd5p1",
+        "matches_live_remote_ref": true
+      },
+      {
+        "order": 1,
+        "pr": 60,
+        "pr_url": "https://github.com/djshellshoxxx/quietvote/pull/60",
+        "input_sha": "754c586aa65735d50514b543a62a5e3c96a4d138",
+        "role": "cherry-pick",
+        "remote_ref": "refs/heads/codex/quietvote-lazy-integrity-20261117",
+        "matches_live_remote_ref": true
+      },
+      {
+        "order": 2,
+        "pr": 61,
+        "pr_url": "https://github.com/djshellshoxxx/quietvote/pull/61",
+        "input_sha": "04171611e8c8d836ede49c30f0c6f0acc9d0da05",
+        "role": "cherry-pick",
+        "remote_ref": "refs/heads/codex/quietvote-python-tie-validation-20261117",
+        "matches_live_remote_ref": true
+      },
+      {
+        "order": 3,
+        "pr": 62,
+        "pr_url": "https://github.com/djshellshoxxx/quietvote/pull/62",
+        "input_sha": "6875cd36c65427dbc0b877b356727a396b7f9581",
+        "role": "cherry-pick",
+        "remote_ref": "refs/heads/codex/quietvote-board-policy-anchor-20261117",
+        "matches_live_remote_ref": true
+      },
+      {
+        "order": 4,
+        "pr": 63,
+        "pr_url": "https://github.com/djshellshoxxx/quietvote/pull/63",
+        "input_sha": "0042967a76ef871d01f3726d1ff9331293e9a255",
+        "role": "cherry-pick",
+        "remote_ref": "refs/heads/codex/quietvote-python-decrypter-validation-20261117",
+        "matches_live_remote_ref": true
+      },
+      {
+        "order": 5,
+        "pr": 64,
+        "pr_url": "https://github.com/djshellshoxxx/quietvote/pull/64",
+        "input_sha": "4b88209afb5a6c8fba1df06e0af8d1c1ac21d15f",
+        "role": "cherry-pick",
+        "remote_ref": "refs/heads/codex/quietvote-marker-equivocation-20261117",
+        "matches_live_remote_ref": true
+      },
+      {
+        "order": 6,
+        "pr": 65,
+        "pr_url": "https://github.com/djshellshoxxx/quietvote/pull/65",
+        "input_sha": "0653163a3cee2b230398a572723a028c0dda6d7d",
+        "role": "cherry-pick",
+        "remote_ref": "refs/heads/codex/quietvote-revote-copy-20261117",
+        "matches_live_remote_ref": true
+      },
+      {
+        "order": 7,
+        "pr": 66,
+        "pr_url": "https://github.com/djshellshoxxx/quietvote/pull/66",
+        "input_sha": "ae17bd0c2a33427a77b2d71673ed55787c463c6c",
+        "role": "cherry-pick",
+        "remote_ref": "refs/heads/codex/quietvote-web-checks-20261117",
+        "matches_live_remote_ref": true
+      }
+    ],
+    "remote_verification": {
+      "command": "git ls-remote --heads origin <eight named input branches>",
+      "exit_code": 0,
+      "refs": [
+        {
+          "sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "ref": "refs/heads/claude/clever-gates-uqd5p1"
+        },
+        {
+          "sha": "6875cd36c65427dbc0b877b356727a396b7f9581",
+          "ref": "refs/heads/codex/quietvote-board-policy-anchor-20261117"
+        },
+        {
+          "sha": "754c586aa65735d50514b543a62a5e3c96a4d138",
+          "ref": "refs/heads/codex/quietvote-lazy-integrity-20261117"
+        },
+        {
+          "sha": "4b88209afb5a6c8fba1df06e0af8d1c1ac21d15f",
+          "ref": "refs/heads/codex/quietvote-marker-equivocation-20261117"
+        },
+        {
+          "sha": "0042967a76ef871d01f3726d1ff9331293e9a255",
+          "ref": "refs/heads/codex/quietvote-python-decrypter-validation-20261117"
+        },
+        {
+          "sha": "04171611e8c8d836ede49c30f0c6f0acc9d0da05",
+          "ref": "refs/heads/codex/quietvote-python-tie-validation-20261117"
+        },
+        {
+          "sha": "0653163a3cee2b230398a572723a028c0dda6d7d",
+          "ref": "refs/heads/codex/quietvote-revote-copy-20261117"
+        },
+        {
+          "sha": "ae17bd0c2a33427a77b2d71673ed55787c463c6c",
+          "ref": "refs/heads/codex/quietvote-web-checks-20261117"
+        }
+      ],
+      "log_path": "session-evidence/analysis/branch_inventory/public-composition-remote-refs.tsv"
+    },
+    "fetched_missing_objects": [
+      "6875cd36c65427dbc0b877b356727a396b7f9581",
+      "0042967a76ef871d01f3726d1ff9331293e9a255",
+      "4b88209afb5a6c8fba1df06e0af8d1c1ac21d15f",
+      "0653163a3cee2b230398a572723a028c0dda6d7d",
+      "ae17bd0c2a33427a77b2d71673ed55787c463c6c"
+    ],
+    "fetch_mode": "git fetch --no-tags --no-write-fetch-head --no-recurse-submodules origin <missing exact SHAs>; read-only remote object retrieval, no remote ref mutation",
+    "git_configuration": {
+      "scope": "per invocation only; no shared or global configuration changes",
+      "user_name": "Codex",
+      "user_email": "codex@openai.com",
+      "signoff": "--signoff",
+      "cryptographic_commit_signing": false
+    },
+    "starting_head": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+    "applied_commits": [
+      {
+        "pr": 60,
+        "input_sha": "754c586aa65735d50514b543a62a5e3c96a4d138",
+        "input_tree": "0db87c6933db0ba9123bd583083a2a98faeee2a6",
+        "parent_before_apply": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+        "applied_sha": "02fb467f52ad8ee69f4cc21a55a6f24d1036ac31",
+        "applied_tree": "76afd6a75484d460ee2d123632f591fd71ff2b66",
+        "exit_code": 0,
+        "dco_signoff_present": true,
+        "automatic_merge_paths": [],
+        "manual_edits": false
+      },
+      {
+        "pr": 61,
+        "input_sha": "04171611e8c8d836ede49c30f0c6f0acc9d0da05",
+        "input_tree": "e937d8ec4af92af1f9076342d9ef84aab505c145",
+        "parent_before_apply": "02fb467f52ad8ee69f4cc21a55a6f24d1036ac31",
+        "applied_sha": "c3bc1637b0cead1da99affe8f4d2d4819933caa6",
+        "applied_tree": "e3bba59def76570c9b18fa17c9e89ad9a0020aa7",
+        "exit_code": 0,
+        "dco_signoff_present": true,
+        "automatic_merge_paths": [],
+        "manual_edits": false
+      },
+      {
+        "pr": 62,
+        "input_sha": "6875cd36c65427dbc0b877b356727a396b7f9581",
+        "input_tree": "dd86a0b5129560f888c9e1b97914fa11e9d4eea6",
+        "parent_before_apply": "c3bc1637b0cead1da99affe8f4d2d4819933caa6",
+        "applied_sha": "879baa87f62720479220ab3bf8ac473cf38f45d0",
+        "applied_tree": "103a8bf694a4f3c3791e85c36b62844dd8efd9f4",
+        "exit_code": 0,
+        "dco_signoff_present": true,
+        "automatic_merge_paths": [],
+        "manual_edits": false
+      },
+      {
+        "pr": 63,
+        "input_sha": "0042967a76ef871d01f3726d1ff9331293e9a255",
+        "input_tree": "311b4a68e8c41957470cfa43a7cd37f835ddce69",
+        "parent_before_apply": "879baa87f62720479220ab3bf8ac473cf38f45d0",
+        "applied_sha": "607d81f8b412a176fb86d41b9178c417ba305be6",
+        "applied_tree": "ba92aeb0c2ab7a83c76cfdc0fe9f2cb36406929b",
+        "exit_code": 0,
+        "dco_signoff_present": true,
+        "automatic_merge_paths": [
+          "docs/16-crypto-protocol.md"
+        ],
+        "manual_edits": false
+      },
+      {
+        "pr": 64,
+        "input_sha": "4b88209afb5a6c8fba1df06e0af8d1c1ac21d15f",
+        "input_tree": "266c5a41a87802fc3d512982002f01eb93a03516",
+        "parent_before_apply": "607d81f8b412a176fb86d41b9178c417ba305be6",
+        "applied_sha": "8ea026ddd3a60b410e55fd317596642da53fefca",
+        "applied_tree": "fc8639dee35fa1863c66bc1c59d40251d9ce5b63",
+        "exit_code": 0,
+        "dco_signoff_present": true,
+        "automatic_merge_paths": [
+          "docs/16-crypto-protocol.md",
+          "docs/errata/spec-errata-log.md",
+          "verifier-py/qv_verifier/election.py"
+        ],
+        "manual_edits": false
+      },
+      {
+        "pr": 65,
+        "input_sha": "0653163a3cee2b230398a572723a028c0dda6d7d",
+        "input_tree": "66472438d182cf27a1e0b69deec4d5bd299363ef",
+        "parent_before_apply": "8ea026ddd3a60b410e55fd317596642da53fefca",
+        "applied_sha": "b3bea9a4a43c6f363186ac0ae7a586c29394dba2",
+        "applied_tree": "9fe4efb1753f9ffbbe94aa8379663654aa722a15",
+        "exit_code": 0,
+        "dco_signoff_present": true,
+        "automatic_merge_paths": [],
+        "manual_edits": false
+      },
+      {
+        "pr": 66,
+        "input_sha": "ae17bd0c2a33427a77b2d71673ed55787c463c6c",
+        "input_tree": "ac3735480e347226e2d4a9dda228d2e3cf10868e",
+        "parent_before_apply": "b3bea9a4a43c6f363186ac0ae7a586c29394dba2",
+        "applied_sha": "1733e8bf3aaf1860b0c9f2680300310a70e3e2fd",
+        "applied_tree": "316c490b46a2062556360c3c0201f1a1c6ae105c",
+        "exit_code": 0,
+        "dco_signoff_present": true,
+        "automatic_merge_paths": [],
+        "manual_edits": false
+      }
+    ],
+    "final_head": "1733e8bf3aaf1860b0c9f2680300310a70e3e2fd",
+    "final_tree": "316c490b46a2062556360c3c0201f1a1c6ae105c",
+    "expected_tested_head": "cf53e694483ccb45466b19f27cf8c642800b6c85",
+    "expected_tested_tree": "316c490b46a2062556360c3c0201f1a1c6ae105c",
+    "tested_commit_object_present": true,
+    "tested_commit_tree_read_from_git": "316c490b46a2062556360c3c0201f1a1c6ae105c",
+    "tree_identity_confirmed": true,
+    "conflicts": [],
+    "conflict_count": 0,
+    "manual_resolutions": 0,
+    "clean_worktree": true,
+    "detached_head": true,
+    "tests_executed": [],
+    "remote_refs_created_or_updated": [],
+    "remote_reviews_or_approvals_submitted": [],
+    "outcome": "All published PR inputs replay cleanly to the exact tracked-source tree of root's tested final composition.",
+    "qualification": [
+      "This receipt independently verifies source reproducibility and tree identity. It does not rerun tests or transfer passing CI from a different head.",
+      "Root's reported final typecheck, i18n and 338-pass web suite remain separately executed evidence at cf53e694483ccb45466b19f27cf8c642800b6c85; its Git tree was read directly and matches.",
+      "Replayed local commit IDs differ because composition and committer metadata differ. Git tree identity binds tracked files and modes.",
+      "Every input is a currently published remote branch head; persistence does not require publishing this detached replay commit.",
+      "No remote branch, merge, approval or redundant stack was created. No product files were edited manually."
+    ],
+    "work_log_path": "session-evidence/analysis/branch_inventory/public-composition-work-log.json"
+  }
+}

@@ -1,0 +1,27 @@
+# B1 audit PoC (2026-10-28): run the Python second verifier on every out/*.bundle.json written by gen.ts and print the TS and
+# Python verdicts side by side. Run from the worktree root: python3 -I audit-b1-poc/py_diff.py
+import glob, json, os, sys
+here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(here, '..', 'verifier-py'))
+from qv_verifier.election import verify_bundle  # noqa: E402
+from qv_verifier import qvjson  # noqa: E402
+
+ts = json.load(open(os.path.join(here, 'out', 'ts-results.json')))
+rows = []
+for f in sorted(glob.glob(os.path.join(here, 'out', '*.bundle.json'))):
+    name = os.path.basename(f)[: -len('.bundle.json')]
+    b = qvjson.parse(open(f, 'rb').read())
+    try:
+        r = verify_bundle(b)
+        pv = r['verdict']
+        pf = [k for k, s in r['checks'].items() if s == 'fail']
+        pc = sorted({x['code'] + ('/F' if x['fatal'] else '/nf') for x in r['findings']})
+        extra = r.get('results')
+    except Exception as e:  # verify_bundle raised
+        pv, pf, pc, extra = 'EXCEPTION', [], [repr(e)], None
+    t = ts.get(name, {})
+    rows.append((name, t.get('verdict'), t.get('failed'), pv, pf, pc))
+    print(f"{name:28} TS={str(t.get('verdict')):10} PY={pv:10} {'DIVERGE' if t.get('verdict') != pv else 'same   '} "
+          f"TSfail={t.get('failed')} PYfail={pf} PYcodes={pc}")
+json.dump([{'scenario': r[0], 'ts': r[1], 'py': r[3], 'ts_failed': r[2], 'py_failed': r[4], 'py_codes': r[5]} for r in rows],
+          open(os.path.join(here, 'out', 'py-results.json'), 'w'), indent=2)

@@ -1,0 +1,234 @@
+// B3 audit PoC (throwaway evidence, not part of `npm test`): drives the WEB client code (ApiClient, registrationBody,
+// BallotController, deriveElectionContext) against the REAL @quietvote/server through the server package's own test World.
+// Run from the repo root:  node --test --test-reporter=spec packages/web/audit-b3/interop-server.poc.test.ts
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { bytesToHex, ed25519Sign, ed25519Verify, hexToBytes, systemRng, utf8 } from '@quietvote/crypto';
+import { NO_SUPERSEDES, ballotCode, castDigest } from '@quietvote/protocol';
+import { ApiClient } from '../src/api/client.ts';
+import { ApiError } from '../src/api/errors.ts';
+import { BallotController, lastOwnBallotCode } from '../src/flow/ballot-controller.ts';
+import { deriveElectionContext } from '../src/flow/election.ts';
+import { entryRecord } from '../src/flow/entries.ts';
+import { inviteHash } from '../src/flow/invite.ts';
+import { registrationBody } from '../src/flow/onboarding.ts';
+import { inlineSealer } from '../src/flow/seal.ts';
+import { createTranslator } from '../src/i18n/index.ts';
+import { createSigner } from '../src/key/signer.ts';
+import { MemoryStorage } from '../src/key/storage.ts';
+import { b64uDecode, b64uEncode } from '../src/util/hex.ts';
+import { World } from '../../server/test/helpers/world.ts';
+
+const t = createTranslator('en').t;
+const SEL1 = { budget: ['yes'], chair: ['ann'] };
+const SEL2 = { budget: ['no'], chair: ['bob'] };
+
+test('B3-F1: web registrationBody() is refused by the real server (PoP layout and invite_code semantics differ)', async () => {
+  const w = new World({ seed: 'b3-reg', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    const inv = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { count: 3 }, w.owner, w.idemKey());
+    assert.equal(inv.status, 201, inv.text);
+    const codes: string[] = inv.json.invites.map((i: { code: string }) => i.code);
+    const api = new ApiClient({ baseUrl: w.base });
+    const signer = await createSigner(w.voters[0]!.secretKey.slice());
+    // what the voter's browser holds after parseFragment('#inv=<code>'): the 16 raw bytes of the issued code
+    const token = b64uDecode(codes[0]!)!;
+    assert.equal(token.length, 16);
+
+    // (a) exactly what ui/app.ts keyView.finish() sends
+    const webBody = await registrationBody({ apiElectionId: w.electionId, token, signer });
+    const a = await api.register(w.electionId, webBody).then(() => 'accepted', (e: unknown) => (e instanceof ApiError ? `${e.status} ${e.code}` : String(e)));
+    console.log('(a) web registrationBody ->', a);
+    assert.equal(a, '401 BAD_SIGNATURE');
+
+    // (b) same invite_code (hash of token) but the PoP laid out as the server verifies it: "QV-REG-v1\0<election id>\0" || pk
+    const serverPop = b64uEncode(await signer.sign(new Uint8Array([...utf8(`QV-REG-v1\0${w.electionId}\0`), ...signer.publicKey])));
+    const b = await api.register(w.electionId, { ...webBody, pop: serverPop }).then(() => 'accepted', (e: unknown) => (e instanceof ApiError ? `${e.status} ${e.code}` : String(e)));
+    console.log('(b) server-layout PoP + invite_code=b64u(SHA-256(token)) ->', b);
+    assert.equal(b, '422 INVITE_EXPIRED');
+
+    // (c) control: server-layout PoP and the raw issued code is accepted (the server itself works)
+    const c = await api.register(w.electionId, { ...webBody, pop: serverPop, invite_code: codes[0]! }).then((r) => `accepted ${r.status}`, (e: unknown) => (e instanceof ApiError ? `${e.status} ${e.code}` : String(e)));
+    console.log('(c) control: server layout + raw code ->', c);
+    assert.equal(c, 'accepted approved');
+    void inviteHash; void ed25519Sign;
+  } finally {
+    await w.stop();
+  }
+});
+
+async function openElection(seed: string): Promise<World> {
+  const w = new World({ seed, n: 3, t: 2, voters: 3 });
+  await w.start();
+  await w.setupOrgAndElection();
+  await w.registerVoters();
+  const m = await w.publishManifest();
+  assert.equal(m.status, 201, m.text);
+  await w.ceremony();
+  assert.equal((await w.open()).status, 201);
+  return w;
+}
+
+async function loadLog(w: World, api: ApiClient) {
+  const all = await api.allEntries(w.electionId);
+  const records = all.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) }));
+  const r = await deriveElectionContext(records);
+  assert.ok(r.ok, r.ok ? '' : r.detail);
+  return { ctx: r.value, records };
+}
+
+test('B3-F2: revote with the page\'s cached log (no live refresh) is rejected by the real server and the UI says the opposite of what happened', async () => {
+  const w = await openElection('b3-revote');
+  try {
+    const api = new ApiClient({ baseUrl: w.base });
+    const signer = await createSigner(w.voters[0]!.secretKey.slice());
+    const pkHex = bytesToHex(signer.publicKey);
+    const mk = (L: Awaited<ReturnType<typeof loadLog>>): BallotController => {
+      const cx = L.ctx.params.ctx;
+      const supersedes = lastOwnBallotCode(L.records, pkHex, bytesToHex(cx), (env) => ed25519Verify(signer.publicKey, hexToBytes(env.sig, 64), castDigest(cx, ballotCode(cx, env.body)))) || NO_SUPERSEDES;
+      return new BallotController({
+        ctx: L.ctx, apiElectionId: w.electionId, origin: w.origin, signer, api, sealer: inlineSealer, storage: new MemoryStorage(),
+        rng: systemRng, logPk: hexToBytes(w.logPkHex, 32), supersedes, clientBuild: 'poc', now: () => w.nowSec,
+      });
+    };
+    const run = async (c: BallotController, sel: Record<string, string[]>) => {
+      c.select(sel); c.review(); await c.seal(); c.codeRendered();
+      return c.cast();
+    };
+    // the page loads the election once (app.ts load()): this is L.records for the whole page session unless SSE refreshes it
+    const cached = await loadLog(w, api);
+    const a = await run(mk(cached), SEL1);
+    console.log('ballot A ->', a?.outcome);
+    assert.ok(a?.outcome === 'ACCEPTED_RECORDED' || a?.outcome === 'PENDING_UNCONFIRMED', JSON.stringify(a));
+    w.tick(3);
+    // voter goes back to the Vote tab: voteView() builds a new controller from the SAME cached records (A is not in them)
+    const bCtl = mk(cached);
+    assert.equal(bCtl.supersedesHex, NO_SUPERSEDES, 'stale chain link: points at genesis although A is recorded');
+    const b = await run(bCtl, SEL2);
+    console.log('ballot B (stale cache) ->', b?.outcome, b?.error);
+    assert.equal(b?.outcome, 'SUPERSEDED');
+    assert.equal(b?.error?.ux, 'E-VOT-SUPERSEDED-LOST');
+    console.log('  receipt title shown:', JSON.stringify(t('qv.receipt.supersededTitle')));
+    console.log('  error shown:', JSON.stringify(t('qv.err.E-VOT-SUPERSEDED-LOST.title')), '/', JSON.stringify(t('qv.err.E-VOT-SUPERSEDED-LOST.body')));
+    // what the log really holds: only A; B (the voter's intended final choice) was never recorded
+    const after = await loadLog(w, api);
+    const mine = after.records.filter((r) => (r.record as { intent?: string; body?: { voter?: string } } | undefined)?.body?.voter === pkHex);
+    console.log('  voter ballots in the log after B:', mine.length);
+    assert.equal(mine.length, 1);
+    // control: a controller built from a fresh read of the log revotes fine
+    w.tick(3);
+    const c = await run(mk(after), SEL2);
+    console.log('ballot C (fresh log) ->', c?.outcome);
+    assert.ok(c?.outcome === 'ACCEPTED_RECORDED' || c?.outcome === 'PENDING_UNCONFIRMED');
+  } finally {
+    await w.stop();
+  }
+});
+
+test('B3-F3: BallotController.cast() is not re-entrant: a second concurrent call replaces `pending`, so the first call\'s successful receipt is reported as an integrity alarm', async () => {
+  const w = await openElection('b3-double');
+  try {
+    // no real sleeping on 429: the server clock is simulated
+    const api = new ApiClient({ baseUrl: w.base, sleep: async () => undefined });
+    const signer = await createSigner(w.voters[1]!.secretKey.slice());
+    const L = await loadLog(w, api);
+    const c = new BallotController({
+      ctx: L.ctx, apiElectionId: w.electionId, origin: w.origin, signer, api, sealer: inlineSealer, storage: new MemoryStorage(),
+      rng: systemRng, logPk: hexToBytes(w.logPkHex, 32), supersedes: NO_SUPERSEDES, clientBuild: 'poc', now: () => w.nowSec,
+    });
+    c.select(SEL1); c.review(); await c.seal(); c.codeRendered();
+    const before = (await api.allEntries(w.electionId)).entries.length;
+    const [r1, r2] = await Promise.all([c.cast(), c.cast()]);
+    const after = (await api.allEntries(w.electionId)).entries;
+    console.log('call 1:', r1?.outcome, r1?.error?.ux, '| call 2:', r2?.outcome, r2?.error?.ux, '| final state:', c.state.kind, '| ballots appended to the log:', after.length - before);
+    // the board recorded exactly one ballot, yet the controller ends in `failed` and one call reports E-BOARD-INCL-FAIL
+    // ("Your receipt doesn't match the record. Save the evidence and report it") because verifyAppendResult() compared the
+    // server's receipt for entry #1 with this.pending.leafHash, which the second call had already replaced with entry #2.
+    assert.equal(after.length - before, 1);
+    assert.equal(c.state.kind, 'failed');
+    assert.ok([r1, r2].some((r) => r?.error?.ux === 'E-BOARD-INCL-FAIL'));
+  } finally {
+    await w.stop();
+  }
+});
+
+test('B3-F4: WRONG_PHASE for a paused/not-yet-open election is reported as "Voting had closed" (E-VOT-CLOSED)', async () => {
+  const w = await openElection('b3-phase');
+  try {
+    const api = new ApiClient({ baseUrl: w.base });
+    const signer = await createSigner(w.voters[2]!.secretKey.slice());
+    const L = await loadLog(w, api);
+    const mk = (): BallotController => new BallotController({
+      ctx: L.ctx, apiElectionId: w.electionId, origin: w.origin, signer, api, sealer: inlineSealer, storage: new MemoryStorage(),
+      rng: systemRng, logPk: hexToBytes(w.logPkHex, 32), supersedes: NO_SUPERSEDES, clientBuild: 'poc', now: () => w.nowSec,
+    });
+    // steward pause (QV-ADR-022): ballots are refused with 409 WRONG_PHASE "ballots are not accepted while the election is PAUSED"
+    assert.equal((await w.post('notice', w.coord[0]!, w.control('pause', 'maintenance'))).status, 201);
+    w.tick(3);
+    const c = mk();
+    c.select(SEL1); c.review(); await c.seal(); c.codeRendered();
+    const r = await c.cast();
+    console.log('cast while PAUSED ->', r?.outcome, r?.error?.ux);
+    assert.equal(r?.outcome, 'AFTER_CLOSE');
+    assert.equal(r?.error?.ux, 'E-VOT-CLOSED');
+    console.log('  UI title:', JSON.stringify(t('qv.receipt.afterCloseTitle')), '| error title:', JSON.stringify(t('qv.err.E-VOT-CLOSED.title')));
+    // and the error body cannot even be rendered with the arguments app.ts passes (errorBox(ux, {}, ref)): it falls back to "Something went wrong"
+    assert.throws(() => t('qv.err.E-VOT-CLOSED.body', {}), /missing message argument "time"/);
+  } finally {
+    await w.stop();
+  }
+});
+
+test('B3-F31: the real server answers 409 INVITE_USED when a DIFFERENT key already consumed the invite; ui/app.ts treats every 409 as "already registered" and prints "Your key is registered."', async () => {
+  const w = new World({ seed: 'b3-409', n: 3, t: 2, voters: 3 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    const inv = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { count: 1 }, w.owner, w.idemKey());
+    const code: string = inv.json.invites[0].code;
+    const api = new ApiClient({ baseUrl: w.base });
+    const regAs = async (i: number): Promise<{ status: number; code: string } | 'ok'> => {
+      const s = await createSigner(w.voters[i]!.secretKey.slice());
+      const pop = b64uEncode(await s.sign(new Uint8Array([...utf8(`QV-REG-v1\0${w.electionId}\0`), ...s.publicKey])));
+      return api.register(w.electionId, { invite_code: code, pk: b64uEncode(s.publicKey), alg: 'ed25519', pop }).then(() => 'ok' as const, (e: ApiError) => ({ status: e.status, code: e.code }));
+    };
+    console.log('key 1 with the invite  ->', await regAs(0));
+    const second = await regAs(1);
+    console.log('key 2 with the same invite ->', second);
+    assert.deepEqual(second, { status: 409, code: 'INVITE_USED' });
+    // ui/app.ts keyView.finish(): `if (!(e instanceof ApiError && e.status === 409)) { show the error; return }` -> any 409 falls through to t('qv.key.registered')
+    const src = (await import('node:fs')).readFileSync(new URL('../src/ui/app.ts', import.meta.url), 'utf8');
+    assert.match(src, /e instanceof ApiError && e\.status === 409/);
+    console.log('app.ts decides on e.status === 409 only (never on e.code): INVITE_USED is reported as success');
+  } finally {
+    await w.stop();
+  }
+});
+
+test('B3-F4b: the real server\'s WRONG_PHASE detail text while PAUSED (what errors.ts:40 has to classify with a regex)', async () => {
+  const w = await openElection('b3-phase2');
+  try {
+    const api = new ApiClient({ baseUrl: w.base });
+    const orig = api.postEntryWithRetry.bind(api);
+    let seen = '';
+    api.postEntryWithRetry = async (...a: Parameters<typeof orig>) => {
+      try { return await orig(...a); } catch (e) { if (e instanceof ApiError) seen = `${e.status} ${e.code} detail=${JSON.stringify(e.detail)} reason=${JSON.stringify(e.reason)}`; throw e; }
+    };
+    const signer = await createSigner(w.voters[2]!.secretKey.slice());
+    const L = await loadLog(w, api);
+    assert.equal((await w.post('notice', w.coord[0]!, w.control('pause', 'maintenance'))).status, 201);
+    w.tick(3);
+    const c = new BallotController({
+      ctx: L.ctx, apiElectionId: w.electionId, origin: w.origin, signer, api, sealer: inlineSealer, storage: new MemoryStorage(),
+      rng: systemRng, logPk: hexToBytes(w.logPkHex, 32), supersedes: NO_SUPERSEDES, clientBuild: 'poc', now: () => w.nowSec,
+    });
+    c.select(SEL1); c.review(); await c.seal(); c.codeRendered();
+    const r = await c.cast();
+    console.log('server answer while PAUSED:', seen, '-> client', r?.outcome, r?.error?.ux);
+    assert.match(seen, /WRONG_PHASE/);
+  } finally {
+    await w.stop();
+  }
+});

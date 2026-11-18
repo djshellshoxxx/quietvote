@@ -1,0 +1,16 @@
+import http from 'node:http';
+const seen = [];
+const srv = http.createServer((req, res) => { seen.push([req.socket.remoteAddress, req.headers['user-agent'], req.headers['cookie'], req.headers['referer'], req.headers['x-request-id']]); res.end('ok'); });
+await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+const port = srv.address().port;
+const get = (localAddress) => new Promise((resolve, reject) => {
+  const agent = new http.Agent({ keepAlive: false });
+  const req = http.request({ host: '127.0.0.1', port, path: '/', method: 'GET', localAddress, agent, headers: { 'user-agent': 'UA-x', cookie: 'a=b', referer: 'https://r.invalid/x', 'x-request-id': 'rid' } }, (res) => { res.resume(); res.on('end', resolve); });
+  req.on('error', reject); req.end();
+});
+for (const a of ['127.83.17.201', '127.83.17.202', '127.201.33.7']) { try { await get(a); } catch (e) { console.log('ERR', a, e.code); } }
+// fetch with forbidden-ish headers
+const r = await fetch(`http://127.0.0.1:${port}/`, { headers: { 'user-agent': 'UA-fetch', cookie: 'c=d', referer: 'https://ref.invalid/', 'x-request-id': 'rid2' } });
+await r.text();
+console.log(JSON.stringify(seen));
+srv.close();

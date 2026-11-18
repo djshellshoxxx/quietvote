@@ -1,0 +1,1264 @@
+[
+  {
+    "id": "D0-honest",
+    "n": 3,
+    "t": 2,
+    "markers": {
+      "dkg-open": 1,
+      "dkg-r1-open": 5,
+      "dkg-r1-close": 9,
+      "dkg-r2-close": 13,
+      "dkg-r3-close": 14,
+      "dkg-final": 15
+    },
+    "records": {
+      "commits": [
+        {
+          "seq": 2,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 1,
+            "h": "6226e4fad8c919f0eae152a1e66214c3da959e6d6e73c512b7a2a45769618986"
+          }
+        },
+        {
+          "seq": 3,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 2,
+            "h": "17be587039c7126f0340d858ce5f42f27f77effba8532efc4d0ad848d218bb3b"
+          }
+        },
+        {
+          "seq": 4,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 3,
+            "h": "caf780e2e6bab67a89eafb68d2ec6597c49a3c9fdd7a6f9659257383c6025f1b"
+          }
+        }
+      ],
+      "dealings": [
+        {
+          "seq": 6,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 1,
+            "enc": {
+              "E": "0085634763d031c5de1cd79521118ecec6ea496f49dea28249fcc0c65c24553e",
+              "c": "59b5359bcf582ec4a5626a2456bf15e8755b18b28d8a3ca72e682157e336510b",
+              "s": "d09afb4b458131de98d264e1526cb83a0896db9bc78c870c1a3da79ff7e67603"
+            },
+            "coeffs": [
+              {
+                "A": "6c98ce9c029655d15dd6f97d47f5dc18c1c148e7cf4fc1f25f440bb1a056aa72",
+                "c": "be127f35689df8c5ce33fac6a0c30a3042ae0905451846ae3ee5553af0e3cf0f",
+                "s": "fba1abfd1c5d49e2456745a348eb5dc44c337e6cf967f2d3bb9400e2f9d13403"
+              },
+              {
+                "A": "e8d0244b64e9731d88174b354f56b9fcfca1318492fe8755e5fac96505919264",
+                "c": "22b9c5334c555c5f1b2a954b822962549c76392ec790f5065159dae2b959d608",
+                "s": "1283f144840bf6668e86f5d94a18aa5171dc0fba35f99919e764181d45282c00"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 7,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 2,
+            "enc": {
+              "E": "2ae424ec78bfde955df76c0c658839001b6adb7f840c1ba1fae400e44fffe404",
+              "c": "404eae9a4837c741e94d7be54fa1254a6fa9e1492d644ef211621664ebcafe06",
+              "s": "b6be4090b6d3cdbdb8357d79a971ebc4fbab819c651e553dbf8c5c0cc8c0e50e"
+            },
+            "coeffs": [
+              {
+                "A": "2ac777e6b1b79d281f0aae408a99006b042f584a679fe9dffe736ae78013a313",
+                "c": "421cf7069b5958ce4e70ad031be1a3278233284b895b681eb66415f15555610a",
+                "s": "55b969a3433011daf28fbb2a7a55aef9d652f00d6ca44ff8a582c5f01d801109"
+              },
+              {
+                "A": "da6f5fb527a5861d5ddef9847398bd1b45cdc51f8098bfb46d24da46808ce02a",
+                "c": "04e6c91455806fba7f463d36d71cd6e83c241e736e824daa78c778903bfd0a09",
+                "s": "3fb72e48294a7a8cd53235f9ea968e591ce92d5f5f09f22a232c3aeed2b5d305"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 8,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 3,
+            "enc": {
+              "E": "b02192d4aee798a28a46c5a95cb1d76a20f2301216399157fa7db2d44dd3d62d",
+              "c": "9d6d4c3aa3709ec3457b9c96e856b8cbbdafd9e87765f95948e4359ed1e5f909",
+              "s": "ca9315d516aa6661d31d3df8f9a181c3fd3caa8cac22204f487ae58a3cc41403"
+            },
+            "coeffs": [
+              {
+                "A": "36cdca47b37b8b2590d96cf26a8d23c80f10fff16f2d3ebd7089014d71e84778",
+                "c": "6993830d1a1d26a72bc47ab17f0ef57e7dbbb488cbb6dc4b02c41057fbc2e708",
+                "s": "ae4ff8e4f9905589a8aef686ab31cb45a8807718476dc0feb4f09869f3c7c700"
+              },
+              {
+                "A": "68a94e8311503912d71968aaeaf6c9e077a39a585999845f02874fba6939b50c",
+                "c": "4e60bebc91e537056dc393965a93c82601d310ff33cd8689288121360ef1e406",
+                "s": "b373c35eb5982953fdbaac50e3bdf364ee1a2094b27d8ca98a04fd153f48d901"
+              }
+            ]
+          }
+        }
+      ],
+      "shares": [
+        {
+          "seq": 10,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 1,
+            "shares": [
+              {
+                "j": 2,
+                "R": "5a34f034566a1ffbf3aebb764ba9708855dc7b7849206741907292f27d565352",
+                "ct": "a4e47396225ecde985424da301aad29dfb4cbb6c088b3d1a190fcf5d702fa15f",
+                "tag": "a0ae5f66d0826cf7abfbab0d1f6d913c"
+              },
+              {
+                "j": 3,
+                "R": "906d4eb1590ef30d34a4166427a5b8a1fe4b342ce872398a60b1131b66ae7e57",
+                "ct": "e1fb6386568301ecce2a9fe766b2e2adca3cf551a9cb90b8dab351e30a3ac9e1",
+                "tag": "b668a557db53fdcf78e5789b1a94c1c3"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 11,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 2,
+            "shares": [
+              {
+                "j": 1,
+                "R": "0824e30b476448dda869612ee3a07016a8b0e90a2179cb3bff9ef6e335e44a36",
+                "ct": "37caeaf880192ac81e1b7feb03aa6a919834010d70e80f2322b9a9844c49b71b",
+                "tag": "c2b138d00811e6b4846b92595b60e9a8"
+              },
+              {
+                "j": 3,
+                "R": "fe0e667f5cec85a850ab9745b8a1fde7eba3fd07aea70a81c65ea476a346c715",
+                "ct": "e6ac08c3b4537f5dcc3351512b424285b8303e5a8d1382a254c8c84eca055fcd",
+                "tag": "8dfdd93427d4b31a4484633113ff3a04"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 12,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 3,
+            "shares": [
+              {
+                "j": 1,
+                "R": "ea24e9c567b2834feb6340cbb8933bf4e31e554cc0bf10446d151845481f3f15",
+                "ct": "8cd9bd8a23e9224e621a9c0097be13d938ae9213f7452d7a73064d1b7ee7230f",
+                "tag": "6662ead4380f9193b92b61a5310d48bf"
+              },
+              {
+                "j": 2,
+                "R": "a87491a69e430551f02f361190e3326814db3418cc5856eb3d10c52763ff260a",
+                "ct": "beb0612698dc2da7fb2abcde542f5a76af1c589da584db34ae7b9b61edcd94c1",
+                "tag": "2bf5a96d97e96e081cbc2c5eaf05a05c"
+              }
+            ]
+          }
+        }
+      ],
+      "complaints": []
+    },
+    "manifest_hash_hex": "1c209063ce45271ec215135921b5de07c79c4e30f7a5aaae4b3ffec48cfc53a3",
+    "ts": {
+      "Q": [
+        1,
+        2,
+        3
+      ],
+      "K_hex": "50cb472ed55ccfc7ab9f0a1e644700c71ef7db73ebd9934296d35e46108b5173",
+      "ctx_hex": "bed87454af06620a1772b99c6b42d4a86f9944cd8d1482dc1c75107cc4e6ef45"
+    }
+  },
+  {
+    "id": "D1-duplicate-different-commit",
+    "n": 3,
+    "t": 2,
+    "markers": {
+      "dkg-open": 1,
+      "dkg-r1-open": 6,
+      "dkg-r1-close": 10,
+      "dkg-r2-close": 14,
+      "dkg-r3-close": 15,
+      "dkg-final": 16
+    },
+    "records": {
+      "commits": [
+        {
+          "seq": 2,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 1,
+            "h": "a72fd6d20f055890688b4dd045823daa9106cb4c7c6b5351aefd989d6f2f6b16"
+          }
+        },
+        {
+          "seq": 3,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 2,
+            "h": "02c229f7c59ac1416a7bfebe1fc5c0569a4ccf9e8a1a8793c971348dadbbb7d4"
+          }
+        },
+        {
+          "seq": 4,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 3,
+            "h": "830fae278751608de0774c7018863c39de022c15b1b8114aa9104e33ade5c2f8"
+          }
+        },
+        {
+          "seq": 5,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 3,
+            "h": "1fdd29d79ef7a97efa0e682f9b23c4463643d616f466f521e7fa621d7acd9555"
+          }
+        }
+      ],
+      "dealings": [
+        {
+          "seq": 7,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 1,
+            "enc": {
+              "E": "c430936a673fa2c15ca8300fb26d43e170983a130583cef61b296df835ae2c16",
+              "c": "cf4321e0dbd3fc9fbcf5a1db78bdfdc852a211541cc25dcfe5ecc399c372600f",
+              "s": "93f776feab7817d0c8e478faf17d2eeb10b472d13f67d62d47806e52ed7b5c0a"
+            },
+            "coeffs": [
+              {
+                "A": "a89e0629340a6d92134eb4df9b8a5ff68250161529895d3284acb9acf9641f4e",
+                "c": "d1a03abef851a2e0d1f2abb63d79f880639cefffe891522872d382bfa877870b",
+                "s": "1e7f972996a67b20076d897d2c920a8a98959203c9d6880fadc1b03e41de3504"
+              },
+              {
+                "A": "e4846a094e7dd3064c7516c990fbdd1a2d893d9ec7d6f316cb979905184a2576",
+                "c": "2f8243a75b3a59c17df10a88cd4576a7314c63f66c61d821a430bd16be8e1605",
+                "s": "220173223d228c72181a930793c7a22394faba1d4d2fd7fb91b05caebc9fb50f"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 8,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 2,
+            "enc": {
+              "E": "5eb120170da34eab289a4f98acaa57c6cfae87c574f2760d0faf284e1c7e316a",
+              "c": "a22142173a5dc76dbaef4818735b52e4af83debf8ff3f25c384fd91541f8180d",
+              "s": "0a29a442e62babbda56f7d48aec30be957570b4c1d452ce430122a7021683d0f"
+            },
+            "coeffs": [
+              {
+                "A": "7e1db4f308dd2e9bfacf1a0061841dd167da7a3f5f7a979e14013d3b56eb8867",
+                "c": "f8af03a8aa8a6c5bcd48c25cfc55bb4f33798239e49a1950dc20d6205de45e0f",
+                "s": "859585089a558c4a1f78fbdcefbb3a1fbe97de48f803e23a75010f2ddcb1fc06"
+              },
+              {
+                "A": "18850409c447af1710ccc7dc7ef71b4b3bfe6c18e5af4cb40a26b873669a4925",
+                "c": "04fc220be107ec13ee5553cf07f06a7471a57b0b930735a3dd8b547440700800",
+                "s": "ea372641095eb4ffc188a9bc3fd7b041ac09758558c29ddeca1200813403fb0a"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 9,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 3,
+            "enc": {
+              "E": "8817f313ffc34b322c7f0638a0e3036aa71fa00701e4c8ceea6ac9cb18ef2e19",
+              "c": "840ad152544c8e29818151cc5f608fe9cf797313c7096617e5485cd5e005bf0e",
+              "s": "77d99116e77ff389c62cd47afad6d635cc70e8f67a1c0d13f765149e80e3c40d"
+            },
+            "coeffs": [
+              {
+                "A": "12f777a419855aad609ed6d91186a24c27fa4dee4d8b51e1a1103f46ad28b472",
+                "c": "79204e8f64b2140e72735c35b428a63181e512275a35950870f673dc87d39205",
+                "s": "9517a8c0af73006f50796f5eccdce3ba3810b9ade014123d83b36e42e0f5ff04"
+              },
+              {
+                "A": "dc6e270dcf78324d1b75bc5837cb5d7fad4a5597495ad42067c7b8c47cd9d606",
+                "c": "d41a5e409c937c7779849243efb8b616c08cac7c29b195902a4a269dddd0d90d",
+                "s": "ca9a788f752986c027166fc3edf03fff8e0ee26f6a6c01dc44ce2fa06e3fdf0c"
+              }
+            ]
+          }
+        }
+      ],
+      "shares": [
+        {
+          "seq": 11,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 1,
+            "shares": [
+              {
+                "j": 2,
+                "R": "0846f6c0d147173e6b7ca4c71278e56ea4573f0aeff6f6502c8afa4c56c99902",
+                "ct": "19e52952d5dfc248561c1b4cecaf0ea821c6dfe77a9195db779a89291bb999b4",
+                "tag": "f02bdf9f4e781c5312b5f5211c5fa432"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 12,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 2,
+            "shares": [
+              {
+                "j": 1,
+                "R": "002c401b2fd85e7f873d01b8a21aceb259ae68e3dd4e493ab2e0cf0cdf4fab6f",
+                "ct": "0d4185a688ea3f69acdbcd71990cb6e0b9b61c5f4fee0411336562a114fc3185",
+                "tag": "42a2c0f7bcef6e6ba6bf650ec037d7d6"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 13,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 3,
+            "shares": [
+              {
+                "j": 1,
+                "R": "98b25fa458f7e7ae2557deb9ef813864d86d906a448e605446d70fc811a26034",
+                "ct": "62e4ca752981f281188808abd3c04bfdbeba1bf68dec27dc91aad8990f1ccf36",
+                "tag": "1ebbdd06b6bffcd8cbe66465b643031f"
+              },
+              {
+                "j": 2,
+                "R": "ae5cc8aa361974f480389f47645e3d6a30ec422bf04d8f248d08aaf1be6cbe2b",
+                "ct": "2440578fed66f8a29fe15a80c70c13474d26e03f24157858a130430f1f684791",
+                "tag": "bef2ca6ea3c42c86bd5b62fad421cb97"
+              }
+            ]
+          }
+        }
+      ],
+      "complaints": []
+    },
+    "manifest_hash_hex": "1c209063ce45271ec215135921b5de07c79c4e30f7a5aaae4b3ffec48cfc53a3",
+    "ts": {
+      "Q": [
+        1,
+        2
+      ],
+      "K_hex": "762988a8071d97922d941d2cf1f34bbe227e34181167422172bffb6443d48939",
+      "ctx_hex": "0856ce918a0c587b7d1fa6e5ec73dfc4f2481204cacc0d060466449f22c5b024"
+    }
+  },
+  {
+    "id": "D2-uppercase-hex-dealing",
+    "n": 3,
+    "t": 2,
+    "markers": {
+      "dkg-open": 1,
+      "dkg-r1-open": 5,
+      "dkg-r1-close": 9,
+      "dkg-r2-close": 13,
+      "dkg-r3-close": 14,
+      "dkg-final": 15
+    },
+    "records": {
+      "commits": [
+        {
+          "seq": 2,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 1,
+            "h": "5fe61839df1488a2133276f1585ad8c333ef0a94007d8eebc47d166c4a52bb65"
+          }
+        },
+        {
+          "seq": 3,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 2,
+            "h": "68cee0ff3c8bcb78031900c61b523a749bd6e4c5e0395b8109f5dd526ba6faac"
+          }
+        },
+        {
+          "seq": 4,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 3,
+            "h": "adb70a443763f5d3aec3e2132545ed8e78eb415ab93b9c2b6bd32dbcc69c5d9b"
+          }
+        }
+      ],
+      "dealings": [
+        {
+          "seq": 6,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 1,
+            "enc": {
+              "E": "c47a74acd59d29f1af3e8a5ff466ed036307cd433962e4e5ca8ff1bb7989b879",
+              "c": "d2ff47e435903f298a24495b3234bf445bd2db1a2fc175b8010d52379b07ff06",
+              "s": "d1a54a503f533b38bd3ca40572a3580001dee5ebab303c667ba2b09653c5200e"
+            },
+            "coeffs": [
+              {
+                "A": "24626cd955404cb7eee96250c6761eb7fc540d5de1bf952c3ddfdfa84b4cc416",
+                "c": "85eebd33439d727b088af11d7426172a8b64f789efa4626416c8a5f944c69004",
+                "s": "c6195faaf81ba053e7084c401844008be34603ee2e0784187e15ebc6236a7b0f"
+              },
+              {
+                "A": "847b07671e59bd175aa86531e7d83788347b327310f047b3b45651409a48074f",
+                "c": "04921a3b3dd31a4a54a3107e7e5d0648d3c9b28f75ed5025ef49d5d15500d80d",
+                "s": "e939fe0fa21c3c316e970ab6fa814f1a2da8facdd39528055031313c73684105"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 7,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 2,
+            "enc": {
+              "E": "16e87becb45f03b3b33550ce8136ed0648cb01103f364d4c9802c15d9bc64b6f",
+              "c": "876162ffef949af32552e753f47a8dd1b7e73f3467669821a7308a4889164902",
+              "s": "e348b294ca0a91505053d0a725c173e6672f6a31925bfaaa14135bb2b21b710c"
+            },
+            "coeffs": [
+              {
+                "A": "147624cf5b03acc9523da28f8a596b37dbc1e66fb4a8a84565877d88ecaa3b7a",
+                "c": "6c3447006c2dc9dc1043993a7874fca33bfac8e729b7edd9847096d3bf16d40d",
+                "s": "2a8e880ae1794ce3aebfa1ab6359b19ed42c776d37cf430975d376a4d3787305"
+              },
+              {
+                "A": "5e374f9317b3e73155482cab03ff6c148d140de486a6c61f1a7c3cb3340fb17d",
+                "c": "f13b1ee33c175731155dc5c88f929a867f4c68faaa9bfe3c04c962516d797303",
+                "s": "ca27696b57b22036362933d0f2ee22864ba6bb1228090ec5b57d87289a6acd05"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 8,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 3,
+            "enc": {
+              "E": "D6481101C13886FC3F22FA961D232F13EEC6AB836B267E99A60D178F92D7FE68",
+              "c": "D40729FF272BD7E447A50E5AC48529E8CBF4F31796B42DAD94AF2008CF7FDC06",
+              "s": "E17925416C816CA0EBA6089FD2B37ECBE60BD01188D253AF9C35624FDCFE3800"
+            },
+            "coeffs": [
+              {
+                "A": "18ADA648F38478DE17ECB049ED894EF0BAF53573A68888D28B88E4EC0EDBDD40",
+                "c": "92BECB4927CEB8ABF4B4474314615ABFE76477FE8F3352CADEBBB7561676BF04",
+                "s": "5181FDAFE3425815C2E3ABDC94C52EBCBD98488A5DBC914DA111DC1B5478CE05"
+              },
+              {
+                "A": "B87C23EECB007E6D93E16759A35ABD61CCF8028A167DB72B7A8827385B0B1F18",
+                "c": "790FE2F0180E624037DF1974EB7AB5F813989C6154B32D10FB6F8A77C63CA308",
+                "s": "5D6554215BACF55E82BBD6F54675019F41B0DFCFB0E62FC6153B979A465CB402"
+              }
+            ]
+          }
+        }
+      ],
+      "shares": [
+        {
+          "seq": 10,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 1,
+            "shares": [
+              {
+                "j": 2,
+                "R": "78144c386736ff9caa37b05bb1ad14444a757aa816ad0cc95465a640656a5b0d",
+                "ct": "91fe4fc33822f2c69685c765a7ecd165283134744628710c0217a063ff530a71",
+                "tag": "8291e318923bcd9917874b9f09105398"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 11,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 2,
+            "shares": [
+              {
+                "j": 1,
+                "R": "0e1635cf509f0147d3036881a82b040c0f002edd2e6c5c9564694d9c85be540b",
+                "ct": "5f848b79682f62321117fe49794f9a0fac9fcfc41030e73dc2a0091e827fce5d",
+                "tag": "26dccdf61edf15fd7efcc4bdbb3b2567"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 12,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 3,
+            "shares": [
+              {
+                "j": 1,
+                "R": "786b798248b5eacd6c34b40280e40e4eddf37280c8e01e0cba55ccb964b9f817",
+                "ct": "b35cf1a63e06b9a12fecb6333463af399218525959ac0d20c7e225c833f7f977",
+                "tag": "5f8ce4fe011ede84c9cdf060b50b7f5c"
+              },
+              {
+                "j": 2,
+                "R": "f621e3ff4f131887b6c17939a2f51523dac02ba42813af853d9de77b65e6ce7f",
+                "ct": "f0fbe3d89751e4d6368aa141248b3d626b961ee7cd9bd3917e3e3e81dd71c9fd",
+                "tag": "59f40f4e99121a47a6ce22277038160c"
+              }
+            ]
+          }
+        }
+      ],
+      "complaints": []
+    },
+    "manifest_hash_hex": "1c209063ce45271ec215135921b5de07c79c4e30f7a5aaae4b3ffec48cfc53a3",
+    "ts": {
+      "Q": [
+        1,
+        2
+      ],
+      "K_hex": "883a863736d09eb3aac50d37c3c886acf0263f97a750ce2f497e8b364bd52001",
+      "ctx_hex": "1dbf627a45a341984ab171187509202f66f9a9b022400dcbb985bbe36618861f"
+    }
+  },
+  {
+    "id": "D3-complaint-vs-R2-disqualified",
+    "n": 4,
+    "t": 2,
+    "markers": {
+      "dkg-open": 1,
+      "dkg-r1-open": 6,
+      "dkg-r1-close": 11,
+      "dkg-r2-close": 16,
+      "dkg-r3-close": 18,
+      "dkg-final": 19
+    },
+    "records": {
+      "commits": [
+        {
+          "seq": 2,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 1,
+            "h": "1dc78fe0d99ba14829508c3d5b32ca9b539935a0ad514790f79169ae54c3be9c"
+          }
+        },
+        {
+          "seq": 3,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 2,
+            "h": "1fe69a6f47155261a165d6ca1b748df1357c45f8b162bf740984a37c40e94487"
+          }
+        },
+        {
+          "seq": 4,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 3,
+            "h": "0007770ce7b689d597d746a76f25d609cd7ecb6856efb8557f30395cffe5dcfb"
+          }
+        },
+        {
+          "seq": 5,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 4,
+            "h": "37517f594526366cbb912e21f2498cc0bd5d6513f07d7791eded238f03f9a2d5"
+          }
+        }
+      ],
+      "dealings": [
+        {
+          "seq": 7,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 1,
+            "enc": {
+              "E": "668b65c9554f043dd9c1376b5c664cd4c83e4b6c24702638d3f40c2b43b9ea46",
+              "c": "986173d6d91ead73158c1fbc8ee92f28b063ae9ecbfadb3c8b454a94acac9102",
+              "s": "faddafc7ce357c6466df6a456ff3e8154cc3c940c47ec3cce404d411be3a1304"
+            },
+            "coeffs": [
+              {
+                "A": "68d89479d4e8a1fca694f4191e778cb4ac20270c51ef01bfa2fb9bf7be067473",
+                "c": "0cd132a81e1b0a8584b3dd387485cf911e58177a18b1edcb897b551bac722105",
+                "s": "e1e9e0278b90b34b7df73f8def29b5113741a91ff156b3b6a4db370d1e92210f"
+              },
+              {
+                "A": "de405a3b90e55031a1bc2700139b1f98d9e0c379c3a11341dc0c06e418fb3739",
+                "c": "8f0f4b23f942f36873bba839fd313264a7d07482b3779315c7e4288b6fe3d701",
+                "s": "b23e8de40054d22909f6fc4dfd94345a4877efc26b289fb2e6366b46044b4305"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 8,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 2,
+            "enc": {
+              "E": "485f71d0f66649c4b4b604102b0b177d07bff2be01ae7d35484acd2379d22c0f",
+              "c": "93bc8e7a54ff61c8fd563bd4c55b03ce94ec25e5012042a15451a77fd0755d0f",
+              "s": "33a96093383bdd5ffa225c3444aaa5685994883bd61ee2d622a18babb98b820f"
+            },
+            "coeffs": [
+              {
+                "A": "9c50a6cd44bed8349904ddb3522d1318cf164d5d511c9947e83df832af406c15",
+                "c": "a64a8454b39ffa0ea904b87f728e96fd717614ccdebff4a9bfa1f78f79e4b800",
+                "s": "626366698a8c89e92d7acde13d8dfa995c8a123c444a894f660a74821c8e900c"
+              },
+              {
+                "A": "223fba58c288079544f79a57f609968af65732535071902467f0d2839ced7b27",
+                "c": "b3ed3502bee16246ebf643316116431f6efed63246ca9bd04bc1c4cbef3b7c0c",
+                "s": "f95e81a794b05d97e1a5faf92813ece3fccecbb2decec89f04e37e6810636003"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 9,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 3,
+            "enc": {
+              "E": "c6d5a0fcae6c0ede23f8854ab3a0bd22132fa91b577fde156468144415945837",
+              "c": "cabf13d2cfa0318bf72b985297bc13f43075566d92b5b39065f51dd33fd29503",
+              "s": "01a0471c2f64a823008e8c17fda51a16818ab44604bf0359f91e3d039022c508"
+            },
+            "coeffs": [
+              {
+                "A": "b6dfa23e7fcaf6297c206a23f85187047c7ccaa2cb61b7374bbbd18003814746",
+                "c": "00f4d66b63e70076adebd6bcf1eaeaa0b04fadfceaccdaa1c843aeee5f71f20a",
+                "s": "f810893ed7b5532adaa79966b6181831ffda3705a38809ccb4adf48f0d1bd607"
+              },
+              {
+                "A": "d0a4c914e43f5139535e8da819d53dd28cc05668a528775096818e43d26a911d",
+                "c": "d4f3064bbd0be3301e38689e36b73cd566f152fb6aae87c9c691672856a78903",
+                "s": "a2bca7f2fe73bd5ff6489432220852bf5b639da3f60427aeed15c339a552b406"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 10,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 4,
+            "enc": {
+              "E": "d27998de7eaeea94d6cb650e2c7c0ab34ec3c46b7fec22e6e4b85f750f15cc6a",
+              "c": "8c3364f351f066e6a9d1b89f012bb1318ee519c5d8972c52f155e56138671b00",
+              "s": "f980908b1bfae550dc099887b060c2c6d07cd5f359fb237cd95a875362596b0e"
+            },
+            "coeffs": [
+              {
+                "A": "cca6b07a480c9f46aa350aa36d3beca2382aa0a3335a7a8e0d1cc875dd54966f",
+                "c": "c518041928ba14e2ea56205d17468284ed7c2082fc7710d34091c1a53e027208",
+                "s": "65f4793b6a966f22cee8f235033b011cbc7ae4811eeed9ada1cf8a86bfc53709"
+              },
+              {
+                "A": "40f63b305b06305713496514d1b847e131b1923773ea858dfc8ea4a355850308",
+                "c": "49ad35f1ff164f24fddb1de58adb5c063299163ab1779ffcb6d159878ae83a01",
+                "s": "ec57dea0aaf2f4ce7f425d378b215e2e26bdaae12a37577ba4258a09c6feb903"
+              }
+            ]
+          }
+        }
+      ],
+      "shares": [
+        {
+          "seq": 12,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 1,
+            "shares": [
+              {
+                "j": 2,
+                "R": "7017aa6c9f68eaa3ba0611599d402ad13044df4e721e8823f91d208f82948f4d",
+                "ct": "fcc0ac6927d4d3e94d8085c4d7eb606eedbc27b2ffb3b11c66f9274fab108530",
+                "tag": "5a4124b47752e98890c7b919d89a5c88"
+              },
+              {
+                "j": 3,
+                "R": "7a422c11e543b36e91e2c373273b24d3780f1c932552d20797ad2633b12fcd38",
+                "ct": "1676cce218fbe3426ae80d27e605aef504e756d520632ffec9a31a69836a5ec5",
+                "tag": "747b87977df6ad25be6e9f316a2fe5c6"
+              },
+              {
+                "j": 4,
+                "R": "9cd03b6d71cb5cc4ec1b542cdcfb57ce6d7702562dfef2a2e103adeb5e03ad76",
+                "ct": "a386d6fad23cb2d2c3056e8526fabe8f91cc20f150da0ac7bf48c0fdf577ef7f",
+                "tag": "98fbe5db32d42d10efa88167f01a289c"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 13,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 2,
+            "shares": [
+              {
+                "j": 1,
+                "R": "e4202c2acd9ccc444e0aaec042ee6eb65718ddfbaffbf94ec6e52e16027bdc3c",
+                "ct": "6e5ce1a4e4ea7d705d3a0462e33b279eb981623cf9b480ce17fb190301f56398",
+                "tag": "7af0f62b7bdccdff94f18157023ed2a8"
+              },
+              {
+                "j": 3,
+                "R": "7c61fa3af02c1c24112642d5d5ea398f43db482f2e95466f28ee5b540d0eee45",
+                "ct": "cb4aed34e97cfd500a5df5866fb6e1702154d7680425ba16cbeba095a5e99d28",
+                "tag": "b694c054197ea58350bd27e1b3642d86"
+              },
+              {
+                "j": 4,
+                "R": "c0ceb4c5b7d4b8646154e51401380d8334ce1c673a3327bc0b90c6afceebe55f",
+                "ct": "4e1ff73a27b76a6a0e5291172c2c3b7e14f6f8e3635729b6cff20457daf75826",
+                "tag": "7982dcecc3b6381493baadf1abb8a278"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 14,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 3,
+            "shares": [
+              {
+                "j": 1,
+                "R": "2cc9ff1fe19de8e01474f143c8fe3523ae53435fdeecd845bde3fd4928d08a19",
+                "ct": "6aa60c9e5fab4a3bb0ac6fc254110d76f72f2bd404e5d4fe0bc55d8c69780caa",
+                "tag": "2b95e88c48802ec5f44c70b8cb5b2159"
+              },
+              {
+                "j": 2,
+                "R": "6ea194797e78f4f87dcda5ae5af9a3a21a506017f81392565cf268b0fb3a3b2d",
+                "ct": "2daad9cafd2bd479a2b23d66925e4f621f86b3fb3495eb6e23b354a39a935e38",
+                "tag": "594cd0a88a838da15ff33a3813a268a0"
+              },
+              {
+                "j": 4,
+                "R": "a21117838a407b3002bbfc87b90741e3986ec1a6c739b563d8221f5dea7b6879",
+                "ct": "efb951f1678ad4b04bea97ff445299c4af747e7c80f60edae19711900b4dd2d6",
+                "tag": "36c2f8cc3b7a64347a63edb80a81c0df"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 15,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 4,
+            "shares": [
+              {
+                "j": 3,
+                "R": "d869aee778193c8fda75fad6556b58447ab9f17185a075977d90e168cad9d77f",
+                "ct": "e53001284be757eca378a925fb1d93617b27e1e9189f8874074b1c0489879769",
+                "tag": "be2ecbe429e0a8859c69d5493496dcc8"
+              },
+              {
+                "j": 2,
+                "R": "328775917bfc4df4a8d37af97801a6e3212305df2e52f76c38d8b7a9d6527e24",
+                "ct": "3f757c7ceb4457d145af55ed68c421fd3176ae0afda8f2c9fc289de96f142582",
+                "tag": "31bfa146ec68571f38d177e4953657de"
+              },
+              {
+                "j": 1,
+                "R": "4edfd0bb43b1e7e47385e636fa4290524a034e196587cc2c3219346e93bc9021",
+                "ct": "458519b82b4f7efef91158b076568eefb02eba40a6f77596d7e09c36dbd7eaaa",
+                "tag": "ac281d005676c9b00161c72ffc481d55"
+              }
+            ]
+          }
+        }
+      ],
+      "complaints": [
+        {
+          "seq": 17,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-complaint",
+            "accuser": 2,
+            "accused": 4,
+            "S": "94160560bc5f57b6a69586d415597cd5f356c35ec94cee40235d5a40774d976f",
+            "c": "54f9a6a7cfb677c05c122946be7f6625c268e7febaa5b09ba29b9e5bb3b0bb09",
+            "s": "43755944694a03f4a0bfddbb1c16c312e9a03eb90b32bcc77813295f341a3f04"
+          }
+        }
+      ]
+    },
+    "manifest_hash_hex": "1c209063ce45271ec215135921b5de07c79c4e30f7a5aaae4b3ffec48cfc53a3",
+    "ts": {
+      "Q": [
+        1,
+        3
+      ],
+      "K_hex": "6efe85b16a156e6b2fdc71a2d0123e400a4c3ff8e7c712fa5bc941d2f8235f2b",
+      "ctx_hex": "1151574fece914d9004ac64d791977bd608822528960c7729b73d101a7d5625c"
+    }
+  },
+  {
+    "id": "D4-commit-before-dkg-open",
+    "n": 3,
+    "t": 2,
+    "markers": {
+      "dkg-open": 2,
+      "dkg-r1-open": 5,
+      "dkg-r1-close": 9,
+      "dkg-r2-close": 13,
+      "dkg-r3-close": 14,
+      "dkg-final": 15
+    },
+    "records": {
+      "commits": [
+        {
+          "seq": 3,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 1,
+            "h": "497bc3ac3bbad1f335d6efbd9b8042624fbf618590f4309e06d2e0937b25b30a"
+          }
+        },
+        {
+          "seq": 4,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 2,
+            "h": "f756d1720add2fc623c440490ad07167d8ab77547160e395def9b02d215474ce"
+          }
+        },
+        {
+          "seq": 1,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 3,
+            "h": "e1265f95f6b86badded2ee0efb83ace799c250ded27399c8401d4652ffdf59e0"
+          }
+        }
+      ],
+      "dealings": [
+        {
+          "seq": 6,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 1,
+            "enc": {
+              "E": "c0561e38f2a78a8b3d1b5f3acf607ec00f255bffb34add1b2fbe40225585a676",
+              "c": "7e56a03db76b0b204408f3d3077eb279c96b3828e05687e683ce259d481bf50c",
+              "s": "ad4226c234df790f6aaecc8a1f74eb9a143bf1e606bc2ff7e359238974417907"
+            },
+            "coeffs": [
+              {
+                "A": "7ca8436a3948346d9b723c2b27e854b526a587e43f7760be781e54b65bb3e154",
+                "c": "9db22d4fb7f76bd34566e4b8d5ce55242555c901db7c8e121d600266365ead00",
+                "s": "8e35409005aa4bcc34621649ae1e0369c58f723d47f03a2b552fc057daea2000"
+              },
+              {
+                "A": "fc356f80851b143de348fdf60e3cff4f3756743d4ba747f5e82a919f169eeb1f",
+                "c": "a36e01eb3fbd0b518a17813a6895db61aeec3257fcb7adb1cfa1c95931060d08",
+                "s": "72296b73d47a2934012f78cc6c668e9ca4048f78ae6a1c0450cb72e71311300a"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 7,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 2,
+            "enc": {
+              "E": "1868ef4ce65e905fbf459c7d67e1785f323392535b5f192fb7fa75db3080d049",
+              "c": "4c44e0b67ac84eab01045f4781198aa55c9fb5a9da1439d46cc88e7ac4fd1c00",
+              "s": "233821d6c07fe18f2934eccf62cae78b8317c31da5d73959bacb82e05e872001"
+            },
+            "coeffs": [
+              {
+                "A": "50306d3895b5cba640865619b292b939dce764854c9f11d11cfc79f280812662",
+                "c": "83a02edf35e5445341c63a82e077402a083b46d94f14c5701f2368bc8692190d",
+                "s": "9bdd4306d3f4e84f8e00979fda8f8205baf9b5ea0a2a6400d53f2a8e808dd90b"
+              },
+              {
+                "A": "b8524ccf540388872285157ea5edd5a3130760615db83d1b55c78cef4db6b01c",
+                "c": "866a557714382ba02e2147ddb20bc6ed9e587caa6f9798e682ab5e14f1ec4d02",
+                "s": "2cb5ab199c1d534c9aaa214c3d36b2e60d11c9d6a063a4ceb9cd9a3d13cb7809"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 8,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 3,
+            "enc": {
+              "E": "4a3f9e4488094b510b5a0ca346d4a5c0fc8fb3ab3a561024f8cad9c15e3ec502",
+              "c": "1e08bfd3f3d68ad6f4a4c546f853c77884d451d4733d324e0b0c257093a12002",
+              "s": "36b0fe12c25a6f16aa05d11a9aec00329fea48420197dfd1e4adfbb80c6c3809"
+            },
+            "coeffs": [
+              {
+                "A": "4c040dd050f475ad9079e58fb712753489b2c29a57087eddf37ae48bef76763f",
+                "c": "c9cb8c3400081b0c3ece131cd3f50baf598619aabc89bcd4aff59ac6a64fa301",
+                "s": "1f4876b896520fd1caccf15ef611507f2046e13dc8fdbb76fff5ba7738362f0e"
+              },
+              {
+                "A": "30b617a615c0194dea9a2331776b9d4865518a009a1622c05d80d57541acb22d",
+                "c": "60247c394789869e815dac7cb1e1662b68b77a23bedad26e6df20609365f4402",
+                "s": "12f4658b24085ae5076e89b9065588d4dd725df5798343aa58f603ad6a2f6103"
+              }
+            ]
+          }
+        }
+      ],
+      "shares": [
+        {
+          "seq": 10,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 1,
+            "shares": [
+              {
+                "j": 2,
+                "R": "a01558f3e20b96f2d29ef5d1c5b9ac21b1870de6ced498becf5c5d0b690dd821",
+                "ct": "4c79580fcc190d0264956d2609441d3fc4a40fb9a6cee380f8d64e4990425728",
+                "tag": "bbe6d79e3daf25c7661346dfc659adbb"
+              },
+              {
+                "j": 3,
+                "R": "32cf67013a57fe03c7c2001d024761ec0f4fa93cb626e454ad3e3973715fc35c",
+                "ct": "0dedcaf85beff4e24f8ac9011077aa5f72d82657f71f8d7fb01c39b0d7bbe27b",
+                "tag": "877a5a26fc46b349df03100da056f9fd"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 11,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 2,
+            "shares": [
+              {
+                "j": 1,
+                "R": "e6da3ae9080fa69c713fd7fcc7dd49aa7d0c6c419dc2eef5ee689e2e4eba2b48",
+                "ct": "84757c78f55d89c4b501ee3def3369a112e9ec634ee03129fa6f6b351ab4cbd9",
+                "tag": "2e6b45ca48ced974d456abc5c3ed74d5"
+              },
+              {
+                "j": 3,
+                "R": "f0ae23b4b60294d5617011fcaeac1dfc6c9393814e956e8d2d7635f990f2b74f",
+                "ct": "211420555a81870e562cff2a98c13b3ee5356043f5f9270fe22530a9e6da58cd",
+                "tag": "c46386f5e341fb17281508c270084a96"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 12,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 3,
+            "shares": [
+              {
+                "j": 1,
+                "R": "4a12b83a7ada0c209d06eacc479f7f1c12a4253e6bf2482481796dabb83fd665",
+                "ct": "db2293f7d9afdef31e0d755cef13ecfc692fd031c340c1e9f14ddd34ff6b9898",
+                "tag": "4b1794cdeb25c992bd7e62667ec8e22c"
+              },
+              {
+                "j": 2,
+                "R": "46c1424416c55f8ebd6cbe6530b47ff745d47e51f3c9a6945af3fb4a301e5328",
+                "ct": "f4389d4963bbd833f05f824c64d3c33ba448a7e0f816038587166a17b41b92a6",
+                "tag": "7d13f8f946f4a69d2513411a66d355bf"
+              }
+            ]
+          }
+        }
+      ],
+      "complaints": []
+    },
+    "manifest_hash_hex": "1c209063ce45271ec215135921b5de07c79c4e30f7a5aaae4b3ffec48cfc53a3",
+    "ts": {
+      "Q": [
+        1,
+        2,
+        3
+      ],
+      "K_hex": "5c553615be54a9d504dcc2433d37d3c98e1c7771be72c65e8c0529b06b569407",
+      "ctx_hex": "d36b2afefca89aada1042ed8e0cc18f9d835d63e26faf4ade1ce04ee72c63971"
+    }
+  },
+  {
+    "id": "D5-boolean-index-trustee-1",
+    "n": 3,
+    "t": 2,
+    "markers": {
+      "dkg-open": 1,
+      "dkg-r1-open": 5,
+      "dkg-r1-close": 9,
+      "dkg-r2-close": 13,
+      "dkg-r3-close": 14,
+      "dkg-final": 15
+    },
+    "records": {
+      "commits": [
+        {
+          "seq": 2,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 1,
+            "h": "df8e5503ba5126b996e671bac7a33ee815b15cfa29b6bfd5fa6b81ae894acd25"
+          }
+        },
+        {
+          "seq": 3,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 2,
+            "h": "893f9efb11709c8cfa5a7355e8eb53df3416b4b8d9f3468b165df77735b7863d"
+          }
+        },
+        {
+          "seq": 4,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-commit",
+            "i": 3,
+            "h": "987266ea5e414277ced0949134c6d7e05e6b696de4281786f2597abee2f17fe9"
+          }
+        }
+      ],
+      "dealings": [
+        {
+          "seq": 6,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": true,
+            "enc": {
+              "E": "2c9986ca1e63fe55703e71164855a61a64cd0a6b7571a16e62131bc8792a8f14",
+              "c": "9cff477ebe35edc5f1eae34350886be536e425974f6312f6d92835233c036b08",
+              "s": "029a4f2723dd1318155878f9f9c467155c3355761e0ddec3653df98468304b07"
+            },
+            "coeffs": [
+              {
+                "A": "da1c34db2b9affb72f097b2cd46a0b081da9cb5e325ae4bc1d1b771f732db23d",
+                "c": "1bf073bb942f93e9432cdad75b9ee918b17b0a6ffa3bfd5de48ce2f7d85a8f0f",
+                "s": "2c42a98f5942496aca68c41c53c5dfb7e7346401ee0a102e7ed16a8d23358200"
+              },
+              {
+                "A": "c83643a29b7cefde84e93eecf8ea2bc393f94246396f900e9a6b0bbed96e2d07",
+                "c": "c0f4c4762dd17cf8f980f26162d82906c74ad9abead75defa2e0c7aab8a7c306",
+                "s": "82f2090bef663538519cd15f5d4833105bb20e81d8101c4dad9be32044bb0606"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 7,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 2,
+            "enc": {
+              "E": "e6a41e85c2a3cb3eb60114b4059cd89b879772f5fbd78eb0873a6bae17349c11",
+              "c": "9e277521fd06b5b0ebfc045f6d21e10bcae98ed678d6454b4ea0a78ec0a2d100",
+              "s": "4fab5510687492cabf2ae935881b0725eeeaf14995ff79b3886501aec9f5940c"
+            },
+            "coeffs": [
+              {
+                "A": "d8faab943543836efd44f48b12d3d637372ffce3bb44ae3febefc1dfa498e25a",
+                "c": "2b359ce056e7ca35e9efb6ebc6e2dec132bc3d0381fbe8864f075ea6c7284700",
+                "s": "9894bed1694e3f08e69757427feab749569acb204f742b35604811abdcebd808"
+              },
+              {
+                "A": "ea13202049cf1fd6e5542c1d72bdfe1342f192e684dcae78e0b443b637dfab48",
+                "c": "8d16364dbc97cf9ca755201a0fad9bc40f98f4ab0b3198003403b3ff7598f601",
+                "s": "ccb7f99d0e5d6ab59db308c709a193b5fae6c1ace0b9c150ad7d2a7d5de19b0d"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 8,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-dealing",
+            "i": 3,
+            "enc": {
+              "E": "1413832f77eaa87e9d21afcd7c6847ac62c8146d5c5b6e2b49d6555cfb7ddd13",
+              "c": "9b21d557ef91d4c0830be01f418f7a7a6bb10051fa57c9d4b88dda23b0dfdf05",
+              "s": "962e64de2be7eeaf2da29fa1274afd4292fef6bbfa554a6b54a9354d7cfe9307"
+            },
+            "coeffs": [
+              {
+                "A": "a818ba6a8c4e7748961554f7947cd30ac5ab17a6f077feede21ddd8b6196a72a",
+                "c": "27e6a976d229fa7d3058e6a87c803a081aaebe35085e40538fdafb403800e206",
+                "s": "d6102112037567a72fb4229d14f704c06604158871686b06ef5127c2c25cba0e"
+              },
+              {
+                "A": "78ddd2be043048400b75aab2054dcdfb4fae4b392b2e24358a6acf8a96a9c307",
+                "c": "8fb9b4dc6dfaaeadc31d7cd46b52cacd5811ac582db7ff8658b1877f98fff809",
+                "s": "59cde7d8ff512e73b2bb84c369a3206f6d223e1093baa1da5d8d376379fb8d02"
+              }
+            ]
+          }
+        }
+      ],
+      "shares": [
+        {
+          "seq": 10,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 1,
+            "shares": [
+              {
+                "j": 2,
+                "R": "3a4913b5928f3e17664ad33f3611a5eda6ef7c7bba95c4700cbe4cd2115eb143",
+                "ct": "324d730bd79e6ab4e9f44330bdd625280eeef91842dc2fe20bb602e64adc6b13",
+                "tag": "f16e2dab8fc41ac871abc3930b35779c"
+              },
+              {
+                "j": 3,
+                "R": "f2799c6117e7df008f944580a89692118c52fc3b54129c023b31df6497485f29",
+                "ct": "f2666125bbb64a27ed675156d2a90db611aa6b9fe2c76c333ff0af4e9f1af8e6",
+                "tag": "8f2d2416aaf9b7672f69e9f74546f6ce"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 11,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 2,
+            "shares": [
+              {
+                "j": 3,
+                "R": "c2fff8726af3f9fff02f2eb686d8200bcbc41f721d92ae8010f0721fe0e75c70",
+                "ct": "4135d256d3a23f11cf2e5a8a48eb6e3f7bbddd4d4af9b3c6b3d37842b1327e39",
+                "tag": "5592eda0c2e05b57b6a8122db71f51f7"
+              }
+            ]
+          }
+        },
+        {
+          "seq": 12,
+          "body": {
+            "proto": "qv1-r255-sha2",
+            "type": "dkg-shares",
+            "i": 3,
+            "shares": [
+              {
+                "j": 2,
+                "R": "6031426499ace42ff9c94c2ad76f2e15aba16684b1ac34b046cf6bc398960309",
+                "ct": "e7080fd9ca6964ce0fe559ef000effab72ab7c811f5a22cb8bf2b8c42ed3a8ad",
+                "tag": "fd58d7598f4405c851c450d73e010e70"
+              }
+            ]
+          }
+        }
+      ],
+      "complaints": []
+    },
+    "manifest_hash_hex": "1c209063ce45271ec215135921b5de07c79c4e30f7a5aaae4b3ffec48cfc53a3",
+    "ts": {
+      "Q": [
+        2,
+        3
+      ],
+      "K_hex": "ee63c0954d8db46e20e72c159f9ecc3a246a061f19fe1a078aab88445f203643",
+      "ctx_hex": "9abc142c1ea74bdb0d2b2f810cbd84f373a1025747ff23dcb8a1737ab2bc3860"
+    }
+  }
+]

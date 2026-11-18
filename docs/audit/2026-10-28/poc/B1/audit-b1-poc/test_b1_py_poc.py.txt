@@ -1,0 +1,84 @@
+# B1 audit PoC tests for verifier-py (2026-10-28). Each test PASSES when the reported defect is PRESENT.
+# Needs the bundles/op inputs written by `node audit-b1-poc/gen.ts` and `node audit-b1-poc/oplevel.ts`.
+# Run from the worktree root: python3 -I -m unittest discover -s audit-b1-poc -p 'test_b1_py_poc.py'
+import json
+import os
+import sys
+import unittest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.join(HERE, '..')
+sys.path.insert(0, os.path.join(ROOT, 'verifier-py'))
+from qv_verifier import dkg, manifest, qvjson  # noqa: E402
+from qv_verifier.election import verify_bundle  # noqa: E402
+from qv_verifier.errors import QVError  # noqa: E402
+
+
+def load(path):
+    with open(path, 'rb') as fh:
+        return qvjson.parse(fh.read())
+
+
+def jload(path):
+    with open(path, encoding='utf-8') as fh:
+        return json.load(fh)
+
+
+def out(name):
+    return os.path.join(HERE, 'out', name)
+
+
+class B1PythonVerifierPoc(unittest.TestCase):
+    def test_B1_02_control_entries_are_fatal_on_shipped_vector(self):
+        # test-vectors/v1/elections/log-layer-4v/notices/pause-resume.bundle.json: TS verifyElection -> PASS
+        b = load(os.path.join(ROOT, 'test-vectors/v1/elections/log-layer-4v/notices/pause-resume.bundle.json'))
+        r = verify_bundle(b)
+        self.assertEqual(r['verdict'], 'FAIL')
+        self.assertIn('E_SCHEMA', [f['code'] for f in r['findings'] if f['fatal']])
+
+    def test_B1_02_bad_signature_close_marker_before_valid_one_is_fatal(self):
+        r = verify_bundle(load(out('E7-bad-close-then-good.bundle.json')))  # TS: PASS
+        self.assertEqual(r['verdict'], 'FAIL')
+
+    def test_B1_03_approval_without_winners_raises(self):
+        with self.assertRaises(QVError):  # TS: PASS (1 seat, QV-20 §5.3)
+            verify_bundle(load(out('E5-approval-no-winners.bundle.json')))
+
+    def test_B1_04_uppercase_hex_tally_share_accepted(self):
+        r = verify_bundle(load(out('E14-tally-share-uppercase-hex.bundle.json')))  # TS: FAIL (E_SCHEMA)
+        self.assertEqual(r['verdict'], 'PASS')
+        self.assertEqual(r['checks']['chk.encoding.canonical'], 'pass')
+
+    def test_B1_04_uppercase_hex_and_boolean_index_dkg_records_accepted(self):
+        scen = {s['id']: s for s in jload(out('op-dkg.json'))}
+        for sid in ('D2-uppercase-hex-dealing', 'D5-boolean-index-trustee-1'):
+            s = scen[sid]
+            self.assertEqual(s['ts']['Q'], [1, 2] if sid.startswith('D2') else [2, 3])  # TS excludes the malformed dealer
+            with self.assertRaises(QVError) as cm:  # Python admits it to R1, so honest packages look incomplete -> abort
+                dkg.adjudicate(bytes.fromhex(s['manifest_hash_hex']), s['n'], s['t'], s['markers'], s['records'])
+            self.assertEqual(cm.exception.code, 'E_DKG_QUORUM')
+
+    def test_B1_08_manifest_rules_missing_in_python(self):
+        cases = {c['id']: c for c in jload(out('op-manifest.json'))}
+        for cid in ('M1-created-after-open', 'M2-invalid-date-feb30', 'M3-hour-24', 'M18-yes-no-without-rule'):
+            self.assertNotEqual(cases[cid]['ts'], 'OK')  # TS rejects
+            manifest.validate(cases[cid]['manifest'], cases[cid]['roll_size'])  # Python accepts (no exception)
+
+    def test_B1_09_spoils_over_max_spoils_are_not_limited(self):
+        # TS drops the over-limit spoil (B1-01); Python registers it, excludes the cast and FAILs on the TS-built tally
+        r = verify_bundle(load(out('E1-spoil-over-limit.bundle.json')))
+        self.assertEqual(r['verdict'], 'FAIL')
+        self.assertIn('E_SPOILED_CODE_CAST', r['codes'])
+
+
+    def test_B1_13_manifest_envelope_extra_members_fatal_in_python(self):
+        r = verify_bundle(load(out('E19-manifest-envelope-extra-members.bundle.json')))  # TS: PASS
+        self.assertEqual(r['verdict'], 'FAIL')
+
+    def test_B1_14_missing_dkg_open_marker_accepted(self):
+        r = verify_bundle(load(out('E20-dkg-open-marker-dropped.bundle.json')))  # TS: FAIL (E_DKG_MARKERS)
+        self.assertEqual(r['verdict'], 'PASS')
+
+
+if __name__ == '__main__':
+    unittest.main()

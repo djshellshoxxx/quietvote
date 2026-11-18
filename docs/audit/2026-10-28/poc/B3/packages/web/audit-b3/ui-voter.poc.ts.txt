@@ -1,0 +1,217 @@
+// B3 audit PoC (Playwright, throwaway evidence): voter-facing UI behaviours of the production build against FakeBoard.
+// Run from the repo root: node packages/web/audit-b3/ui-voter.poc.ts
+// A step prints PASS when the (defective) behaviour named in its title was OBSERVED, i.e. PASS = finding confirmed.
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { FakeBoard, TEST_CONTESTS, sharedSim } from '../test/helpers/fake-board.ts';
+import { setup } from '../../protocol/test/helpers/sim.ts';
+import { PASS, exe, pw, results, startStack, step } from './harness.ts';
+
+const sim = await sharedSim();
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const base = `${stack.origin}/e/${board.apiId}`;
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const ctxOpts = { };
+const text = async (p: import('playwright').Page): Promise<string> => (await p.locator('main').innerText()).replace(/\n+/g, ' | ');
+const tail = (t: string, from: string): string => { const i = t.indexOf(from); return i < 0 ? t : t.slice(i); };
+const idb = (p: import('playwright').Page): Promise<Record<string, number>> => p.evaluate(async () => {
+  const db: IDBDatabase = await new Promise((res, rej) => { const o = indexedDB.open('quietvote-v1'); o.onsuccess = () => res(o.result); o.onerror = () => rej(o.error); });
+  const out: Record<string, number> = {};
+  for (const s of Array.from(db.objectStoreNames)) out[s] = await new Promise<number>((res) => { const r = db.transaction(s).objectStore(s).count(); r.onsuccess = () => res(r.result); });
+  db.close();
+  return out;
+});
+const importKey = async (p: import('playwright').Page, url: string): Promise<void> => {
+  await p.goto(url);
+  await p.getByLabel('Use a key file I saved before').check();
+  await p.getByLabel('Key file', { exact: true }).setInputFiles(stack.keyFile);
+  await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+  await p.getByRole('button', { name: 'Create key' }).click();
+};
+const fresh = async (): Promise<import('playwright').Page> => (await browser.newContext(ctxOpts)).newPage();
+const sealAndChoose = async (p: import('playwright').Page): Promise<void> => {
+  await p.getByLabel('YES', { exact: true }).check();
+  await p.getByRole('button', { name: 'Review my choices' }).click();
+  await p.getByRole('button', { name: 'Seal my ballot' }).click();
+  await p.getByRole('button', { name: 'Send my vote' }).waitFor({ timeout: 30000 });
+};
+
+try {
+  await step('B3-F12 Benaloh test result never shows the opened plaintext although it asks "Do these match what you picked?"', async () => {
+    const p = await fresh();
+    await importKey(p, `${base}/key`);
+    await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+    await p.getByRole('link', { name: 'Vote' }).first().click();
+    await sealAndChoose(p);
+    await p.getByRole('button', { name: 'Double-check this vote' }).click();
+    await p.getByText('Practice vote opened').waitFor({ timeout: 30000 });
+    const t = await text(p);
+    const tables = await p.locator('main table').count();
+    if (!t.includes('Do these match what you picked?')) throw new Error('question not found');
+    if (/\bYES\b/.test(t) || tables > 0) throw new Error(`plaintext is shown: ${t}`);
+    await p.context().close();
+    return `tables on the screen: ${tables}; contains "YES"/"ann": ${/YES/.test(t)}\nscreen text from the heading on: ${tail(t, 'Practice vote opened').slice(0, 900)}`;
+  });
+
+  await step('B3-F13 "Clear this device" wipes the only copy of the wrapped key in one click, with no confirmation and no backup check', async () => {
+    const p = await fresh();
+    let dialogs = 0;
+    p.on('dialog', async (d) => { dialogs++; await d.dismiss(); });
+    await p.goto(`${base}/key`);
+    await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+    await p.getByRole('button', { name: 'Create key' }).click();
+    await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+    const before = await idb(p);
+    await p.getByRole('button', { name: 'Clear this device' }).click();
+    await p.waitForTimeout(500);
+    const after = await idb(p);
+    const dlg = await p.locator('dialog, [role="dialog"], [role="alertdialog"]').count();
+    await p.context().close();
+    if (before.keys !== 1 || after.keys !== 0 || dialogs !== 0 || dlg !== 0) throw new Error(JSON.stringify({ before, after, dialogs, dlg }));
+    return `IndexedDB before ${JSON.stringify(before)} -> after ${JSON.stringify(after)}; browser dialogs: ${dialogs}; in-page dialog elements: ${dlg}`;
+  });
+
+  await step('B3-F14 a link without an invitation still ends in "Your key is registered." although no registration request was sent', async () => {
+    const p = await fresh();
+    const n0 = board.requests.length;
+    await p.goto(`${base}/key`);
+    await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+    const hint = await p.getByText('This link has no invitation in it').count();
+    await p.getByRole('button', { name: 'Create key' }).click();
+    const msg = p.getByText('Your key is registered.');
+    await msg.waitFor({ timeout: 30000 });
+    const regs = board.requests.slice(n0).filter((r) => r.url.includes('/registrations')).length;
+    await p.context().close();
+    if (regs !== 0) throw new Error(`registration requests: ${regs}`);
+    return `hint "no invitation" shown: ${hint > 0}; success text shown: true; POST /registrations sent: ${regs}`;
+  });
+
+  await step('B3-F15 when registration fails the new key can no longer be backed up (no download / recovery buttons, also after reload)', async () => {
+    const p = await fresh();
+    await p.goto(`${base}/key#inv=AAAAAAAAAAAAAAAAAAAAAA`);
+    await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+    await p.getByRole('button', { name: 'Create key' }).click();
+    await p.locator('main .error').first().waitFor({ timeout: 30000 });
+    const alert1 = (await p.locator('main .error').first().innerText()).replace(/\n+/g, ' | ');
+    const dl1 = await p.getByRole('button', { name: 'Download key file' }).count();
+    const rc1 = await p.getByRole('button', { name: 'Show recovery code' }).count();
+    const stored = await idb(p);
+    // the key is stored in the browser. Reload without the invite and unlock it:
+    await p.goto(`${base}/key`);
+    await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+    await p.getByRole('button', { name: 'Unlock key' }).click();
+    await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+    const dl2 = await p.getByRole('button', { name: 'Download key file' }).count();
+    const rc2 = await p.getByRole('button', { name: 'Show recovery code' }).count();
+    await p.context().close();
+    if (dl1 + rc1 + dl2 + rc2 !== 0 || stored.keys !== 1) throw new Error(JSON.stringify({ dl1, rc1, dl2, rc2, stored }));
+    return `registration error shown: "${alert1}"\nkeys stored in IndexedDB: ${stored.keys}; backup buttons after the failure: ${dl1 + rc1}; after reload+unlock: ${dl2 + rc2}`;
+  });
+
+  await step('B3-F16 importing a file that is not a key file is reported as "This browser won\'t store your key" (E-KEY-STORAGE)', async () => {
+    const p = await fresh();
+    const junk = join(stack.dist, 'junk.qvkey');
+    writeFileSync(junk, 'this is not a key file');
+    await p.goto(`${base}/key`);
+    await p.getByLabel('Use a key file I saved before').check();
+    await p.getByLabel('Key file', { exact: true }).setInputFiles(junk);
+    await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+    await p.getByRole('button', { name: 'Create key' }).click();
+    const a = p.locator('main .error').first();
+    await a.waitFor({ timeout: 30000 });
+    const msg = (await a.innerText()).replace(/\n+/g, ' | ');
+    await p.context().close();
+    if (!/won.t store your key/.test(msg)) throw new Error(msg);
+    return `alert text: ${msg}`;
+  });
+
+  await step('B3-F17 unlocking an existing key uses autocomplete="new-password" (password managers are told to create, not fill)', async () => {
+    const p = await fresh();
+    await importKey(p, `${base}/key`);
+    await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+    await p.goto(`${base}/key`);
+    await p.getByRole('button', { name: 'Unlock key' }).waitFor();
+    const ac = await p.getByLabel('Passphrase', { exact: true }).getAttribute('autocomplete');
+    await p.context().close();
+    if (ac !== 'new-password') throw new Error(String(ac));
+    return `unlock form passphrase input autocomplete="${ac}"`;
+  });
+
+  await step('B3-F18 the header link "Privacy and limits" leads to the not-found page', async () => {
+    const p = await fresh();
+    await p.goto(stack.origin + '/');
+    await p.getByRole('link', { name: 'Privacy and limits' }).click();
+    await p.waitForTimeout(300);
+    const url = p.url();
+    const t = await text(p);
+    await p.context().close();
+    if (!/could not find/.test(t)) throw new Error(t);
+    return `href -> ${url}; page says: ${t}`;
+  });
+
+  await step('B3-F19 "Yes, it matches" confirms the Election ID with an empty field, and the confirmation is keyed by the API id (survives a different manifest)', async () => {
+    const p = await fresh();
+    await p.goto(base);
+    await p.getByRole('button', { name: 'Yes, it matches' }).waitFor({ timeout: 20000 });
+    const idA = (await p.locator('header.election-head').innerText()).replace(/\n+/g, ' ');
+    await p.getByRole('button', { name: 'Yes, it matches' }).click();
+    await p.getByText('Election ID confirmed on this device.').waitFor();
+    // a different election (different manifest => different Election ID) now answers under the same API id
+    const sim2 = await setup({ seed: 'b3-other-election', n: 3, t: 2, voters: 4, contests: TEST_CONTESTS()!, minCounted: 3 });
+    stack.board.current = new FakeBoard(sim2, board.apiId);
+    await p.reload();
+    await p.getByRole('heading', { level: 1 }).waitFor({ timeout: 20000 });
+    const again = await text(p);
+    const idB = (await p.locator('header.election-head').innerText()).replace(/\n+/g, ' ');
+    stack.board.current = board;
+    await p.context().close();
+    if (idA === idB || !again.includes('Election ID confirmed on this device.')) throw new Error(`${idA} / ${idB} / ${again}`);
+    return `before: ${idA}\nafter swap: ${idB}\nthe page still says "Election ID confirmed on this device." (no comparison was made against the new ID)`;
+  });
+
+  await step('B3-F20 a 500 after the ballot was recorded is shown as "Something went wrong ... Your ballot has not been sent unless you saw a receipt."', async () => {
+    const p = await fresh();
+    await importKey(p, `${base}/key`);
+    await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+    await p.getByRole('link', { name: 'Vote' }).first().click();
+    await sealAndChoose(p);
+    const n0 = board.entries.length;
+    stack.intercept.fn = async (m, path, _b, real) => {
+      if (m === 'POST' && path.endsWith('/log/entries')) { await real(); return new Response(JSON.stringify({ status: 500, code: 'INTERNAL', detail: 'boom', retryable: true }), { status: 500, headers: { 'Content-Type': 'application/problem+json' } }); }
+      return undefined;
+    };
+    await p.getByRole('button', { name: 'Send my vote' }).click();
+    await p.locator('main .error').first().waitFor({ timeout: 40000 });
+    const t = await text(p);
+    stack.intercept.fn = undefined;
+    const recorded = board.entries.length - n0;
+    await p.context().close();
+    if (!t.includes('Your ballot has not been sent unless you saw a receipt.') || recorded !== 1) throw new Error(`${recorded} ${t}`);
+    return `entries recorded on the board by this click: ${recorded}\nscreen text from the live line on: ${tail(t, 'Your ballot').slice(0, 700)}`;
+  });
+
+  await step('B3-F21 the vote screen is not gated on the election phase: a closed election still offers the whole ballot flow, then says "Voting had closed"', async () => {
+    const closedBoard = new FakeBoard(sim);
+    closedBoard.close();
+    stack.board.current = closedBoard;
+    const p = await fresh();
+    await importKey(p, `${base}/key`);
+    await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+    await p.getByRole('link', { name: 'Vote' }).first().click();
+    await p.getByLabel('YES', { exact: true }).waitFor({ timeout: 20000 });
+    await sealAndChoose(p);
+    await p.getByRole('button', { name: 'Send my vote' }).click();
+    await p.locator('main .error').first().waitFor({ timeout: 40000 });
+    const t = await text(p);
+    stack.board.current = board;
+    await p.context().close();
+    return `phase shown before voting: none (form rendered); after sealing and sending: ${tail(t, 'Voting had closed')}`;
+  });
+} finally {
+  await browser.close();
+  stack.close();
+}
+const failed = results.filter((r) => !r.ok).length;
+console.log(`\n${results.length - failed}/${results.length} findings reproduced`);
+process.exit(failed > 0 ? 1 : 0);

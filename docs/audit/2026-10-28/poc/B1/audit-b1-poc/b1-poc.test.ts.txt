@@ -1,0 +1,96 @@
+// B1 audit PoC tests (2026-10-28). Each test PASSES when the reported defect is PRESENT (it documents current behaviour).
+// Synthetic data only. Run from the worktree root: node --test audit-b1-poc/b1-poc.test.ts
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { bytesToHex } from '../packages/crypto/src/index.ts';
+import {
+  NO_SUPERSEDES, PROTO_ID, buildBallot, makeCast, makeSpoil, validateManifest, verifyElection, type ManifestContest,
+} from '../packages/protocol/src/index.ts';
+import { formatReport, verifyBundle } from '../packages/verifier/src/index.ts';
+import {
+  bundleOf, castBallot, closeElection, multiSign, publishTally, push, setup, type SimOpts,
+} from '../packages/protocol/test/helpers/sim.ts';
+
+const H = bytesToHex;
+const yesNo: ManifestContest = {
+  id: 'budget', title: 'Budget?', method: 'yes-no', options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }], selection_limit: 1,
+  min_selections: 0, rule: { type: 'threshold', num: 1, den: 2, basis: 'yes+no', strict: true }, tie_break: { type: 'status-quo', option: 'no' },
+};
+const base = (seed: string, extra: Partial<SimOpts> = {}): SimOpts => ({ seed, n: 3, t: 2, voters: 4, contests: [yesNo], ...extra });
+
+test('B1-01 (QV-16-REQ-015): a spoil over max_spoils_per_voter is dropped before the spoiled set, so the same code is counted unflagged', async () => {
+  const s = await setup(base('b1-poc-01', { maxSpoils: 0 }));
+  const p = s.params!;
+  const v = s.voters[0]!;
+  const b = buildBallot(p, v.secretKey, v.publicKey, NO_SUPERSEDES, { budget: ['yes'] }, s.rng, 0);
+  assert.ok(b.ok);
+  if (!b.ok) return;
+  push(s, makeSpoil(p, v.secretKey, b.value, 'publish')); // xi + selections published
+  push(s, makeCast(p, v.secretKey, b.value)); // same body => same ballot code
+  s.lastCode.set(H(v.publicKey), H(b.value.code));
+  castBallot(s, 1, { budget: ['no'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  const r = await verifyElection(JSON.parse(JSON.stringify(bundleOf(s))));
+  assert.equal(r.verdict, 'PASS');
+  assert.equal(r.checks['chk.benaloh.spoiled'], 'pass');
+  assert.ok(!r.findings.some((f) => f.code === 'E_SPOILED_CODE_CAST'), 'no E_SPOILED_CODE_CAST alarm');
+  assert.ok(r.countedBallots!.some((c) => c.code === H(b.value.code)), 'the publicly revealed ballot is counted');
+  assert.ok(r.findings.some((f) => f.code === 'E_REVOTE_LIMIT'), 'the spoil was only logged as E_REVOTE_LIMIT');
+});
+
+test('B1-06: qv-verify/verifyBundle without a pinned manifest hash reports V1 PASS for any self-consistent bundle, with no caveat', async () => {
+  // an "attacker" election: own coordinator, own trustees, own roll; nothing ties it to the election the user meant
+  const s = await setup(base('b1-poc-06-attacker'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['yes'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  const r = await verifyBundle(JSON.parse(JSON.stringify(bundleOf(s))));
+  assert.equal(r.verdict, 'PASS');
+  assert.equal(r.checks.V1.status, 'pass');
+  assert.ok(!r.caveats.some((c) => /pin|out[- ]of[- ]band|anchor|manifest hash/i.test(c)), `caveats: ${JSON.stringify(r.caveats)}`);
+  const text = formatReport(r);
+  assert.ok(!text.includes(H(s.mh)), 'the verified manifest hash is not even printed');
+});
+
+test('B1-05: manifest free text containing U+061C ARABIC LETTER MARK (a Bidi_Control character) is accepted', () => {
+  const r = validateManifest({
+    proto: PROTO_ID, type: 'manifest', election_id: '00'.repeat(16), title: 'Vote\u061c', created: '2026-10-21T12:00:00Z',
+    voting_open: '2026-11-01T09:00:00Z', voting_close: '2026-11-08T21:00:00Z', clock_skew_s: 300, contests: [yesNo],
+    roll: { scheme: 'ed25519-roll-v1', weights: 'uniform' },
+    trustees: [{ index: 1, name: 'T1', sign_pk: 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a' }], n: 1, t: 1,
+    coordinator: { keys: ['3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c'], m: 1 },
+    ballots: { max_per_voter: 8, max_spoils_per_voter: 16 },
+    bb: { log_id: '00'.repeat(32), log_pk: 'fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025', witness_quorum: 0 },
+    privacy_ack: true,
+  }, 4);
+  assert.ok(r.ok, r.ok ? '' : `${r.error} ${r.detail}`);
+  // control: U+202E is rejected by the same rule
+  assert.ok(!validateManifest({ ...(r.ok ? r.value.manifest : {}), title: 'Vote\u202e' } as never, 4).ok);
+});
+
+test('B1-02 context (reference side): QV-ADR-022 control records (pause/resume) on the protocol log fail chk.encoding.canonical as "unknown record type" (E_VERSION/L)', async () => {
+  const s = await setup(base('b1-poc-11'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] });
+  push(s, multiSign(s, s.mh, { proto: PROTO_ID, type: 'control', action: 'pause', reason: 'outage' }));
+  push(s, multiSign(s, s.mh, { proto: PROTO_ID, type: 'control', action: 'resume' }));
+  castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  const r = await verifyElection(JSON.parse(JSON.stringify(bundleOf(s))));
+  assert.equal(r.verdict, 'PASS');
+  assert.equal(r.checks['chk.encoding.canonical'], 'fail');
+  assert.equal(r.findings.filter((f) => f.code === 'E_VERSION' && f.cls === 'L').length, 2);
+});
+
+test('B1-13: unknown members in the (unsigned) manifest envelope and its sig objects pass with chk.encoding.canonical = pass', async () => {
+  const s = await setup(base('b1-poc-13'));
+  castBallot(s, 0, { budget: ['yes'] }); castBallot(s, 1, { budget: ['yes'] }); castBallot(s, 2, { budget: ['no'] }); castBallot(s, 3, { budget: ['yes'] });
+  closeElection(s); publishTally(s, [1, 2]);
+  const b = JSON.parse(JSON.stringify(bundleOf(s)));
+  b.manifest.note = 'junk';
+  b.manifest.sigs[0].extra = 1;
+  const r = await verifyElection(b);
+  assert.equal(r.verdict, 'PASS');
+  assert.equal(r.checks['chk.encoding.canonical'], 'pass');
+  assert.ok(!r.findings.some((f) => f.code === 'E_SCHEMA'));
+  const v = await verifyBundle(JSON.stringify(b));
+  assert.equal(v.verdict, 'PASS');
+});

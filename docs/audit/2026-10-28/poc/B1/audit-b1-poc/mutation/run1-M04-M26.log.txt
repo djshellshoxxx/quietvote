@@ -1,0 +1,43 @@
+M01 cp-dh challenge omits pt(Ej) PATTERN MISMATCH 2
+M02 cp-dh challenge omits pt(S) PATTERN MISMATCH 2
+M03 pok-share challenge omits pt(Yj) PATTERN MISMATCH 2
+M04 cp-dec-spoil challenge omits ballotCode             crypto=KILLED   (# fail 1)  protocol-subset=survived (# fail 0)  106s
+M05 cp-limit challenge omits u32(L)                     crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 8)  89s
+M06 cp-dec challenge omits pt(B)                        crypto=KILLED   (# fail 1)  protocol-subset=KILLED   (# fail 4)  76s
+M07 cds01 challenge omits pt(K)                         crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 8)  74s
+M08 pok challenge omits u16(k) PATTERN MISMATCH 2
+M09 cdsVerify drops identity checks                     crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  73s
+M10 hs_nz counter first                                 crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 7)  64s
+M11 ed25519Verify zip215 true                           crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  65s
+M12 strict point: small-order allowed                   crypto=KILLED   (# fail 1)  protocol-subset=KILLED   (# fail 3)  63s
+M13 strict point: no canonical re-encode check          crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  61s
+M14 ed25519Verify skips strict R check                  crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  61s
+M15 scalarFromBytes reduces instead of rejecting        crypto=KILLED   (# fail 1)  protocol-subset=KILLED   (# fail 5)  59s
+M16 dlogSolve skips re-verification                     crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  63s
+M17 dlogSolve skips bound check                         crypto=KILLED   (# fail 1)  protocol-subset=survived (# fail 0)  81s
+M18 pokVerify allows identity A                         crypto=KILLED   (# fail 1)  protocol-subset=survived (# fail 0)  87s
+M19 shareKeyVerify allows identity Yj                   crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  115s
+M20 frame drops field count u32(m)                      crypto=KILLED   (# fail 2)  protocol-subset=KILLED   (# fail 15)  95s
+M21 binder omits ctx                                    crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 7)  86s
+M22 verifyEnvelope skips voter strict-point check       crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  80s
+M23 analyzeBallotLog: spoiled-set check removed         crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 5)  77s
+M24 window check off-by-one (seq >= open)               crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  87s
+M25 decryptAggregates uses all valid shares (no t-subset) PATTERN MISMATCH 2
+M26 DKG: complaints ignore late bound                   crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  86s
+Traceback (most recent call last):
+  File "/tmp/claude-0/-home-user/b9ccda38-9f8d-54d6-a99c-1f20e1924081/scratchpad/mutscripts/mutate.py", line 57, in <module>
+    rc1, f1, t1 = run(['node', '--test'] + [str(p) for p in sorted((D/'packages/crypto/test').glob('*.test.ts'))], D/'packages/crypto')
+                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/-home-user/b9ccda38-9f8d-54d6-a99c-1f20e1924081/scratchpad/mutscripts/mutate.py", line 42, in run
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=900)
+  File "/usr/lib/python3.13/subprocess.py", line 557, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1223, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 2155, in _communicate
+    ready = selector.select(timeout)
+  File "/usr/lib/python3.13/selectors.py", line 398, in select
+    fd_event_list = self._selector.poll(timeout)
+KeyboardInterrupt

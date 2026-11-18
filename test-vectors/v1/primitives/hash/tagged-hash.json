@@ -1,0 +1,743 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "primitives/hash",
+  "operation": "hash.tagged",
+  "description": "Framed hashes for every QV-16 §5.4 label",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "tagged-manifest",
+      "input": {
+        "label": "manifest",
+        "kind": "H256",
+        "fields_hex": [
+          "57188c5c083a7d46fd65a81ef47e190d14369990bb0d234c207557a7a43fdc50",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d73686132000000086d616e6966657374000000030000002057188c5c083a7d46fd65a81ef47e190d14369990bb0d234c207557a7a43fdc5000000009636f6e746573742d310000000107",
+          "digest_hex": "1ec1def983bc744b8a5a04130b715a07e1cff04d22729ba01368eb6b86b5f7bf"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-dkg-commit",
+      "input": {
+        "label": "dkg-commit",
+        "kind": "H256",
+        "fields_hex": [
+          "f3df1b159295e0ff8dd1753ae79f8ce653b51f5027a6b2ee2b6ce6254b1f100d",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000a646b672d636f6d6d69740000000300000020f3df1b159295e0ff8dd1753ae79f8ce653b51f5027a6b2ee2b6ce6254b1f100d00000009636f6e746573742d310000000107",
+          "digest_hex": "90efabed31973cc4abe46896f617049863e6d6424e3b68a42b5e2873710b4dcb"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-dkg-transcript",
+      "input": {
+        "label": "dkg-transcript",
+        "kind": "H256",
+        "fields_hex": [
+          "d590890aef566689fae6845e3062dffde087065e4e4dd1999157a24eec6ce949",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000e646b672d7472616e7363726970740000000300000020d590890aef566689fae6845e3062dffde087065e4e4dd1999157a24eec6ce94900000009636f6e746573742d310000000107",
+          "digest_hex": "701f5f387b67f44188f642080ff3e9e7add1a655a5f1109dc5cbd58a208fe515"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-dkg-dealing",
+      "input": {
+        "label": "dkg-dealing",
+        "kind": "H256",
+        "fields_hex": [
+          "2f3f18608eaa02b5459ca5d78494abd59f9f33da81ce00cb106e2bffa5ff19d2",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000b646b672d6465616c696e6700000003000000202f3f18608eaa02b5459ca5d78494abd59f9f33da81ce00cb106e2bffa5ff19d200000009636f6e746573742d310000000107",
+          "digest_hex": "e8849aeae4a7d2f851e21ccc9f4fc4dc1574b4abec40d431baf79431fccc093c"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-election-ctx",
+      "input": {
+        "label": "election-ctx",
+        "kind": "H256",
+        "fields_hex": [
+          "46ee48b9e6f565f2029d1eeffba01a07d4a36627500c56f5b05ceab532017931",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000c656c656374696f6e2d637478000000030000002046ee48b9e6f565f2029d1eeffba01a07d4a36627500c56f5b05ceab53201793100000009636f6e746573742d310000000107",
+          "digest_hex": "a8e8e0e1be6e359bb4d049cdf7e1e4d1ab14a68f3ab848744f16443cdfd3678c"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-pok",
+      "input": {
+        "label": "pok",
+        "kind": "hs",
+        "fields_hex": [
+          "ae3f6432e000fb6883c4b1368d22548e298e4d0027efc0baf172f17a2c0d1c86",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d7368613200000003706f6b0000000300000020ae3f6432e000fb6883c4b1368d22548e298e4d0027efc0baf172f17a2c0d1c8600000009636f6e746573742d310000000107",
+          "scalar_hex": "896e2e142fed657e73c54f92a98db655a3256eca8e581ca7df4ae9542260f205"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-pok-share",
+      "input": {
+        "label": "pok-share",
+        "kind": "hs",
+        "fields_hex": [
+          "c505700e76a5c6e2597131341a2e8d723c2bf96bca10906f995899d16e3f68b9",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d7368613200000009706f6b2d73686172650000000300000020c505700e76a5c6e2597131341a2e8d723c2bf96bca10906f995899d16e3f68b900000009636f6e746573742d310000000107",
+          "scalar_hex": "3a37b80cae6dafe7c71d5d6c9cb780b1e73c0178bdb5b9905fc5a6ca65f19a04"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-cp-dh",
+      "input": {
+        "label": "cp-dh",
+        "kind": "hs",
+        "fields_hex": [
+          "2cc942d71f6081fa530efc81dd17ecafa95359d764e5cd238c2ff076a2d286fa",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000563702d646800000003000000202cc942d71f6081fa530efc81dd17ecafa95359d764e5cd238c2ff076a2d286fa00000009636f6e746573742d310000000107",
+          "scalar_hex": "e869c1fb5679e5eb899170a22b6bad8fd3044396a3d10bdf51c41115c5689300"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-cds01",
+      "input": {
+        "label": "cds01",
+        "kind": "hs",
+        "fields_hex": [
+          "2b0f4abbd156038817d21300857cf80a00b42a93c79fe84318b405813093afa7",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d7368613200000005636473303100000003000000202b0f4abbd156038817d21300857cf80a00b42a93c79fe84318b405813093afa700000009636f6e746573742d310000000107",
+          "scalar_hex": "ee4fa0df0943ebb213b33a8b9f3eeddb35e10b13bc71bdb89f7e0bf77330bf01"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-cp-limit",
+      "input": {
+        "label": "cp-limit",
+        "kind": "hs",
+        "fields_hex": [
+          "a3186633fd5321478c1ccde194d4c210596be6164d3232b8f6d072323a2c1b24",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000863702d6c696d69740000000300000020a3186633fd5321478c1ccde194d4c210596be6164d3232b8f6d072323a2c1b2400000009636f6e746573742d310000000107",
+          "scalar_hex": "5fc8e0e02f40df1d8326c590d17bc751afe8f1f28f76a68ea9be3bbe42074b0e"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-cp-dec",
+      "input": {
+        "label": "cp-dec",
+        "kind": "hs",
+        "fields_hex": [
+          "3f2514612bcbbffc74d2539a430db391a2e147fd374065c20bfde0a0cb5cc76c",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000663702d64656300000003000000203f2514612bcbbffc74d2539a430db391a2e147fd374065c20bfde0a0cb5cc76c00000009636f6e746573742d310000000107",
+          "scalar_hex": "5bae64809ebf6ced5946e804f75c8eb2c9931a4d47c975c3ff17a89da795f702"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-cp-dec-spoil",
+      "input": {
+        "label": "cp-dec-spoil",
+        "kind": "hs",
+        "fields_hex": [
+          "ca036d8bd7067deb8903f82ce0b66efbee7e704c79553fcfbac5c54fb155bfba",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000c63702d6465632d73706f696c0000000300000020ca036d8bd7067deb8903f82ce0b66efbee7e704c79553fcfbac5c54fb155bfba00000009636f6e746573742d310000000107",
+          "scalar_hex": "3237f83bb86361ea01cc696b67b9c697790ca25911b251ff974235afa52c630e"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-ballot-code",
+      "input": {
+        "label": "ballot-code",
+        "kind": "H256",
+        "fields_hex": [
+          "e528753755ad986fe99821d55cc050f032db5cb423d391d20467290adb036457",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000b62616c6c6f742d636f64650000000300000020e528753755ad986fe99821d55cc050f032db5cb423d391d20467290adb03645700000009636f6e746573742d310000000107",
+          "digest_hex": "3d3afc32b15ce71ce731bf16a0edd29764f2b6917e019ddbbf5c417c5670a8af"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-binder-roll",
+      "input": {
+        "label": "binder-roll",
+        "kind": "H256",
+        "fields_hex": [
+          "41e1bcd5b1ab0adce1e1625f4425f10c0acfac431a5bc4c674b7f091e9ce4fb7",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000b62696e6465722d726f6c6c000000030000002041e1bcd5b1ab0adce1e1625f4425f10c0acfac431a5bc4c674b7f091e9ce4fb700000009636f6e746573742d310000000107",
+          "digest_hex": "acef85e863a521c0cc7fd3b4fae274bf41ac79e299524a624386f6fe84a4cbe4"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-sig-cast",
+      "input": {
+        "label": "sig-cast",
+        "kind": "H256",
+        "fields_hex": [
+          "e7f5497590c20947d94a9f8c809145a68ff3442130a5c7f1d331f2702791fdd6",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d73686132000000087369672d636173740000000300000020e7f5497590c20947d94a9f8c809145a68ff3442130a5c7f1d331f2702791fdd600000009636f6e746573742d310000000107",
+          "digest_hex": "7ae097d842f69362bb6398abfbae1e991c8707098b87f234302ca6b211b618d6"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-sig-spoil",
+      "input": {
+        "label": "sig-spoil",
+        "kind": "H256",
+        "fields_hex": [
+          "8ae8f633509ccd230b72f4dd72e2edf8687c1ef7bfdb1da7d7580e2c58ffeb1a",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d73686132000000097369672d73706f696c00000003000000208ae8f633509ccd230b72f4dd72e2edf8687c1ef7bfdb1da7d7580e2c58ffeb1a00000009636f6e746573742d310000000107",
+          "digest_hex": "1b57d57da4b6534c0cf502645f70b6c0b2b7b3ce9bec34e937762870340c22c7"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-sig-record",
+      "input": {
+        "label": "sig-record",
+        "kind": "H256",
+        "fields_hex": [
+          "b510ee75882e2aef7b3040f155ed102ed03e24003c632f111d9698b28ea75f8f",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000a7369672d7265636f72640000000300000020b510ee75882e2aef7b3040f155ed102ed03e24003c632f111d9698b28ea75f8f00000009636f6e746573742d310000000107",
+          "digest_hex": "315f8c117672a1eb73b9346c7d061b78d1ef4d399f00036fee91f9d9a4ad6830"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-voter-nonce-key",
+      "input": {
+        "label": "voter-nonce-key",
+        "kind": "H256",
+        "fields_hex": [
+          "4af421e9d3b50263dc5d9d0d3ff0544770a000ca11e408eeb275fecbe9a1e94b",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000f766f7465722d6e6f6e63652d6b657900000003000000204af421e9d3b50263dc5d9d0d3ff0544770a000ca11e408eeb275fecbe9a1e94b00000009636f6e746573742d310000000107",
+          "digest_hex": "311dfbf19dce07f97a45282ef1dde26a44c909b3c8803b5d7db6a52ee0d68938"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-ballot-seed",
+      "input": {
+        "label": "ballot-seed",
+        "kind": "H512",
+        "fields_hex": [
+          "54e2d053f172ed520384fb390bc860f54bc70c8e5ffb56c92c1f12a4d53e6fdb",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000b62616c6c6f742d73656564000000030000002054e2d053f172ed520384fb390bc860f54bc70c8e5ffb56c92c1f12a4d53e6fdb00000009636f6e746573742d310000000107",
+          "digest_hex": "27f70bfaa93e7a2a76b9a2cdbaf6470ed8dd03063da29b41737d422e71642814bae8f8bbd02472dc0b72c10baa4992172e79009d04dc233b3623d04b24420079"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-selvec",
+      "input": {
+        "label": "selvec",
+        "kind": "H256",
+        "fields_hex": [
+          "7082da8e75deb943029cb84a3ce7174961f682b09a270e9b6c787c26f531addd",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000673656c76656300000003000000207082da8e75deb943029cb84a3ce7174961f682b09a270e9b6c787c26f531addd00000009636f6e746573742d310000000107",
+          "digest_hex": "c91e15eff2072fa828451d2902c902afba9b0df2aaf2fca395861e16358dfc43"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-enc-nonce",
+      "comment": "preimage includes the trailing u32(counter=0) field",
+      "input": {
+        "label": "enc-nonce",
+        "kind": "hs_nz",
+        "fields_hex": [
+          "d6d476f23e7bb5eacda7cfb66a1f48ea44d9fdad18aac1946710430cef28d92a",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d7368613200000009656e632d6e6f6e63650000000400000020d6d476f23e7bb5eacda7cfb66a1f48ea44d9fdad18aac1946710430cef28d92a00000009636f6e746573742d3100000001070000000400000000",
+          "scalar_hex": "e14e0883740c8f97356f54afc5695db20b8663d92f4a9079787ec9a64759c402",
+          "counter_field_hex": "00000000"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-proof-w",
+      "comment": "preimage includes the trailing u32(counter=0) field",
+      "input": {
+        "label": "proof-w",
+        "kind": "hs_nz",
+        "fields_hex": [
+          "d4494bd03a8f50f4d2b76b2ec71e46976aa81e4e1520ec6a5fc0ec861906ccf0",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000770726f6f662d770000000400000020d4494bd03a8f50f4d2b76b2ec71e46976aa81e4e1520ec6a5fc0ec861906ccf000000009636f6e746573742d3100000001070000000400000000",
+          "scalar_hex": "702032e2bfd68a5fbad42ab5f5428d612e79398a034e10d96109921838502f00",
+          "counter_field_hex": "00000000"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-proof-csim",
+      "input": {
+        "label": "proof-csim",
+        "kind": "hs",
+        "fields_hex": [
+          "dcfe71b4a465fe0abed7c2cc99c839b98fc17f414c50a7cb1f6ed66e73532dbd",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000a70726f6f662d6373696d0000000300000020dcfe71b4a465fe0abed7c2cc99c839b98fc17f414c50a7cb1f6ed66e73532dbd00000009636f6e746573742d310000000107",
+          "scalar_hex": "8bcd08ed78198b8079a8ffc1b7289330742a522fed9d940ce2edb8edce83c100"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-proof-ssim",
+      "input": {
+        "label": "proof-ssim",
+        "kind": "hs",
+        "fields_hex": [
+          "fafecb46e5044eff7fd985afa0ffa703fd0b8fadab7a0b1437588888adf1e7e7",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000a70726f6f662d7373696d0000000300000020fafecb46e5044eff7fd985afa0ffa703fd0b8fadab7a0b1437588888adf1e7e700000009636f6e746573742d310000000107",
+          "scalar_hex": "2debbe2ec144d83fdf65c0144cc55d7687cb575eb48443a7603f4e681bb3140c"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-limit-w",
+      "comment": "preimage includes the trailing u32(counter=0) field",
+      "input": {
+        "label": "limit-w",
+        "kind": "hs_nz",
+        "fields_hex": [
+          "bcabb2dd86a0a014ec8643c57bc847747262d63de205b73cbf2922e64cd433f9",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d73686132000000076c696d69742d770000000400000020bcabb2dd86a0a014ec8643c57bc847747262d63de205b73cbf2922e64cd433f900000009636f6e746573742d3100000001070000000400000000",
+          "scalar_hex": "94497a3b1eb33bb3a674987c92308249981176fd7972449e1ec82baea9dfef04",
+          "counter_field_hex": "00000000"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-cp-dec-nonce",
+      "comment": "preimage includes the trailing u32(counter=0) field",
+      "input": {
+        "label": "cp-dec-nonce",
+        "kind": "hs_nz",
+        "fields_hex": [
+          "ccec31fcffa8b795008f066382558ee1cd6125e7bef5b9d05cb7b7f7059fa4f4",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000c63702d6465632d6e6f6e63650000000400000020ccec31fcffa8b795008f066382558ee1cd6125e7bef5b9d05cb7b7f7059fa4f400000009636f6e746573742d3100000001070000000400000000",
+          "scalar_hex": "8010a99c510c5f6b85c2e26262c57b27a69359add0cfa7732ae7ce423156bf07",
+          "counter_field_hex": "00000000"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-reveal",
+      "input": {
+        "label": "reveal",
+        "kind": "H256",
+        "fields_hex": [
+          "bee53a7ad485ef34ea689a5cd2616a675ddb38bc97e26b0c8adf7b07311bcb48",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000672657665616c0000000300000020bee53a7ad485ef34ea689a5cd2616a675ddb38bc97e26b0c8adf7b07311bcb4800000009636f6e746573742d310000000107",
+          "digest_hex": "d560aef92e1702d642de0254e00c5753127390e6e4dbdc1bc749cccefcea6cbf"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-boundary-ab-c",
+      "input": {
+        "label": "manifest",
+        "kind": "H256",
+        "fields_hex": [
+          "6162",
+          "63"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "digest_hex": "4d9d5457e2bf3ec406f4f5e0225a2c6626f0fde72eacc5ba9509e3e03a60cd87",
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d73686132000000086d616e6966657374000000020000000261620000000163"
+        }
+      },
+      "tags": [
+        "field-boundary"
+      ]
+    },
+    {
+      "id": "tagged-boundary-a-bc",
+      "comment": "differs from tagged-boundary-ab-c",
+      "input": {
+        "label": "manifest",
+        "kind": "H256",
+        "fields_hex": [
+          "61",
+          "6263"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "digest_hex": "a060eb656231dc57b3bc265431b2bc3e64977e6892751d8ec4833342314958ec",
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d73686132000000086d616e6966657374000000020000000161000000026263"
+        }
+      },
+      "tags": [
+        "field-boundary"
+      ]
+    },
+    {
+      "id": "tagged-cds01-length-383",
+      "comment": "QV-16 Appendix A.4 length check",
+      "input": {
+        "label": "cds01",
+        "kind": "hs",
+        "fields_hex": [
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "627564676574",
+          "796573",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "0000000000000000000000000000000000000000000000000000000000000000"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000563647330310000000b0000002000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000662756467657400000003796573000000200000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000",
+          "scalar_hex": "7b006b525a5def7f5f58cda7afd3d6508c3ea1c27056287da201dabe4e65b00d"
+        }
+      },
+      "tags": [
+        "length",
+        "preimage-bytes:383"
+      ]
+    },
+    {
+      "id": "tagged-unknown-label",
+      "input": {
+        "label": "nope",
+        "kind": "H256",
+        "fields_hex": []
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DOMAIN_UNKNOWN"
+      },
+      "tags": [
+        "negative"
+      ]
+    }
+  ]
+}

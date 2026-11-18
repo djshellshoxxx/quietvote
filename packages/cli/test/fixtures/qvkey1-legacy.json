@@ -1,0 +1,61 @@
+{
+  "source": "bf6c36df2bb8df6bd5b985a55a29ad4e2a1af912",
+  "seed_hex": "723f175cc8bc62571d3dce4b9a5bd6dd5da6cd93af0bb1284f643abcb9d23006",
+  "canonical_words": "babu badu bafu bagu bahu baju",
+  "fixtures": [
+    {
+      "name": "legacy-cli-words",
+      "writer": "cli",
+      "passphrase": "  BABU -  BADU -  BAFU -  BAGU -  BAHU -  BAJU  ",
+      "container": {
+        "v": 1,
+        "kdf": "argon2id",
+        "m": 19456,
+        "t": 2,
+        "p": 1,
+        "salt": "193bcfaaeed19e49da2f2c3c631f94f8",
+        "aead": "A256GCM",
+        "iv": "4facae395599cc263c8565d4",
+        "aad": "qv-key-v1|9bad24c735e28549",
+        "ct": "f7e7c3cb45a65d135ba0dc0f9026c911150f5963f4f4899e31e037ee854be58dc1269aa117332994e7ab6fb2898dfdca006df6a183cb907a7eab069e68374482e8a82d2650547376ed8b1bb339c67e63",
+        "keyId": "9bad24c735e28549"
+      }
+    },
+    {
+      "name": "legacy-web-words",
+      "writer": "web",
+      "passphrase": "  BABU -  BADU -  BAFU -  BAGU -  BAHU -  BAJU  ",
+      "container": {
+        "v": 1,
+        "kdf": "argon2id",
+        "m": 19456,
+        "t": 2,
+        "p": 1,
+        "salt": "9aedbda2a60898584352355a0c3f84ce",
+        "aead": "A256GCM",
+        "iv": "8347190e068c0b21a08cdea6",
+        "aad": "qv-key-v1|9bad24c735e28549",
+        "ct": "9f05ee12247b20259718d807a468469430772c13d159ab0f2dc89db4b1f20e2466dbfbaf676b684dc098e8bd6ce2ee32da266c499cd142d7c117b5b40342e72215900580778fbdd95942077bce977338",
+        "keyId": "9bad24c735e28549"
+      }
+    },
+    {
+      "name": "legacy-cli-unicode",
+      "writer": "cli",
+      "passphrase": "  MixED   décor-Σ-０7!  ",
+      "container": {
+        "v": 1,
+        "kdf": "argon2id",
+        "m": 19456,
+        "t": 2,
+        "p": 1,
+        "salt": "72d62521190f8c5efaf798e92703b42c",
+        "aead": "A256GCM",
+        "iv": "9e0531fb21a11170e5a105df",
+        "aad": "qv-key-v1|9bad24c735e28549",
+        "ct": "48e9e847eebcde3d1dab8f0051922d43292d6fb555c1eaafa1af3de4209c2db0c739d1f62c258b1f8a91488f035d14d332ba8367a8e792a3e813adcdf36f92de8169e2c006988281bdbff233a7c162f1",
+        "keyId": "9bad24c735e28549"
+      }
+    }
+  ]
+}

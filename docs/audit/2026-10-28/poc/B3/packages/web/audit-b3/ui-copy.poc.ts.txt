@@ -1,0 +1,57 @@
+// B3 audit PoC (Playwright): voter-visible copy vs manifest facts, and Cast/Test button parity.
+import { FakeBoard, TEST_CONTESTS } from '../test/helpers/fake-board.ts';
+import { setup } from '../../protocol/test/helpers/sim.ts';
+import { PASS, exe, pw, startStack, step, results } from './harness.ts';
+
+// One ballot per voter (manifest ballots.max_per_voter = 1, spoil cap 1).
+const sim = await setup({ seed: 'b3-oneballot', n: 3, t: 2, voters: 4, contests: TEST_CONTESTS()!, minCounted: 3, maxPerVoter: 1 });
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const base = `${stack.origin}/e/${board.apiId}`;
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+try {
+  await step('B3-F26 an election with max_per_voter = 1 still tells the voter "you can vote again" (rules page, vote page, guarantee panel)', async () => {
+    console.log('manifest ballots:', JSON.stringify(sim.manifest.ballots));
+    const p = await (await browser.newContext()).newPage();
+    await p.goto(`${base}/key`);
+    await p.getByLabel('Use a key file I saved before').check();
+    await p.getByLabel('Key file', { exact: true }).setInputFiles(stack.keyFile);
+    await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+    await p.getByRole('button', { name: 'Create key' }).click();
+    await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+    await p.getByRole('link', { name: 'Vote' }).first().click();
+    await p.getByLabel('YES', { exact: true }).waitFor();
+    await p.locator('main details > summary').first().click();
+    const t = (await p.locator('main').innerText()).replace(/\n+/g, ' | ');
+    await p.context().close();
+    const a = t.includes('You can vote again before the vote closes. Only your newest ballot counts.');
+    const b = t.includes('This election allows one ballot per person');
+    if (!a || b) throw new Error(`revote claim shown: ${a}; one-ballot note shown: ${b}`);
+    return `revote claim shown: ${a}; "This election allows one ballot per person" shown: ${b}`;
+  });
+
+  await step('B3-F27 Cast and Test buttons do not have equal visual weight (filled primary vs outline)', async () => {
+    const p = await (await browser.newContext()).newPage();
+    await p.goto(`${base}/key`);
+    await p.getByLabel('Use a key file I saved before').check();
+    await p.getByLabel('Key file', { exact: true }).setInputFiles(stack.keyFile);
+    await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+    await p.getByRole('button', { name: 'Create key' }).click();
+    await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+    await p.getByRole('link', { name: 'Vote' }).first().click();
+    await p.getByLabel('YES', { exact: true }).check();
+    await p.getByRole('button', { name: 'Review my choices' }).click();
+    await p.getByRole('button', { name: 'Seal my ballot' }).click();
+    await p.getByRole('button', { name: 'Send my vote' }).waitFor({ timeout: 30000 });
+    const css = async (name: string) => p.getByRole('button', { name }).evaluate((e) => { const s = getComputedStyle(e); return { bg: s.backgroundColor, fg: s.color, border: s.borderTopColor, w: Math.round(e.getBoundingClientRect().width) }; });
+    const cast = await css('Send my vote');
+    const test = await css('Double-check this vote');
+    await p.context().close();
+    if (cast.bg === test.bg) throw new Error(JSON.stringify({ cast, test }));
+    return `Send my vote: ${JSON.stringify(cast)}\nDouble-check this vote: ${JSON.stringify(test)}`;
+  });
+} finally {
+  await browser.close();
+  stack.close();
+}
+process.exit(results.some((r) => !r.ok) ? 1 : 0);

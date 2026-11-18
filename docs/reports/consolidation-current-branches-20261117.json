@@ -1,0 +1,3455 @@
+{
+  "observed_at_utc": "2026-11-18T07:30:33.884151+00:00",
+  "repository": "djshellshoxxx/quietvote",
+  "main": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+  "canonical": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+  "branch_count": 60,
+  "classifications": {
+    "already_integrated": 52,
+    "already_superseded": 3,
+    "requires_independent_security_review": 1,
+    "requires_selective_extraction": 1,
+    "requires_repair": 1,
+    "canonical_integration": 1,
+    "main_baseline": 1
+  },
+  "canonical_exact_ancestor_count": 54,
+  "pull_request_count": 58,
+  "open_pull_requests": [
+    27,
+    43,
+    57,
+    58
+  ],
+  "branches": [
+    {
+      "branch": "chatgpt/quietvote-ci-action-pin-guard-20261104",
+      "sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+      "protected": false,
+      "main": {
+        "ahead": 240,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 262,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 28,
+          "title": "fix(ci): detect unpinned step uses in action-pin validator",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+          "base": "claude/laughing-volta-61srfa",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/28"
+        }
+      ],
+      "source_head_subject": "fix(ci): inspect ordinary step uses entries for SHA pins",
+      "prior_inventory_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114",
+      "sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+      "protected": false,
+      "main": {
+        "ahead": 351,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 151,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 46,
+          "title": "fix(server): reject casts reusing previously spoiled ciphertexts (S1-02)",
+          "state": "closed",
+          "merged": false,
+          "draft": false,
+          "head_sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+          "base": "claude/wonderful-hypatia-9yszin",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/46"
+        }
+      ],
+      "source_head_subject": "docs(audit): record S1-02 follow-up status",
+      "prior_inventory_sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/quietvote-trustee-fixture-paths-20261102",
+      "sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+      "protected": false,
+      "main": {
+        "ahead": 205,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 297,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 25,
+          "title": "test(trustee): use canonical temporary fixture paths",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+          "base": "integration/quietvote-consolidated-20261030",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/25"
+        }
+      ],
+      "source_head_subject": "docs: record chat repairs and source-pinned validation",
+      "prior_inventory_sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/quietvote-visual-ci-repair-20261102",
+      "sha": "980a5cd72c9b05bc8ce28a588376462ce85f8206",
+      "protected": false,
+      "main": {
+        "ahead": 157,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 1,
+        "behind": 346,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 23,
+          "title": "fix(ci): repair pseudo-locale workflow YAML parsing",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "980a5cd72c9b05bc8ce28a588376462ce85f8206",
+          "base": "checkpoint/quietvote-ordinary-ux-20261024",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/23"
+        }
+      ],
+      "source_head_subject": "fix(ci): repair pseudo-locale browser workflow YAML",
+      "prior_inventory_sha": "980a5cd72c9b05bc8ce28a588376462ce85f8206",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "cherry": [
+        "- 980a5cd72c9b05bc8ce28a588376462ce85f8206 fix(ci): repair pseudo-locale browser workflow YAML"
+      ],
+      "branch_unique_commits": [
+        "980a5cd72c9b05bc8ce28a588376462ce85f8206 fix(ci): repair pseudo-locale browser workflow YAML"
+      ],
+      "merge_base": "1b531b8f83eea607de07da847c4044c861964056",
+      "unique_files": [
+        ".github/workflows/pseudo-locale-visual.yml"
+      ],
+      "unique_diff_stat": "1 file changed, 2 insertions(+), 1 deletion(-)",
+      "classification": "already_superseded",
+      "unique_functionality": "One historical workflow patch; patch-equivalent to signed 06e089895d94dd1710afd5113fec2a01a235e979.",
+      "dependencies": "Signed patch is already an ancestor of canonical.",
+      "security_risk": "No new unique patch.",
+      "action": "Preserve branch and closed #23; do not merge duplicate patch.",
+      "test_status": "No runtime delta; current signed workflow retained.",
+      "equivalent_trees": true
+    },
+    {
+      "branch": "chatgpt/quietvote-visual-ci-signed-20261102",
+      "sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+      "protected": false,
+      "main": {
+        "ahead": 157,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 345,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 24,
+          "title": "fix(ci): repair pseudo-locale workflow YAML parsing",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+          "base": "checkpoint/quietvote-ordinary-ux-20261024",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/24"
+        }
+      ],
+      "source_head_subject": "fix(ci): repair pseudo-locale browser workflow YAML",
+      "prior_inventory_sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/audit-rate-config-20261110",
+      "sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+      "protected": false,
+      "main": {
+        "ahead": 262,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 240,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 33,
+          "title": "fix(server): reject non-finite rate configuration (randomized audit)",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/33"
+        }
+      ],
+      "source_head_subject": "docs(audit): record deterministic read-only vectors CLI rotation 13",
+      "prior_inventory_sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/board-reader-lengths-20261110",
+      "sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+      "protected": false,
+      "main": {
+        "ahead": 249,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 253,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 39,
+          "title": "fix(board): validate byte-reader lengths before advancing",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/39"
+        }
+      ],
+      "source_head_subject": "fix(board): reject invalid reader lengths without moving cursor",
+      "prior_inventory_sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/crockford-display-grouping-20261110",
+      "sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+      "protected": false,
+      "main": {
+        "ahead": 250,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 252,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 40,
+          "title": "fix(web): bound human-readable code grouping input",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/40"
+        }
+      ],
+      "source_head_subject": "fix(web): reject invalid display grouping widths before iteration",
+      "prior_inventory_sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/docs-wiki-sections-20261110",
+      "sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+      "protected": false,
+      "main": {
+        "ahead": 281,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 221,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 34,
+          "title": "docs(wiki): separate User Guide and Developer Guide, repair draft status",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/34"
+        }
+      ],
+      "source_head_subject": "docs(wiki): source-pin CLI inspection qualification and maintenance ledger",
+      "prior_inventory_sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/election-inspect-counters-20261110",
+      "sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+      "protected": false,
+      "main": {
+        "ahead": 249,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 253,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 41,
+          "title": "fix(cli): count prototype-named election log types safely",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/41"
+        }
+      ],
+      "source_head_subject": "fix(cli): count unverified log record names without inherited properties",
+      "prior_inventory_sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/import-preabort-20261110",
+      "sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+      "protected": false,
+      "main": {
+        "ahead": 249,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 253,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 35,
+          "title": "fix(server): reject pre-aborted import before archive scan",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/35"
+        }
+      ],
+      "source_head_subject": "fix(server): fail fast on pre-aborted import verification",
+      "prior_inventory_sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/job-start-recovery-20261110",
+      "sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+      "protected": false,
+      "main": {
+        "ahead": 249,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 253,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 36,
+          "title": "fix(server): contain job-start storage failures without stranding queue",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/36"
+        }
+      ],
+      "source_head_subject": "fix(server): contain failed job-start transitions in scheduler",
+      "prior_inventory_sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/pool-delete-diagnostic-20261110",
+      "sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+      "protected": false,
+      "main": {
+        "ahead": 249,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 253,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 38,
+          "title": "fix(server): make deletion-state conflict diagnostic match existing policy",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/38"
+        }
+      ],
+      "source_head_subject": "fix(server): list IMPORTED in deletion-conflict diagnostic",
+      "prior_inventory_sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/seal-worker-lifecycle-20261110",
+      "sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+      "protected": false,
+      "main": {
+        "ahead": 249,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 253,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 37,
+          "title": "fix(web): settle sealing Worker failures and release worker resources",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/37"
+        }
+      ],
+      "source_head_subject": "fix(web): terminate sealing Worker on posting and message errors",
+      "prior_inventory_sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex/verifier-triage-20261110",
+      "sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+      "protected": false,
+      "main": {
+        "ahead": 265,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 237,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 32,
+          "title": "feat(verifier): read-only mismatch triage without relaxing strict comparator",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/32"
+        }
+      ],
+      "source_head_subject": "docs(handoff): reconcile CLI inspect correction and audit/wiki run 13",
+      "prior_inventory_sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "chatgpt/zero-codex-continuation-spec-20261109",
+      "sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+      "protected": false,
+      "main": {
+        "ahead": 1,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 501,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 31,
+          "title": "docs: ChatGPT-only zero-Codex continuation for QuietVote",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/31"
+        }
+      ],
+      "source_head_subject": "docs: specify isolated ChatGPT-only QuietVote continuation",
+      "prior_inventory_sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "checkpoint/quietvote-ordinary-ux-20261024",
+      "sha": "1b531b8f83eea607de07da847c4044c861964056",
+      "protected": false,
+      "main": {
+        "ahead": 156,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 346,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [],
+      "source_head_subject": "docs: record quietvote checkpoint receipt",
+      "prior_inventory_sha": "1b531b8f83eea607de07da847c4044c861964056",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/clever-gates-uqd5p1",
+      "sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "protected": false,
+      "main": {
+        "ahead": 506,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 4,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "prs": [
+        {
+          "number": 26,
+          "title": "Continue QuietVote integration: Windows trustee fixtures, remaining decision-free work",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+          "base": "integration/quietvote-consolidated-20261030",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/26"
+        },
+        {
+          "number": 57,
+          "title": "feat(crypto): hedge all prover nonces in one registry revision (CP-02, B1-12, C3)",
+          "state": "open",
+          "merged": false,
+          "draft": true,
+          "head_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "base": "integration/quietvote-completion",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/57"
+        }
+      ],
+      "source_head_subject": "test(server): fresh connections in the HTTP e2e across blocking verification",
+      "prior_inventory_sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+      "changed_since_prior_inventory": true,
+      "head_dco_present": true,
+      "cherry": [
+        "+ 180e017049ba04d29b203eac7090e2d0d2e356b2 feat(crypto): hedge all prover nonces in one registry revision (CP-02, B1-12, C3; QV-ADR-027)",
+        "+ 66b2cbe96ea6ce823a7f646662516b29a1170751 docs(decisions): record owner decision D-99 = option A (QV-ADR-029)",
+        "+ fd23cb3a481328a2b6315ae34cc2ee589b31aead test(server): fresh connections in the HTTP e2e across blocking verification"
+      ],
+      "branch_unique_commits": [
+        "fd23cb3a481328a2b6315ae34cc2ee589b31aead test(server): fresh connections in the HTTP e2e across blocking verification",
+        "66b2cbe96ea6ce823a7f646662516b29a1170751 docs(decisions): record owner decision D-99 = option A (QV-ADR-029)",
+        "edcca24cf3d5499181206e4d7684b9e9e8ac7525 merge: integration/quietvote-completion (72bccc6, docs-only) into registry revision branch",
+        "180e017049ba04d29b203eac7090e2d0d2e356b2 feat(crypto): hedge all prover nonces in one registry revision (CP-02, B1-12, C3; QV-ADR-027)"
+      ],
+      "merge_base": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "unique_files": [
+        "docs/16-crypto-protocol.md",
+        "docs/audit/consolidation-2026-10-30.md",
+        "docs/decision-log.md",
+        "docs/errata/spec-errata-log.md",
+        "docs/plan/OPEN-DECISIONS.md",
+        "packages/crypto/src/proofs.ts",
+        "packages/crypto/src/transcript.ts",
+        "packages/crypto/test/conformance-nonce-hedge.test.ts",
+        "packages/crypto/test/cp08-fiat-shamir.test.ts",
+        "packages/crypto/test/proofs.test.ts",
+        "packages/protocol/NOTES.md",
+        "packages/protocol/test/conformance-nonce-hedge.test.ts",
+        "packages/server/NOTES.md",
+        "packages/server/test/e2e.test.ts",
+        "packages/server/test/helpers/world.ts",
+        "packages/verifier/canary/corpus.json",
+        "test-vectors/MANIFEST.json",
+        "test-vectors/v1/canary/canary-election.json",
+        "test-vectors/v1/canary/expected-report.json",
+        "test-vectors/v1/elections/log-layer-4v/adv-board.json",
+        "test-vectors/v1/elections/log-layer-4v/adv-bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/board.json",
+        "test-vectors/v1/elections/log-layer-4v/bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/expected-report.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/extension-after-close.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/extension-after-close.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/extension-before-close.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/extension-before-close.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/pause-resume.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/pause-resume.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/unknown-kind.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/unknown-kind.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/unrecognised-body.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/unrecognised-body.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-after-close.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-after-close.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-before-open.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-before-open.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-by-trustee.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-by-trustee.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-in-anchor-entry.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-in-anchor-entry.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-record-sig-not-coordinator.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-record-sig-not-coordinator.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-with-quorum-field.board.json",
+        "test-vectors/v1/elections/log-layer-4v/notices/waiver-with-quorum-field.bundle.json",
+        "test-vectors/v1/elections/log-layer-4v/vectors.json",
+        "test-vectors/v1/elections/small-approval-20v/bundle.json",
+        "test-vectors/v1/elections/small-approval-20v/expected-report.json",
+        "test-vectors/v1/elections/tiny-yesno-3v/bundle.json",
+        "test-vectors/v1/elections/tiny-yesno-3v/expected-report.json",
+        "test-vectors/v1/mutations/aggregate-altered.json",
+        "test-vectors/v1/mutations/ballot-replayed.json",
+        "test-vectors/v1/mutations/ciphertext-bit-flip.json",
+        "test-vectors/v1/mutations/count-altered.json",
+        "test-vectors/v1/mutations/counted-ballot-dropped.json",
+        "test-vectors/v1/mutations/fewer-than-t-partials.json",
+        "test-vectors/v1/mutations/manifest-field-flip.json",
+        "test-vectors/v1/mutations/manifest-signature-removed.json",
+        "test-vectors/v1/mutations/non-canonical-hex.json",
+        "test-vectors/v1/mutations/open-binding-fields-absent.json",
+        "test-vectors/v1/mutations/open-joint-key-ref-forward.json",
+        "test-vectors/v1/mutations/open-joint-key-ref-mismatch.json",
+        "test-vectors/v1/mutations/open-manifest-hash-mismatch.json",
+        "test-vectors/v1/mutations/open-roll-ref-absent.json",
+        "test-vectors/v1/mutations/open-roll-ref-forward.json",
+        "test-vectors/v1/mutations/open-roll-ref-nonexistent.json",
+        "test-vectors/v1/mutations/open-roll-ref-wrong-record.json",
+        "test-vectors/v1/mutations/partial-decryption-wrong.json",
+        "test-vectors/v1/mutations/result-flipped.json",
+        "test-vectors/v1/mutations/spoil-wrong-plaintext.json",
+        "test-vectors/v1/mutations/spoiled-also-cast.json",
+        "test-vectors/v1/mutations/tally-wrong-ctx.json",
+        "test-vectors/v1/mutations/unknown-field-in-tally.json",
+        "test-vectors/v1/primitives/hash/tagged-hash.json",
+        "test-vectors/v1/protocol/ballot/ballot-encrypt.json",
+        "test-vectors/v1/protocol/ballot/ballot-verify.json",
+        "test-vectors/v1/protocol/benaloh/private-audit.json",
+        "test-vectors/v1/protocol/benaloh/spoil-reveal.json",
+        "test-vectors/v1/protocol/dkg/dkg.json",
+        "test-vectors/v1/protocol/proofs/cp-dleq/dh-reveal.json",
+        "test-vectors/v1/protocol/proofs/schnorr-pok/pok.json",
+        "test-vectors/v1/protocol/tally/partial-decrypt/dec.json",
+        "verifier-py/NOTES.md",
+        "verifier-py/README.md",
+        "verifier-py/qv_verifier/framed_hash.py",
+        "verifier-py/tests/test_primitives.py"
+      ],
+      "unique_diff_stat": "87 files changed, 11336 insertions(+), 10826 deletions(-)",
+      "classification": "requires_independent_security_review",
+      "unique_functionality": "Four new commits: nonce hardening, merge canonical docs, D-99 option-A ADR-029 decision, HTTP e2e connection fixture repair.",
+      "dependencies": "Canonical integration plus two required approvals including security reviewer; D-99 decision is useful independent work context.",
+      "security_risk": "Crypto/domain registry/vector changes; no independent approval may be replaced with AI review.",
+      "action": "Review/test #57 at fd23cb3; preserve crypto approval gate. Consider independent noncrypto slices if safely separable.",
+      "test_status": "Not rerun by branch-inventory lane; verify exact-head CI and independent conformance in crypto lane."
+    },
+    {
+      "branch": "claude/dazzling-cerf-n8ha3g",
+      "sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+      "protected": false,
+      "main": {
+        "ahead": 35,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 468,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 1,
+          "title": "Complete spec set, security research, plan, and first implementation",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/1"
+        }
+      ],
+      "source_head_subject": "feat: log-layer witness/receipt verification, server SSE+webhooks, web publish flow and draft translations",
+      "prior_inventory_sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/docs-screenshots",
+      "sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+      "protected": false,
+      "main": {
+        "ahead": 1,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 1,
+        "behind": 502,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 21,
+          "title": "Docs: refresh README status and spec index notes",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/21"
+        }
+      ],
+      "source_head_subject": "Docs: refresh README status, note no UI, clarify spec index",
+      "prior_inventory_sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "cherry": [
+        "+ e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d Docs: refresh README status, note no UI, clarify spec index"
+      ],
+      "branch_unique_commits": [
+        "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d Docs: refresh README status, note no UI, clarify spec index"
+      ],
+      "merge_base": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "unique_files": [
+        "README.md",
+        "docs/SPEC-INDEX.md"
+      ],
+      "unique_diff_stat": "2 files changed, 11 insertions(+), 2 deletions(-)",
+      "classification": "already_superseded",
+      "unique_functionality": "Obsolete documentation asserts no implementation/UI and older spec navigation.",
+      "dependencies": "Current README, wiki and spec index supersede content.",
+      "security_risk": "Would regress accuracy of published product claims.",
+      "action": "Preserve branch and closed PR; do not import stale documentation.",
+      "test_status": "Source content inspected; no runtime tests applicable."
+    },
+    {
+      "branch": "claude/exciting-hawking-r0evza",
+      "sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "protected": false,
+      "main": {
+        "ahead": 369,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 133,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 44,
+          "title": "QuietVote integration (draft, not for main): consolidated #43, PR #42 work, and Haiku lane fixes",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/44"
+        }
+      ],
+      "source_head_subject": "docs(handoff): Haiku run consolidation matrix and handoff (2026-11-11)",
+      "prior_inventory_sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/haiku-T01-baseline",
+      "sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+      "protected": false,
+      "main": {
+        "ahead": 248,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 254,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 45,
+          "title": "docs: haiku baseline qualification receipt (T01)",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/45"
+        },
+        {
+          "number": 53,
+          "title": "Preserve the historical T01 qualification receipt on the integration branch",
+          "state": "closed",
+          "merged": true,
+          "draft": false,
+          "head_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+          "base": "integration/quietvote-completion",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/53"
+        }
+      ],
+      "source_head_subject": "docs: add haiku baseline qualification receipt (T01)",
+      "prior_inventory_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/laughing-volta-61srfa",
+      "sha": "2aaf0a01816afb256a804c23dd45de86eca2a993",
+      "protected": false,
+      "main": {
+        "ahead": 247,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 9,
+        "behind": 264,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 27,
+          "title": "QuietVote remaining recovery: rollback, exports, control reasons and lazy integrity",
+          "state": "open",
+          "merged": false,
+          "draft": true,
+          "head_sha": "2aaf0a01816afb256a804c23dd45de86eca2a993",
+          "base": "claude/clever-gates-uqd5p1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/27"
+        }
+      ],
+      "source_head_subject": "docs(handoff): pause handoff for claude/laughing-volta-61srfa; preserve rejected web-ballot work as a patch",
+      "prior_inventory_sha": "2aaf0a01816afb256a804c23dd45de86eca2a993",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "cherry": [
+        "+ 13b86c22f973aee91453090b2ec5bcff104e8804 fix(board,server): rollback anchor, no zero-seed receipts, control reason enum (QV-ADR-027 B2-07, B2-12, B2-16)",
+        "+ 07fd61c83c89dd220403fe8df5dab4b3533b79de feat(server): invite expiry default, rate-limit headers, signed-request auth only, IPv6 /56 buckets, export ack before archive delete (QV-ADR-027 B2-10 partial, N-16, N-20, N-32 a/b, N-21)",
+        "+ b2f043e0b9e648d3c85503ee40ccf4b6f0278c83 feat(web): integrity-pinned preloads for lazy chunks, trustee steps stay CLI-only (QV-ADR-027 W15, N-37c)",
+        "+ 80c3a17d59cd2c9d87d9afef7a82684a818aa9c3 docs: report-only traceability script, historical claims markers, empty-state maintainer/key/licence notes, REQ-063 client scope (QV-ADR-027 N-23c, CLAIMS-LINT-HISTORICAL, N-08b, RECON-REQ063-SERVER)",
+        "+ 2aaf0a01816afb256a804c23dd45de86eca2a993 docs(handoff): pause handoff for claude/laughing-volta-61srfa; preserve rejected web-ballot work as a patch"
+      ],
+      "branch_unique_commits": [
+        "2aaf0a01816afb256a804c23dd45de86eca2a993 docs(handoff): pause handoff for claude/laughing-volta-61srfa; preserve rejected web-ballot work as a patch",
+        "b1732c4186bf9fd3c217a6fe4bed9e195468421f merge: tmp-d3 (QV-ADR-027 items)",
+        "527bb97f8e706588bc7dc13828525cc82a5d08bd merge: tmp-d2 (QV-ADR-027 items)",
+        "1792be9e359a9ee675d8c3c29e4578f595dd61d6 merge: tmp-c2 (QV-ADR-027 items)",
+        "b18ec4b6d5dd0776a63bfa308a1d092bde910dc7 merge: tmp-c1 (QV-ADR-027 items)",
+        "80c3a17d59cd2c9d87d9afef7a82684a818aa9c3 docs: report-only traceability script, historical claims markers, empty-state maintainer/key/licence notes, REQ-063 client scope (QV-ADR-027 N-23c, CLAIMS-LINT-HISTORICAL, N-08b, RECON-REQ063-SERVER)",
+        "b2f043e0b9e648d3c85503ee40ccf4b6f0278c83 feat(web): integrity-pinned preloads for lazy chunks, trustee steps stay CLI-only (QV-ADR-027 W15, N-37c)",
+        "07fd61c83c89dd220403fe8df5dab4b3533b79de feat(server): invite expiry default, rate-limit headers, signed-request auth only, IPv6 /56 buckets, export ack before archive delete (QV-ADR-027 B2-10 partial, N-16, N-20, N-32 a/b, N-21)",
+        "13b86c22f973aee91453090b2ec5bcff104e8804 fix(board,server): rollback anchor, no zero-seed receipts, control reason enum (QV-ADR-027 B2-07, B2-12, B2-16)"
+      ],
+      "merge_base": "250e7fa191195cd8e1dd3e2573778db2968b91f7",
+      "unique_files": [
+        "MAINTAINERS.md",
+        "docs/07-threat-model-security.md",
+        "docs/09-api-data-contracts.md",
+        "docs/10-user-experience.md",
+        "docs/13-accessibility-localization.md",
+        "docs/17-key-ceremony-trustees.md",
+        "docs/19-client-supply-chain.md",
+        "docs/24-traceability-matrix.md",
+        "docs/28-data-model-storage.md",
+        "docs/LICENSE-NOTE.md",
+        "docs/RELEASE-KEYS.md",
+        "docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md",
+        "docs/audit/2026-10-28/B3-quietvote-web.md",
+        "docs/audit/consolidation-2026-10-30.md",
+        "docs/audit/web-second-wave.md",
+        "docs/errata/spec-errata-log.md",
+        "docs/handoffs/2026-11-11-laughing-volta-handoff.md",
+        "docs/handoffs/wip/2026-11-11-web-ballot-adr027-B3-06-B3-14-B3-11a-B3-28-B3-25.patch",
+        "docs/plan/COMPLETION.md",
+        "docs/plan/OPEN-DECISIONS.md",
+        "docs/plan/TODO.md",
+        "docs/reports/security-review-2026-10-21.md",
+        "docs/reports/traceability-matrix.md",
+        "docs/research/outstanding-research.md",
+        "docs/research/security-speculative.md",
+        "docs/research/ui-security-ux.md",
+        "packages/board/NOTES.md",
+        "packages/board/src/log.ts",
+        "packages/board/test/log.test.ts",
+        "packages/server/NOTES.md",
+        "packages/server/src/admin.ts",
+        "packages/server/src/app.ts",
+        "packages/server/src/controldb.ts",
+        "packages/server/src/election.ts",
+        "packages/server/src/electiondb.ts",
+        "packages/server/src/env.ts",
+        "packages/server/src/export.ts",
+        "packages/server/src/ext-routes.ts",
+        "packages/server/src/gossip.ts",
+        "packages/server/src/http.ts",
+        "packages/server/src/pool.ts",
+        "packages/server/src/problem.ts",
+        "packages/server/src/ratelimit.ts",
+        "packages/server/src/records.ts",
+        "packages/server/test/admin.test.ts",
+        "packages/server/test/adr027-anchor.test.ts",
+        "packages/server/test/adr027-c2.test.ts",
+        "packages/server/test/audit.test.ts",
+        "packages/server/test/e2e.test.ts",
+        "packages/server/test/events.test.ts",
+        "packages/web/NOTES.md",
+        "packages/web/e2e/verifier.ts",
+        "packages/web/src/api/client.ts",
+        "packages/web/src/api/types.ts",
+        "packages/web/src/build/site.ts",
+        "packages/web/src/i18n/runtime.ts",
+        "packages/web/src/ui/app.ts",
+        "packages/web/src/util/pinned-preload.ts",
+        "packages/web/test/i18n-catalogs.test.ts",
+        "packages/web/test/lazy.test.ts",
+        "packages/web/test/locale-preference.test.ts",
+        "packages/web/test/n20-auth.test.ts",
+        "packages/web/test/pinned-preload.test.ts",
+        "packages/web/test/trustee-scope.test.ts",
+        "scripts/trace.mjs",
+        "scripts/trace.test.mjs"
+      ],
+      "unique_diff_stat": "66 files changed, 3682 insertions(+), 193 deletions(-)",
+      "classification": "requires_selective_extraction",
+      "unique_functionality": "Residual rollback anchor, recorded exports/deletion acknowledgement, control-reason admission, lazy module integrity and trustee boundary; five non-equivalent commits remain, some hunks already recovered.",
+      "dependencies": "Current control schema 7/election schema 9 require additive migrations 8/10; preserve current durable receipt and recovery contracts.",
+      "security_risk": "Wholesale merge reintroduces obsolete migrations and rejected ballot WIP; signing-path and recovery correctness need review.",
+      "action": "Keep #27; port compatible slices onto current canonical and verify each. Preserve original branch.",
+      "test_status": "Historical residual gates are documented; this inventory does not rerun them."
+    },
+    {
+      "branch": "claude/quietvote-audit-board-cli-1",
+      "sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+      "protected": false,
+      "main": {
+        "ahead": 87,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 416,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 11,
+          "title": "fix(board,cli): security audit BC-01..BC-10 + fuzz/mutation tests",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+          "base": "claude/quietvote-audit-qa-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/11"
+        }
+      ],
+      "source_head_subject": "merge audit-qa (CI test fix)",
+      "prior_inventory_sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-audit-crypto-protocol-1",
+      "sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+      "protected": false,
+      "main": {
+        "ahead": 90,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 413,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 10,
+          "title": "fix(crypto,protocol): audit CP-01 re-wrapped spoils, CP-03, CP-04",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+          "base": "claude/quietvote-audit-qa-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/10"
+        }
+      ],
+      "source_head_subject": "test(protocol): cover post-open signed roll-commit replay",
+      "prior_inventory_sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-audit-qa-1",
+      "sha": "563eec8659184e32771244088d59acc5035fa798",
+      "protected": false,
+      "main": {
+        "ahead": 84,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 419,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 6,
+          "title": "feat(protocol): spoil-share record, collectSpoilShares, private-audit vectors",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "563eec8659184e32771244088d59acc5035fa798",
+          "base": "claude/quietvote-board-cli-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/6"
+        }
+      ],
+      "source_head_subject": "docs(audit): extensive handoff (status, landing order, remaining work and how, caveats)",
+      "prior_inventory_sha": "563eec8659184e32771244088d59acc5035fa798",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-audit-server-1",
+      "sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+      "protected": false,
+      "main": {
+        "ahead": 90,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 413,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 9,
+          "title": "fix(server): security audit SRV-001..007",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+          "base": "claude/quietvote-audit-qa-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/9"
+        }
+      ],
+      "source_head_subject": "merge audit-qa (CI test fix)",
+      "prior_inventory_sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-audit-trustee-1",
+      "sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+      "protected": false,
+      "main": {
+        "ahead": 89,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 414,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 8,
+          "title": "fix(trustee): security audit TR-01/TR-02 (spoil relay cast-ciphertext refusal)",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+          "base": "claude/quietvote-audit-qa-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/8"
+        }
+      ],
+      "source_head_subject": "merge audit-qa (CI test fix)",
+      "prior_inventory_sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-audit-web-verifier-1",
+      "sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+      "protected": false,
+      "main": {
+        "ahead": 88,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 415,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 7,
+          "title": "fix(web,verifier): security audit findings WV-1..WV-7",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+          "base": "claude/quietvote-audit-qa-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/7"
+        }
+      ],
+      "source_head_subject": "merge audit-qa (CI test fix)",
+      "prior_inventory_sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-board-cli-1",
+      "sha": "c69473f242c9848847c3e899016c562e51a325e4",
+      "protected": false,
+      "main": {
+        "ahead": 65,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 438,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 4,
+          "title": "board grammar fix, CLI check, trustee spoil-decryption relay",
+          "state": "closed",
+          "merged": true,
+          "draft": true,
+          "head_sha": "c69473f242c9848847c3e899016c562e51a325e4",
+          "base": "claude/quietvote-finish-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/4"
+        }
+      ],
+      "source_head_subject": "fix(trustee): audit findings T1-T12 - log-evidence gate, release ledger, witness check, hardening",
+      "prior_inventory_sha": "c69473f242c9848847c3e899016c562e51a325e4",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-ci-gates-1",
+      "sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+      "protected": false,
+      "main": {
+        "ahead": 84,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 419,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 15,
+          "title": "ci: lockfile lint + npm audit gates (DEP-02), cli verifier dep (DEP-01)",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+          "base": "claude/quietvote-audit-qa-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/15"
+        }
+      ],
+      "source_head_subject": "ci: lockfile lint + npm audit (high) gates (DEP-02); declare cli dep on @quietvote/verifier (DEP-01)",
+      "prior_inventory_sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-cli-spoil-collect-1",
+      "sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+      "protected": false,
+      "main": {
+        "ahead": 88,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 415,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 16,
+          "title": "feat(cli): qv election spoil-collect (offline trustee spoil-share gathering)",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+          "base": "claude/quietvote-audit-board-cli-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/16"
+        }
+      ],
+      "source_head_subject": "feat(cli): qv election spoil-collect (offline gather/verify/decode trustee spoil shares, POST bodies)",
+      "prior_inventory_sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-complete-1",
+      "sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+      "protected": false,
+      "main": {
+        "ahead": 77,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 426,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 12,
+          "title": "Restore base typecheck/test green; port QV-ADR-015 election-open binding to verifier-py",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+          "base": "claude/quietvote-board-cli-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/12"
+        }
+      ],
+      "source_head_subject": "Merge remote-tracking branch 'origin/claude/quietvote-finish-1' into claude/quietvote-complete-1",
+      "prior_inventory_sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-docs-1",
+      "sha": "5341f6f66d237e0bba6a6d68efcc11ace5c8ac6c",
+      "protected": false,
+      "main": {
+        "ahead": 44,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 459,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 5,
+          "title": "docs: fix contradicted citations, claims-lint cleanup, status alignment",
+          "state": "closed",
+          "merged": true,
+          "draft": true,
+          "head_sha": "5341f6f66d237e0bba6a6d68efcc11ace5c8ac6c",
+          "base": "claude/quietvote-finish-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/5"
+        }
+      ],
+      "source_head_subject": "docs: fix contradicted citations, reduce claims-lint findings, align README/SECURITY/wiki status",
+      "prior_inventory_sha": "5341f6f66d237e0bba6a6d68efcc11ace5c8ac6c",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-finish-1",
+      "sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+      "protected": false,
+      "main": {
+        "ahead": 70,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 433,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 3,
+          "title": "Finish remaining engineering work (wave 1+)",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+          "base": "claude/dazzling-cerf-n8ha3g",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/3"
+        }
+      ],
+      "source_head_subject": "test(server): raise keep-alive timeout in the test world",
+      "prior_inventory_sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-security-fixes-k616wx",
+      "sha": "5382d5f89226a7464025480c3a6be606da79859a",
+      "protected": false,
+      "main": {
+        "ahead": 347,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 155,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [],
+      "source_head_subject": "docs(security): add sensitive components blue-team deep pass",
+      "prior_inventory_sha": "5382d5f89226a7464025480c3a6be606da79859a",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-spoil-wiring-1",
+      "sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+      "protected": false,
+      "main": {
+        "ahead": 98,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 405,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 14,
+          "title": "feat(server): trustees-mode spoil shares (QV-ADR-020) wired into tally",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+          "base": "claude/quietvote-audit-server-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/14"
+        }
+      ],
+      "source_head_subject": "merge crypto-protocol",
+      "prior_inventory_sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-trustee-hardening-1",
+      "sha": "f0423305cb4571b584a7b9454ed774d006663613",
+      "protected": false,
+      "main": {
+        "ahead": 90,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 413,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 17,
+          "title": "fix(trustee): TR-03 bundle lock, TR-04 fork refusal at release",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "f0423305cb4571b584a7b9454ed774d006663613",
+          "base": "claude/quietvote-audit-trustee-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/17"
+        }
+      ],
+      "source_head_subject": "fix(trustee): TR-03 bundle lock + change detection, TR-04 fork refusal at release; mark TR-05 fixed in base",
+      "prior_inventory_sha": "f0423305cb4571b584a7b9454ed774d006663613",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-ui-locale-a11y-sltfb3",
+      "sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "protected": false,
+      "main": {
+        "ahead": 113,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 390,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 18,
+          "title": "web: skip-link focus and long-word wrap fixes, Playwright a11y checks, i18n dynamic-ref resolution",
+          "state": "closed",
+          "merged": true,
+          "draft": true,
+          "head_sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+          "base": "checkpoint/quietvote-ordinary-ux-20261024",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/18"
+        }
+      ],
+      "source_head_subject": "Merge PR #19: FakeBoard registrations per QV-09; e2e registration journey fixed (owner-approved)",
+      "prior_inventory_sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quietvote-web-triage-1",
+      "sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+      "protected": false,
+      "main": {
+        "ahead": 91,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 412,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 13,
+          "title": "fix(web): second-wave audit W1-W14",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+          "base": "claude/quietvote-audit-web-verifier-1",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/13"
+        }
+      ],
+      "source_head_subject": "merge web-verifier (CI test fix)",
+      "prior_inventory_sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/quirky-curie-n5pxf5",
+      "sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "protected": false,
+      "main": {
+        "ahead": 0,
+        "behind": 0,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 502,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [],
+      "source_head_subject": "Add extensive handoff documentation for audit process",
+      "prior_inventory_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/sharp-archimedes-tu76rh",
+      "sha": "9a03414e0e826db292f9dd5728e4d3d2f0682784",
+      "protected": false,
+      "main": {
+        "ahead": 503,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 1,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "prs": [
+        {
+          "number": 19,
+          "title": "test(web): FakeBoard registrations per QV-09; fix e2e registration journey",
+          "state": "closed",
+          "merged": true,
+          "draft": false,
+          "head_sha": "31f2a085348b37357f54b70d6de07d2466ed17ac",
+          "base": "claude/quietvote-ui-locale-a11y-sltfb3",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/19"
+        },
+        {
+          "number": 20,
+          "title": "docs(audit): 2026-10-28 code audit evidence (in progress)",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
+          "base": "claude/quietvote-ui-locale-a11y-sltfb3",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/20"
+        },
+        {
+          "number": 58,
+          "title": "docs(audit): final state of the 2026-10-28 verification pass",
+          "state": "open",
+          "merged": false,
+          "draft": true,
+          "head_sha": "9a03414e0e826db292f9dd5728e4d3d2f0682784",
+          "base": "integration/quietvote-completion",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/58"
+        }
+      ],
+      "source_head_subject": "docs(audit): record final state of the 2026-10-28 verification pass",
+      "prior_inventory_sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
+      "changed_since_prior_inventory": true,
+      "head_dco_present": false,
+      "cherry": [
+        "+ 9a03414e0e826db292f9dd5728e4d3d2f0682784 docs(audit): record final state of the 2026-10-28 verification pass"
+      ],
+      "branch_unique_commits": [
+        "9a03414e0e826db292f9dd5728e4d3d2f0682784 docs(audit): record final state of the 2026-10-28 verification pass"
+      ],
+      "merge_base": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "unique_files": [
+        "docs/audit/2026-10-28/interim-verification-quietvote.json",
+        "docs/audit/2026-10-28/interim-verification-quietvote.md"
+      ],
+      "unique_diff_stat": "2 files changed, 306 insertions(+), 249 deletions(-)",
+      "classification": "requires_repair",
+      "unique_functionality": "Final historical 2026-10-28 audit verification evidence in two files; no runtime change.",
+      "dependencies": "Canonical integration; author-matching DCO is absent; no reviews recorded.",
+      "security_risk": "Historical claims must stay scoped to 424110d, not represented as current findings.",
+      "action": "Preserve #58 and prepare integration; reconcile author DCO requirement before merge.",
+      "test_status": "No runtime delta; root reports exact-head docs CI green. Branch-inventory lane independently checks scope and DCO."
+    },
+    {
+      "branch": "claude/tender-maxwell-93ctiw",
+      "sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "protected": false,
+      "main": {
+        "ahead": 369,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 133,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [],
+      "source_head_subject": "docs(handoff): Haiku run consolidation matrix and handoff (2026-11-11)",
+      "prior_inventory_sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "claude/wonderful-hypatia-9yszin",
+      "sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+      "protected": false,
+      "main": {
+        "ahead": 347,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 155,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 42,
+          "title": "Consolidate open zero-codex PRs, add inventory and tooling (paused by owner)",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+          "base": "codex/quietvote-milestone-20261109",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/42"
+        }
+      ],
+      "source_head_subject": "docs(handoff): record the full qualification of the last code commit",
+      "prior_inventory_sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-completion-20261116",
+      "sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "protected": false,
+      "main": {
+        "ahead": 414,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 88,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 51,
+          "title": "Add offline recovery and extend QuietVote client workflows",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+          "base": "codex/quietvote-finish-20261116",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/51"
+        }
+      ],
+      "source_head_subject": "docs: record recovery and client continuation qualification",
+      "prior_inventory_sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-consolidation-audit-20261104",
+      "sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+      "protected": false,
+      "main": {
+        "ahead": 1,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 501,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 29,
+          "title": "Audit QuietVote cumulative branches and consolidation sequence",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/29"
+        }
+      ],
+      "source_head_subject": "docs: audit QuietVote cumulative branch ancestry and integration gates",
+      "prior_inventory_sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-continue-20261116",
+      "sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+      "protected": false,
+      "main": {
+        "ahead": 408,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 94,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 49,
+          "title": "Bound trustee KDF costs and add independent receipt CLI",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+          "base": "codex/quietvote-trustee-acceptance-20261116",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/49"
+        }
+      ],
+      "source_head_subject": "feat(cli): independently verify anchored board receipts",
+      "prior_inventory_sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-finish-20261116",
+      "sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+      "protected": false,
+      "main": {
+        "ahead": 410,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 92,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 50,
+          "title": "feat: prepare trustee archives and persist gossip health",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+          "base": "codex/quietvote-continue-20261116",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/50"
+        }
+      ],
+      "source_head_subject": "docs: record archive and gossip qualification",
+      "prior_inventory_sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-milestone-20261109",
+      "sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "protected": false,
+      "main": {
+        "ahead": 247,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 255,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 30,
+          "title": "QuietVote: import availability, cooperative verification and recovery checkpoint",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/30"
+        }
+      ],
+      "source_head_subject": "test(server): isolate upload capacity refusal from eager body transport",
+      "prior_inventory_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-resume-20261116",
+      "sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
+      "protected": false,
+      "main": {
+        "ahead": 403,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 99,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 47,
+          "title": "Continue QuietVote consolidation, security repairs and online operations",
+          "state": "closed",
+          "merged": true,
+          "draft": true,
+          "head_sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
+          "base": "integration/quietvote-completion",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/47"
+        }
+      ],
+      "source_head_subject": "docs: preserve qualified continuation checkpoint and publication evidence",
+      "prior_inventory_sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-reviewed-milestones-20261116",
+      "sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+      "protected": false,
+      "main": {
+        "ahead": 494,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 8,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 55,
+          "title": "Consolidate reviewed author pins, Python verifier parity, and signed-governance milestones",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+          "base": "codex/quietvote-teams-20261116",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/55"
+        }
+      ],
+      "source_head_subject": "fix(server): bind invite retention cutoffs on the minimum supported Node 22",
+      "prior_inventory_sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-teams-20261116",
+      "sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "protected": false,
+      "main": {
+        "ahead": 492,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 10,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 52,
+          "title": "Complete election workflows, durable recovery and evidence verification",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+          "base": "codex/quietvote-completion-20261116",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/52"
+        }
+      ],
+      "source_head_subject": "test: consolidate CLI evidence and Node 22 verifier CI repairs",
+      "prior_inventory_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "codex/quietvote-trustee-acceptance-20261116",
+      "sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+      "protected": false,
+      "main": {
+        "ahead": 406,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 96,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 48,
+          "title": "feat(trustee): export saved ceremony and tally outputs for online relay",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+          "base": "codex/quietvote-resume-20261116",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/48"
+        }
+      ],
+      "source_head_subject": "docs: record trustee relay qualification and next steps",
+      "prior_inventory_sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "docs/readme-and-wiki",
+      "sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+      "protected": false,
+      "main": {
+        "ahead": 1,
+        "behind": 1,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "canonical": {
+        "ahead": 1,
+        "behind": 503,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 2,
+          "title": "Add wiki pages and README wiki section",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/2"
+        }
+      ],
+      "source_head_subject": "Add wiki pages and README wiki section",
+      "prior_inventory_sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "cherry": [
+        "+ 29313c369aeda4f1ab2503ca3437c5bd22025a09 Add wiki pages and README wiki section"
+      ],
+      "branch_unique_commits": [
+        "29313c369aeda4f1ab2503ca3437c5bd22025a09 Add wiki pages and README wiki section"
+      ],
+      "merge_base": "69c03fb6f50c3b6e865946820f878ea8b595e6ce",
+      "unique_files": [
+        "README.md",
+        "docs/wiki/Codebase-Map.md",
+        "docs/wiki/Decisions-and-Status.md",
+        "docs/wiki/Home.md",
+        "docs/wiki/Specification-Map.md",
+        "docs/wiki/_Sidebar.md"
+      ],
+      "unique_diff_stat": "6 files changed, 54 insertions(+)",
+      "classification": "already_superseded",
+      "unique_functionality": "Obsolete documentation asserts no implementation/UI and older spec navigation.",
+      "dependencies": "Current README, wiki and spec index supersede content.",
+      "security_risk": "Would regress accuracy of published product claims.",
+      "action": "Preserve branch and closed PR; do not import stale documentation.",
+      "test_status": "Source content inspected; no runtime tests applicable."
+    },
+    {
+      "branch": "integration/qualified-stack-20261116",
+      "sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "protected": false,
+      "main": {
+        "ahead": 492,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 10,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 54,
+          "title": "Consolidate the reviewed historical implementation stack into integration",
+          "state": "closed",
+          "merged": true,
+          "draft": false,
+          "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+          "base": "integration/quietvote-completion",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/54"
+        }
+      ],
+      "source_head_subject": "test: consolidate CLI evidence and Node 22 verifier CI repairs",
+      "prior_inventory_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "integration/quietvote-completion",
+      "sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "protected": false,
+      "main": {
+        "ahead": 502,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 0,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": true
+      },
+      "prs": [
+        {
+          "number": 43,
+          "title": "QuietVote canonical integration: consolidated prototype and remaining core work",
+          "state": "open",
+          "merged": false,
+          "draft": true,
+          "head_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/43"
+        }
+      ],
+      "source_head_subject": "docs: record completed QuietVote consolidation and residual work",
+      "prior_inventory_sha": "f895b1a3f895595d62fc3ecd29dad496296e3672",
+      "changed_since_prior_inventory": true,
+      "head_dco_present": true,
+      "classification": "canonical_integration",
+      "unique_functionality": "502 cumulative commits beyond main.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve #43 as canonical cumulative PR; reviews and provenance remain unresolved.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "integration/quietvote-consolidated-20261030",
+      "sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "protected": false,
+      "main": {
+        "ahead": 203,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 299,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 22,
+          "title": "Consolidate QuietVote prototype and retain protocol review blockers",
+          "state": "closed",
+          "merged": false,
+          "draft": true,
+          "head_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+          "base": "main",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/22"
+        }
+      ],
+      "source_head_subject": "docs: point final readback to the draft PR receipt",
+      "prior_inventory_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "integration/quietvote-reviewed-20261117",
+      "sha": "8686e625270826bc0776596a1bbaf434832f4afd",
+      "protected": false,
+      "main": {
+        "ahead": 500,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 2,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [
+        {
+          "number": 56,
+          "title": "Consolidate reviewed QuietVote work and recover historical repairs",
+          "state": "closed",
+          "merged": true,
+          "draft": false,
+          "head_sha": "8686e625270826bc0776596a1bbaf434832f4afd",
+          "base": "integration/quietvote-completion",
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/56"
+        }
+      ],
+      "source_head_subject": "fix: consolidate reviewed QuietVote work and historical repairs",
+      "prior_inventory_sha": null,
+      "changed_since_prior_inventory": true,
+      "head_dco_present": true,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "main",
+      "sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "protected": false,
+      "main": {
+        "ahead": 0,
+        "behind": 0,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 502,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [],
+      "source_head_subject": "Add extensive handoff documentation for audit process",
+      "prior_inventory_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "main_baseline",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Target for PR #43 only after required approvals and full exact-head qualification.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    },
+    {
+      "branch": "planning/future-cli-specs-20261110",
+      "sha": "85a7d3e0a898adec0fba9b07ef492ff5d5c5ed20",
+      "protected": false,
+      "main": {
+        "ahead": 1,
+        "behind": 0,
+        "exact_ancestor_of_base": false,
+        "base_ancestor_of_head": true
+      },
+      "canonical": {
+        "ahead": 0,
+        "behind": 501,
+        "exact_ancestor_of_base": true,
+        "base_ancestor_of_head": false
+      },
+      "prs": [],
+      "source_head_subject": "docs: propose future command-line interface specification",
+      "prior_inventory_sha": "85a7d3e0a898adec0fba9b07ef492ff5d5c5ed20",
+      "changed_since_prior_inventory": false,
+      "head_dco_present": false,
+      "classification": "already_integrated",
+      "unique_functionality": "No unique commits beyond canonical integration.",
+      "dependencies": "No additional source integration needed.",
+      "security_risk": "No new source delta.",
+      "action": "Preserve branch; source already in canonical integration.",
+      "test_status": "Covered by canonical source history; no fresh branch-specific tests run in this inventory."
+    }
+  ],
+  "pull_requests": [
+    {
+      "number": 1,
+      "title": "Complete spec set, security research, plan, and first implementation",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "69c03fb6f50c3b6e865946820f878ea8b595e6ce",
+      "head": "claude/dazzling-cerf-n8ha3g",
+      "head_sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/1",
+      "updated_at": "2026-11-18T03:24:03Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 2,
+      "title": "Add wiki pages and README wiki section",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "69c03fb6f50c3b6e865946820f878ea8b595e6ce",
+      "head": "docs/readme-and-wiki",
+      "head_sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/2",
+      "updated_at": "2026-11-18T03:24:01Z",
+      "contained_in_canonical": false,
+      "contained_in_main": false
+    },
+    {
+      "number": 3,
+      "title": "Finish remaining engineering work (wave 1+)",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/dazzling-cerf-n8ha3g",
+      "base_sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+      "head": "claude/quietvote-finish-1",
+      "head_sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/3",
+      "updated_at": "2026-11-18T03:23:59Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 4,
+      "title": "board grammar fix, CLI check, trustee spoil-decryption relay",
+      "state": "closed",
+      "merged": true,
+      "draft": true,
+      "base": "claude/quietvote-finish-1",
+      "base_sha": "a5573a4495ff9b8f884d4a9d5d9a456fae647d03",
+      "head": "claude/quietvote-board-cli-1",
+      "head_sha": "c69473f242c9848847c3e899016c562e51a325e4",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/4",
+      "updated_at": "2026-10-21T12:35:05Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 5,
+      "title": "docs: fix contradicted citations, claims-lint cleanup, status alignment",
+      "state": "closed",
+      "merged": true,
+      "draft": true,
+      "base": "claude/quietvote-finish-1",
+      "base_sha": "cc73db417de20e7afc00aad3cefc97fae8d481ad",
+      "head": "claude/quietvote-docs-1",
+      "head_sha": "5341f6f66d237e0bba6a6d68efcc11ace5c8ac6c",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/5",
+      "updated_at": "2026-10-21T12:06:44Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 6,
+      "title": "feat(protocol): spoil-share record, collectSpoilShares, private-audit vectors",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-board-cli-1",
+      "base_sha": "c69473f242c9848847c3e899016c562e51a325e4",
+      "head": "claude/quietvote-audit-qa-1",
+      "head_sha": "563eec8659184e32771244088d59acc5035fa798",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/6",
+      "updated_at": "2026-11-18T03:23:57Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 7,
+      "title": "fix(web,verifier): security audit findings WV-1..WV-7",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-qa-1",
+      "base_sha": "7b4826a2681224c86605ad71a62fbd7877343b66",
+      "head": "claude/quietvote-audit-web-verifier-1",
+      "head_sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/7",
+      "updated_at": "2026-11-18T03:23:55Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 8,
+      "title": "fix(trustee): security audit TR-01/TR-02 (spoil relay cast-ciphertext refusal)",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-qa-1",
+      "base_sha": "7b4826a2681224c86605ad71a62fbd7877343b66",
+      "head": "claude/quietvote-audit-trustee-1",
+      "head_sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/8",
+      "updated_at": "2026-11-18T03:23:53Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 9,
+      "title": "fix(server): security audit SRV-001..007",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-qa-1",
+      "base_sha": "7b4826a2681224c86605ad71a62fbd7877343b66",
+      "head": "claude/quietvote-audit-server-1",
+      "head_sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/9",
+      "updated_at": "2026-11-18T03:23:51Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 10,
+      "title": "fix(crypto,protocol): audit CP-01 re-wrapped spoils, CP-03, CP-04",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-qa-1",
+      "base_sha": "7b4826a2681224c86605ad71a62fbd7877343b66",
+      "head": "claude/quietvote-audit-crypto-protocol-1",
+      "head_sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/10",
+      "updated_at": "2026-11-18T03:23:49Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 11,
+      "title": "fix(board,cli): security audit BC-01..BC-10 + fuzz/mutation tests",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-qa-1",
+      "base_sha": "7b4826a2681224c86605ad71a62fbd7877343b66",
+      "head": "claude/quietvote-audit-board-cli-1",
+      "head_sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/11",
+      "updated_at": "2026-11-18T03:23:47Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 12,
+      "title": "Restore base typecheck/test green; port QV-ADR-015 election-open binding to verifier-py",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-board-cli-1",
+      "base_sha": "c69473f242c9848847c3e899016c562e51a325e4",
+      "head": "claude/quietvote-complete-1",
+      "head_sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/12",
+      "updated_at": "2026-11-18T03:23:45Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 13,
+      "title": "fix(web): second-wave audit W1-W14",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-web-verifier-1",
+      "base_sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+      "head": "claude/quietvote-web-triage-1",
+      "head_sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/13",
+      "updated_at": "2026-11-18T03:23:43Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 14,
+      "title": "feat(server): trustees-mode spoil shares (QV-ADR-020) wired into tally",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-server-1",
+      "base_sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+      "head": "claude/quietvote-spoil-wiring-1",
+      "head_sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/14",
+      "updated_at": "2026-11-18T03:23:40Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 15,
+      "title": "ci: lockfile lint + npm audit gates (DEP-02), cli verifier dep (DEP-01)",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-qa-1",
+      "base_sha": "7b4826a2681224c86605ad71a62fbd7877343b66",
+      "head": "claude/quietvote-ci-gates-1",
+      "head_sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/15",
+      "updated_at": "2026-11-18T03:23:39Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 16,
+      "title": "feat(cli): qv election spoil-collect (offline trustee spoil-share gathering)",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-board-cli-1",
+      "base_sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+      "head": "claude/quietvote-cli-spoil-collect-1",
+      "head_sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/16",
+      "updated_at": "2026-11-18T03:23:36Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 17,
+      "title": "fix(trustee): TR-03 bundle lock, TR-04 fork refusal at release",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-audit-trustee-1",
+      "base_sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+      "head": "claude/quietvote-trustee-hardening-1",
+      "head_sha": "f0423305cb4571b584a7b9454ed774d006663613",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/17",
+      "updated_at": "2026-11-18T03:23:35Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 18,
+      "title": "web: skip-link focus and long-word wrap fixes, Playwright a11y checks, i18n dynamic-ref resolution",
+      "state": "closed",
+      "merged": true,
+      "draft": true,
+      "base": "checkpoint/quietvote-ordinary-ux-20261024",
+      "base_sha": "884f59975bdfcad51d5dac7b77b8bd5ae0d6b067",
+      "head": "claude/quietvote-ui-locale-a11y-sltfb3",
+      "head_sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/18",
+      "updated_at": "2026-10-28T06:58:40Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 19,
+      "title": "test(web): FakeBoard registrations per QV-09; fix e2e registration journey",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "base": "claude/quietvote-ui-locale-a11y-sltfb3",
+      "base_sha": "3b738004061d6ced57b5a3650491fb894cf99e6d",
+      "head": "claude/sharp-archimedes-tu76rh",
+      "head_sha": "31f2a085348b37357f54b70d6de07d2466ed17ac",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/19",
+      "updated_at": "2026-10-28T06:46:00Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 20,
+      "title": "docs(audit): 2026-10-28 code audit evidence (in progress)",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/quietvote-ui-locale-a11y-sltfb3",
+      "base_sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+      "head": "claude/sharp-archimedes-tu76rh",
+      "head_sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/20",
+      "updated_at": "2026-11-18T03:23:33Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 21,
+      "title": "Docs: refresh README status and spec index notes",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "head": "claude/docs-screenshots",
+      "head_sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/21",
+      "updated_at": "2026-11-18T03:23:30Z",
+      "contained_in_canonical": false,
+      "contained_in_main": false
+    },
+    {
+      "number": 22,
+      "title": "Consolidate QuietVote prototype and retain protocol review blockers",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "head": "integration/quietvote-consolidated-20261030",
+      "head_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/22",
+      "updated_at": "2026-11-18T03:23:28Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 23,
+      "title": "fix(ci): repair pseudo-locale workflow YAML parsing",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "checkpoint/quietvote-ordinary-ux-20261024",
+      "base_sha": "1b531b8f83eea607de07da847c4044c861964056",
+      "head": "chatgpt/quietvote-visual-ci-repair-20261102",
+      "head_sha": "980a5cd72c9b05bc8ce28a588376462ce85f8206",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/23",
+      "updated_at": "2026-11-03T00:45:33Z",
+      "contained_in_canonical": false,
+      "contained_in_main": false
+    },
+    {
+      "number": 24,
+      "title": "fix(ci): repair pseudo-locale workflow YAML parsing",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "checkpoint/quietvote-ordinary-ux-20261024",
+      "base_sha": "1b531b8f83eea607de07da847c4044c861964056",
+      "head": "chatgpt/quietvote-visual-ci-signed-20261102",
+      "head_sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/24",
+      "updated_at": "2026-11-18T03:23:26Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 25,
+      "title": "test(trustee): use canonical temporary fixture paths",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "integration/quietvote-consolidated-20261030",
+      "base_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "head": "chatgpt/quietvote-trustee-fixture-paths-20261102",
+      "head_sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/25",
+      "updated_at": "2026-11-18T03:23:24Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 26,
+      "title": "Continue QuietVote integration: Windows trustee fixtures, remaining decision-free work",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "integration/quietvote-consolidated-20261030",
+      "base_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "head": "claude/clever-gates-uqd5p1",
+      "head_sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/26",
+      "updated_at": "2026-11-18T03:23:22Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 27,
+      "title": "QuietVote remaining recovery: rollback, exports, control reasons and lazy integrity",
+      "state": "open",
+      "merged": false,
+      "draft": true,
+      "base": "claude/clever-gates-uqd5p1",
+      "base_sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+      "head": "claude/laughing-volta-61srfa",
+      "head_sha": "2aaf0a01816afb256a804c23dd45de86eca2a993",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/27",
+      "updated_at": "2026-11-18T03:31:51Z",
+      "contained_in_canonical": false,
+      "contained_in_main": false
+    },
+    {
+      "number": 28,
+      "title": "fix(ci): detect unpinned step uses in action-pin validator",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "claude/laughing-volta-61srfa",
+      "base_sha": "250e7fa191195cd8e1dd3e2573778db2968b91f7",
+      "head": "chatgpt/quietvote-ci-action-pin-guard-20261104",
+      "head_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/28",
+      "updated_at": "2026-11-18T03:23:20Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 29,
+      "title": "Audit QuietVote cumulative branches and consolidation sequence",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "head": "codex/quietvote-consolidation-audit-20261104",
+      "head_sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/29",
+      "updated_at": "2026-11-18T03:23:18Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 30,
+      "title": "QuietVote: import availability, cooperative verification and recovery checkpoint",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "head": "codex/quietvote-milestone-20261109",
+      "head_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/30",
+      "updated_at": "2026-11-18T03:23:16Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 31,
+      "title": "docs: ChatGPT-only zero-Codex continuation for QuietVote",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "head": "chatgpt/zero-codex-continuation-spec-20261109",
+      "head_sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/31",
+      "updated_at": "2026-11-18T03:23:14Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 32,
+      "title": "feat(verifier): read-only mismatch triage without relaxing strict comparator",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/verifier-triage-20261110",
+      "head_sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/32",
+      "updated_at": "2026-11-18T03:23:12Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 33,
+      "title": "fix(server): reject non-finite rate configuration (randomized audit)",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/audit-rate-config-20261110",
+      "head_sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/33",
+      "updated_at": "2026-11-18T03:23:10Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 34,
+      "title": "docs(wiki): separate User Guide and Developer Guide, repair draft status",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/docs-wiki-sections-20261110",
+      "head_sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/34",
+      "updated_at": "2026-11-18T03:23:08Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 35,
+      "title": "fix(server): reject pre-aborted import before archive scan",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/import-preabort-20261110",
+      "head_sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/35",
+      "updated_at": "2026-11-18T03:23:07Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 36,
+      "title": "fix(server): contain job-start storage failures without stranding queue",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/job-start-recovery-20261110",
+      "head_sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/36",
+      "updated_at": "2026-11-18T03:23:05Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 37,
+      "title": "fix(web): settle sealing Worker failures and release worker resources",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/seal-worker-lifecycle-20261110",
+      "head_sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/37",
+      "updated_at": "2026-11-18T03:23:03Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 38,
+      "title": "fix(server): make deletion-state conflict diagnostic match existing policy",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/pool-delete-diagnostic-20261110",
+      "head_sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/38",
+      "updated_at": "2026-11-18T03:23:01Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 39,
+      "title": "fix(board): validate byte-reader lengths before advancing",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/board-reader-lengths-20261110",
+      "head_sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/39",
+      "updated_at": "2026-11-18T03:22:59Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 40,
+      "title": "fix(web): bound human-readable code grouping input",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/crockford-display-grouping-20261110",
+      "head_sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/40",
+      "updated_at": "2026-11-18T03:22:57Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 41,
+      "title": "fix(cli): count prototype-named election log types safely",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "chatgpt/zero-codex/election-inspect-counters-20261110",
+      "head_sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/41",
+      "updated_at": "2026-11-18T03:22:55Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 42,
+      "title": "Consolidate open zero-codex PRs, add inventory and tooling (paused by owner)",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "claude/wonderful-hypatia-9yszin",
+      "head_sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/42",
+      "updated_at": "2026-11-18T03:22:52Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 43,
+      "title": "QuietVote canonical integration: consolidated prototype and remaining core work",
+      "state": "open",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "head": "integration/quietvote-completion",
+      "head_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/43",
+      "updated_at": "2026-11-18T03:34:45Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 44,
+      "title": "QuietVote integration (draft, not for main): consolidated #43, PR #42 work, and Haiku lane fixes",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "main",
+      "base_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+      "head": "claude/exciting-hawking-r0evza",
+      "head_sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/44",
+      "updated_at": "2026-11-18T03:22:50Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 45,
+      "title": "docs: haiku baseline qualification receipt (T01)",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-milestone-20261109",
+      "base_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "head": "claude/haiku-T01-baseline",
+      "head_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/45",
+      "updated_at": "2026-11-18T03:22:48Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 46,
+      "title": "fix(server): reject casts reusing previously spoiled ciphertexts (S1-02)",
+      "state": "closed",
+      "merged": false,
+      "draft": false,
+      "base": "claude/wonderful-hypatia-9yszin",
+      "base_sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+      "head": "chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114",
+      "head_sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/46",
+      "updated_at": "2026-11-18T03:22:46Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 47,
+      "title": "Continue QuietVote consolidation, security repairs and online operations",
+      "state": "closed",
+      "merged": true,
+      "draft": true,
+      "base": "integration/quietvote-completion",
+      "base_sha": "5382d5f89226a7464025480c3a6be606da79859a",
+      "head": "codex/quietvote-resume-20261116",
+      "head_sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/47",
+      "updated_at": "2026-11-18T02:36:57Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 48,
+      "title": "feat(trustee): export saved ceremony and tally outputs for online relay",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-resume-20261116",
+      "base_sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
+      "head": "codex/quietvote-trustee-acceptance-20261116",
+      "head_sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/48",
+      "updated_at": "2026-11-18T03:22:44Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 49,
+      "title": "Bound trustee KDF costs and add independent receipt CLI",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-trustee-acceptance-20261116",
+      "base_sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+      "head": "codex/quietvote-continue-20261116",
+      "head_sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/49",
+      "updated_at": "2026-11-18T03:22:42Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 50,
+      "title": "feat: prepare trustee archives and persist gossip health",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-continue-20261116",
+      "base_sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+      "head": "codex/quietvote-finish-20261116",
+      "head_sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/50",
+      "updated_at": "2026-11-18T03:22:40Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 51,
+      "title": "Add offline recovery and extend QuietVote client workflows",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-finish-20261116",
+      "base_sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+      "head": "codex/quietvote-completion-20261116",
+      "head_sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/51",
+      "updated_at": "2026-11-18T03:22:38Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 52,
+      "title": "Complete election workflows, durable recovery and evidence verification",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-completion-20261116",
+      "base_sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "head": "codex/quietvote-teams-20261116",
+      "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/52",
+      "updated_at": "2026-11-18T03:22:37Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 53,
+      "title": "Preserve the historical T01 qualification receipt on the integration branch",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "base": "integration/quietvote-completion",
+      "base_sha": "5382d5f89226a7464025480c3a6be606da79859a",
+      "head": "claude/haiku-T01-baseline",
+      "head_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/53",
+      "updated_at": "2026-11-16T23:41:28Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 54,
+      "title": "Consolidate the reviewed historical implementation stack into integration",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "base": "integration/quietvote-completion",
+      "base_sha": "f895b1a3f895595d62fc3ecd29dad496296e3672",
+      "head": "integration/qualified-stack-20261116",
+      "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/54",
+      "updated_at": "2026-11-18T02:36:54Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 55,
+      "title": "Consolidate reviewed author pins, Python verifier parity, and signed-governance milestones",
+      "state": "closed",
+      "merged": false,
+      "draft": true,
+      "base": "codex/quietvote-teams-20261116",
+      "base_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "head": "codex/quietvote-reviewed-milestones-20261116",
+      "head_sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/55",
+      "updated_at": "2026-11-18T03:22:34Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 56,
+      "title": "Consolidate reviewed QuietVote work and recover historical repairs",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "base": "integration/quietvote-completion",
+      "base_sha": "44f73ca8c52511d8587d8381ef7a5c589c4626af",
+      "head": "integration/quietvote-reviewed-20261117",
+      "head_sha": "8686e625270826bc0776596a1bbaf434832f4afd",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/56",
+      "updated_at": "2026-11-18T03:31:52Z",
+      "contained_in_canonical": true,
+      "contained_in_main": false
+    },
+    {
+      "number": 57,
+      "title": "feat(crypto): hedge all prover nonces in one registry revision (CP-02, B1-12, C3)",
+      "state": "open",
+      "merged": false,
+      "draft": true,
+      "base": "integration/quietvote-completion",
+      "base_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "head": "claude/clever-gates-uqd5p1",
+      "head_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/57",
+      "updated_at": "2026-11-18T06:12:57Z",
+      "contained_in_canonical": false,
+      "contained_in_main": false
+    },
+    {
+      "number": 58,
+      "title": "docs(audit): final state of the 2026-10-28 verification pass",
+      "state": "open",
+      "merged": false,
+      "draft": true,
+      "base": "integration/quietvote-completion",
+      "base_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "head": "claude/sharp-archimedes-tu76rh",
+      "head_sha": "9a03414e0e826db292f9dd5728e4d3d2f0682784",
+      "url": "https://github.com/djshellshoxxx/quietvote/pull/58",
+      "updated_at": "2026-11-18T05:32:26Z",
+      "contained_in_canonical": false,
+      "contained_in_main": false
+    }
+  ],
+  "note": "Inventory is immutable-source ancestry and patch review. Test claims are limited to identified prior evidence or delegated exact-head verification; required human/group reviews are not supplied by this agent."
+}

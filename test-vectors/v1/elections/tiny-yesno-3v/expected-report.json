@@ -1,0 +1,35 @@
+{
+  "verdict": "PASS",
+  "checks": {
+    "chk.manifest.hash": "pass",
+    "chk.manifest.sig": "pass",
+    "chk.keys.trustees": "pass",
+    "chk.board.append_only": "not_run",
+    "chk.board.witness": "not_run",
+    "chk.ballots.valid": "pass",
+    "chk.ballots.latest": "pass",
+    "chk.tally.aggregate": "pass",
+    "chk.tally.decrypt": "pass",
+    "chk.result.rules": "pass",
+    "chk.benaloh.spoiled": "pass",
+    "chk.receipts.sample": "not_run",
+    "chk.encoding.canonical": "pass",
+    "chk.time.window": "pass"
+  },
+  "counts": {
+    "cast": 4,
+    "spoiled": 1,
+    "counted": 4
+  },
+  "ctx_prefix": "bb914d504e8e9247",
+  "results": [
+    {
+      "contest": "budget",
+      "participation": 4,
+      "quorum_met": true,
+      "outcome": {
+        "kind": "passed"
+      }
+    }
+  ]
+}

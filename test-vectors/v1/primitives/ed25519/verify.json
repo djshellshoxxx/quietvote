@@ -1,0 +1,104 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "primitives/ed25519",
+  "operation": "ed25519.verify",
+  "description": "Strict RFC 8032 verification (QV-ADR-018)",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "verify-ok",
+      "input": {
+        "public_hex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "sig_hex": "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b",
+        "msg_hex": ""
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "valid": true
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "verify-wrong-message",
+      "input": {
+        "public_hex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "sig_hex": "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b",
+        "msg_hex": "00"
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_SIG"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "verify-s-plus-l",
+      "input": {
+        "public_hex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "sig_hex": "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901554c8c7872aa064e049dbb3013fbf29380d25bf5f0595bbe24655141438e7a101b",
+        "msg_hex": ""
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_SIG"
+      },
+      "tags": [
+        "negative",
+        "malleability",
+        "policy:strict"
+      ]
+    },
+    {
+      "id": "verify-small-order-pk",
+      "input": {
+        "public_hex": "0100000000000000000000000000000000000000000000000000000000000000",
+        "sig_hex": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "msg_hex": ""
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_SIG"
+      },
+      "tags": [
+        "negative",
+        "policy:strict"
+      ]
+    },
+    {
+      "id": "verify-short-signature",
+      "input": {
+        "public_hex": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        "sig_hex": "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a10",
+        "msg_hex": ""
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_SIG"
+      },
+      "tags": [
+        "negative"
+      ]
+    }
+  ]
+}
