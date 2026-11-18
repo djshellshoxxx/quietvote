@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-inspect|election-draft|election-submit|election-tally-draft|election-export`.
+Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -86,6 +86,33 @@ framing and accept the existing protected QVKEY1 key format. Seeds and passphras
 Create requires an explicit access choice and stable idempotency key. Reusing the same key/body avoids duplicate
 creation; changing the body requires a new key. A successful link-access creation returns its read key once;
 protect the command output. Read commands accept `--read-key-file` for that key instead of placing it in arguments.
+
+### Pinned membership
+
+For a pinned election, add `--pinned-roll members.json` to `online election-create`. The file must be a JSON array
+of distinct, strictly ascending, lowercase hexadecimal Ed25519 public keys, each 64 characters. The client does not
+sort, normalize or remove entries. It rejects malformed keys, directories, symbolic links where supported by the
+platform, and oversized files before loading a signing key or making a request. The complete signed JSON request
+must fit the existing 1,153,434-byte ceiling; the server also enforces its configured voter limit. No secret keys,
+invitation tokens or contact details belong in this file.
+
+The supplied list is immutable and must match the later signed manifest's roll root and size. Membership is stored
+separately from enrollment: a member who never registers remains on the committed roll and in the quorum denominator.
+An active election reports that member as `registered: false`; an imported archive reports `registered: null` and
+`registration_known: false` because a public archive contains membership evidence without registration history.
+
+To provision an existing unpublished draft, or recover the missing list for an already-published pinned manifest:
+
+```sh
+qv online election-pinned-roll --server https://vote.example --id ELECTION_ID \
+  --pinned-roll members.json --audience qv:INSTANCE_ID@https://vote.example \
+  --key organizer.key --passphrase-file passphrase.txt --idempotency-key attach-membership-2026 --json
+```
+
+For an existing pinned manifest, use its original complete list. The server checks the root and size. Identical
+retries preserve the first list; a different list is refused, and published unpinned elections and imported mirrors
+cannot be converted through this command. A legacy browser publish checkpoint must be inspected and recovered
+explicitly with this command; the browser refuses to assume an older creation authenticated the full list.
 
 `election-submit` relays a JSON object containing only `header` and `body`, each base64url-encoded board-entry
 bytes. `qv-trustee export-entry` now creates this format for persisted trustee ceremony outputs and gated tally

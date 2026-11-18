@@ -140,6 +140,15 @@ All errors: `Content-Type: application/problem+json`.
 | 503 | `LOG_UNAVAILABLE`, `QUARANTINED`, `MAINTENANCE` | server cannot append / is read-only | yes (reads still work) |
 | 507 | `LOG_FULL` | per-election cap | no |
 
+Pinned membership adds `422 PINNED_ROLL_INVALID` for a malformed list,
+`422 PINNED_ROLL_MISMATCH` for a list/manifest mismatch,
+`409 PINNED_ROLL_IMMUTABLE` for a conflicting attachment,
+`503 PINNED_ROLL_UNAVAILABLE` when a pinned election lacks its complete list,
+and `403 VOTER_NOT_ON_PINNED_ROLL` for an excluded registration key. A missing
+list requires organizer recovery; repeating an unchanged request cannot supply
+the missing membership. Standard request-parser failures still return
+`400 BAD_REQUEST` before list validation. See §7.1.1.
+
 ### 4.4 Idempotency
 - **Log appends** are naturally idempotent: identical `(header, body)` ⇒ `200` with original receipt; same `(author,type,author_nonce)` with different bytes ⇒ `409 NONCE_REUSE`. Clients retry safely after network errors with the **same bytes**.
 - **Other mutating `POST`/`PUT`/`PATCH`/`DELETE`** accept `Idempotency-Key: <8–128 chars>`; required on `POST /orgs`, `POST …/elections`, `…/invites`, `…/exports`, `/imports`. Same key + same request hash ⇒ stored response replayed (header `Idempotent-Replay: true`) for 24 h; same key + different request ⇒ `422 IDEMPOTENCY_MISMATCH`; concurrent in-flight ⇒ `409 IDEMPOTENCY_IN_PROGRESS`. Scope of a key: `(principal, key)`. If an internal failure or restart leaves the original outcome unknown, the server retains the request binding and returns `409 STATE_CONFLICT` with reason `IDEMPOTENCY_INTERRUPTED` and `retryable: false` until the original expiry. The operation may already have committed; reconcile resources/jobs before issuing a new request.
@@ -240,6 +249,7 @@ Note: unknown `key_id` returns a normal-looking challenge (the failure appears a
 | Method & path | Auth | Class | Idem | Request | Response |
 |---|---|---|---|---|---|
 | `POST /api/v1/orgs/{org_id}/elections` | org | M | R | `ElectionCreate` | `201 ElectionDraft` (election_id, origin, `log_pk`, state `DRAFT`) |
+| `PUT /api/v1/elections/{election_id}/pinned-roll` | org | M | R | `{pinned_roll: [<public key hex>, ...]}` | `200 {election_id, roll_root, roll_size, attached:true}` |
 | `PUT /api/v1/elections/{election_id}/draft` | org | M | h | `ManifestDraft` (JSON; non-binding convenience store for the manifest being edited) | `200 ElectionDraft` |
 | `GET /api/v1/elections/{election_id}` | read | R | n.a. | — | `Election` (public summary) |
 | `GET /api/v1/elections/{election_id}/manifest` | read | R | n.a. | — | `EntryView` of seq 0 (409 `WRONG_PHASE` before publish) |
@@ -261,11 +271,74 @@ Publishing the manifest = `POST log/entries` with `type=manifest` signed by an o
 | `DELETE /elections/{id}/invites/{invite_id}` | org | M | h | — | `204`; code unusable |
 | `POST /elections/{id}/registrations` | anon+code | A | h | `Registration` | `201 RegistrationResult` `{voter_kid, status}`; `409 INVITE_USED`; `422 INVITE_EXPIRED`; `403 REGISTRATION_CLOSED` |
 | `PATCH /elections/{id}/voters/{voter_kid}` | org | M | h | `{status:"approved"|"rejected"}` | `200 Voter` (only when manifest `roll_policy.approval=required`; before `roll_commit`) |
-| `GET /elections/{id}/roll` | read | R | n.a. | `?cursor&limit=` | `Page<Voter>` (`voter_kid`, `pk`, `alg`, `status`, `roll_index`, `weight`) + `roll_root`, `roll_size` once committed |
-| `GET /elections/{id}/voters/{voter_kid}` | read | R | n.a. | — | `VoterStatus` `{registered, status, ballot_count, first_seq, latest_seq}` (public in Phase 1) |
+| `GET /elections/{id}/roll` | read | R | n.a. | `?cursor&limit=` | `Page<Voter>` (`voter_kid`, `pk`, `alg`, `status`, `roll_index`, `weight`, `registered`, `registration_known`) + `roll_size` and `roll_root` when pinned or committed |
+| `GET /elections/{id}/voters/{voter_kid}` | read | R | n.a. | — | `VoterStatus` `{registered: boolean \| null, registration_known, status, ballot_count, first_seq, latest_seq}` (public in Phase 1; imported registration may be unknown) |
 | `GET /elections/{id}/voters/{voter_kid}/ballots` | read | R | n.a. | `?cursor` | `Page<{seq, leaf_hash}>` |
 
 Registration closes automatically at `roll_commit`.
+
+### 7.1.1 Authenticated complete pinned membership
+
+The implemented D-99 / QV-ADR-029 transport is an optional `pinned_roll` array
+on the existing signed election-creation request. Each element is exactly 64
+lowercase hex characters encoding a strict Ed25519 public key. The nonempty
+array must already be strictly ascending and contain no duplicates. The server
+checks its configured voter limit and the existing request byte limit; it never
+truncates or silently sorts a submitted list. The default voter limit is 10,000,
+with an absolute configuration ceiling of 100,000, while the default request
+ceiling remains 1,153,434 bytes. The byte limit can therefore reject a list
+smaller than the configured voter count limit.
+
+The current implementation authenticates both creation and attachment with its
+existing `QV-Sig` request signature and an `Idempotency-Key`, binding the exact
+body to the organization key. A stored opaque draft is not a membership source.
+The list is committed transactionally with the election and its management
+receipt, separately from registrations. Its root is computed with the existing
+`rollRoot` algorithm; publishing a pinned manifest requires matching root and
+size. A creation-provisioned list also restricts registration before the
+manifest is published and cannot later be replaced by an unpinned manifest.
+
+For an existing active election whose signed manifest pins a roll, the signed
+`PUT /api/v1/elections/{id}/pinned-roll` operation attaches the complete list.
+It must match that immutable manifest exactly. An identical retry returns the
+same membership; a different list is refused. Imported elections remain read
+only. The same signed operation can provision a historical `DRAFT` before any
+manifest exists; the later manifest must match that immutable list. It cannot
+convert an already published unpinned manifest. Attachment, registration, and
+lifecycle admission serialize through the runtime mutex. No signed manifest, invitation proof-of-possession framing, or
+public archive encoding changes.
+
+In pinned mode, registration checks membership before consuming an invitation
+or returning the consumed-invitation retry result. A missing list and an
+off-roll key are distinct refusals and do not change the invitation, voter
+table, or public log. Pinned members who never register do not block
+`roll_commit`: the complete list supplies commitment, replay, quorum denominator,
+pagination, and export. Unpinned elections retain approved-registration rolls.
+
+Membership is not a registration receipt. Active absent members have
+`registered:false` and no synthetic voter row. Public archive imports contain
+no registration evidence; an imported member therefore reports
+`registered:null, registration_known:false`. Clients must preserve that unknown
+state. Internal imported voter indexes remain available for verifying archived
+ballot authors. The optional `pinned_roll:{root,size}` election metadata reports
+the stored binding; full membership remains available through `/roll`.
+Before manifest publication this is server-reported draft state. Independent
+verification authenticates membership against the signed manifest and
+commitment, rather than trusting an HTTP metadata response alone.
+
+Election schema migration 10 adds the immutable membership table and preserves
+earlier migration checksums. Historical committed membership remains readable
+when its full list can be reconstructed and checked against the signed
+commitment. An uncommitted historical subset cannot supply missing public keys;
+the organizer must attach the exact list. Private restore floors also retain
+the complete stored binding after idempotency receipts expire, because list
+attachment need not advance the public log.
+
+The browser publish flow sends its validated full list and binds it to resumable
+state. The CLI accepts a bounded JSON-array file using `online election-create
+--pinned-roll FILE`; `online election-pinned-roll` supplies the authenticated
+recovery attachment. See the [implementation and verification receipt](reports/pinned-membership-implementation-20261118.md)
+for exact source, tests, compatibility limits, and remaining review gates.
 
 ### 7.2 Trustees
 
@@ -532,7 +605,10 @@ Shared definitions (`$defs`) — abbreviated; complete files live in `packages/p
                      "challenge_id": {"type": "string"}, "signature": {"$ref": "common.json#/$defs/B64u"}}},
     "ElectionCreate": {"type": "object", "required": ["title"], "additionalProperties": false,
       "properties": {"title": {"type": "string", "minLength": 1, "maxLength": 200},
-                     "access": {"enum": ["public", "link"], "default": "public"}}},
+                     "access": {"enum": ["public", "link"], "default": "public"},
+                     "pinned_roll": {"type": "array", "minItems": 1, "maxItems": 100000, "uniqueItems": true,
+                       "items": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                       "description": "Strictly ascending strict Ed25519 public keys; additionally bounded by the configured voter and request-byte limits."}}},
     "ManifestDraft": {"type": "object", "description": "Organizer-editable draft; the binding manifest is the signed seq-0 entry (body per QV-16/QV-03). Server stores opaquely, max 256 KiB.",
       "properties": {"title": {"type": "string"}, "contests": {"type": "array"}, "trustees": {"type": "array"}, "n": {"type": "integer"}, "t": {"type": "integer"},
                      "ceremony_mode": {"enum": ["online-dkg", "airgap-dkg", "airgap-dealer"]},
@@ -565,7 +641,15 @@ Shared definitions (`$defs`) — abbreviated; complete files live in `packages/p
       "properties": {"voter_kid": {"$ref": "common.json#/$defs/KeyId"}, "status": {"enum": ["pending", "approved"]}}},
     "Voter": {"type": "object", "required": ["voter_kid", "pk", "alg", "status"],
       "properties": {"voter_kid": {"$ref": "common.json#/$defs/KeyId"}, "pk": {"$ref": "common.json#/$defs/B64u"}, "alg": {"type": "string"},
-                     "status": {"enum": ["pending", "approved", "rejected", "committed"]}, "roll_index": {"type": ["integer", "null"]}, "weight": {"type": "integer"}}},
+                     "status": {"enum": ["pending", "approved", "rejected", "committed", "unregistered"]},
+                     "registered": {"type": ["boolean", "null"]}, "registration_known": {"type": "boolean"},
+                     "roll_index": {"type": ["integer", "null"]}, "weight": {"type": "integer"}}},
+    "VoterStatus": {"type": "object", "required": ["registered", "status", "ballot_count", "first_seq", "latest_seq"],
+      "properties": {"registered": {"type": ["boolean", "null"], "description": "null for imported membership without registration evidence"},
+                     "registration_known": {"type": "boolean"},
+                     "status": {"enum": ["pending", "approved", "rejected", "committed", "unregistered", null]},
+                     "ballot_count": {"type": "integer", "minimum": 0},
+                     "first_seq": {"type": ["integer", "null"]}, "latest_seq": {"type": ["integer", "null"]}}},
     "TrusteeRedeem": {"type": "object", "required": ["invite_code", "pk_sign", "pk_xport", "alg", "pop"], "additionalProperties": false,
       "properties": {"invite_code": {"type": "string"}, "pk_sign": {"$ref": "common.json#/$defs/B64u"}, "pk_xport": {"$ref": "common.json#/$defs/B64u"},
                      "alg": {"$ref": "common.json#/$defs/Alg"}, "pop": {"$ref": "common.json#/$defs/B64u"}}},

@@ -12,7 +12,8 @@ Only changes that are verifiably present in the repository tree are listed. This
 
 ### Protocol, schema and API version effects
 
-- None recorded here. This section does not change test vectors, domain-separation labels, encodings or wire formats.
+- Pinned membership adds election-database migration 10 and the optional signed creation field `pinned_roll`, plus `PUT /api/v1/elections/:id/pinned-roll` for authenticated provisioning/recovery. Existing manifest, invitation proof-of-possession, log and archive encodings, test vectors and domain-separation labels are unchanged. The experimental API remains `/api/v1/`.
+- Registration read models now distinguish an absent active member from an imported member whose registration history is unavailable. Imported members return `registered:null, registration_known:false`; active absent members return `registered:false, registration_known:true`. API consumers must handle the nullable imported value and the roll status `unregistered` rather than infer enrollment from membership.
 
 ### Deprecations
 
@@ -21,6 +22,7 @@ Only changes that are verifiably present in the repository tree are listed. This
 ### Added
 
 - Governance placeholder files with an explicit empty state: [MAINTAINERS.md](MAINTAINERS.md), [docs/RELEASE-KEYS.md](docs/RELEASE-KEYS.md), [docs/LICENSE-NOTE.md](docs/LICENSE-NOTE.md) and this file. They record that no maintainers group, release keys, release or counsel-reviewed licence note exists (decision QV-ADR-027, register item N-08b).
+- Authenticated complete pinned membership across server storage/admission, browser publication, CLI creation/recovery and private backup comparison, implementing accepted D-99 option A. The full roll can be committed even when some members never register; quorum and privacy denominators still include those members. See the [implementation and verification note](docs/reports/pinned-membership-implementation-20261118.md).
 
 ### Changed
 
@@ -33,7 +35,9 @@ Only changes that are verifiably present in the repository tree are listed. This
 
 ### Upgrade notes and verification
 
-- Not applicable: there is nothing to upgrade from and no release to verify. See [docs/RELEASE-KEYS.md](docs/RELEASE-KEYS.md).
+- There is no released version or release artifact to upgrade or verify. See [docs/RELEASE-KEYS.md](docs/RELEASE-KEYS.md).
+- Existing development data receives the additive migration 10. A historical pinned election with an incomplete uncommitted list requires a signed attachment of the full canonical member list matching its manifest. A committed list is reconstructed only when its root and size verify; missing absent-member keys are never guessed from registered voters. An unpublished draft can receive its first immutable list before publishing the matching manifest.
+- Retain an independent minimum private backup to protect the authenticated full membership during restore, including after management receipts expire. A public backup report alone does not contain that private membership binding. Commands, compatibility boundaries and verification results are recorded in the [implementation note](docs/reports/pinned-membership-implementation-20261118.md) and [API contract](docs/09-api-data-contracts.md#711-authenticated-complete-pinned-membership).
 
 ## History before 2026-11-11
 

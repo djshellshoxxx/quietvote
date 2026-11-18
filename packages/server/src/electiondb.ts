@@ -4,6 +4,8 @@ import { decodeHeader, toHex, type BoardStore, type StoredCheckpoint, type Store
 import { all, closeDb, get, openDb, run, tx, type Migration } from './db.ts';
 import { b64u } from '@quietvote/board';
 import type { RegistrationScheme } from './registration.ts';
+import { parsePinnedRoll, samePinnedRoll, type PinnedRoll } from './pinned-roll.ts';
+import { ApiError } from './problem.ts';
 import type { OperationReceipt } from './operation-receipts.ts';
 
 const MIGRATIONS: Migration[] = [
@@ -166,6 +168,16 @@ CREATE TABLE operation_receipt (
   { version: 9, name: 'registration_scheme', sql: `
 ALTER TABLE election ADD COLUMN registration_scheme TEXT NOT NULL DEFAULT 'legacy-raw-v1' CHECK (registration_scheme IN ('legacy-raw-v1','hashed-pop-v1'));
 ` },
+  { version: 10, name: 'immutable_pinned_roll', sql: `
+CREATE TABLE pinned_roll (
+  id INTEGER PRIMARY KEY CHECK (id=1),
+  root TEXT NOT NULL CHECK (length(root)=64 AND root NOT GLOB '*[^0-9a-f]*'),
+  size INTEGER NOT NULL CHECK (size BETWEEN 1 AND 100000),
+  keys_json TEXT NOT NULL CHECK (length(keys_json) <= 6700001)
+) STRICT;
+CREATE TRIGGER pinned_roll_noupdate BEFORE UPDATE ON pinned_roll BEGIN SELECT RAISE(ABORT,'pinned roll is immutable'); END;
+CREATE TRIGGER pinned_roll_nodelete BEFORE DELETE ON pinned_roll BEGIN SELECT RAISE(ABORT,'pinned roll is immutable'); END;
+` },
 ];
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
@@ -299,6 +311,7 @@ export class ElectionDb {
   readonly db: DatabaseSync;
   readonly store: SqliteBoardStore;
   readonly path: string;
+  private pinnedCache: { encoded: string; value: PinnedRoll } | undefined;
   constructor(path: string, appVersion: string, readOnly = false) {
     this.path = path;
     this.db = openDb({ path, applicationId: 0x51564442, synchronous: 'FULL', migrations: MIGRATIONS, appVersion, readOnly });
@@ -331,6 +344,31 @@ export class ElectionDb {
   }
   setMeta(key: string, value: string): void {
     run(this.db, 'INSERT INTO meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, value);
+  }
+  /** The immutable full list is never materialized as fictitious voter registrations. */
+  pinnedRoll(): PinnedRoll | undefined {
+    const row = get<{ root: string; size: number; keys_json: string }>(this.db, 'SELECT root,size,keys_json FROM pinned_roll WHERE id=1');
+    if (row === undefined) return undefined;
+    if (this.pinnedCache?.encoded === row.keys_json && this.pinnedCache.value.root === row.root && this.pinnedCache.value.size === row.size) return this.pinnedCache.value;
+    let value: PinnedRoll;
+    try { value = parsePinnedRoll(JSON.parse(row.keys_json)); }
+    catch { throw new Error('stored pinned roll is invalid'); }
+    if (value.root !== row.root || value.size !== row.size || JSON.stringify(value.keys) !== row.keys_json) throw new Error('stored pinned roll binding is invalid');
+    this.pinnedCache = { encoded: row.keys_json, value };
+    return value;
+  }
+  /** Caller supplies the surrounding management transaction and durable response journal. */
+  attachPinnedRoll(value: PinnedRoll): void {
+    const checked = parsePinnedRoll(value.keys);
+    if (!samePinnedRoll(checked, value)) throw new ApiError(422, 'PINNED_ROLL_INVALID', 'pinned roll binding is invalid');
+    const old = this.pinnedRoll();
+    if (old !== undefined) {
+      if (!samePinnedRoll(old, checked)) throw new ApiError(409, 'PINNED_ROLL_IMMUTABLE', 'the pinned roll is already attached and cannot be replaced');
+      return;
+    }
+    const encoded = JSON.stringify(checked.keys);
+    run(this.db, 'INSERT INTO pinned_roll(id,root,size,keys_json) VALUES (1,?,?,?)', checked.root, checked.size, encoded);
+    // Do not cache the insert before its enclosing transaction commits.
   }
   importVoters(pks: Uint8Array[], kidOf: (pk: Uint8Array) => string, at: number): void {
     pks.forEach((pk, i) => {
@@ -527,6 +565,9 @@ export class ElectionDb {
   /** Approved keys, hex, strictly ascending (the order rollRoot requires). */
   approvedKeysHex(): string[] {
     return all<{ pk: Uint8Array }>(this.db, "SELECT pk FROM voter WHERE status IN ('approved','committed')").map((r) => toHex(r.pk)).sort();
+  }
+  committedKeysHex(): string[] {
+    return all<{ pk: Uint8Array }>(this.db, "SELECT pk FROM voter WHERE status='committed'").map((r) => toHex(r.pk)).sort();
   }
   commitRoll(sortedHex: string[]): void {
     this.tx(() => {

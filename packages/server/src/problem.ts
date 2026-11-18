@@ -21,6 +21,8 @@ const TITLES: Record<string, string> = {
   EVENT_GONE: 'Event gone', ELECTION_DELETED: 'Election deleted', ENTRY_TOO_LARGE: 'Entry too large', PAYLOAD_TOO_LARGE: 'Payload too large',
   UNSUPPORTED_MEDIA_TYPE: 'Unsupported media type', ENTRY_INVALID: 'Entry failed validation', VALIDATION_FAILED: 'Validation failed',
   IDEMPOTENCY_MISMATCH: 'Idempotency key reused with a different request', INVITE_EXPIRED: 'Invite expired',
+  PINNED_ROLL_INVALID: 'Invalid pinned roll', PINNED_ROLL_MISMATCH: 'Pinned roll mismatch', PINNED_ROLL_IMMUTABLE: 'Pinned roll is immutable',
+  PINNED_ROLL_UNAVAILABLE: 'Pinned roll unavailable', VOTER_NOT_ON_PINNED_ROLL: 'Voter is not on the pinned roll',
   RATE_LIMITED: 'Rate limited', REVOTE_LIMIT: 'Revote limit reached', INTERNAL: 'Internal error',
   LOG_UNAVAILABLE: 'Log unavailable', QUARANTINED: 'Log quarantined', MAINTENANCE: 'Maintenance', BUSY: 'Server busy', LOG_FULL: 'Log full',
   URI_TOO_LONG: 'URI too long', HEADERS_TOO_LARGE: 'Request headers too large',

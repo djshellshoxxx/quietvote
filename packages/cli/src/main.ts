@@ -13,7 +13,7 @@ import { cmdVectorsCheck } from './cmd-vectors.ts';
 import { cmdPolicyDraftTemplate, cmdPolicyDraftValidate } from './cmd-policy-draft.ts';
 import { cmdGovernanceExport, cmdGovernancePrepare, cmdGovernanceSign, cmdGovernanceVerify } from './cmd-governance.ts';
 import { EXIT, type Io } from './io.ts';
-import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
+import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionPinnedRoll, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 
 export const VERSION = '0.1.0';
 
@@ -59,7 +59,12 @@ usage:
   qv online instance --server <origin> [--json]
   qv online admin-status --server <origin> --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
   qv online election-create --server <origin> --audience <qv:id@publicUrl> --key <keyfile>
-                    --org <id> --title <title> --access public|link --idempotency-key <key> [passphrase options] [--json]
+                    --org <id> --title <title> --access public|link --idempotency-key <key>
+                    [--pinned-roll <sorted-keys.json>] [passphrase options] [--json]
+  qv online election-pinned-roll --server <origin> --id <id> --pinned-roll <sorted-keys.json>
+                    --audience <qv:id@publicUrl> --key <keyfile> --idempotency-key <key> [passphrase options] [--json]
+                                   attach the immutable full list matching an existing pinned manifest;
+                                   JSON array of distinct, sorted lowercase Ed25519 public keys; never voter secrets
   qv online invites-create --server <origin> --id <id> --count <1..1000> --out <private.json>
                     --audience <qv:id@publicUrl> --key <keyfile> --idempotency-key <key> [passphrase options] [--read-key-file <file>] [--json]
                                    reserves an exclusive private output before issuance; bearer codes never appear in stdout
@@ -104,7 +109,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
   election: { 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
-  online: { 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
+  online: { 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
   'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },
   governance: { prepare: cmdGovernancePrepare, sign: cmdGovernanceSign, export: cmdGovernanceExport, verify: cmdGovernanceVerify },

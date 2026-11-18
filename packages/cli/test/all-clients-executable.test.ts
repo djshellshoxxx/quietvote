@@ -22,7 +22,7 @@ const serverBin = fileURLToPath(new URL('../../server/bin/qv-server.ts', import.
 const pythonBin = fileURLToPath(new URL('../../../verifier-py/qv_verifier', import.meta.url));
 
 test('all shipped executables complete one real-clock election with exact totals and independent verification', { timeout: 1_200_000 }, async (t) => {
-  const w = new World({ seed: 'all-client-executables', n: 3, t: 2, voters: 3 });
+  const w = new World({ seed: 'all-client-executables', n: 3, t: 2, voters: 3, pinnedRoll: true });
   // This overlap is required by the existing trustee archive-author rule; no separate-organizer claim.
   w.owner = w.coord[0]!;
   const passphrase = 'T4!synthetic-C8$combined-R6#client';
@@ -110,8 +110,10 @@ test('all shipped executables complete one real-clock election with exact totals
       { key: w.owner, headers: w.idemKey() });
     assert.equal(org.status, 201, org.text);
     w.orgId = org.json.org_id;
+    const pinnedRollFile = path('pinned-members.json');
+    writeFileSync(pinnedRollFile, JSON.stringify(w.voters.map((voter) => bytesToHex(voter.publicKey)).sort()));
     const created = await online('election-create', ['--org', w.orgId, '--title', 'Combined-client election', '--access', 'public',
-      '--audience', w.audience, '--idempotency-key', 'combined-client-create', ...keyArgs(w.owner)]);
+      '--audience', w.audience, '--idempotency-key', 'combined-client-create', '--pinned-roll', pinnedRollFile, ...keyArgs(w.owner)]);
     w.electionId = created['election_id']; w.origin = created['origin']; w.logPkHex = created['log_pk_hex'];
     const invitations = path('issued-invitations.json');
     const issuance = await online('invites-create', ['--count', String(w.voters.length), '--out', invitations,

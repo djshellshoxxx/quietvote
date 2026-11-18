@@ -32,6 +32,7 @@ const apiError = (status: number, code: string, extra: Partial<ConstructorParame
   new ApiError({ status, code, message: code, ...extra });
 
 interface FakeOpts {
+  failCreate?: ApiError;
   /** Throws for the n-th (1-based) entry post, counting every entry post. */
   failPost?: { at: number; error: ApiError };
   failInvites?: { at: number; error: ApiError };
@@ -41,19 +42,22 @@ interface FakeOpts {
 interface Fake {
   client: PublishClient;
   elections: number;
+  electionInputs: { key: string; roll: readonly string[] | undefined }[];
   posts: { id: string; header: string; body: string }[];
   inviteCalls: { count: number; key: string }[];
 }
 
 /** Fake of the subset of ApiClient the flow uses. Records what it was asked to do. */
 function fakeClient(o: FakeOpts = {}): Fake {
-  const f: Fake = { client: undefined as unknown as PublishClient, elections: 0, posts: [], inviteCalls: [] };
+  const f: Fake = { client: undefined as unknown as PublishClient, elections: 0, electionInputs: [], posts: [], inviteCalls: [] };
   let inviteSeq = 0;
   f.client = {
-    async createElection(orgId: string, title: string): Promise<ElectionSummary> {
+    async createElection(orgId: string, title: string, key: string, pinnedRoll?: readonly string[]): Promise<ElectionSummary> {
       assert.equal(orgId, ORG);
       assert.equal(title, 'Budget');
       f.elections++;
+      f.electionInputs.push({ key, roll: pinnedRoll === undefined ? undefined : [...pinnedRoll] });
+      if (o.failCreate !== undefined) throw o.failCreate;
       return { election_id: ELECTION, origin: ORIGIN, log_pk: b64uEncode(LOG_PK), state: 'DRAFT', title };
     },
     async postEntryWithRetry(id: string, header: string, body: string): Promise<AppendResult> {
@@ -89,6 +93,8 @@ test('publish: success creates the election, posts manifest, DKG start and invit
   if (!res.ok) return;
   assert.deepEqual(res.state.done, ['validate', 'election', 'manifest', 'ceremony_start', 'invites']);
   assert.equal(fake.elections, 1);
+  assert.deepEqual(fake.electionInputs[0]!.roll, roll, 'creation authenticates the entire pinned membership');
+  assert.deepEqual(res.state.pinnedRoll, roll);
   assert.deepEqual(fake.posts.map((p) => p.id), [ELECTION, ELECTION]);
 
   // manifest entry: coordinator (= organizer key) signed, bound to the server election id and log key
@@ -270,7 +276,7 @@ test('commitRoll: refuses a signer that is not the manifest coordinator', async 
   assert.equal((res.error as PublishError).code, 'E-ORG-SIGNER');
 });
 
-test('signed requests: createElection carries a QV-Sig header that verifies over the QV-08 request message', async () => {
+test('signed requests: createElection authenticates the exact full pinned list', async () => {
   const signer = await signerFor(5);
   let auth = '';
   let target = '';
@@ -285,13 +291,14 @@ test('signed requests: createElection carries a QV-Sig header that verifies over
       return new Response(JSON.stringify({ election_id: ELECTION, origin: ORIGIN, log_pk: b64uEncode(LOG_PK), state: 'DRAFT' }), { status: 201, headers: { 'content-type': 'application/json' } });
     },
   });
-  await api.createElection(ORG, 'Budget', 'key-abcdefgh');
+  await api.createElection(ORG, 'Budget', 'key-abcdefgh', roll);
   const m = /^QV-Sig keyid=([A-Za-z0-9_-]+),ts=(\d+),nonce=([A-Za-z0-9_-]+),sig=([A-Za-z0-9_-]+)$/.exec(auth);
   assert.ok(m, auth);
   const sig = b64uDecode(m[4]!)!;
   const msg = requestMessage('POST', target, 'qv:inst@https://board.example', Number(m[2]), b64uDecode(m[3]!)!, utf8(body));
   assert.ok(ed25519Verify(signer.publicKey, sig, msg));
   assert.equal(target, `/api/v1/orgs/${ORG}/elections`);
+  assert.deepEqual(JSON.parse(body), { title: 'Budget', pinned_roll: roll });
   assert.equal(m[2], '1800000000');
   assert.ok(ed25519IsStrictPoint(signer.publicKey));
 });
@@ -301,4 +308,147 @@ test('signed requests: a management call without a configured key fails locally 
   const api = new ApiClient({ fetch: async () => { called = true; return new Response('{}'); } });
   await assert.rejects(api.createInvites(ELECTION, 1, 'key-abcdefgh'), (e: unknown) => e instanceof ApiError && e.code === 'UNAUTHENTICATED');
   assert.equal(called, false);
+});
+
+// @verifies QV-09-REQ-020
+test('pinned membership: invalid lists are refused before signing or sending management requests', async () => {
+  let calls = 0;
+  const api = new ApiClient({ fetch: async () => { calls++; return new Response('{}'); } });
+  for (const invalid of [[], [roll[0]!, roll[0]!], [...roll].reverse(), [roll[0]!.toUpperCase()], ['00'.repeat(32)], ['g'.repeat(64)]]) {
+    for (const request of [() => api.createElection(ORG, 'Budget', 'key-abcdefgh', invalid),
+      () => api.putPinnedRoll(ELECTION, invalid, 'key-abcdefgh')]) {
+      await assert.rejects(request, (e: unknown) => e instanceof ApiError && e.code === 'PINNED_ROLL_INVALID');
+    }
+  }
+  await assert.rejects(api.createElection(ORG, 'X'.repeat(1_153_434), 'key-abcdefgh', roll),
+    (e: unknown) => e instanceof ApiError && e.code === 'PINNED_ROLL_INVALID');
+  assert.equal(calls, 0);
+});
+
+test('pinned membership: attachment signature covers the exact list, method and target', async () => {
+  const signer = await signerFor(5);
+  let calls = 0;
+  const api = new ApiClient({ baseUrl: 'https://board.example',
+    signing: { signer, audience: 'qv:inst@https://board.example', now: () => 1_800_000_000, nonce: () => new Uint8Array(16).fill(9) },
+    fetch: async (url, init) => {
+      calls++;
+      assert.equal(url, `https://board.example/api/v1/elections/${ELECTION}/pinned-roll`);
+      assert.equal(init!.method, 'PUT');
+      const headers = init!.headers as Record<string, string>;
+      assert.equal(headers['Idempotency-Key'], 'attach-original-roll');
+      assert.deepEqual(JSON.parse(init!.body as string), { pinned_roll: roll });
+      const m = /^QV-Sig keyid=([A-Za-z0-9_-]+),ts=(\d+),nonce=([A-Za-z0-9_-]+),sig=([A-Za-z0-9_-]+)$/.exec(headers.Authorization!);
+      assert.ok(m);
+      const msg = requestMessage('PUT', `/api/v1/elections/${ELECTION}/pinned-roll`, 'qv:inst@https://board.example', Number(m[2]), b64uDecode(m[3]!)!, utf8(init!.body as string));
+      assert.ok(ed25519Verify(signer.publicKey, b64uDecode(m[4]!)!, msg));
+      return Response.json({ election_id: ELECTION, roll_root: 'a'.repeat(64), roll_size: roll.length, attached: true });
+    },
+  });
+  assert.equal((await api.putPinnedRoll(ELECTION, roll, 'attach-original-roll')).attached, true);
+  assert.equal(calls, 1);
+});
+
+test('pinned membership: an uncertain creation retries the exact list and idempotency key', async () => {
+  const signer = await signerFor();
+  const first = fakeClient({ failCreate: apiError(0, 'NETWORK') });
+  const failed = await publishElection(input(first.client, signer));
+  assert.equal(failed.ok, false);
+  if (failed.ok) return;
+  const resumed = fakeClient();
+  const next = await publishElection(input(resumed.client, signer), failed.state);
+  assert.equal(next.ok, true, next.ok ? '' : String(next.error));
+  assert.deepEqual(resumed.electionInputs, first.electionInputs);
+});
+
+test('pinned membership: resumed publication refuses changed membership or form before any mutation', async () => {
+  const signer = await signerFor();
+  for (const failure of [{ failCreate: apiError(0, 'NETWORK') }, { failPost: { at: 1, error: apiError(503, 'MAINTENANCE') } }]) {
+    const first = await publishElection(input(fakeClient(failure).client, signer));
+    assert.equal(first.ok, false);
+    if (first.ok) continue;
+    for (const changed of [{ rollHex: roll.slice(1) }, { form: { ...form, title: 'Changed' } }, { orgId: 'OTHER' }, { inviteCount: 1 }]) {
+      const next = fakeClient();
+      const refused = await publishElection(input(next.client, signer, changed), first.state);
+      assert.equal(refused.ok, false);
+      if (!refused.ok) assert.equal((refused.error as PublishError).code, 'E-ORG-STATE');
+      assert.equal(next.elections + next.posts.length + next.inviteCalls.length, 0);
+    }
+  }
+});
+
+test('pinned membership: publication snapshots caller-owned input before the first await', async () => {
+  const signer = await signerFor();
+  const originalRoll = [...roll];
+  const originalForm = structuredClone(form);
+  const fake = fakeClient();
+  const create = fake.client.createElection;
+  fake.client.createElection = async (...args) => {
+    const created = await create(...args);
+    originalRoll.pop();
+    originalForm.title = 'Changed during request';
+    return created;
+  };
+  const result = await publishElection(input(fake.client, signer, { form: originalForm, rollHex: originalRoll }));
+  assert.equal(result.ok, true, result.ok ? '' : String(result.error));
+  assert.deepEqual(fake.electionInputs[0]!.roll, roll);
+  const manifest = decodeRecord(fake.posts[0]!.body).body as unknown as Manifest;
+  assert.equal(manifest.title, 'Budget');
+  assert.equal(manifest.roll.size, roll.length);
+  assert.equal(fake.inviteCalls[0]!.count, roll.length);
+});
+
+test('pinned membership: legacy publication state gives a recovery instruction without creating an election', async () => {
+  const signer = await signerFor();
+  const result = await publishElection(input(fakeClient().client, signer));
+  assert.ok(result.ok);
+  const legacy = { ...result.state, v: 1 } as unknown as PublishState;
+  const fake = fakeClient();
+  const resumed = await publishElection(input(fake.client, signer), legacy);
+  assert.equal(resumed.ok, false);
+  if (!resumed.ok) assert.match(String(resumed.error), /qv online election-pinned-roll/);
+  const committed = await commitRoll(input(fake.client, signer), legacy);
+  assert.equal(committed.ok, false);
+  if (!committed.ok) assert.match(String(committed.error), /qv online election-pinned-roll/);
+  assert.equal(fake.elections + fake.posts.length + fake.inviteCalls.length, 0);
+});
+
+test('pinned membership: unbound or altered checkpoint metadata cannot redirect creation', async () => {
+  const signer = await signerFor();
+  const first = await publishElection(input(fakeClient({ failCreate: apiError(0, 'NETWORK') }).client, signer));
+  assert.equal(first.ok, false);
+  if (first.ok) return;
+  const unbound = structuredClone(first.state);
+  delete unbound.inputHash;
+  unbound.done = [];
+  for (const state of [
+    { ...unbound, orgId: 'OTHER' },
+    { ...unbound, title: 'Different title' },
+    { ...first.state, electionKey: 'different-idempotency-key' },
+  ]) {
+    const fake = fakeClient();
+    const result = await publishElection(input(fake.client, signer), state);
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal((result.error as PublishError).code, 'E-ORG-STATE');
+    assert.equal(fake.elections + fake.posts.length + fake.inviteCalls.length, 0);
+  }
+});
+
+test('pinned membership: commitment uses all members without registration and refuses altered stored pins', async () => {
+  const signer = await signerFor();
+  const pub = await publishElection(input(fakeClient().client, signer));
+  assert.ok(pub.ok);
+  const untouched = fakeClient();
+  const committed = await commitRoll(input(untouched.client, signer), pub.state);
+  assert.equal(committed.ok, true, committed.ok ? '' : String(committed.error));
+  assert.equal(decodeRecord(untouched.posts[0]!.body).body['size'], roll.length);
+  for (const altered of [
+    { ...pub.state, pinnedRoll: roll.slice(1) },
+    { ...pub.state, roll: { root: '0'.repeat(64), size: roll.length } },
+    { ...pub.state, roll: { ...pub.state.roll!, size: roll.length - 1 } },
+  ]) {
+    const fake = fakeClient();
+    const result = await commitRoll(input(fake.client, signer), altered);
+    assert.equal(result.ok, false);
+    assert.equal(fake.posts.length, 0);
+  }
 });

@@ -2,7 +2,7 @@
 import { closeSync, constants, existsSync, fstatSync, fsyncSync, ftruncateSync, lstatSync, openSync, readSync, writeFileSync, writeSync } from 'node:fs';
 import { authorKeyId, b64u, unb64u, signRequest } from '@quietvote/board';
 import { ed25519Sign, parseQvJson, sha256, wipe } from '@quietvote/crypto';
-import { logOrigin, registrationMessage } from '@quietvote/protocol';
+import { logOrigin, registrationMessage, rollRoot } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs, type FlagSpec, type Parsed } from './args.ts';
 import { PASSPHRASE_FLAGS, isHex, printJson } from './common.ts';
 import { loadVoterKey } from './cmd-keygen.ts';
@@ -11,6 +11,7 @@ import { EXIT, type Io } from './io.ts';
 const BASE = { server: 'value', json: 'bool', 'timeout-ms': 'value' } as const;
 const AUTH = { key: 'value', audience: 'value', ...PASSPHRASE_FLAGS } as const;
 const MAX_RESPONSE = 64 * 1024 * 1024;
+const MAX_PINNED_ROLL_REQUEST = 1_153_434;
 
 function args(argv: string[], spec: FlagSpec): Parsed {
   const p = parseArgs(argv, { ...BASE, ...spec });
@@ -38,7 +39,7 @@ function readLimited(path: string, limit: number, regular = false): Uint8Array {
     fd = openSync(path, regular ? constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0) : 'r');
     if (regular) {
       const stat = fstatSync(fd);
-      if (!stat.isFile() || stat.size > limit) throw new InputError('invite input must be a bounded regular file');
+      if (!stat.isFile() || stat.size > limit) throw new InputError('input must be a bounded regular file');
     }
     const bytes = Buffer.alloc(limit + 1);
     let size = 0;
@@ -56,6 +57,23 @@ function readLimited(path: string, limit: number, regular = false): Uint8Array {
 function inputJson(path: string, limit: number): unknown {
   const bytes = readLimited(path, limit);
   try { return parseQvJson(bytes); } catch { throw new InputError('input is not valid QV-JSON'); }
+}
+
+/** Membership input is exact: normalization or sorting would change the signed management request. */
+function inputPinnedRoll(path: string): string[] {
+  let value: unknown;
+  try { value = parseQvJson(readLimited(path, MAX_PINNED_ROLL_REQUEST, true)); }
+  catch (e) { if (e instanceof InputError) throw e; throw new InputError('pinned roll must be a JSON array of public keys'); }
+  if (!Array.isArray(value) || value.length < 1 || value.length > 100_000 ||
+      !value.every((key) => typeof key === 'string' && /^[0-9a-f]{64}$/.test(key)) || !rollRoot(value).ok) {
+    throw new InputError('pinned roll must contain distinct, strictly ascending canonical Ed25519 public keys');
+  }
+  return value as string[];
+}
+
+function pinnedRollBody<T>(body: T): T {
+  if (Buffer.byteLength(JSON.stringify(body), 'utf8') > MAX_PINNED_ROLL_REQUEST) throw new InputError('pinned roll request exceeds the 1,153,434-byte limit');
+  return body;
 }
 
 async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void): Promise<Uint8Array> {
@@ -272,7 +290,7 @@ export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<nu
   } finally { closeSync(fd); }
 }
 export async function cmdOnlineElectionCreate(argv: string[], io: Io): Promise<number> {
-  const p = args(argv, { ...AUTH, org: 'value', title: 'value', access: 'value', 'idempotency-key': 'value' });
+  const p = args(argv, { ...AUTH, org: 'value', title: 'value', access: 'value', 'idempotency-key': 'value', 'pinned-roll': 'value' });
   needFlag(p, 'idempotency-key');
   const org = needFlag(p, 'org');
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(org)) throw new UsageError('--org contains invalid characters');
@@ -280,7 +298,15 @@ export async function cmdOnlineElectionCreate(argv: string[], io: Io): Promise<n
   if (title.length > 200) throw new UsageError('--title must contain at most 200 characters');
   const access = needFlag(p, 'access');
   if (access !== 'public' && access !== 'link') throw new UsageError('--access must be public or link');
-  return jsonRequest(p, io, 'POST', `/api/v1/orgs/${org}/elections`, { title, access }, true);
+  const body = pinnedRollBody({ title, access, ...(p.has('pinned-roll') ? { pinned_roll: inputPinnedRoll(needFlag(p, 'pinned-roll')) } : {}) });
+  return jsonRequest(p, io, 'POST', `/api/v1/orgs/${org}/elections`, body, true);
+}
+export async function cmdOnlineElectionPinnedRoll(argv: string[], io: Io): Promise<number> {
+  const p = args(argv, { ...AUTH, id: 'value', 'pinned-roll': 'value', 'idempotency-key': 'value' });
+  const path = `${electionPath(p)}/pinned-roll`;
+  needFlag(p, 'idempotency-key');
+  const body = pinnedRollBody({ pinned_roll: inputPinnedRoll(needFlag(p, 'pinned-roll')) });
+  return jsonRequest(p, io, 'PUT', path, body, true);
 }
 export async function cmdOnlineElectionDraft(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { ...AUTH, id: 'value', file: 'value' });

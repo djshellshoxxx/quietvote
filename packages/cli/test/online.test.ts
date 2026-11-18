@@ -27,15 +27,31 @@ test('online commands create, inspect and edit a draft through the real signed H
     const instance = await cli(['online', 'instance', ...common]);
     assert.equal(instance.code, 0, instance.err);
     assert.equal(JSON.parse(instance.out).registration_mode, 'open');
-    const create = await cli(['online', 'election-create', ...common, ...auth, '--org', w.orgId, '--title', 'CLI election', '--access', 'public', '--idempotency-key', 'create-election-1']);
+    const pinned = w.voters.map((voter) => bytesToHex(voter.publicKey)).sort();
+    const pinnedFile = writeJson(w.dir, 'pinned-members.json', pinned);
+    const createArgs = ['online', 'election-create', ...common, ...auth, '--org', w.orgId, '--title', 'CLI election', '--access', 'public',
+      '--idempotency-key', 'create-election-1', '--pinned-roll', pinnedFile];
+    const create = await cli(createArgs);
     assert.equal(create.code, 0, create.err);
     const id = JSON.parse(create.out).election_id;
-    const replay = await cli(['online', 'election-create', ...common, ...auth, '--org', w.orgId, '--title', 'CLI election', '--access', 'public', '--idempotency-key', 'create-election-1']);
+    const replay = await cli(createArgs);
     assert.equal(replay.code, 0, replay.err);
     assert.equal(JSON.parse(replay.out).election_id, id);
     const inspect = await cli(['online', 'election-inspect', ...common, '--id', id]);
     assert.equal(inspect.code, 0, inspect.err);
     assert.equal(JSON.parse(inspect.out).title, 'CLI election');
+    assert.equal(JSON.parse(inspect.out).pinned_roll.size, pinned.length);
+    const membership = (await w.get(`/api/v1/elections/${id}/roll`)).json.items;
+    assert.equal(membership.length, pinned.length);
+    assert.ok(membership.every((row: { registered: unknown }) => row.registered === false), 'provisioning membership never invents registrations');
+    const attached = await cli(['online', 'election-pinned-roll', ...common, ...auth, '--id', id,
+      '--pinned-roll', pinnedFile, '--idempotency-key', 'attach-pinned-roll-1']);
+    assert.equal(attached.code, 0, attached.err);
+    assert.equal(JSON.parse(attached.out).attached, true);
+    const conflicted = await cli(['online', 'election-pinned-roll', ...common, ...auth, '--id', id,
+      '--pinned-roll', writeJson(w.dir, 'different-members.json', pinned.slice(1)), '--idempotency-key', 'attach-pinned-roll-2']);
+    assert.equal(conflicted.code, 1);
+    assert.match(conflicted.err, /PINNED_ROLL_IMMUTABLE/);
     const draft = writeJson(w.dir, 'draft.json', { title: 'Draft from CLI' });
     const edit = await cli(['online', 'election-draft', ...common, ...auth, '--id', id, '--file', draft]);
     assert.equal(edit.code, 0, edit.err);

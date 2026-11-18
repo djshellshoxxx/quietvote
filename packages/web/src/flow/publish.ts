@@ -6,12 +6,13 @@
 // bytes are stored, so a retry re-posts identical bytes (idempotent, QV-09 §4.4) instead of signing a new entry. Invite
 // codes are secrets: the state holds them until the organizer has them, so it must not be written to browser storage.
 //
-// The roll-commit is NOT part of publishElection: the server accepts it only after registrations approved the roll
-// (server election.ts vRollCommit), and invites are refused once the roll is committed. Use commitRoll for that step.
-import { PROTO_ID, manifestHash, type Manifest, type MarkerBody, type RollCommitBody } from '@quietvote/protocol';
-import { bytesToHex, hexToBytes, systemRng, type Rng } from '@quietvote/crypto';
+// The roll-commit is separate from publishElection. Pinned membership does not depend on every member registering;
+// invitations must still be issued before commitment. Use commitRoll for that step.
+import { PROTO_ID, manifestHash, rollRoot, type Manifest, type MarkerBody, type RollCommitBody } from '@quietvote/protocol';
+import { bytesToHex, hexToBytes, jcs, sha256, systemRng, type Rng } from '@quietvote/crypto';
 import type { ApiClient } from '../api/client.ts';
 import type { InviteResult } from '../api/types.ts';
+import { boundedPinnedRollBody, checkedPinnedRoll } from '../api/pinned-roll.ts';
 import type { Signer } from '../key/signer.ts';
 import { b64uDecode, b64uEncode } from '../util/hex.ts';
 import { prepareEntry } from './entries.ts';
@@ -57,11 +58,15 @@ interface StoredEntry {
 }
 
 export interface PublishState {
-  readonly v: 1;
+  readonly v: 2;
   done: PublishStep[];
   orgId: string;
   title: string;
   electionKey: string;
+  /** Exact immutable membership supplied to the signed creation request. Public keys only. */
+  pinnedRoll: string[];
+  /** Binds the form, organizer, list and invitation count before the first network mutation. */
+  inputHash?: string;
   electionId?: string | undefined;
   origin?: string | undefined;
   logPkB64u?: string | undefined;
@@ -97,7 +102,7 @@ export const MAX_INVITES_PER_REQUEST = 1000;
 const ORIGIN_PLACEHOLDER = 'quietvote/v1/AAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 function freshState(input: PublishInput, rng: Rng): PublishState {
-  return { v: 1, done: [], orgId: input.orgId, title: input.form.title, electionKey: idemKey(rng), entries: {}, inviteBatches: [] };
+  return { v: 2, done: [], orgId: input.orgId, title: input.form.title, electionKey: idemKey(rng), pinnedRoll: [], entries: {}, inviteBatches: [] };
 }
 
 function idemKey(rng: Rng): string {
@@ -122,12 +127,38 @@ function mustHave<T>(v: T | undefined, what: string): T {
   return v;
 }
 
+/** Snapshot caller-owned arrays before awaiting and reject changed input on a mutation retry. */
+function bindInput(input: PublishInput, st: PublishState): PublishInput {
+  if (st.v !== 2) throw new PublishError('E-ORG-STATE', 'this checkpoint predates pinned membership; inspect the existing election and attach its matching full roll with qv online election-pinned-roll');
+  const rollHex = checkedPinnedRoll(input.rollHex);
+  const form = JSON.parse(JSON.stringify(input.form)) as PublishForm;
+  if (st.orgId !== input.orgId || st.title !== form.title) throw new PublishError('E-ORG-STATE', 'publish organization or title differs from the original checkpoint');
+  const inviteCount = input.inviteCount ?? rollHex.length;
+  if (!Number.isInteger(inviteCount) || inviteCount < 0 || inviteCount > 100_000) throw new PublishError('E-ORG-STATE', 'invitation count must be an integer from 0 to 100000');
+  boundedPinnedRollBody({ title: form.title, pinned_roll: rollHex });
+  const hash = bytesToHex(sha256(jcs({ orgId: input.orgId, form, rollHex, inviteCount, electionKey: st.electionKey, signer: bytesToHex(input.signer.publicKey) })));
+  if (st.inputHash !== undefined) {
+    if (hash !== st.inputHash || st.orgId !== input.orgId || st.title !== form.title ||
+        JSON.stringify(st.pinnedRoll) !== JSON.stringify(rollHex)) {
+      throw new PublishError('E-ORG-STATE', 'publish inputs changed; retry with the original organizer, form, membership and invitation count');
+    }
+  } else {
+    if (st.done.length !== 0 || st.electionId !== undefined) throw new PublishError('E-ORG-STATE', 'checkpoint has no membership binding; recover the existing election with qv online election-pinned-roll');
+    st.inputHash = hash;
+    st.pinnedRoll = [...rollHex];
+  }
+  return { ...input, form, rollHex, inviteCount };
+}
+
 /** Runs the publish steps in order. Pass the state of a failed run to resume it. */
 export async function publishElection(input: PublishInput, prior?: PublishState): Promise<PublishResult> {
   const rng = input.rng ?? systemRng;
   const now = input.now ?? (() => Math.floor(Date.now() / 1000));
   const st = prior === undefined ? freshState(input, rng) : clone(prior);
   const fail = (step: PublishStep, error: unknown): PublishResult => ({ ok: false, step, error, state: st });
+
+  try { input = bindInput(input, st); }
+  catch (error) { return fail('validate', error); }
 
   // 1. Local validation before any server call, so a bad form never leaves an empty election behind.
   if (!st.done.includes('validate')) {
@@ -141,7 +172,7 @@ export async function publishElection(input: PublishInput, prior?: PublishState)
 
   const steps: [PublishStep, () => Promise<void>][] = [
     ['election', async () => {
-      const el = await input.client.createElection(st.orgId, st.title, st.electionKey);
+      const el = await input.client.createElection(st.orgId, st.title, st.electionKey, [...st.pinnedRoll]);
       st.electionId = el.election_id;
       st.origin = el.origin;
       st.logPkB64u = el.log_pk;
@@ -211,8 +242,8 @@ export async function publishElection(input: PublishInput, prior?: PublishState)
 }
 
 /**
- * Posts the roll-commit (QV-18 §5.2) for a published election. Call after registrations are approved: the server rejects a
- * root that differs from the approved roll. Resumable like publishElection.
+ * Posts the roll-commit (QV-18 §5.2) for the complete pinned membership, including members who never register.
+ * The server checks the stored list and signed manifest pins. Resumable like publishElection.
  */
 export async function commitRoll(input: PublishInput, prior: PublishState): Promise<PublishResult> {
   const rng = input.rng ?? systemRng;
@@ -226,9 +257,14 @@ export async function commitRoll(input: PublishInput, prior: PublishState): Prom
     if (bytesToHex(input.signer.publicKey) !== mustHave(st.coordinatorPkHex, 'coordinator key')) {
       throw new PublishError('E-ORG-SIGNER', 'the signing key is not the manifest coordinator key');
     }
+    input = bindInput(input, st);
+    const roll = mustHave(st.roll, 'roll');
+    const rr = rollRoot(st.pinnedRoll);
+    if (!st.done.includes('manifest') || !rr.ok || roll.root !== bytesToHex(rr.value) || roll.size !== st.pinnedRoll.length) {
+      throw new PublishError('E-ORG-STATE', 'roll commitment differs from the original authenticated membership');
+    }
     if (st.done.includes('roll_commit')) return { ok: true, state: st };
     if (st.entries.roll_commit === undefined) {
-      const roll = mustHave(st.roll, 'roll');
       const body: RollCommitBody = { proto: PROTO_ID, type: 'roll-commit', root: roll.root, size: roll.size };
       st.entries.roll_commit = await entryOf(input, rng, now, origin, 'roll_commit', await signMulti(input.signer, mh, body));
     }

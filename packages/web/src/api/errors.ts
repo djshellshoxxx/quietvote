@@ -38,7 +38,11 @@ export function uxCodeFor(e: unknown, submitting = false): UxCode {
   switch (e.code) {
     case NETWORK: return submitting ? 'E-NET-TIMEOUT' : 'E-NET-OFFLINE';
     case TIMEOUT: return 'E-NET-TIMEOUT';
-    case 'AUTHOR_NOT_AUTHORIZED': return 'E-VOT-NOTONROLL';
+    case 'AUTHOR_NOT_AUTHORIZED':
+    case 'VOTER_NOT_ON_PINNED_ROLL': return 'E-VOT-NOTONROLL';
+    case 'PINNED_ROLL_INVALID':
+    case 'PINNED_ROLL_MISMATCH':
+    case 'PINNED_ROLL_IMMUTABLE': return 'E-ORG-MANIFEST';
     case 'WRONG_PHASE': return /clos/i.test(e.detail ?? '') ? 'E-VOT-CLOSED' : /not.*open|before/i.test(e.detail ?? '') ? 'E-VOT-NOTOPEN' : 'E-API-UNAVAILABLE';
     case 'REVOTE_LIMIT': return 'E-VOT-ONEBALLOT';
     case 'ENTRY_INVALID': return e.reason === 'E_SUPERSEDES' || e.reason === 'SUPERSEDED' ? 'E-VOT-SUPERSEDED-LOST' : 'E-VOT-REJECTED-PROOF';
@@ -48,6 +52,7 @@ export function uxCodeFor(e: unknown, submitting = false): UxCode {
     case 'LOG_UNAVAILABLE':
     case 'QUARANTINED':
     case 'REGISTRATION_UNAVAILABLE':
+    case 'PINNED_ROLL_UNAVAILABLE':
     case 'MAINTENANCE': return 'E-API-UNAVAILABLE';
     case 'READ_KEY_REQUIRED': return 'E-READ-KEY';
     default: return 'E-GEN-UNKNOWN';
@@ -68,6 +73,7 @@ export interface PhaseTimes {
 export function uxPresentation(ux: string | undefined, e: unknown, times: PhaseTimes = {}): { ux: string; args: Args } {
   const code = ux ?? uxCodeFor(e);
   switch (code) {
+    case 'E-ORG-MANIFEST': return { ux: code, args: { detail: e instanceof ApiError && e.status === 0 ? e.detail ?? '' : '' } };
     case 'E-API-RATE': return { ux: code, args: { seconds: e instanceof ApiError && e.retryAfter !== undefined ? Math.ceil(e.retryAfter) : 60 } };
     case 'E-VOT-CLOSED': return times.closes !== undefined ? { ux: code, args: { time: times.closes } } : { ux: 'E-API-UNAVAILABLE', args: {} };
     case 'E-VOT-NOTOPEN': return times.opens !== undefined ? { ux: code, args: { time: times.opens } } : { ux: 'E-API-UNAVAILABLE', args: {} };

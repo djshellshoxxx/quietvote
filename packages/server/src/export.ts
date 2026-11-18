@@ -29,7 +29,7 @@ export function electionBundle(rt: ElectionRuntime, opts: { includeBoardRecords?
     if (!page.more) break;
     from = (page.rows.at(-1)?.seq ?? from) + 1;
   }
-  return { manifest: st.manifestRec, manifest_hash: bytesToHex(manifestHash(st.manifest!)), roll: st.rollSet ? [...st.rollSet].sort() : rt.edb.approvedKeysHex(), log };
+  return { manifest: st.manifestRec, manifest_hash: bytesToHex(manifestHash(st.manifest!)), roll: [...rt.canonicalRollKeys()], log };
 }
 
 export function logBundle(rt: ElectionRuntime): LogBundle {

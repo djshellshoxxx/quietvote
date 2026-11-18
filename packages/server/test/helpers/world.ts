@@ -45,6 +45,7 @@ export interface WorldOpts {
   voters: number;
   witnessQuorum?: number;
   spoilTrustees?: boolean;
+  pinnedRoll?: boolean;
   server?: Partial<ServerOptions>;
   /**
    * Send `connection: close` on every request so no pooled idle socket is reused. For tests that block the event loop
@@ -211,7 +212,8 @@ export class World {
     let r = await this.req('POST', '/api/v1/orgs', body, { key: o, headers: this.idemKey() });
     if (r.status !== 201) throw new Error(`org: ${r.status} ${r.text}`);
     this.orgId = r.json.org_id;
-    r = await this.signed('POST', `/api/v1/orgs/${this.orgId}/elections`, { title: 'Annual meeting' }, o, this.idemKey());
+    r = await this.signed('POST', `/api/v1/orgs/${this.orgId}/elections`, { title: 'Annual meeting',
+      ...(this.o.pinnedRoll ? { pinned_roll: this.voters.map((v) => H(v.publicKey)).sort() } : {}) }, o, this.idemKey());
     if (r.status !== 201) throw new Error(`election: ${r.status} ${r.text}`);
     this.electionId = r.json.election_id;
     this.origin = r.json.origin;
@@ -247,6 +249,11 @@ export class World {
       privacy_ack: true,
       ...(this.o.spoilTrustees ? { spoil_trustee_decrypt: true } : {}),
     };
+    if (this.o.pinnedRoll) {
+      const keys = this.voters.map((v) => H(v.publicKey)).sort(), root = rollRoot(keys);
+      if (!root.ok) throw new Error('invalid fixture roll');
+      m.roll.root = H(root.value); m.roll.size = keys.length;
+    }
     return m;
   }
 

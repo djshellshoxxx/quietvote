@@ -77,7 +77,8 @@ export function publishFailure(e: unknown): { ux: string; detail: string } {
     return (PUBLISH_UX_CODES as readonly string[]).includes(e.code) ? { ux: e.code, detail: e.detail } : { ux: 'E-GEN-UNKNOWN', detail: '' };
   }
   const ux: UxCode = uxCodeFor(e);
-  return { ux, detail: '' };
+  // Only local validation supplies technical detail; remote problem text is not displayed here.
+  return { ux, detail: ux === 'E-ORG-MANIFEST' && e instanceof ApiError && e.status === 0 ? e.detail ?? '' : '' };
 }
 
 const failed = (e: unknown, state: PublishState | undefined): PublishOutcome => {
