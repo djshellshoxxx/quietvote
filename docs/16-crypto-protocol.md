@@ -661,6 +661,18 @@ Spoil records do not participate in the chain and do not consume `max_per_voter`
 #### 5.14.3 Window
 `ELECTION_OPEN` and `ELECTION_CLOSE` are coordinator-signed log records. A ballot is in the window iff its sequence number is strictly between the two markers. The verifier additionally checks, when `witness_quorum > 0`, that the witness-cosigned tree head covering the open marker has timestamp ≥ `voting_open − clock_skew_s` and the one covering the close marker has timestamp ≥ `voting_close − clock_skew_s` (the coordinator may not close early) and ≤ `voting_close + clock_skew_s` unless the manifest permits extensions via a signed `extension` record (not defined in suite v1). With `witness_quorum = 0` the times are reported **unwitnessed** and the verdict carries that caveat.
 
+**Authenticated marker duplicates (QV-ADR-027, P10 option A).** After QV-JSON,
+closed-schema and coordinator-threshold validation, compare the canonical JCS
+**bodies** of records with the same `election-open` or `election-close` name;
+signature-array ordering or spelling is not part of this comparison. An
+identical body is class-L `E_MARKERS` and leaves the first marker selected. A
+different authenticated body is class-F `E_MARKERS`: `chk.time.window` fails,
+ballot selection and dependent tally/rule checks remain `not_run`, and no result
+is emitted. Completed manifest and trustee checks retain their results. Invalid
+or insufficient coordinator signatures remain nonfatal log-only findings and
+cannot select a phase or create authenticated equivocation. This rule does not
+change DKG-marker duplicate handling.
+
 #### 5.14.4 Admission/verification checks per cast ballot (the server SHOULD run these at submission; verifiers MUST run all)
 
 | # | Check | Failure code |
@@ -822,8 +834,11 @@ permits it to alter witness policy, time bounds, ballot selection or tally data.
 Invalid manifest/ballot/tally handling retains its separately specified rules.
 The later per-row ADR-027 reconciliation also rejects malformed non-tally records
 and unknown protocol versions as class L. Invalid signatures cannot occupy a
-marker phase: the first valid coordinator threshold wins, with ignored noise and
-later duplicates reported. Missing required DKG markers remain fatal; missing
+marker phase: the first valid coordinator threshold selects it. Identical
+authenticated election-open/close bodies are log-only duplicates; differing
+authenticated bodies are fatal `E_MARKERS` and stop dependent checks as specified
+in §5.14.3 (P10). Ignored signature noise cannot create that conflict. Missing
+required DKG markers remain fatal; missing
 authenticated open/close leaves verification incomplete. Identical canonical
 tally bodies are log-only duplicates; different later bodies are fatal
 `E_RESULT`. Malformed current-suite tally bodies remain fatal and unexamined.

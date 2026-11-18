@@ -466,8 +466,15 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   for (const { seq, rec } of pendingCtxMarkers) {
     if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'markers', completed: markersCompleted++, total: pendingCtxMarkers.length });
     if (verifyMultiSig(dkg.ctx, rec, m.coordinator.keys, m.coordinator.m)) {
-      if (markers.has(rec.body.name)) F('E_MARKERS', `duplicate marker ${rec.body.name}`, seq, 'L');
-      else markers.set(rec.body.name, { seq, body: rec.body, rec });
+      const previous = markers.get(rec.body.name);
+      if (previous === undefined) markers.set(rec.body.name, { seq, body: rec.body, rec });
+      else if (H(jcs(previous.body)) === H(jcs(rec.body))) F('E_MARKERS', `duplicate marker ${rec.body.name}`, seq, 'L');
+      else {
+        // QV-ADR-027 / P10: authenticated body equivocation makes the voting window untrustworthy.
+        F('E_MARKERS', `conflicting marker ${rec.body.name}: body differs from the first authenticated marker`, seq);
+        R.checks['chk.time.window'] = 'fail';
+        return done();
+      }
     } else F('E_SIG', 'election marker lacks m valid coordinator signatures', seq, 'L');
   }
   const open = markers.get('election-open');
