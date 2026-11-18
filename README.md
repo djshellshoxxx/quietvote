@@ -62,7 +62,7 @@ Do not treat placeholder requirements or proposed capability boundaries as appro
 
 ## Contributing
 
-The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md) when available.
+The project is not yet implementation-ready. Contributions to the specification framework should identify assumptions, tradeoffs, threat-model effects, and testable acceptance criteria. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Repository description
 
