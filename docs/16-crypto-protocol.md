@@ -762,7 +762,7 @@ Published as a log entry of type `tally` signed by the tally coordinator (a conv
   "results": [ { "contest":"budget", "participation": 3, "quorum_met": true, "outcome": { … §5.19.3 } } ] }
 ```
 
-`decrypters` lists all `T_valid` members that supplied shares (not only `S`); `S` is derived by the verifier (§5.17). Trustees' individual share records may be published as separate signed log entries and aggregated into the tally record; the verifier accepts either as long as every proof is present.
+`decrypters` lists all `T_valid` members that supplied shares (not only `S`); `S` is derived by the verifier (§5.17). A mismatch with the recomputed `T_valid` is fatal `E_DEC_PROOF`: `chk.tally.decrypt` fails and outcome results are withheld (QV-16-REQ-019, P11). Trustees' individual share records may be published as separate signed log entries and aggregated into the tally record; the verifier accepts either as long as every proof is present.
 
 #### 5.19.2 What the full election record contains
 Manifest + coordinator signatures; roll; DKG records (commit, dealing, shares, complaints, keyconf, markers); open/close markers; all cast and spoil envelopes in sequence order with receipts-relevant tree heads; tally record; signed tree heads and witness cosignatures (QV-18); verifier version/hash used. The record is exportable as a single archive (ADR-001 exit) and re-verifiable offline.
