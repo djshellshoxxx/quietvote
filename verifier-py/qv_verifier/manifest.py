@@ -160,6 +160,8 @@ def _contest(c: Any, idx: int) -> None:
     tbt = _str(tb.get("type"), f"{w}.tie_break.type")
     if tbt == "status-quo":
         _obj(tb, {"type", "option"}, set(), f"{w}.tie_break")
+        if method != "yes-no":
+            _bad(f"{w}: status-quo requires a yes-no contest")
         if tb["option"] not in ids:
             _bad(f"{w}: status-quo option not among options")
     elif tbt in TIE_TYPES:
