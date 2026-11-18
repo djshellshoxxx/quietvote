@@ -224,7 +224,18 @@
         "evidence": "op_py.py / oplevel.ts manifest probes (M0 valid control); test_b1_py_poc.py.",
         "known_ref": "",
         "suggested_fix": "Port reference checks the spec states into verifier-py; record the rest as errata."
-      }
+      },
+      "candidate_followups": [
+        {
+          "pr": 61,
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/61",
+          "head": "04171611e8c8d836ede49c30f0c6f0acc9d0da05",
+          "status": "unmerged candidate",
+          "scope": "The M7 manifest-validation subset: Python permits status-quo tie breaks only for yes/no contests, matching QV-03 and approved B1-08 direction. Other tie methods and yes/no options remain accepted.",
+          "review_report": "consolidation-current-recheck-20261117.md",
+          "remaining_limit": "Repairs only M7, not every acceptance difference in the preserved B1-08 corpus. Canonical corpus counts and status above remain unchanged; unratified numerical/schema boundaries remain separate."
+        }
+      ]
     },
     {
       "id": "B1-09",
@@ -1251,7 +1262,18 @@
         "evidence": "ui-observer.poc.ts step B3-F24: tampered static chunk executed true; sri-preload.poc.ts shows modulepreload+integrity blocks it. build.test.ts:12 cannot see chunks.",
         "known_ref": "W15 (not fixed at this SHA), WV-10",
         "suggested_fix": "Emit <link rel=modulepreload integrity crossorigin> for every statically imported chunk and extend the HTML test to require integrity for every imported module."
-      }
+      },
+      "candidate_followups": [
+        {
+          "pr": 60,
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/60",
+          "head": "754c586aa65735d50514b543a62a5e3c96a4d138",
+          "status": "unmerged candidate",
+          "scope": "W15 extends the already repaired static-import boundary to pinned lazy chart/locale imports and their static dependency graphs; app-only UTF-8 output restores strict bundle-budget headroom.",
+          "review_report": "consolidation-w15-current-review-20261117.md",
+          "remaining_limit": "The sealing worker remains a separate integrity gap. The independent source/focused-test review does not supply actual production-browser qualification or required approvals. The canonical static-import finding status above remains unchanged."
+        }
+      ]
     },
     {
       "id": "B3-05",
@@ -1644,7 +1666,26 @@
         "evidence": "ui-copy.poc.ts (B3-F26): revote claim shown with max_per_voter=1; errmap-server.poc.test.ts (B3-F30): 4 attempts 429, outcome PENDING_UNCONFIRMED E-API-RATE.",
         "known_ref": "",
         "suggested_fix": "Honour problem body retryable; map REVOTE_LIMIT to E-VOT-ONEBALLOT; show revote note per manifest."
-      }
+      },
+      "candidate_followups": [
+        {
+          "pr": 65,
+          "url": "https://github.com/djshellshoxxx/quietvote/pull/65",
+          "head": "0653163a3cee2b230398a572723a028c0dda6d7d",
+          "status": "unmerged candidate",
+          "reviewed_local_commit": "676376024b33bbbee6a34dc11f9e169d7d49d4c6",
+          "reviewed_tree": "66472438d182cf27a1e0b69deec4d5bd299363ef",
+          "scope": "Conditional existing-key g4/nc3 copy in English and five draft catalogs, generated COPY and QV-10; existing manifest-selected oneBallot/revoteNote and empty native-review maps preserved.",
+          "review_report": "consolidation-revote-copy-review-20261117.md",
+          "stacked_on": {
+            "pr": 60,
+            "head": "754c586aa65735d50514b543a62a5e3c96a4d138",
+            "url": "https://github.com/djshellshoxxx/quietvote/pull/60",
+            "reason": "Depends on the app-only UTF-8 budget fix. PR #65 targets the PR #60 branch until that dependency merges, then canonical; PR #43 remains the sole cumulative integration."
+          },
+          "remaining_limit": "Larger-quota REVOTE_LIMIT to ONEBALLOT error copy remains separate. DOM evidence mocks key unlock/live startup and is not browser, casting or native-review qualification. Canonical status above is unchanged."
+        }
+      ]
     },
     {
       "id": "B3-15",

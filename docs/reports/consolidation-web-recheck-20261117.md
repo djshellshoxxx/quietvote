@@ -614,4 +614,4 @@ Log: `b3-pause-reproduction.log`.
 - Required human/security-group approvals are not supplied by this review.
 - Existing browser scenarios were read to trace intended protection. This lane did not execute those browser scenarios.
 - Static-import SRI is repaired. W15 lazy-import and sealing-worker boundaries remain separately tracked; no later W15 candidate is covered here.
-- No runtime source was edited and no vulnerability details were publicly posted.
+- No runtime source was edited and no new reproduction scripts or private test inputs are included.
