@@ -185,10 +185,15 @@ Every call to `H256/H512/hs` uses exactly one of these labels. Labels are ASCII,
 | `proof-csim` | simulated challenge | hs | `ξ`, `contest_id`, `option_id` |
 | `proof-ssim` | simulated response | hs | `ξ`, `contest_id`, `option_id` |
 | `limit-w` | limit-proof nonce | hs_nz | `ξ`, `contest_id` |
-| `cp-dec-nonce` | trustee proof nonce (hedged) | hs_nz | `sc(s_j)`, `ctx`, `contest_id`, `option_id`, `rand32` (32 CSPRNG bytes) |
+| `cp-dec-nonce` | trustee proof nonce (hedged) | hs_nz | `sc(s_j)`, `ctx`, `contest_id`, `option_id`, `pt(A)`, `pt(B)`, `rand32` (32 CSPRNG bytes). Spoil mode (§5.13.4): the `option_id` field is `option_id ‖ 0x00 ‖ ballot_code` and `(A, B) = (α, β)` |
+| `pok-nonce` | DKG PoK nonce (hedged, §5.7.2) | hs_nz | `sc(a)`, `manifest_hash`, `u8(i)`, `u16(k)`, `pt(A)`, `rand32` |
+| `pok-share-nonce` | share-key PoK nonce (hedged, §5.7.8) | hs_nz | `sc(s_j)`, `ctx`, `u8(j)`, `pt(Y_j)`, `rand32` |
+| `cp-dh-nonce` | complaint DLEQ nonce (hedged, §5.7.5) | hs_nz | `sc(e_j)`, `manifest_hash`, `u8(i)`, `u8(j)`, `pt(E_j)`, `pt(R_ij)`, `pt(S)`, `rand32` |
 | `reveal` | digest of spoil reveal object | H256 | `ctx`, `JCS(reveal)` |
 
 Roll leaves (§5.6.2) and the counted-ballot root (§5.19) use plain RFC 9162 hashing (`0x00`/`0x01` prefixes) and therefore have no registry label.
+
+**Registry revision 2026-11-04 (QV-ADR-027; CP-02, B1-12, C3/OQ-7).** `cp-dec-nonce` now also hashes the ciphertext points `pt(A)`, `pt(B)` (previously `sc(s_j)`, `ctx`, `contest_id`, `option_id`, `rand32`), and three hedged prover-nonce labels were added: `pok-nonce`, `pok-share-nonce`, `cp-dh-nonce` (previously plain CSPRNG nonces). Each trustee/dealer nonce hashes the secret, the statement context and indices, the statement point(s) and 32 fresh CSPRNG bytes (`rand32`), so a failed or repeating RNG cannot reuse a nonce across two different statements (a reused Schnorr/Chaum–Pedersen nonce with two challenges reveals the secret; the same reason RFC 8032 §5.1.6 and RFC 6979 §3.2 derive the nonce from the secret and the message `[UNVERIFIED-OFFLINE: section references as cited in the 2026-11-04 decision register, not re-fetched for this revision]`). `rand32` keeps fresh randomness in the nonce (hedged, not purely deterministic). These nonces are never transmitted, so verifiers and the wire format are unchanged; only prover output bytes (and vectors generated with a fixed RNG) change. Implementations of this revision are AI-assisted and unaudited.
 
 
 ### 5.5 Canonical serialization and versioning
@@ -317,14 +322,14 @@ It publishes `{"type":"dkg-commit","i":i,"h":hex(H256("dkg-commit"; manifest_has
 Statement: dealer knows `a` with `A = [a]G`. Context tuple `(i, k)` where `k ∈ 0..t-1` for coefficient `k`, and `k = 0xFFFF` for the encryption key `E_i`.
 
 ```
-prove:  u ← hs_nz-style CSPRNG nonce (non-zero);  R = [u]G
+prove:  u = hs_nz("pok-nonce"; sc(a), manifest_hash, u8(i), u16(k), pt(A), rand32);  R = [u]G
         c = hs("pok"; manifest_hash, u8(i), u16(k), pt(A), pt(R))
         s = u + c·a   (mod ℓ)          ; proof = (c, s)
 verify: R' = [s]G − [c]A
         accept iff  c == hs("pok"; manifest_hash, u8(i), u16(k), pt(A), pt(R'))  and  A ≠ O and c,s canonical
 ```
 
-The challenge hashes the statement `A` and the commitment `R'` (strong Fiat–Shamir, see §5.22). `u` must be fresh CSPRNG output (or hedged per §5.11 style with the secret and context); a repeated `u` with different `c` reveals `a`.
+The challenge hashes the statement `A` and the commitment `R'` (strong Fiat–Shamir, see §5.22). `u` is hedged (registry revision 2026-11-04): it hashes the secret, the context `(manifest_hash, i, k)`, the statement `A` and 32 CSPRNG bytes (`rand32`), because a repeated `u` with different `c` reveals `a`. A verifier cannot check how `u` was derived; the rule binds provers only.
 
 #### 5.7.3 Round 1 — reveal
 
@@ -388,7 +393,7 @@ If decryption, scalar parsing or (F) fails, *j* publishes a `dkg-complaint` (tim
 where `(c,s)` is a DLEQ proof that `log_G E_j = log_R S` (the `cp-dh` label):
 
 ```
-u ← CSPRNG non-zero;  a1 = [u]G;  a2 = [u]R
+u = hs_nz("cp-dh-nonce"; sc(e_j), manifest_hash, u8(i), u8(j), pt(E_j), pt(R), pt(S), rand32);  a1 = [u]G;  a2 = [u]R
 c = hs("cp-dh"; manifest_hash, u8(i), u8(j), pt(E_j), pt(R), pt(S), pt(a1), pt(a2))
 s = u + c·e_j
 verify: a1' = [s]G − [c]E_j;  a2' = [s]R − [c]S;  accept iff c == hs(… pt(a1'), pt(a2'))
@@ -431,7 +436,7 @@ with the invariant `[s_j]G = Y_j` and `s_j = F(j)` for the joint polynomial `F =
 Each `j ∈ Q` verifies `[s_j]G == Y_j` and publishes a `dkg-keyconf` record (timely before `dkg-final`; each trustee computes `ctx` itself, §5.6.3) containing a Schnorr proof of knowledge of `s_j` with respect to `Y_j`:
 
 ```
-u ← CSPRNG non-zero;  R = [u]G;  c = hs("pok-share"; ctx, u8(j), pt(Y_j), pt(R));  s = u + c·s_j
+u = hs_nz("pok-share-nonce"; sc(s_j), ctx, u8(j), pt(Y_j), rand32);  R = [u]G;  c = hs("pok-share"; ctx, u8(j), pt(Y_j), pt(R));  s = u + c·s_j
 ```
 
 The final context is computed from `Q`, `K` and the dealings only (the key confirmations are *not* part of it), so `ctx` is already defined when the confirmations are produced:
@@ -639,7 +644,7 @@ In published-reveal mode (voter opt-in, QV-ADR-020) the spoil record publishes t
 
 #### 5.13.4 Spoiled-ballot decryption by trustees (optional mode, Should)
 
-If `reveal` is absent, the spoiled ballot is decrypted at tally time by the decrypter set using the same threshold procedure as §5.16–5.17 applied to each selection ciphertext `(α,β)` separately (no aggregation), with the label `cp-dec-spoil` (which binds `ballot_code`). Since each `m ∈ {0,1}`, discrete log recovery is a single comparison (`T = O` or `T = G`). Use case: voters whose device cannot run the reveal computation, or ElectionGuard-style "challenged ballot" workflows. The result is published in the tally record's `spoiled` array and checked by the verifier.
+If `reveal` is absent, the spoiled ballot is decrypted at tally time by the decrypter set using the same threshold procedure as §5.16–5.17 applied to each selection ciphertext `(α,β)` separately (no aggregation), with the label `cp-dec-spoil` (which binds `ballot_code`). The proof nonce is `hs_nz("cp-dec-nonce"; sc(s_j), ctx, cid, oid ‖ 0x00 ‖ ballot_code, pt(α), pt(β), rand32)` (§5.4; IDs never contain `0x00`, so the folded field is unambiguous). Since each `m ∈ {0,1}`, discrete log recovery is a single comparison (`T = O` or `T = G`). Use case: voters whose device cannot run the reveal computation, or ElectionGuard-style "challenged ballot" workflows. The result is published in the tally record's `spoiled` array and checked by the verifier.
 
 ### 5.14 Revoting, ordering and counting rules
 
@@ -700,7 +705,7 @@ Trustee `j ∈ T` holds `s_j` with `Y_j = [s_j]G` (public). For each `(c, o)`:
 
 ```
 M_{j,o} = [s_j] A_o                                       ; partial decryption share
-u = CSPRNG (or hedged) non-zero;  a = [u]G;  b = [u]A_o
+u = hs_nz("cp-dec-nonce"; sc(s_j), ctx, cid, oid, pt(A_o), pt(B_o), rand32);  a = [u]G;  b = [u]A_o
 c = hs("cp-dec"; ctx, cid, oid, u8(j), pt(Y_j), pt(A_o), pt(B_o), pt(M_{j,o}), pt(a), pt(b))
 s = u + c·s_j
 proof = (c, s)
@@ -709,7 +714,7 @@ verify: a' = [s]G − [c]Y_j ;  b' = [s]A_o − [c]M_{j,o} ;  accept iff c == hs
 
 `Y_j` is **recomputed by the verifier** from the DKG commitments (§5.7.7) — it is never taken from the trustee's message. The statement proves `log_G Y_j = log_{A_o} M_{j,o}`, i.e. the trustee used its committed share. The challenge hashes `B_o` as well, binding the full ciphertext.
 
-Trustees shall derive `u` with a hedged construction: `u = hs_nz("cp-dec-nonce"; sc(s_j), ctx, cid, oid, 32 CSPRNG bytes)` (registry label, §5.4). A repeated `u` for a different challenge exposes `s_j`.
+Trustees shall derive `u` with a hedged construction: `u = hs_nz("cp-dec-nonce"; sc(s_j), ctx, cid, oid, pt(A_o), pt(B_o), 32 CSPRNG bytes)` (registry label, §5.4). A repeated `u` for a different challenge exposes `s_j`; hashing `(A_o, B_o)` (registry revision 2026-11-04, CP-02) means a failed RNG cannot repeat `u` for two different aggregates of the same `(ctx, cid, oid)` (e.g. a re-run tally over a changed counted set). `Y_j` and `M_{j,o}` are functions of `s_j` and `A_o`, and a trustee has one index `j` per `ctx`, so they add nothing to the hedge.
 
 A trustee shall **never** produce partial decryptions for any `(A, B)` other than the published tally aggregates and, in spoil mode, published spoiled ballots: a decryption oracle for an individual cast ballot would break secrecy. Trustee software shall therefore ignore the coordinator's claimed aggregates, recompute every `A_o, B_o` itself from the log (§5.15, after running all §5.14.4 checks), and decrypt only those; for spoiled ballots it shall decrypt only ballots whose spoil record is on the log and is in trustee-decryption mode. QV-17 specifies the ceremony.
 
@@ -964,7 +969,7 @@ Other verification: property-based tests of the proofs (completeness, soundness 
 | OQ-4 | Tie-break beacon definition (which beacon, pinning) | QV-20/QV-18 | Disabled in v1 |
 | OQ-5 | Should verifier accept ZIP-215 signatures for voter keys generated by other tools? | QV-19 | Strict only |
 | OQ-6 | Display length of tracking code and word-list encoding | QV-10 | 130 bits base32 |
-| OQ-7 | Hedged nonce labels for DKG PoK and complaint proofs (currently plain CSPRNG; add registry labels) | Protocol lead | Add in next revision |
+| OQ-7 | Hedged nonce labels for DKG PoK and complaint proofs (currently plain CSPRNG; add registry labels) | Protocol lead | **Resolved 2026-11-04 (QV-ADR-027 C3):** `pok-nonce`, `pok-share-nonce`, `cp-dh-nonce` added (§5.4 registry revision) |
 | OQ-8 | Per-contest weights / large `V` bound for Phase 2 | QV-20 | Out of v1 |
 | OQ-9 | Third-party extension record for closing time | QV-03 | None in v1 |
 | OQ-10 | R-01 reconciliation (research doc absent at authoring) | Protocol lead | Reconcile when present |
@@ -979,6 +984,7 @@ Other verification: property-based tests of the proofs (completeness, soundness 
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 2026-10-21 | Initial Draft |
+| 0.1-r1 | 2026-11-04 | §5.4 registry revision (QV-ADR-027; CP-02, B1-12, C3/OQ-7): `cp-dec-nonce` binds `pt(A)`, `pt(B)`; new hedged labels `pok-nonce`, `pok-share-nonce`, `cp-dh-nonce`; §5.7.2, §5.7.5, §5.7.8, §5.13.4, §5.16 updated. Prover-side only; verifiers unchanged; vectors regenerated. Owner-approved, not independently reviewed. |
 
 ---
 

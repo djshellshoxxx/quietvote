@@ -38,6 +38,11 @@ LABELS: dict[str, str] = {
     "proof-ssim": "hs",
     "limit-w": "hs_nz",
     "cp-dec-nonce": "hs_nz",
+    # Registry revision 2026-11-04 (QV-ADR-027 C3): hedged prover nonces. A verifier never recomputes a prover
+    # nonce; the labels are listed so the registry (and the tagged-hash vectors) stay complete.
+    "pok-nonce": "hs_nz",
+    "pok-share-nonce": "hs_nz",
+    "cp-dh-nonce": "hs_nz",
     "reveal": "H256",
 }
 

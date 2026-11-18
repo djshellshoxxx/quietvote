@@ -28,8 +28,8 @@
         "k": 1,
         "A_hex": "14d02048b9d4ee4902321e981fd6b3cf0dfaeee3b70629b5efad20da9ae22205",
         "proof": {
-          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
-          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+          "c": "8ea434bc7e3a6017b61c5dffe4d88d89ab4a87a3e0d04c2af200b0558c3ac703",
+          "s": "989d28103ecffba1e12d1aa3096748b83619d68126e9567bb69b43db0758ce07"
         }
       },
       "expect": {
@@ -50,8 +50,8 @@
         "k": 1,
         "A_hex": "14d02048b9d4ee4902321e981fd6b3cf0dfaeee3b70629b5efad20da9ae22205",
         "proof": {
-          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
-          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+          "c": "8ea434bc7e3a6017b61c5dffe4d88d89ab4a87a3e0d04c2af200b0558c3ac703",
+          "s": "989d28103ecffba1e12d1aa3096748b83619d68126e9567bb69b43db0758ce07"
         }
       },
       "expect": {
@@ -71,8 +71,8 @@
         "k": 0,
         "A_hex": "14d02048b9d4ee4902321e981fd6b3cf0dfaeee3b70629b5efad20da9ae22205",
         "proof": {
-          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
-          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+          "c": "8ea434bc7e3a6017b61c5dffe4d88d89ab4a87a3e0d04c2af200b0558c3ac703",
+          "s": "989d28103ecffba1e12d1aa3096748b83619d68126e9567bb69b43db0758ce07"
         }
       },
       "expect": {
@@ -92,8 +92,8 @@
         "k": 1,
         "A_hex": "14d02048b9d4ee4902321e981fd6b3cf0dfaeee3b70629b5efad20da9ae22205",
         "proof": {
-          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
-          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+          "c": "8ea434bc7e3a6017b61c5dffe4d88d89ab4a87a3e0d04c2af200b0558c3ac703",
+          "s": "989d28103ecffba1e12d1aa3096748b83619d68126e9567bb69b43db0758ce07"
         }
       },
       "expect": {
@@ -113,8 +113,8 @@
         "k": 1,
         "A_hex": "9e0a92bc679219c63a137a6b8995d7c2124ffd171f150085f85f3070d7b29749",
         "proof": {
-          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
-          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+          "c": "8ea434bc7e3a6017b61c5dffe4d88d89ab4a87a3e0d04c2af200b0558c3ac703",
+          "s": "989d28103ecffba1e12d1aa3096748b83619d68126e9567bb69b43db0758ce07"
         }
       },
       "expect": {
@@ -134,8 +134,8 @@
         "k": 1,
         "A_hex": "0000000000000000000000000000000000000000000000000000000000000000",
         "proof": {
-          "c": "68ee0128c092d3d59f3e36392f8d8cfa73735c8d8eaec218873db1f0f3a63f0d",
-          "s": "26a9a7fcecf5eaab520add7448af840b271c2deab7a3b23d86db525dfda8ac02"
+          "c": "8ea434bc7e3a6017b61c5dffe4d88d89ab4a87a3e0d04c2af200b0558c3ac703",
+          "s": "989d28103ecffba1e12d1aa3096748b83619d68126e9567bb69b43db0758ce07"
         }
       },
       "expect": {

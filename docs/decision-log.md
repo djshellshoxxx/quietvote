@@ -350,3 +350,13 @@ The ADRs below resolve cross-spec conflicts found during the 2026-10-21 consiste
 - **Consequences:** Server, QV-09 schema, server tests and any CLI enrolment client change. A successful real web/server registration journey must be added while the committed-roll refusal is retained. The raw token never crosses the wire.
 - **Requirements affected:** QV-04-REQ-005, QV-09 §3.3, QV-19 §6.1 / REQ-010.
 - **Review trigger:** External protocol review; any finding that the hashed form weakens invite secrecy or enables replay.
+
+### QV-ADR-029 — Pinned-roll registration (D-99, finding S1-01): refuse off-roll keys
+
+- **Status:** Accepted by project owner (2026-11-18).
+- **Context:** When the manifest pins `roll.root` and `roll.size`, the server still approved registrations for keys outside the pinned roll, and `roll_commit` had to equal both the manifest roll and the approved set. One extra invitee or one absent member could therefore block roll commitment ([review findings](audit/2026-11-11/README.md) S1-01; QV-04 REQ-009; QV-ADR-015).
+- **Decision:** Option (A). In pinned mode the server refuses registration of any key that is not a member of the pinned roll (typed refusal, no state change), and `roll_commit` is checked against the manifest's pinned roll only. Members of the pinned roll who never register do not block commitment. The QV-ADR-028 hashed-invite, invite-bound PoP contract is unchanged.
+- **Alternatives considered:** (B) a signed voter-removal route (new wire contract); (C) dropping pinned mode from v1.
+- **Consequences:** The membership check needs a roll-membership proof or the pinned roll list available to the server; the implementing commit names the source and adds negative tests for off-roll keys and for an absent member. Owner approval is not independent review; QuietVote remains unaudited and not for real elections.
+- **Requirements affected:** QV-04 REQ-009, QV-09 registration and roll endpoints, QV-ADR-015.
+- **Review trigger:** External protocol review; evidence that pinned rolls need organizer-side removal (would reopen option B).

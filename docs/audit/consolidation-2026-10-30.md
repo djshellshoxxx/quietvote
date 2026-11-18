@@ -4645,3 +4645,19 @@ Browser checks used `QV_REQUIRE_BROWSER=1` and `QV_CHROMIUM=/usr/bin/chromium`; 
 B3-01 registration remains blocked by protocol review. Other partial/open findings and external review gates above remain open despite passing runtime suites. This branch is unaudited and not for real elections.
 
 Historical scratch paths in quoted original evidence or raw worker assessments are provenance, not required working links. Current regression commands and final command receipts are reproducible. Original reports/PoCs remain unchanged; the companion JSON preserves all original records, exact commit mappings and the final bounded validation result.
+
+## Disposition notes, 2026-11-04 (QV-ADR-027, conformance stage C1)
+
+Appended note; the 2026-10-30 rows above are unchanged historical record.
+
+* **CP-02 / C2 / B1-12:** owner gate closed by QV-ADR-027 (register §B, recommended option C). QV-16 §5.4 `cp-dec-nonce` now
+  hashes `pt(A)`, `pt(B)` (spoil mode: `oid ‖ 0x00 ‖ ballot_code`, `pt(α)`, `pt(β)`); `packages/crypto/src/proofs.ts`
+  `decProve`/`spoilDecProve`. Regression: `packages/crypto/test/conformance-nonce-hedge.test.ts` and
+  `packages/protocol/test/conformance-nonce-hedge.test.ts` (constant RNG, same `(ctx, cid, oid)`, different aggregates:
+  different recovered commitments, no `s1 − s2 = (c1 − c2)·s_j` leak; failed before the change). Errata E-003.
+* **C3 (OQ-7, D-19, T-043, N-41 nonce part):** owner gate closed by QV-ADR-027. New `hs_nz` labels `pok-nonce`,
+  `pok-share-nonce`, `cp-dh-nonce` (secret, context, indices, statement point(s), `rand32`) replace plain CSPRNG nonces in
+  `pokProve`/`shareKeyProve`/`dhProve`. Same regression files. Errata E-004. N-41's ML-DSA cosignature part is not touched.
+* Prover-side only; TS and Python verifiers unchanged apart from the Python registry listing the three labels. Vectors
+  regenerated once; every vector id and expectation unchanged, three `tagged-*` registry vectors added.
+* Remaining gate: AI-assisted, unaudited; owner approval is not independent review. External cryptographic review required.
