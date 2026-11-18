@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { gzipSync } from 'node:zlib';
-import { buildSite } from '../src/build/site.ts';
+import ts from 'typescript';
+import { buildSite, lazyPreloadSources } from '../src/build/site.ts';
 import { LOCALE_META, type LocaleMeta } from '../src/i18n/locales-core.ts';
 import { hasReviews, loadLocaleDefs } from '../src/i18n/runtime.ts';
 import { gate, offeredLocales } from '../src/i18n/locales-core.ts';
@@ -21,8 +22,16 @@ const build = (): Promise<{ dir: string; assets: { path: string; sha384: string 
   })());
 
 const text = (dir: string, p: string): string => readFileSync(join(dir, p), 'utf8');
-/** esbuild writes non-ASCII as \\uXXXX escapes by default. */
-const esc = (s: string): string => [...s].map((c) => (c.charCodeAt(0) > 126 ? `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}` : c)).join('').toLowerCase();
+/** Compare decoded JavaScript values independently of the bundler's UTF-8/escape spelling. */
+function stringValues(source: string): Set<string> {
+  const values = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    if (ts.isStringLiteralLike(node)) values.add(node.text);
+    ts.forEachChild(node, visit);
+  };
+  visit(ts.createSourceFile('built.js', source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.JS));
+  return values;
+}
 
 test('build splits the app: translated catalogs and the results chart are separate chunks, not part of the entry', async () => {
   const { dir, assets } = await build();
@@ -31,12 +40,13 @@ test('build splits the app: translated catalogs and the results chart are separa
   assert.ok(entry);
   for (const l of ['es', 'fr', 'de', 'pt-BR', 'ar', 'charts']) assert.ok(names.some((n) => n.startsWith(`${l}-`) && n.endsWith('.js')), `chunk for ${l}`);
   const entryText = text(dir, `assets/${entry}`);
+  const entryStrings = stringValues(entryText);
   // distinctive translated strings must be in their chunk only
-  for (const [tag, sample] of [['es', ES['qv.shell.skip']], ['ar', AR['qv.shell.skip']]] as const) {
+  for (const [tag, sample] of [['es', ES['qv.shell.skip']], ['es', ES['qv.shell.privacyLink']], ['ar', AR['qv.shell.skip']]] as const) {
     assert.ok(sample.length > 5);
-    assert.ok(!entryText.toLowerCase().includes(esc(sample)), `${tag} text is not in the entry`);
+    assert.ok(!entryStrings.has(sample), `${tag} text is not in the entry`);
     const chunk = names.find((n) => n.startsWith(`${tag}-`))!;
-    assert.ok(text(dir, `assets/${chunk}`).toLowerCase().includes(esc(sample)), `${tag} text is in its chunk`);
+    assert.ok(stringValues(text(dir, `assets/${chunk}`)).has(sample), `${tag} decoded text is in its chunk`);
   }
   assert.ok(!entryText.includes('qv-bar-svg'), 'chart code is not in the entry');
   assert.ok(text(dir, `assets/${names.find((n) => n.startsWith('charts-'))!}`).includes('qv-bar-svg'));
@@ -107,4 +117,36 @@ test('main.ts loads locale tables before starting and passes them in; the app ha
     assert.ok(!/^import .*catalogs\//m.test(src), `${f} has no static catalog import`);
     assert.ok(!/from '\.\/locales\.ts'|from '\.\.\/i18n\/locales\.ts'/.test(src), `${f} does not pull the all-locales module`);
   }
+});
+
+test('W15: pins cover the chart and every static dependency before its importer; unreviewed catalogs stay unfetched', async () => {
+  const { dir } = await build();
+  const html = text(dir, 'index.html');
+  const pins = new Map([...html.matchAll(/<link rel="modulepreload" href="\/(assets\/[^"]+)" integrity="(sha384-[^"]+)" crossorigin="anonymous">/g)].map((m) => [m[1]!, m[2]!]));
+  const paths = [...pins.keys()];
+  assert.ok(paths.some((p) => p.startsWith('assets/charts-')), 'chart root is pinned');
+  for (const [path, integrity] of pins) {
+    assert.equal(integrity, `sha384-${createHash('sha384').update(readFileSync(join(dir, path))).digest('base64')}`, path);
+    const src = ts.createSourceFile(path, text(dir, path), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+    for (const node of src.statements) {
+      if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)) continue;
+      const dep = `assets/${node.moduleSpecifier.text.replace(/^\.\//, '')}`;
+      assert.ok(pins.has(dep), `${path} dependency ${dep} is pinned`);
+      assert.ok(paths.indexOf(dep) < paths.indexOf(path), `${dep} is pinned before ${path} can fetch descendants`);
+    }
+  }
+  for (const tag of ['es', 'fr', 'de', 'pt-BR', 'ar']) assert.ok(!paths.some((p) => p.startsWith(`assets/${tag}-`)), `unreviewed ${tag} is not preloaded`);
+  assert.ok(!paths.some((p) => p.includes('seal-worker')), 'worker remains a documented separate integrity gap');
+});
+
+test('W15: review records select the catalog pins, including the non-default build branch', async () => {
+  assert.deepEqual(lazyPreloadSources(), ['src/ui/charts.ts']);
+  const meta: LocaleMeta[] = LOCALE_META.map((m) => m.tag === 'ar' ? { ...m, review: { 'qv.privacy.g1': 'x' } } : m);
+  assert.deepEqual(lazyPreloadSources(meta), ['src/ui/charts.ts', 'src/i18n/catalogs/ar.ts']);
+  const dir = mkdtempSync(join(tmpdir(), 'qvW15-'));
+  await buildSite(dir, { localeMeta: meta });
+  const ar = readdirSync(join(dir, 'assets')).find((p) => p.startsWith('ar-'))!;
+  const integrity = `sha384-${createHash('sha384').update(readFileSync(join(dir, 'assets', ar))).digest('base64')}`;
+  assert.ok(text(dir, 'index.html').includes(`<link rel="modulepreload" href="/assets/${ar}" integrity="${integrity}" crossorigin="anonymous">`));
+  assert.ok(!/modulepreload[^>]*\/assets\/es-/.test(text(dir, 'index.html')));
 });

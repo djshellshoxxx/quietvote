@@ -352,6 +352,38 @@ test('fourth review: hand-offs need a scanned implementation, a real namespace a
   }
 });
 
+test('W15: only a transparent async gate preserves a scanned dynamic namespace', () => {
+  const head = "declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\ndeclare function gate(): Promise<void>;\ndeclare const other: typeof import('./b.ts');\ndeclare const flag: boolean;\n";
+  const b = "export function draw(env: { t(k: string): string }): string { return env.t('qv.a.x'); }";
+  const cases: [string, string, boolean][] = [
+    ['awaited gate', "(async () => { await gate(); return await import('./b.ts'); })()", true],
+    ['gate and direct import return', "(async () => { await gate(); return import('./b.ts'); })()", true],
+    ['arbitrary then chain', "gate().then(() => import('./b.ts'))", false],
+    ['missing gate', "(async () => { return await import('./b.ts'); })()", false],
+    ['unawaited gate', "(async () => { gate(); return await import('./b.ts'); })()", false],
+    ['arguments', "(async (ready: Promise<void>) => { await ready; return await import('./b.ts'); })(gate())", false],
+    ['early return', "(async () => { if (flag) return other; await gate(); return await import('./b.ts'); })()", false],
+    ['branch', "(async () => { await gate(); return flag ? await import('./b.ts') : other; })()", false],
+    ['impostor namespace', "(async () => { await gate(); return other; })()", false],
+    ['impostor promise', "({ then: async (_f: unknown) => other }).then(() => import('./b.ts'))", false],
+  ];
+  for (const [name, expression, forwarded] of cases) {
+    const files = {
+      'a.ts': `${head}export async function show(): Promise<void> { const charts = await ${expression}.catch(() => undefined); if (charts) charts.draw({ t }); }`,
+      'b.ts': b,
+    };
+    const refs = extractReferences(files, CAT, { evidence: translatorEvidence(inMemoryProgram(files), keysOf(files)) });
+    assert.equal(refs.forwarded.length, forwarded ? 1 : 0, name);
+    assert.deepEqual(refs.dynamic.map((x) => x.reason), forwarded ? [] : ['translator wrapper used as a value'], name);
+  }
+  const shadowed = {
+    'a.ts': `${head}export async function show(undefined: typeof import('./b.ts')): Promise<void> { const charts = await (async () => { await gate(); return await import('./b.ts'); })().catch(() => undefined); charts.draw({ t }); }`,
+    'b.ts': b,
+  };
+  const refs = extractReferences(shadowed, CAT, { evidence: translatorEvidence(inMemoryProgram(shadowed), keysOf(shadowed)) });
+  assert.deepEqual(refs.forwarded, [], 'a shadowed undefined fallback can substitute an untrusted namespace');
+});
+
 test('fourth review: type errors in a scanned file withdraw all evidence', () => {
   const files: Record<string, string> = { 'a.ts': "declare const tr: { t(k: string): string };\nconst t = (k: string): string => tr.t(k);\ndeclare const m: { t: number };\nexport const n: string = m.t;" };
   const options: ts.CompilerOptions = { target: ts.ScriptTarget.ES2022, types: [], strict: true, noEmit: true };

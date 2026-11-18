@@ -41,6 +41,7 @@ import { buildHeader } from './shell.ts';
 import { electionPath, parseRoute, type Route } from './route.ts';
 import { isCurrentPage, shouldHandleNavigation } from './navigation.ts';
 import { spoilSharesPanel } from './spoil-shares.ts';
+import { pinnedPreloads } from '../util/pinned-preload.ts';
 import { adminPanel } from './admin.ts';
 
 export interface AppEnv {
@@ -859,7 +860,10 @@ export function startApp(env: AppEnv): void {
           add(out, [errorBox('E-VER-FAIL', { id: Object.entries(report.checks).find(([,v]) => v === 'fail')?.[0] ?? report.findings[0]?.code ?? 'tally' }), ...reportContent(report)]);
           return;
         }
-        const charts = await import('./charts.ts').catch(() => undefined);
+        const charts = await (async () => {
+          await pinnedPreloads();
+          return import('./charts.ts');
+        })().catch(() => undefined);
         if (!current(run)) return;
         if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
         const sections = (): HTMLElement[] => {
