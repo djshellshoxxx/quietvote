@@ -718,7 +718,8 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
             st.add("chk.tally.decrypt", "E_TALLY_INSUFFICIENT", True, f"|T_valid| = {len(T_valid)} < t = {t}")
             _stop(st, "chk.result.rules")
         if tb.get("decrypters") != T_valid:
-            st.notes.append(f"tally.decrypters {tb.get('decrypters')} != T_valid {T_valid}")
+            st.add("chk.tally.decrypt", "E_DEC_PROOF", True,
+                   f"tally.decrypters {tb.get('decrypters')} != T_valid {T_valid}")
         S = T_valid[:t]
         lam = {jj: lagrange_at_zero(S, jj) for jj in S}
         for tc, mc in zip(tcont, mcont):
