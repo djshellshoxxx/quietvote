@@ -390,7 +390,8 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
     if (fn.body) visit(fn.body);
     return ok;
   };
-  // `x` in `x.f(...)` must be the real namespace of a scanned module: `import * as x` or `const x = await import('…')`.
+  // `x` in `x.f(...)` must be the real namespace of a scanned module. An awaited gate may precede the import
+  // in a zero-argument async IIFE, but arbitrary promise chains and callbacks are not namespace evidence.
   const scannedNamespace = (receiver: ts.Expression): boolean => {
     if (!ts.isIdentifier(receiver)) return false;
     const decls = checker.getSymbolAtLocation(receiver)?.declarations ?? [];
@@ -405,7 +406,16 @@ export function translatorEvidence(program: ts.Program, files: Readonly<Record<s
       if (ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression) && e.expression.name.text === 'catch') {
         const handler = e.arguments[0];
         if (e.arguments.length !== 1 || !handler || !ts.isArrowFunction(handler) || ts.isBlock(handler.body) || handler.body.kind !== ts.SyntaxKind.Identifier || (handler.body as ts.Identifier).text !== 'undefined') return false;
+        if (checker.getSymbolAtLocation(handler.body)?.declarations?.length) return false; // shadowed `undefined`
         e = unwrap(e.expression.expression);
+      }
+      if (ts.isCallExpression(e) && e.expression.kind !== ts.SyntaxKind.ImportKeyword) {
+        const fn = unwrap(e.expression);
+        if (e.arguments.length || !ts.isArrowFunction(fn) || fn.parameters.length || !ts.getModifiers(fn)?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword) || !ts.isBlock(fn.body)) return false;
+        const [gate, returned] = fn.body.statements;
+        if (fn.body.statements.length !== 2 || !gate || !ts.isExpressionStatement(gate) || !ts.isAwaitExpression(unwrap(gate.expression)) || !returned || !ts.isReturnStatement(returned) || !returned.expression) return false;
+        e = unwrap(returned.expression);
+        if (ts.isAwaitExpression(e)) e = unwrap(e.expression);
       }
       if (ts.isCallExpression(e) && e.expression.kind === ts.SyntaxKind.ImportKeyword) specifier = e.arguments[0];
     }

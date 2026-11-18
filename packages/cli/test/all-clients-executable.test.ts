@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { promisify } from 'node:util';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -38,7 +38,9 @@ test('all shipped executables complete one real-clock election with exact totals
     rate: Object.fromEntries(['read', 'proof', 'writeKey', 'writePre', 'auth', 'manage', 'export', 'gossip', 'inviteFail']
       .map((key) => [key, { limit: 100000, windowSec: 60 }])),
   });
-  const server = spawn(process.execPath, [serverBin, '--config', config], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const server = spawn(process.execPath, [serverBin, '--config', config], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+  const serverStdout = server.stdout;
+  assert.ok(serverStdout && server.stderr);
   const exited = once(server, 'exit');
   let serverStderr = '';
   server.stderr.setEncoding('utf8').on('data', (chunk: string) => { serverStderr += chunk; });
@@ -78,7 +80,7 @@ test('all shipped executables complete one real-clock election with exact totals
     const address = await new Promise<{ host: string; port: number }>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('server readiness timed out')), 30_000);
       let output = '';
-      server.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+      serverStdout.setEncoding('utf8').on('data', (chunk: string) => {
         output += chunk;
         const line = output.split('\n').find((s) => s.startsWith('{'));
         if (line) {
@@ -236,9 +238,10 @@ test('all shipped executables complete one real-clock election with exact totals
     const pyReport = path('python-report.json');
     await exec(process.env.QV_PYTHON ?? 'python3', ['-I', pythonBin, 'vectors', vectorDir, '--report', pyReport], { timeout: 90_000, signal: t.signal });
     assert.deepEqual(JSON.parse(readFileSync(pyReport, 'utf8')).results, { total: 1, passed: 1, failed: 0, not_implemented: 0 });
-    server.kill('SIGTERM');
+    server.send('qv-server:shutdown');
     const [code, signal] = await exited;
     assert.equal(code, 0, serverStderr); assert.equal(signal, null);
+    assert.equal(existsSync(join(w.dir, 'server-data', '.qv-server.lock')), false, 'cleanup releases ownership before exit');
     assert.equal(serverStderr.includes(passphrase), false);
   } finally {
     server.kill('SIGKILL');

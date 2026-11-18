@@ -3,6 +3,7 @@
 // cannot pass gate() whatever its table holds, so skipping its table changes nothing a voter can see.
 import type { LocaleDef } from './locales-core.ts';
 import { LOCALE_META, type LocaleMeta } from './locales-core.ts';
+import { pinnedPreloads } from '../util/pinned-preload.ts';
 
 type Table = LocaleDef['messages'];
 const LOADERS: Record<string, () => Promise<Table>> = {
@@ -19,14 +20,9 @@ export const hasReviews = (m: { review: object }): boolean => Object.keys(m.revi
 export async function loadLocaleDefs(load: Record<string, () => Promise<Table>> = LOADERS, meta: readonly LocaleMeta[] = LOCALE_META): Promise<LocaleDef[]> {
   return Promise.all(meta.map(async (m): Promise<LocaleDef> => {
     const loader = load[m.tag];
-    let messages: Table = {};
-    if (loader !== undefined && hasReviews(m)) {
-      try {
-        messages = await loader();
-      } catch {
-        messages = {};
-      }
-    }
-    return { ...m, messages };
+    return {
+      ...m,
+      messages: loader && hasReviews(m) ? await pinnedPreloads().then(loader).catch(() => ({})) : {},
+    };
   }));
 }

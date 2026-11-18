@@ -46,12 +46,21 @@ export interface WorldOpts {
   witnessQuorum?: number;
   spoilTrustees?: boolean;
   server?: Partial<ServerOptions>;
+  /**
+   * Send `connection: close` on every request so no pooled idle socket is reused. For tests that block the event loop
+   * longer than the keep-alive window (spawnSync, multi-second in-process verification): the next fetch can otherwise
+   * pick an idle socket before timers run while the server's expired keep-alive timer destroys it (ECONNRESET, seen on
+   * Node 24 CI in e2e.test.ts). Server keep-alive behaviour itself is not what such tests assert.
+   */
+  freshConnections?: boolean;
 }
 
 export class World {
   clock = T_SETUP;
   dir = mkdtempSync(join(tmpdir(), 'qv-'));
   logs: string[] = [];
+  /** Wall-clock time of the last request (diagnostics only; election time is `clock`). */
+  lastRequestAt = Date.now();
   server!: QuietVoteServer;
   base = '';
   o: WorldOpts;
@@ -123,8 +132,19 @@ export class World {
     if (o.key) {
       headers['authorization'] = signRequest(o.key.secretKey, o.key.publicKey, method, path, this.audience, bytes, o.ts ?? this.nowSec, o.nonce ?? this.rng.bytes(16));
     }
-    const r = await fetch(this.base + path, { method, headers, ...(bytes.length ? { body: Buffer.from(bytes) } : {}) });
-    const text = await r.text();
+    if (this.o.freshConnections) headers['connection'] = 'close';
+    const idleMs = Date.now() - this.lastRequestAt;
+    let r: Response;
+    let text: string;
+    try {
+      r = await fetch(this.base + path, { method, headers, ...(bytes.length ? { body: Buffer.from(bytes) } : {}) });
+      text = await r.text();
+    } catch (e) {
+      // Name the request so a transport failure (e.g. ECONNRESET) is diagnosable from the CI log alone.
+      throw new Error(`World.req ${method} ${path} failed after ${idleMs} ms idle: ${(e as Error).message}`, { cause: e });
+    } finally {
+      this.lastRequestAt = Date.now();
+    }
     let json: unknown;
     try {
       json = JSON.parse(text);

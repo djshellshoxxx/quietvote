@@ -20,7 +20,10 @@ let server: QuietVoteServer | undefined;
 let launching = false;
 let stopping: Promise<void> | undefined;
 async function stop(): Promise<void> {
-  stopping ??= (async () => { await server?.stop(); })();
+  stopping ??= (async () => {
+    try { await server?.stop(); }
+    finally { if (process.connected) process.disconnect(); }
+  })();
   await stopping;
 }
 try {
@@ -40,6 +43,11 @@ try {
       };
       process.on('SIGINT', shutdown);
       process.on('SIGTERM', shutdown);
+      // Only a parent that explicitly created this IPC channel can send control messages.
+      // Unlike child.kill('SIGTERM'), IPC permits the same cleanup to run on Windows.
+      if (typeof process.send === 'function') {
+        process.on('message', (message: unknown) => { if (message === 'qv-server:shutdown') shutdown(); });
+      }
       const address = await starting;
       process.stdout.write(JSON.stringify({ event: 'listening', host: address.host, port: address.port }) + '\n');
     }
