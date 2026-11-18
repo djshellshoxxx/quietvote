@@ -80,12 +80,12 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.privacy.g1` **[normative]**: Your ballot is locked on your own device before it is sent. The server, the organizers and other members only ever see the locked version.
 - `qv.privacy.g2` **[normative]**: Nobody can open a single ballot alone. Opening needs {t} of the {n} trustees ({trustee_names, list}) working together, and they open only the combined total.
 - `qv.privacy.g3` **[normative]**: Anyone can check the count. The locked ballots, the proofs and the result are published, and free software can re-check them without trusting the server or the organizers.
-- `qv.privacy.g4` **[normative]**: If you change your mind, you can vote again before the vote closes. Only your newest ballot counts.
+- `qv.privacy.g4` **[normative]**: If this election lets you vote again, you can change your vote before it closes. Only your newest ballot counts.
 - `qv.privacy.public` **[normative]**: Visible to everyone who can see this election: that you voted, when, and your ballot code. Not visible: what you chose.
 - `qv.privacy.notclaimed.head` **[normative]**: What this does not protect
 - `qv.privacy.nc1` **[normative]**: If {t} or more trustees secretly work together, they could read individual ballots.
 - `qv.privacy.nc2` **[normative]**: If your phone or computer is infected or being watched, someone could see or change what you pick before it is locked. Testing your ballot (see "Test this ballot") can catch some of this, not all.
-- `qv.privacy.nc3` **[normative]**: If someone makes you vote a certain way or watches you vote, this system cannot stop them. Voting again later is the only protection offered, and only while the vote is open.
+- `qv.privacy.nc3` **[normative]**: If someone makes you vote a certain way or watches you vote, this system cannot stop them. Voting again may help only when allowed and while the vote is open.
 - `qv.privacy.nc4` **[normative]**: This vote is not anonymous about participation. Others can see that you voted.
 - `qv.privacy.nc5` **[normative]**: Your internet provider, and the server, can see that your device connected to this site. Using Tor Browser hides this from them.
 - `qv.privacy.nc6` **[normative]**: If everyone who voted picks the same option, others can tell how everyone voted. Very small groups reveal more.

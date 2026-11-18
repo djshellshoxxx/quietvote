@@ -320,12 +320,12 @@ Format: ICU MessageFormat (QV-13). `{…}` are variables. IDs are stable keys. *
 | `qv.privacy.g1` | `Your ballot is locked on your own device before it is sent. The server, the organizers and other members only ever see the locked version.` |
 | `qv.privacy.g2` | `Nobody can open a single ballot alone. Opening needs {t} of the {n} trustees ({trustee_names}) working together, and they open only the combined total.` |
 | `qv.privacy.g3` | `Anyone can check the count. The locked ballots, the proofs and the result are published, and free software can re-check them without trusting the server or the organizers.` |
-| `qv.privacy.g4` | `If you change your mind, you can vote again before the vote closes. Only your newest ballot counts.` |
+| `qv.privacy.g4` | `If this election lets you vote again, you can change your vote before it closes. Only your newest ballot counts.` |
 | `qv.privacy.public` | `Visible to everyone who can see this election: that you voted, when, and your ballot code. Not visible: what you chose.` |
 | `qv.privacy.notclaimed.head` | `What this does not protect` |
 | `qv.privacy.nc1` | `If {t} or more trustees secretly work together, they could read individual ballots.` |
 | `qv.privacy.nc2` | `If your phone or computer is infected or being watched, someone could see or change what you pick before it is locked. Testing your ballot (see "Test this ballot") can catch some of this, not all.` |
-| `qv.privacy.nc3` | `If someone makes you vote a certain way or watches you vote, this system cannot stop them. Voting again later is the only protection offered, and only while the vote is open.` |
+| `qv.privacy.nc3` | `If someone makes you vote a certain way or watches you vote, this system cannot stop them. Voting again may help only when allowed and while the vote is open.` |
 | `qv.privacy.nc4` | `This vote is not anonymous about participation. Others can see that you voted.` |
 | `qv.privacy.nc5` | `Your internet provider, and the server, can see that your device connected to this site. Using Tor Browser hides this from them.` |
 | `qv.privacy.nc6` | `If everyone who voted picks the same option, others can tell how everyone voted. Very small groups reveal more.` |

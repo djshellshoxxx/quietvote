@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -63,32 +64,69 @@ test('launcher rejects malformed and unsafe configuration before data creation',
   } finally { rmSync(f.dir, { recursive: true, force: true }); }
 });
 
-test('launcher starts actual server, answers readiness and stops on SIGTERM', { timeout: 20_000 }, async (t) => {
-  const f = fixture();
-  f.write();
-  const child = spawn(process.execPath, [bin, '--config', f.path], { stdio: ['ignore', 'pipe', 'pipe'] });
-  t.after(() => { child.kill('SIGKILL'); });
-  let stderr = '';
-  child.stderr.setEncoding('utf8').on('data', (chunk: string) => { stderr += chunk; });
-  const exited = once(child, 'exit');
-  try {
-    const address = await new Promise<{ host: string; port: number }>((resolve, reject) => {
-      let output = '';
-      child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
-        output += chunk;
-        const line = output.split('\n').find((s) => s.startsWith('{'));
-        if (line) { try { resolve(JSON.parse(line)); } catch (e) { reject(e); } }
+// Windows child.kill() terminates the process without delivering its JS signal handlers.
+// Exercise the parent IPC contract everywhere and retain real SIGTERM coverage on POSIX.
+for (const control of process.platform === 'win32' ? ['IPC'] : ['SIGTERM', 'IPC']) {
+  test(`launcher starts actual server, answers readiness and stops on ${control}`, { timeout: 20_000 }, async (t) => {
+    const f = fixture();
+    f.write();
+    const child = spawn(process.execPath, [bin, '--config', f.path], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+    const stdout = child.stdout;
+    assert.ok(stdout && child.stderr);
+    t.after(() => { child.kill('SIGKILL'); });
+    let stderr = '';
+    child.stderr.setEncoding('utf8').on('data', (chunk: string) => { stderr += chunk; });
+    const exited = once(child, 'exit');
+    try {
+      const address = await new Promise<{ host: string; port: number }>((resolve, reject) => {
+        let output = '';
+        stdout.setEncoding('utf8').on('data', (chunk: string) => {
+          output += chunk;
+          const line = output.split('\n').find((s) => s.startsWith('{'));
+          if (line) { try { resolve(JSON.parse(line)); } catch (e) { reject(e); } }
+        });
+        child.once('error', reject);
+        child.once('exit', (code) => reject(new Error(`server exited ${code}: ${stderr}`)));
       });
-      child.once('error', reject);
-      child.once('exit', (code) => reject(new Error(`server exited ${code}: ${stderr}`)));
-    });
-    assert.equal((await fetch(`http://${address.host}:${address.port}/readyz`)).status, 200);
-    assert.equal(existsSync(join(f.dataDir, 'control.sqlite')), true);
-    child.kill('SIGTERM');
-    const [code, signal] = await exited;
-    assert.equal(code, 0, stderr);
-    assert.equal(signal, null);
-  } finally { child.kill('SIGKILL'); await exited; rmSync(f.dir, { recursive: true, force: true }); }
+      if (control === 'IPC') {
+        child.send('unrecognized message');
+        child.send({ type: 'qv-server:shutdown' }); // Only the exact string is a control request.
+      }
+      assert.equal((await fetch(`http://${address.host}:${address.port}/readyz`)).status, 200);
+      assert.equal(existsSync(join(f.dataDir, 'control.sqlite')), true);
+      if (control === 'IPC') child.send('qv-server:shutdown');
+      else child.kill('SIGTERM');
+      const [code, signal] = await exited;
+      assert.equal(code, 0, stderr);
+      assert.equal(signal, null);
+      assert.equal(existsSync(join(f.dataDir, '.qv-server.lock')), false, 'cleanup releases ownership before exit');
+    } finally { child.kill('SIGKILL'); await exited; rmSync(f.dir, { recursive: true, force: true }); }
+  });
+}
+
+test('launcher with parent IPC exits after listen failure and releases ownership', { timeout: 20_000 }, async (t) => {
+  const f = fixture();
+  const occupied = createServer();
+  await new Promise<void>((resolve) => occupied.listen(0, '127.0.0.1', resolve));
+  const address = occupied.address();
+  assert.ok(address && typeof address !== 'string');
+  f.write({ ...f.config, host: '127.0.0.1', port: address.port });
+  const child = spawn(process.execPath, [bin, '--config', f.path], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+  t.after(() => { child.kill('SIGKILL'); });
+  const exited = once(child, 'exit');
+  let stderr = '';
+  assert.ok(child.stderr);
+  child.stderr.setEncoding('utf8').on('data', (chunk: string) => { stderr += chunk; });
+  try {
+    assert.deepEqual(await exited, [1, null], stderr);
+    assert.match(stderr, /startup failed/);
+    assert.equal(existsSync(join(f.dataDir, '.qv-server.lock')), false);
+  } finally {
+    child.kill('SIGKILL');
+    await exited;
+    await new Promise<void>((resolve, reject) => occupied.close((error) => error ? reject(error) : resolve()));
+    rmSync(f.dir, { recursive: true, force: true });
+  }
 });
 
 

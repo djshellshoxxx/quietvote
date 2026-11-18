@@ -15,11 +15,20 @@ The package declares `qv-server` as its executable. `--help` describes its compl
 argument grammar. Unknown/repeated options and positionals fail. Exit 0 means
 config validation succeeded, help printed, or a running service shut down cleanly;
 2 means invalid arguments/configuration; 1 means startup/shutdown failure.
-SIGINT/SIGTERM stop the existing services, close connections and databases, and
+On POSIX, SIGINT/SIGTERM stop the existing services, close connections and databases, and
 await the existing service cleanup. HTTP shutdown force-closes remaining connections;
 it does not guarantee that every in-flight client receives a response. The listening event on stdout includes only bind host/port, never
 tokens or the complete configuration. Operational events use the existing stderr
 JSON logger. Startup errors are deliberately generic to avoid exposing secrets.
+
+For a Node parent supervisor on Windows or POSIX, spawn the executable with an
+IPC channel (`stdio: ['ignore', 'pipe', 'pipe', 'ipc']`). After receiving the
+listening event, send the exact string `qv-server:shutdown` with `child.send()`.
+The launcher completes the same cleanup, disconnects IPC and exits 0; other
+messages are ignored. This channel is inherited from the parent, not exposed
+over HTTP. Windows `child.kill('SIGTERM')` terminates the process abruptly and
+does not exercise graceful cleanup. Forced termination still leaves the
+data-directory lock for deliberate recovery as described below.
 
 ## Configuration
 
@@ -60,8 +69,9 @@ load static assets, test DNS, probe a port, verify a backup, or replace the plan
 
 Use a temporary absolute data path, loopback host, a loopback public origin, port
 0 and registration `closed`. Start the command, read the listening JSON event,
-then GET `/healthz` and `/readyz` on that bind host/port. Send SIGTERM and wait for
-exit 0. The automated `packages/server/test/launcher.test.ts` exercises this exact
+then GET `/healthz` and `/readyz` on that bind host/port. Send SIGTERM on POSIX or
+the parent IPC shutdown message on either platform and wait for exit 0. The
+automated `packages/server/test/launcher.test.ts` exercises this
 flow against the real server. These health endpoints show liveness/database
 availability; they are not election-integrity or complete deployment-readiness
 certificates.

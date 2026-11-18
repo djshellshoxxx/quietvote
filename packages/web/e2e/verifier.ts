@@ -185,7 +185,8 @@ try {
   assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0); checks++;
   await page.goto(`${origin}/e/${board.apiId}/results`);
   await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
-  assert.ok(await page.getByRole('table').count() > 0); checks++;
+  assert.ok(await page.getByRole('table').count() > 0);
+  assert.ok(await page.locator('svg.qv-bar-svg').count() > 0, 'positive control: the pinned chart renders'); checks++;
   // Live result keys are used only by an explicit run; edits discard a pending board response.
   board = new FakeBoard(supplemental.sim); extraAuthor = supplemental.author;
   await page.goto(`${origin}/e/${board.apiId}/results`);
@@ -244,7 +245,12 @@ try {
   waitForCharts = new Promise<void>((resolve) => { releaseCharts = resolve; });
   const chartPending = new Promise<void>((resolve) => { chartsRequested = resolve; });
   const racing = await browser.newPage();
-  await racing.goto(`${origin}/e/${board.apiId}/results`); await chartPending;
+  await racing.goto(`${origin}/e/${board.apiId}/results`, { waitUntil: 'domcontentloaded' }); await chartPending;
+  // The head preload now requests charts before verification starts. Its duplicate is added only after proof checks,
+  // so this milestone proves the append races an actual pending results run instead of merely an eager download.
+  const originalPins = (readFileSync(join(dist, 'index.html'), 'utf8').match(/rel="modulepreload"/g) ?? []).length;
+  await racing.waitForFunction((n) => document.querySelectorAll('link[rel="modulepreload"]').length > n, originalPins, { timeout: 30000 });
+  assert.ok(eventClients.size > 0, 'live stream is connected while the import gate waits');
   const appendedSeq = board.entries.length;
   board = new FakeBoard({ ...sim, log: [...sim.log, { seq: appendedSeq, entry: tally.entry }] });
   const firstRead = racing.waitForResponse((r) => r.url().includes(`/log/entries?from=${appendedSeq}&`));
@@ -276,9 +282,46 @@ try {
   await tamperPage.goto(origin); await blocked;
   assert.equal(await tamperPage.evaluate(() => Object.hasOwn(globalThis, '__qvTamper')), false);
   await tamperPage.close(); writeFileSync(join(dist, chunk), bytes); checks++;
+  // W15: serve changed lazy-module bytes under the trusted build's original HTML and SRI pin.
+  const lazy = /rel="modulepreload" href="\/(assets\/charts-[^"]+\.js)" integrity="sha384-/.exec(entryHtml)?.[1];
+  assert.ok(lazy, 'lazy chart has an integrity preload');
+  const lazyBytes = readFileSync(join(dist, lazy));
+  writeFileSync(join(dist, lazy), Buffer.concat([Buffer.from('globalThis.__qvLazyTamper=true;'), lazyBytes]));
+  board = new FakeBoard(sim);
+  const fresh = await browser.newContext();
+  try {
+    const lazyPage = await fresh.newPage();
+    const pageErrors: string[] = []; lazyPage.on('pageerror', (e) => pageErrors.push(e.message));
+    let fetches = 0; lazyPage.on('request', (r) => { if (r.url() === `${origin}/${lazy}`) fetches++; });
+    const blocked = lazyPage.waitForEvent('console', { predicate: (m) => /integrity|valid digest/i.test(m.text()) && m.text().includes(lazy), timeout: 10000 });
+    await lazyPage.goto(`${origin}/e/${board.apiId}/results`); await blocked;
+    await lazyPage.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
+    assert.ok(await lazyPage.getByRole('table').count() > 0, 'table remains available when the chart is blocked');
+    assert.equal(await lazyPage.locator('svg.qv-bar-svg').count(), 0);
+    assert.equal(await lazyPage.evaluate(() => Object.hasOwn(globalThis, '__qvLazyTamper')), false, 'tampered lazy code never executes');
+    assert.ok(fetches > 0, 'tampered bytes were actually requested');
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await fresh.close(); writeFileSync(join(dist, lazy), lazyBytes);
+  }
+  checks++;
+  // The supported platform floor includes browsers that ignore modulepreload without emitting an error event.
+  const older = await browser.newContext();
+  try {
+    await older.addInitScript(() => {
+      const supports = DOMTokenList.prototype.supports;
+      DOMTokenList.prototype.supports = function (token: string): boolean { return token === 'modulepreload' ? false : supports.call(this, token); };
+    });
+    const olderPage = await older.newPage();
+    await olderPage.goto(`${origin}/e/${board.apiId}/results`);
+    await olderPage.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
+    assert.ok(await olderPage.getByRole('table').count() > 0, 'unsupported preload falls back to the table');
+    assert.equal(await olderPage.locator('svg.qv-bar-svg').count(), 0);
+  } finally { await older.close(); }
+  checks++;
   assert.deepEqual(errors, [], 'no CSP, Trusted Types, or uncaught page errors');
   assert.deepEqual(thirdParty, []); checks++;
-  console.log(`verifier browser: ${checks}/${checks} passed (generated policies, real server, proof gate, anchor, skipped checks, static SRI, stale navigation, blocked storage, size bounds, live append during chart import, offline cancellation/retry/stale reads)`);
+  console.log(`verifier browser: ${checks}/${checks} passed (generated policies, real server, proof gate, anchor, skipped checks, static and lazy SRI, unsupported preload fallback, stale navigation, blocked storage, size bounds, live append during chart import, offline cancellation/retry/stale reads)`);
 } finally {
   await browser.close(); await real.stop(); await new Promise<void>((resolve) => site.close(() => resolve())); rmSync(dir, { recursive: true, force: true });
 }

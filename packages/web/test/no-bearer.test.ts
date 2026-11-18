@@ -8,7 +8,7 @@ import { ApiClient } from '../src/api/client.ts';
 import * as clientModule from '../src/api/client.ts';
 import { createSigner } from '../src/key/signer.ts';
 
-const here = (p: string): string => new URL(p, import.meta.url).pathname;
+const here = (p: string): URL => new URL(p, import.meta.url);
 
 test('N-20: ApiClient has no session-token or challenge/session methods and no export with those names', () => {
   const proto = Object.getOwnPropertyNames(ApiClient.prototype);

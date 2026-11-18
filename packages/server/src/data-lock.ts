@@ -11,7 +11,9 @@ export const DATA_LOCK_NAME = '.qv-server.lock';
  */
 export function lockDataDirectory(dataDir: string): { dataDir: string; release(): void } {
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
-  const canonical = realpathSync(dataDir);
+  // Stored-election recovery compares native-resolved file paths exactly. Use the same spelling for the root;
+  // the JavaScript resolver preserves case aliases on case-insensitive filesystems.
+  const canonical = realpathSync.native(dataDir);
   const path = join(canonical, DATA_LOCK_NAME);
   try {
     mkdirSync(path, { mode: 0o700 });

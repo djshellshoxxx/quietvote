@@ -89,7 +89,9 @@ test('another process cannot open a live server data directory', { timeout: 30_0
     import { buildServer } from ${JSON.stringify(moduleUrl)};
     const server = buildServer({ dataDir: process.argv[1], registrationMode: 'closed', logSink: () => {} });
     await server.start();
-    process.on('SIGTERM', async () => { await server.stop(); process.exit(0); });
+    process.on('message', async (message) => {
+      if (message === 'stop') { await server.stop(); process.exit(0); }
+    });
     process.send('ready');
   `, dir], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
   const exited = once(child, 'exit');
@@ -101,7 +103,7 @@ test('another process cannot open a live server data directory', { timeout: 30_0
       exited.then(() => { throw new Error(`lock child exited early: ${stderr}`); }),
     ]);
     assert.throws(() => buildServer(options(dir)), /data directory.*locked/i);
-    child.kill('SIGTERM');
+    child.send('stop');
     assert.deepEqual(await exited, [0, null]);
     const next = buildServer(options(dir));
     await next.stop();
