@@ -3,7 +3,7 @@
 import { hexToBytes } from '@quietvote/crypto';
 import { verifyElectionText, type VerificationProgress } from '@quietvote/protocol';
 import { createTranslator, type MessageKey } from '../i18n/index.ts';
-import { verificationSummary } from '../flow/verification.ts';
+import { verificationSummary, verifyPublicBundleText } from '../flow/verification.ts';
 import { electionIdOf, sameElectionId } from '../util/crockford.ts';
 
 const t = createTranslator('en').t;
@@ -75,7 +75,7 @@ async function run(): Promise<void> {
   try {
     const text = await f.text();
     if (active !== scope) return;
-    const rep = await verifyElectionText(text, { cooperative: { signal: scope.signal, checkpoint: async (p) => {
+    const rep = await verifyPublicBundleText(text, { cooperative: { signal: scope.signal, checkpoint: async (p) => {
       if (active !== scope) return;
       const progress = $('progress') as HTMLProgressElement;
       progress.max = Math.max(1, p.total);

@@ -69,8 +69,7 @@ the corpus is not signed yet (the vector MANIFEST is unsigned too).
   `pinnedManifestHash` / `--manifest-hash` adds an explicit caveat that the hash was not supplied out of band. This discloses the
   weaker trust basis without changing PASS/INCOMPLETE semantics. Modified reports are sealed again so their hashes remain correct.
 * **TSV-06:** canary self-tests compare an explicitly supplied expected verdict as well as named checks and finding codes.
-* **TSV-04 remains a verdict-policy gate:** a board-layer exception produces a V4 `not_run` result and an explicit caveat; the text
-  report lists skipped checks. Whether this must force the overall verdict to FAIL needs the owner decision also tracked as P1/TSV-05.
+* **TSV-04 / P1 / TSV-05 (2026-11-16, ADR-027):** missing or unchecked append/witness evidence now caps the default verdict at INCOMPLETE; a supplied board-layer exception remains not_run with a generic caveat and cannot use the explicit content-only opt-out. Fatal findings retain FAIL precedence. See [the implementation handoff](../../docs/handoffs/P1-LOG-REQUIRED-20261116.md) for caller classification and the zero-witness exception.
   No board or governance failure was reclassified during consolidation.
 * The protocol verifier now rejects unknown fields on the manifest envelope and its signatures (B1-13). No signed vector or corpus
   expectation was weakened for these changes.

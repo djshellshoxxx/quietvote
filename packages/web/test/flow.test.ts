@@ -203,7 +203,7 @@ test('revote chains by supersedes and the verifier counts only the newest', asyn
   assert.equal(v.countedBallots?.[0]?.code, c2.codeHex);
 });
 
-test('transient network failure: retry resends the SAME bytes; the log gets one entry (idempotent)', async () => {
+test('transient network failure: explicit retry resends the SAME bytes; the log gets one entry (idempotent)', async () => {
   const e = await env();
   e.board.faults = ['network', '503'];
   const c = controller(e, await e.signer(3));
@@ -212,6 +212,8 @@ test('transient network failure: retry resends the SAME bytes; the log gets one 
   await c.seal();
   c.codeRendered();
   const before = e.board.entries.length;
+  assert.equal((await c.cast())?.outcome, 'PENDING_UNCONFIRMED');
+  assert.equal((await c.cast())?.outcome, 'PENDING_UNCONFIRMED');
   const rep = await c.cast();
   assert.equal(rep?.outcome, 'ACCEPTED_RECORDED');
   const posts = e.board.requests.filter((r) => r.method === 'POST');
@@ -229,6 +231,7 @@ test('lost response after the server recorded the ballot: retry returns the orig
   await c.seal();
   c.codeRendered();
   const before = e.board.entries.length;
+  assert.equal((await c.cast())?.outcome, 'PENDING_UNCONFIRMED');
   const rep = await c.cast();
   assert.equal(rep?.outcome, 'ACCEPTED_RECORDED');
   assert.equal(e.board.entries.length, before + 1);
@@ -236,7 +239,7 @@ test('lost response after the server recorded the ballot: retry returns the orig
 
 test('persistent network failure leaves an unknown delivery that can be retried safely (E-NET-TIMEOUT)', async () => {
   const e = await env();
-  e.board.faults = ['network', 'network', 'network', 'network'];
+  e.board.faults = ['network'];
   const c = controller(e, await e.signer(3));
   c.select(SEL);
   c.review();

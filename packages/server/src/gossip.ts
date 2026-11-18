@@ -14,6 +14,7 @@ import {
   type Checkpoint,
 } from '@quietvote/board';
 import { parseQvJson, sha256, utf8 } from '@quietvote/crypto';
+import { gossipPeerId } from './gossip-health.ts';
 import type { Env } from './env.ts';
 import type { ElectionRuntime } from './election.ts';
 import type { ElectionPool } from './pool.ts';
@@ -169,6 +170,7 @@ export class GossipService {
   private readonly transport: WebhookTransport;
   private timer: NodeJS.Timeout | undefined;
   private running = false;
+  private current: Promise<GossipStats> | undefined;
   private stopped = false;
 
   constructor(env: Env, pool: ElectionPool) {
@@ -183,7 +185,8 @@ export class GossipService {
         throw new Error(`config gossipPeers: ${e instanceof TargetRejected ? `${e.code}: ${e.message}` : 'invalid url'}`);
       }
     }
-    this.peers = peers.map((p) => p.replace(/\/+$/, ''));
+    this.peers = [...new Set(peers.map((p) => p.replace(/\/+$/, '')))];
+    env.control.configureGossipHealth(this.peers.map(gossipPeerId));
     this.resolver = env.cfg.gossipResolver ?? systemResolver;
     this.transport = env.cfg.gossipTransport ?? httpsTransport();
     if (this.peers.length > 0 && env.cfg.gossipIntervalMs > 0) {
@@ -192,15 +195,23 @@ export class GossipService {
     }
   }
 
-  stop(): void {
+  stop(): Promise<void> {
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
+    return this.current?.then(() => undefined, () => undefined) ?? Promise.resolve();
   }
 
   /** One round over all public, non-draft elections. Re-entrant calls return immediately. */
-  async runOnce(): Promise<GossipStats> {
-    if (this.running || this.stopped || this.peers.length === 0) return this.stats;
+  runOnce(): Promise<GossipStats> {
+    if (this.running || this.stopped || this.peers.length === 0) return Promise.resolve(this.stats);
+    const work = this.sweep();
+    this.current = work;
+    void work.finally(() => { if (this.current === work) this.current = undefined; }).catch(() => undefined);
+    return work;
+  }
+
+  private async sweep(): Promise<GossipStats> {
     this.running = true;
     this.stats.runs++;
     try {
@@ -211,7 +222,11 @@ export class GossipService {
         if (rows.length === 0) break;
         for (const r of rows) {
           after = r.election_id;
-          if (this.stopped || budget-- <= 0) return this.stats;
+          if (this.stopped) return this.stats;
+          if (budget-- <= 0) {
+            this.health('scheduler', null); // a bounded round completed successfully
+            return this.stats;
+          }
           if (r.access !== 'public' || r.state === 'DRAFT') continue;
           const rt = await this.pool.get(r.election_id);
           if (!rt) continue;
@@ -223,14 +238,28 @@ export class GossipService {
           }
         }
       }
+      this.health('scheduler', null);
+    } catch (error) {
+      this.health('scheduler', 'GOSSIP_SWEEP_FAILED');
+      throw error;
     } finally {
       this.running = false;
     }
     return this.stats;
   }
 
+  private health(id: string, error: string | null): void {
+    const previous = this.env.control.gossipHealth().find((row) => row.peer_id === id);
+    this.env.control.recordGossipHealth(id, error);
+    if (previous?.last_attempt_at === null || previous?.last_error !== error) {
+      this.env.logger.event(id === 'scheduler' ? 'gossip_sweep' : 'gossip_exchange',
+        error === null ? { outcome: 'ok' } : { outcome: 'error', error_code: error });
+    }
+  }
+
   private async exchangeOne(rt: ElectionRuntime, peer: string, note: string): Promise<void> {
     const url = `${peer}/api/v1/gossip/checkpoints`;
+    const health = (error: string | null): void => this.health(gossipPeerId(peer), error);
     this.stats.sent++;
     let status = 0;
     let body: Buffer | undefined;
@@ -243,6 +272,7 @@ export class GossipService {
       });
       if (r.truncated) {
         this.stats.badResponses++;
+        health('GOSSIP_TRUNCATED');
         return;
       }
       status = r.status;
@@ -250,10 +280,12 @@ export class GossipService {
     } catch (e) {
       if (e instanceof TargetRejected) this.stats.blocked++;
       else this.stats.failed++;
+      health(e instanceof TargetRejected ? 'GOSSIP_TARGET_BLOCKED' : 'GOSSIP_TRANSPORT_FAILED');
       return;
     }
     if (status !== 200 && status !== 409) {
       this.stats.failed++;
+      health('GOSSIP_HTTP_STATUS');
       return;
     }
     let notes: string[] = [];
@@ -267,19 +299,23 @@ export class GossipService {
       }
     } catch {
       this.stats.badResponses++;
+      health('GOSSIP_BAD_RESPONSE');
       return;
     }
     this.stats.ok++;
     if (status === 200 && notes.length === 0) this.stats.badResponses++;
+    let valid = 0;
     for (const n of notes) {
       const cp = ownSignedNote(rt, n); // a peer's claims are checked, never trusted
       if (cp === undefined) {
         if (status === 200) this.stats.badResponses++;
         continue;
       }
+      valid++;
       const j = judge(this.env, rt, cp, n, 'outbound');
       if (j.recorded) this.stats.evidence++;
     }
+    health(notes.length === 0 || valid !== notes.length ? 'GOSSIP_INVALID_NOTE' : null);
   }
 }
 

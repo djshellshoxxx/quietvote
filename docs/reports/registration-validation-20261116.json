@@ -1,0 +1,122 @@
+{
+  "starting_source": "bf6c36df2bb8df6bd5b985a55a29ad4e2a1af912",
+  "implementation": "be730e996bf1b312768fc9b9b08c704005f06af8",
+  "implementation_tree": "a7edc2d0aafaf670776311117446e103750e58dd",
+  "followup_fix": "894a94de1da91b007461612944463159d251a5c9",
+  "runtime": {
+    "node": "v24.22.1",
+    "platform": "linux/x64"
+  },
+  "results": {
+    "typecheck": {
+      "exit": 0,
+      "seconds": 8.47,
+      "source": "be730e996bf1b312768fc9b9b08c704005f06af8",
+      "command": "npm run typecheck"
+    },
+    "server-final": {
+      "exit": 0,
+      "seconds": 203.65,
+      "source": "be730e996bf1b312768fc9b9b08c704005f06af8",
+      "command": "node --test --test-concurrency=1 --test-reporter=spec packages/server/test/**/*.test.ts",
+      "tests": 277,
+      "pass": 277,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "web-final": {
+      "exit": 0,
+      "seconds": 87.25,
+      "source": "be730e996bf1b312768fc9b9b08c704005f06af8",
+      "command": "node --test --test-concurrency=1 --test-reporter=spec packages/web/test/**/*.test.ts",
+      "tests": 312,
+      "pass": 312,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "cli-final": {
+      "exit": 0,
+      "seconds": 11.49,
+      "source": "be730e996bf1b312768fc9b9b08c704005f06af8",
+      "command": "node --test --test-concurrency=1 packages/cli/test/enrollment.test.ts packages/cli/test/online.test.ts",
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "build-final": {
+      "exit": 0,
+      "seconds": 0.88,
+      "source": "be730e996bf1b312768fc9b9b08c704005f06af8",
+      "command": "npm run build -w @quietvote/web"
+    },
+    "i18n-final": {
+      "exit": 0,
+      "seconds": 2.71,
+      "source": "be730e996bf1b312768fc9b9b08c704005f06af8",
+      "command": "npm run i18n:check -w @quietvote/web"
+    },
+    "runner-final": {
+      "exit": 0,
+      "seconds": 0.31,
+      "source": "be730e996bf1b312768fc9b9b08c704005f06af8",
+      "command": "node --test .github/scripts/run-browser-journeys.test.mjs",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "refusal-and-expiry": {
+      "source": "894a94de1da91b007461612944463159d251a5c9",
+      "command": "node --test --test-concurrency=1 packages/server/test/registration.test.ts packages/server/test/negative.test.ts packages/server/test/b2-fixes.test.ts",
+      "exit": 0,
+      "tests": 31,
+      "pass": 31,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "seconds": 30.16,
+      "red_baseline": {
+        "source": "be730e996bf1b312768fc9b9b08c704005f06af8",
+        "tests": 2,
+        "fail": 2,
+        "command": "node --test --test-name-pattern='B2-10 unknown|expires exactly' packages/server/test/registration.test.ts"
+      }
+    },
+    "postfix-review-probes": {
+      "source": "1fc77e927c5993de21414c97f69d7d99c2577c43",
+      "command": "node --test --test-concurrency=1 packages/server/test/registration-review.test.ts",
+      "exit": 0,
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "seconds": 5.8,
+      "scope": "Author reran independently authored probes after final fix; not a new independent source review."
+    }
+  },
+  "production_build": {
+    "all_js_gzip_kib_reported": 198.3,
+    "entry_js_gzip_kib_reported": 95.6,
+    "standalone_verifier_kib_reported": 186.8,
+    "budget_changed": false
+  },
+  "independent_review": {
+    "commit": "86d6e60725031827988a83a3fb877fa5238639c3",
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "note": "Review of implementation; final refusal-detail/expiry followup needs separate integrator review."
+  },
+  "limits": [
+    "Lane source receipts; not qualification of later parent integration.",
+    "Local Chromium host launch blocked. New production registration journey is required in hosted CI; no browser pass claimed here.",
+    "D99 pinned membership, group/label membership and original invite-to-voter linkage are not resolved.",
+    "External protocol/security and human/platform release gates remain separate."
+  ]
+}

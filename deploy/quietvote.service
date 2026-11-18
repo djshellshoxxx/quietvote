@@ -1,0 +1,23 @@
+[Unit]
+Description=QuietVote experimental API server
+After=network.target
+
+[Service]
+Type=simple
+User=quietvote
+Group=quietvote
+WorkingDirectory=/opt/quietvote
+StateDirectory=quietvote
+StateDirectoryMode=0700
+UMask=0077
+ExecStartPre=/usr/bin/node /opt/quietvote/packages/server/bin/qv-server.ts --config /etc/quietvote/server.json --check-config
+ExecStart=/usr/bin/node /opt/quietvote/packages/server/bin/qv-server.ts --config /etc/quietvote/server.json
+Restart=on-failure
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

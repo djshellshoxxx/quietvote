@@ -179,6 +179,41 @@ EntryHeader {
 
 Cardinality, ordering and authorization are enforced as a **grammar** (§5.3) by both server and verifier.
 
+#### Legacy suite-v1 control record (QV-ADR-027, N-12 / D-87)
+
+The approved legacy record is the closed envelope
+`{body:{proto:"qv1-r255-sha2",type:"control",action,reason?},sigs:[{key,sig}]}`.
+`action` is a string of at most 32 UTF-16 code units, optional `reason` at most
+256 UTF-16 code units, and `sigs` contains 1 through 8 strictly encoded Ed25519
+signatures. It requires at least `coordinator.m` **distinct** manifest coordinator
+keys signing QV-16 `sig-record` with the manifest hash as scope and `"control"`
+as record type. The separate QV-18 header author must also be a coordinator.
+Trustee/operator/extra-author keys do not acquire control authority.
+
+| Action | Header type |
+|---|---|
+| `pause`, `resume`, `invalidate`, `security-notice`, `witness-waiver`, `extension` | `notice` |
+| `audit-close` | `audit_close` |
+| `cancel` | `election_cancel` |
+| `abort` | `ceremony_abort` |
+
+Malformed/extended records fail log format validation. Unknown actions, wrong
+header types, missing coordinator quorum or wrong-election signatures fail log
+binding. A non-DKG `notice` with no recognised control body also fails binding.
+The offline log-evidence report prominently surfaces authenticated notices;
+waivers, extensions, pauses and resumes never lower manifest witness quorum,
+replace trusted keys or change manifest voting times. An extension after the
+sequenced `election-close` is a fatal time-window finding, including at quorum
+zero. Full terminal/ballot-validity/window-adjustment effects remain a separate
+V13 state-machine contract; authentication is not a claim to implement them.
+
+The separately approved B2-05 monotone signed `control_seq` design is a future
+versioned wire transition. This legacy closed schema does **not** silently accept
+that field, infer counters for old records, or reject unchanged legacy vectors
+for lacking it. A transition must coordinate its version signal, first-counter
+value and advancement rules, signing payload, server and both verifiers, and
+new positive/negative counter/replay vectors before claiming freshness support.
+
 ### 5.3 Admission checks (server) and validity rules (verifier)
 
 For entry `e` proposed at seq `s`, in order:

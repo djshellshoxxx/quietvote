@@ -68,8 +68,9 @@ test('R-01 #5: honest-looking drop of a voter\'s newest ballot is detectable by 
   const dropped = sim.log.splice(drop, 1);
   assert.equal(dropped.length, 1);
   publishTally(sim, [1, 2]);
-  const rep = await verifyElection(bundleOf(sim));
-  assert.equal(rep.verdict, 'PASS', 'log-level consistency alone cannot expose a silent drop');
+  const rep = await verifyElection(bundleOf(sim), { allowNoLog: true });
+  assert.equal(rep.verdict, 'PASS', 'content-only consistency cannot expose a silent drop');
+  assert.equal((await verifyElection(bundleOf(sim))).verdict, 'INCOMPLETE', 'default verification requires independent log evidence');
   const counted = rep.countedBallots!.find((c) => c.voter === H(sim.voters[0]!.publicKey))!;
   assert.notEqual(counted.code, H(mine.built.code), 'the voter\'s own receipt code is not the counted code: detected');
 });

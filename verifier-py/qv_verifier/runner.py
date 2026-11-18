@@ -11,6 +11,8 @@ mutants with their ``expect`` block (see _run_mutation).
 
 from __future__ import annotations
 
+# Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
+
 import hashlib
 import json
 import sys
@@ -21,6 +23,8 @@ from pathlib import Path
 from . import IMPL_NAME, __version__
 from .election import verify_bundle
 from .ops import OPS, run_op
+from .errors import NotImplementedOp
+from .logio import vector_input
 
 PASS, FAIL, NI = "PASS", "FAIL", "NOT-IMPLEMENTED"
 
@@ -63,7 +67,32 @@ def _compare(expect: dict, actual: dict) -> tuple[bool, str]:
     return False, "vector has no ok/expect"
 
 
-def _run_vector_file(path: Path, rel: str, rep: Report) -> None:
+def _run_log_vector(root: Path, v: dict) -> tuple[bool, str]:
+    bundle, evidence = vector_input(root, v['input'])
+    got = verify_bundle(bundle, log=evidence, allow_no_log=True)
+    exp = v['expect']
+    problems = []
+    if exp.get('ok') is True:
+        actual = {'verdict': got['verdict'], 'checks': got['checks']}
+        if actual != exp.get('output'):
+            problems.append(f"report mismatch: {actual!r}")
+    else:
+        failed = sorted(c for c, s in got['checks'].items() if s == 'fail')
+        if failed != sorted(exp.get('failed_checks', [])):
+            problems.append(f"failed checks expected {exp.get('failed_checks')}, got {failed}")
+        # As for election mutations, several independently failing checks can
+        # emit codes; the specified rejection must be present, never substituted.
+        if exp.get('error') not in got['codes']:
+            problems.append(f"missing {exp.get('error')} (emitted {got['codes']})")
+    for tag in v.get('tags', []):
+        if tag.startswith('verdict:') and got['verdict'] != tag.split(':', 1)[1]:
+            problems.append(f"verdict expected {tag}, got {got['verdict']}")
+        if tag.startswith('surfaces:') and not any(tag.split(':', 1)[1] in n for n in got['notes']):
+            problems.append(f"missing caveat {tag}")
+    return not problems, '; '.join(problems)
+
+
+def _run_vector_file(path: Path, rel: str, rep: Report, root: Path) -> None:
     doc = json.loads(path.read_text(encoding="utf-8"))
     op = doc.get("operation", "?")
     if doc.get("format_version") != 1 or doc.get("protocol_version") != "qv1":
@@ -72,6 +101,15 @@ def _run_vector_file(path: Path, rel: str, rep: Report) -> None:
         return
     for v in doc["vectors"]:
         vid = v.get("id", "?")
+        if op == 'log.verify_election':
+            try:
+                ok, note = _run_log_vector(root, v)
+                rep.results.append(Result(PASS if ok else FAIL, rel, vid, op, note))
+            except NotImplementedOp as exc:
+                rep.results.append(Result(NI, rel, vid, op, str(exc)))
+            except Exception as exc:
+                rep.results.append(Result(FAIL, rel, vid, op, f'exception: {exc!r}'))
+            continue
         if op not in OPS:
             rep.results.append(Result(NI, rel, vid, op, "operation not implemented"))
             continue
@@ -105,7 +143,7 @@ def _run_election(path: Path, rel: str, bundle: dict) -> Result:
         return Result(NI, rel, vid, "verify.election", "no expected-report.json next to bundle")
     expected = json.loads(exp_path.read_text(encoding="utf-8"))
     try:
-        got = verify_bundle(bundle)
+        got = verify_bundle(bundle, allow_no_log=True)
     except Exception as exc:
         return Result(FAIL, rel, vid, "verify.election", f"exception: {exc!r}")
     diffs = [k for k in ("verdict", "checks", "counts", "ctx_prefix", "results")
@@ -128,7 +166,7 @@ def _run_mutation(rel: str, doc: dict) -> Result:
     vid = str(doc.get("id", rel))
     exp = doc["expect"]
     try:
-        got = verify_bundle(doc["bundle"])
+        got = verify_bundle(doc["bundle"], allow_no_log=True)
     except Exception as exc:
         return Result(FAIL, rel, vid, "verify.mutation", f"exception: {exc!r}")
     failed = sorted(c for c, s in got["checks"].items() if s == "fail")
@@ -186,7 +224,7 @@ def run_tree(root: Path) -> Report:
             rep.results.append(Result(FAIL, rel, "-", "-", f"unparsable vector file: {exc}"))
             continue
         if isinstance(doc, dict) and isinstance(doc.get("vectors"), list):
-            _run_vector_file(path, rel, rep)
+            _run_vector_file(path, rel, rep, root)
         elif isinstance(doc, dict) and {"manifest", "log", "roll"} <= set(doc):
             if _is_election_vector(path):
                 rep.results.append(_run_election(path, rel, doc))

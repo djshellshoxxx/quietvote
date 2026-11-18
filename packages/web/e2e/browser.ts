@@ -4,14 +4,15 @@ import { existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
-function unavailable(reason: string): never {
+function unavailable(reason: string, required: boolean): never {
   const message = `Browser checks unavailable: ${reason}`;
-  if (process.env.QV_REQUIRE_BROWSER === '1') throw new Error(message);
+  if (required) throw new Error(message);
   console.log(`e2e skipped: ${message}`);
   process.exit(0);
 }
 
-export function browserTools(): { pw: typeof import('playwright'); executablePath: string } {
+export function browserTools(o: { required?: boolean } = {}): { pw: typeof import('playwright'); executablePath: string } {
+  const required = o.required ?? process.env.QV_REQUIRE_BROWSER === '1';
   let pw: typeof import('playwright') | undefined;
   const installs = [
     [import.meta.url, 'playwright'],
@@ -27,7 +28,7 @@ export function browserTools(): { pw: typeof import('playwright'); executablePat
       if ((error as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND') throw error;
     }
   }
-  if (!pw) unavailable('install the pinned Playwright dependency.');
+  if (!pw) unavailable('install the pinned Playwright dependency.', required);
   let executablePath = process.env.QV_CHROMIUM;
   if (executablePath === undefined) {
     executablePath = [pw.chromium.executablePath(), '/usr/bin/chromium', '/opt/pw-browsers/chromium'].find(existsSync);
@@ -36,7 +37,7 @@ export function browserTools(): { pw: typeof import('playwright'); executablePat
     executablePath = join(executablePath, 'chrome-linux', 'chrome');
   }
   if (!executablePath || !existsSync(executablePath) || !statSync(executablePath).isFile()) {
-    unavailable(`no Chromium executable at ${executablePath ?? 'the supported locations'}; set QV_CHROMIUM.`);
+    unavailable(`no Chromium executable at ${executablePath ?? 'the supported locations'}; set QV_CHROMIUM.`, required);
   }
   return { pw, executablePath };
 }

@@ -11,6 +11,7 @@ import type { Ctx, Reply, Route } from './http.ts';
 import { commitImport, verifyBundle } from './imports.ts';
 import { JobError, jobView, type JobRunner } from './jobs.ts';
 import type { ElectionPool } from './pool.ts';
+import type { OperationJournal } from './operation-receipts.ts';
 import { ApiError, conflict, notFound } from './problem.ts';
 import { ELECTION_ID_RE, ORG_ID_RE, fArr, fEnum, fObj, fStr, opt, req, toIso, unbase32 } from './util.ts';
 
@@ -19,7 +20,7 @@ export interface ExtDeps {
   pool: ElectionPool;
   jobs: JobRunner;
   add(r: Route): void;
-  idem(c: Ctx, principal: string, fn: () => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply>;
+  idem(c: Ctx, principal: string, fn: (save: (reply: Reply) => void, journal: OperationJournal) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply>;
   readable(c: Ctx): Promise<ElectionRuntime>;
   intQ(c: Ctx, n: string, def: number, max: number): number;
 }
@@ -102,15 +103,17 @@ export function registerExtRoutes(d: ExtDeps): void {
       if (control.countElections(orgId) >= cfg.maxElectionsPerOrg) throw new ApiError(429, 'RATE_LIMITED', 'election quota reached for this organization', { retryable: false });
       const body = c.body;
       if (body.length === 0) throw new ApiError(400, 'BAD_REQUEST', 'request body required');
-      return d.idem(c, a.keyId, async () => {
+      return d.idem(c, a.keyId, async (save) => {
         const readKey = access === 'link' ? randomBytes(16).toString('base64url') : undefined;
         const readKeyHash = readKey === undefined ? null : sha256(utf8(`QV-READKEY-v1\0${readKey}`));
         const job = jobs.submit('import', cfg.importQueueMax, { kind: 'import', election_id: null, params: { org_id: orgId, access, bytes: body.length }, created_by: a.keyId }, async (ctl) => {
           const vb = await verifyBundle(env, body, mh, () => ctl.tick(), (p) => ctl.progress(p), ctl.signal);
           const r = await commitImport(env, vb, orgId, access, readKeyHash, () => ctl.tick());
           return { result: r, result_ref: r.election_id };
+        }, (row) => {
+          control.audit(a.keyId, 'import.submit', row.job_id, { bytes: body.length });
+          save({ status: 202, json: { ...jobView(row), ...(readKey ? { read_key: readKey } : {}) } });
         });
-        control.audit(a.keyId, 'import.submit', job.job_id, { bytes: body.length });
         return { status: 202, headers: { Location: `/api/v1/jobs/${job.job_id}` }, json: { ...jobView(job), ...(readKey ? { read_key: readKey } : {}) } };
       }, (r) => {
         const j = { ...(r.json as Record<string, unknown>) };
@@ -153,9 +156,9 @@ export function registerExtRoutes(d: ExtDeps): void {
       const b = c.parse(fObj({ scope: req(fEnum('all', 'election')), election_id: opt(fStr({ min: 32, max: 32, re: /^[0-9a-f]{32}$/ })) }));
       if ((b.scope === 'election') !== (b.election_id !== undefined)) throw new ApiError(400, 'BAD_REQUEST', 'election_id is required for scope election and not allowed for scope all');
       if (b.election_id !== undefined && !control.election(b.election_id)) throw notFound('election');
-      return d.idem(c, a.keyId, async () => {
+      return d.idem(c, a.keyId, async (save) => {
         const job = jobs.submit('admin', 4, { kind: 'backup', election_id: b.election_id ?? null, params: { scope: b.scope }, created_by: a.keyId },
-          (ctl) => backupWork(env, pool, ctl.jobId, b.scope, b.election_id, ctl));
+          (ctl) => backupWork(env, pool, ctl.jobId, b.scope, b.election_id, ctl), (row) => save({ status: 202, json: jobView(row) }));
         return { status: 202, headers: { Location: `/api/v1/jobs/${job.job_id}` }, json: jobView(job) };
       });
     },
@@ -165,13 +168,13 @@ export function registerExtRoutes(d: ExtDeps): void {
     handler: (c) => {
       const a = authorizeAdmin(c);
       const id = c.params['id']!;
-      return d.idem(c, a.keyId, async () => {
+      return d.idem(c, a.keyId, async (save) => {
         if (!control.election(id)) throw notFound('election');
         const job = jobs.submit('admin', 4, { kind: 'self_audit', election_id: id, params: {}, created_by: a.keyId }, async (ctl) => {
           const rt = await pool.get(id);
           if (!rt) throw new JobError('NOT_FOUND', 'no such election');
           return selfAuditWork(env, rt, ctl);
-        });
+        }, (row) => save({ status: 202, json: jobView(row) }));
         return { status: 202, headers: { Location: `/api/v1/jobs/${job.job_id}` }, json: jobView(job) };
       });
     },
@@ -182,9 +185,16 @@ export function registerExtRoutes(d: ExtDeps): void {
       const a = authorizeAdmin(c);
       const id = c.params['id']!;
       const b = c.parse(fObj({ ack: req(fStr({ min: 4, max: 64, re: /^[A-Za-z0-9_-]+$/ })), verified_against: req(fArr(fStr({ min: 9, max: 80 }), 16)) }));
-      return d.idem(c, a.keyId, async () => {
+      return d.idem(c, a.keyId, async (save, journal) => {
         if (!control.election(id)) throw notFound('election');
-        return { status: 200, json: await clearQuarantine(env, pool, id, b.ack, b.verified_against, a.keyId) };
+        const json = await clearQuarantine(env, pool, id, b.ack, b.verified_against, a.keyId,
+          (db, result, detail) => journal(db, { status: 200, json: result }, { action: 'quarantine.clear', detail }));
+        const reply = { status: 200, json };
+        control.tx(() => {
+          control.audit(a.keyId, 'quarantine.clear', id, { incident: String(json.incident), witnesses: b.verified_against.map((name) => name.slice(8)).filter((name, i, names) => names.indexOf(name) === i).join(',') });
+          save(reply);
+        });
+        return reply;
       });
     },
   });
@@ -194,7 +204,7 @@ export function registerExtRoutes(d: ExtDeps): void {
       const a = authorizeAdmin(c);
       const id = c.params['id']!;
       const b = c.parse(fObj({ confirm: req(fStr({ min: 1, max: 200 })) }));
-      return d.idem(c, a.keyId, async () => {
+      return d.idem(c, a.keyId, async (save) => {
         const reg = control.election(id);
         if (!reg) throw notFound('election');
         if (b.confirm !== reg.title) throw new ApiError(422, 'VALIDATION_FAILED', 'confirm must equal the election title');
@@ -208,7 +218,7 @@ export function registerExtRoutes(d: ExtDeps): void {
           }
           control.audit(a.keyId, 'election.delete', id);
           return { result: { election_id: id, state: 'DELETED' } };
-        });
+        }, (row) => save({ status: 202, json: jobView(row) }));
         return { status: 202, headers: { Location: `/api/v1/jobs/${job.job_id}` }, json: jobView(job) };
       });
     },

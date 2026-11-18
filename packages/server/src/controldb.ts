@@ -105,7 +105,51 @@ CREATE INDEX job_state ON job(state, created_at);
 ALTER TABLE election_registry ADD COLUMN quarantine TEXT;
 `,
   },
+  {
+    version: 5,
+    name: 'gossip_health',
+    // Bounded to configured peer hashes plus one scheduler row; never stores URLs, IPs or election identifiers.
+    sql: `
+CREATE TABLE gossip_health (
+  peer_id TEXT PRIMARY KEY,
+  last_attempt_at INTEGER, last_success_at INTEGER, last_failure_at INTEGER,
+  consecutive_failures INTEGER NOT NULL DEFAULT 0 CHECK (consecutive_failures>=0),
+  last_error TEXT
+) STRICT;
+`,
+  },
+  {
+    version: 6,
+    name: 'resumable_election_deletion',
+    // Tombstone/DEK removal and the cleanup cursor commit together. Resume historical interrupted deletions too.
+    sql: `
+CREATE TABLE election_cleanup (
+  election_id TEXT PRIMARY KEY REFERENCES election_registry(election_id)
+) STRICT;
+INSERT INTO election_cleanup(election_id) SELECT election_id FROM election_registry WHERE state='DELETED';
+`,
+  },
+  {
+    version: 7,
+    name: 'webhook_event_cursor',
+    // The cursor and matching delivery rows commit together, closing the election/control database bridge.
+    sql: `
+CREATE TABLE webhook_event_cursor (
+  election_id TEXT PRIMARY KEY,
+  event_id INTEGER NOT NULL CHECK (event_id >= 0)
+) STRICT;
+`,
+  },
 ];
+
+export interface GossipHealthRow {
+  peer_id: string;
+  last_attempt_at: number | null;
+  last_success_at: number | null;
+  last_failure_at: number | null;
+  consecutive_failures: number;
+  last_error: string | null;
+}
 
 export interface OutboxRow {
   seq: number;
@@ -185,6 +229,22 @@ export interface RegistryRow {
 
 export class ControlDb {
   readonly db: DatabaseSync;
+
+  configureGossipHealth(peers: string[]): void {
+    const ids = [...new Set([...peers, 'scheduler'])];
+    tx(this.db, () => {
+      run(this.db, `DELETE FROM gossip_health WHERE peer_id NOT IN (${ids.map(() => '?').join(',')})`, ...ids);
+      for (const id of ids) run(this.db, 'INSERT OR IGNORE INTO gossip_health(peer_id) VALUES (?)', id);
+    });
+  }
+
+  gossipHealth(): GossipHealthRow[] { return all(this.db, 'SELECT * FROM gossip_health ORDER BY peer_id'); }
+
+  recordGossipHealth(peerId: string, error: string | null): void {
+    const now = this.now();
+    if (error === null) run(this.db, `UPDATE gossip_health SET last_attempt_at=?, last_success_at=?, consecutive_failures=0, last_error=NULL WHERE peer_id=?`, now, now, peerId);
+    else run(this.db, `UPDATE gossip_health SET last_attempt_at=?, last_failure_at=?, consecutive_failures=MIN(consecutive_failures+1,2147483647), last_error=? WHERE peer_id=?`, now, now, error, peerId);
+  }
   private readonly now: () => number;
   constructor(dataDir: string, now: () => number, appVersion: string) {
     this.now = now;
@@ -265,16 +325,33 @@ export class ControlDb {
   }
   setState(id: string, state: ElectionStateName, title?: string): void {
     const t = this.now();
-    run(this.db, 'UPDATE election_registry SET state=? WHERE election_id=?', state, id);
-    if (title !== undefined) run(this.db, 'UPDATE election_registry SET title=? WHERE election_id=?', title, id);
-    const col = state === 'OPEN' ? 'opened_at' : state === 'CLOSED' ? 'closed_at' : state === 'ARCHIVED' ? 'archived_at' : undefined;
-    if (col) run(this.db, `UPDATE election_registry SET ${col}=? WHERE election_id=? AND ${col} IS NULL`, t, id);
+    this.tx(() => {
+      run(this.db, 'UPDATE election_registry SET state=? WHERE election_id=?', state, id);
+      if (title !== undefined) run(this.db, 'UPDATE election_registry SET title=? WHERE election_id=?', title, id);
+      const col = state === 'OPEN' ? 'opened_at' : state === 'CLOSED' ? 'closed_at' : state === 'ARCHIVED' ? 'archived_at' : undefined;
+      if (col) run(this.db, `UPDATE election_registry SET ${col}=? WHERE election_id=? AND ${col} IS NULL`, t, id);
+    });
   }
   setBytes(id: string, bytes: number): void {
     run(this.db, 'UPDATE election_registry SET bytes_used=? WHERE election_id=?', bytes, id);
   }
   markDeleted(id: string): void {
-    run(this.db, "UPDATE election_registry SET state='DELETED', dek_wrapped=NULL, deleted_at=? WHERE election_id=?", this.now(), id);
+    tx(this.db, () => {
+      run(this.db, "UPDATE election_registry SET state='DELETED', dek_wrapped=NULL, deleted_at=? WHERE election_id=?", this.now(), id);
+      run(this.db, "INSERT OR IGNORE INTO election_cleanup(election_id) SELECT election_id FROM election_registry WHERE election_id=? AND state='DELETED'", id);
+    });
+  }
+
+  pendingElectionCleanup(): { election_id: string; db_path: string }[] {
+    return all(this.db, "SELECT r.election_id,r.db_path FROM election_cleanup c JOIN election_registry r USING(election_id) WHERE r.state='DELETED' ORDER BY r.election_id");
+  }
+
+  finishElectionCleanup(id: string): void {
+    tx(this.db, () => {
+      if (!get(this.db, 'SELECT election_id FROM election_cleanup WHERE election_id=?', id)) return;
+      this.audit('system', 'election.delete', id);
+      run(this.db, 'DELETE FROM election_cleanup WHERE election_id=?', id);
+    });
   }
 
   /** Any registry row, deleted tombstones included (an id is never reused). */
@@ -382,6 +459,13 @@ export class ControlDb {
   }
 
   // ---- webhook outbox (pending deliveries survive restarts; WebhookService is the only writer)
+  webhookEventCursor(electionId: string): number | undefined {
+    return get<{ event_id: number }>(this.db, 'SELECT event_id FROM webhook_event_cursor WHERE election_id=?', electionId)?.event_id;
+  }
+  advanceWebhookEventCursor(electionId: string, eventId: number): void {
+    run(this.db, `INSERT INTO webhook_event_cursor(election_id,event_id) VALUES (?,?)
+      ON CONFLICT(election_id) DO UPDATE SET event_id=MAX(event_id,excluded.event_id)`, electionId, eventId);
+  }
   outboxCount(): number {
     return get<{ n: number }>(this.db, 'SELECT COUNT(*) AS n FROM webhook_outbox')?.n ?? 0;
   }
@@ -415,14 +499,24 @@ export class ControlDb {
   }
 
   // ---- idempotency (QV-09 §4.4)
-  idem(principal: string, key: string): { req_sha256: Uint8Array; status: number; response: Uint8Array | null; expires_at: number } | undefined {
-    return get(this.db, 'SELECT req_sha256,status,response,expires_at FROM idempotency WHERE principal=? AND idem_key=?', principal, key) as never;
+  /** Exclusive startup only: an interrupted request may already have committed its side effect. Never execute it again. */
+  failInterruptedIdempotency(): void {
+    run(this.db, 'UPDATE idempotency SET status=-1 WHERE status=0');
+  }
+
+  idem(principal: string, key: string): { method: string; path: string; req_sha256: Uint8Array; status: number; response: Uint8Array | null; expires_at: number } | undefined {
+    return get(this.db, 'SELECT method,path,req_sha256,status,response,expires_at FROM idempotency WHERE principal=? AND idem_key=?', principal, key) as never;
   }
   storeIdem(principal: string, key: string, method: string, path: string, reqHash: Uint8Array, status: number, response: Uint8Array | null): void {
     const t = this.now();
     run(this.db, 'DELETE FROM idempotency WHERE expires_at < ?', t);
     run(this.db, 'INSERT OR REPLACE INTO idempotency(principal,idem_key,method,path,req_sha256,status,response,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?)',
       principal, key, method, path, reqHash, status, response, t, t + 24 * 3600_000);
+  }
+
+  /** Preserve the request binding when an internal failure leaves the committed outcome uncertain. */
+  interruptIdem(principal: string, key: string): void {
+    run(this.db, 'UPDATE idempotency SET status=-1 WHERE principal=? AND idem_key=? AND status=0', principal, key);
   }
 
   /** Removes the in-progress marker of a request that failed, so the client may retry with the same key. */

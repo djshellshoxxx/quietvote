@@ -1,3 +1,4 @@
+// Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
 // Deterministic generator for test-vectors/v1 (QV-34). Re-running it must produce zero diff (see vectors.test.ts).
 // Expected values for external vectors are written from the cited standards; QuietVote vectors are produced by the
 // reference implementation and (where marked) cross-asserted against hand-written expectations.
@@ -457,7 +458,7 @@ export async function generateAll(): Promise<Map<string, string>> {
   closeElection(tiny);
   publishTally(tiny, [1, 3]);
   const tinyB = bundleOf(tiny);
-  const rep = await verifyElection(tinyB);
+  const rep = await verifyElection(tinyB, { allowNoLog: true });
   assert(rep.verdict === 'PASS', 'tiny must pass');
   put(f('elections', 'tiny-yesno-3v', 'bundle.json'), tinyB);
   put(f('elections', 'tiny-yesno-3v', 'expected-report.json'), expectedOf(rep));
@@ -472,7 +473,7 @@ export async function generateAll(): Promise<Map<string, string>> {
   closeElection(smallSim);
   publishTally(smallSim, [1, 2, 4, 5]);
   const smallB = bundleOf(smallSim);
-  const srep = await verifyElection(smallB);
+  const srep = await verifyElection(smallB, { allowNoLog: true });
   assert(srep.verdict === 'PASS', 'small must pass');
   put(f('elections', 'small-approval-20v', 'bundle.json'), smallB);
   put(f('elections', 'small-approval-20v', 'expected-report.json'), expectedOf(srep));
@@ -523,7 +524,7 @@ export async function generateAll(): Promise<Map<string, string>> {
   for (const m of mutants) {
     const b = clone(tinyB);
     m.mut(b);
-    const r = await verifyElection(b);
+    const r = await verifyElection(b, { allowNoLog: true });
     const failed = Object.entries(r.checks).filter(([, s]) => s === 'fail').map(([k]) => k).sort();
     assert(JSON.stringify(failed) === JSON.stringify([...m.checks].sort()), `mutant ${m.id}: failed checks ${JSON.stringify(failed)}`);
     for (const c of m.codes) assert(r.findings.some((x) => x.code === c), `mutant ${m.id}: missing code ${c} in ${JSON.stringify(r.findings.map((x) => x.code))}`);
@@ -538,7 +539,7 @@ export async function generateAll(): Promise<Map<string, string>> {
     e.entry.body.contests[0].sel[0].s0 = H(scalarToBytes(5n));
     const v = tiny.voters.find((k) => H(k.publicKey) === e.entry.body.voter)!;
     e.entry.sig = H(ed25519Sign(v.secretKey, castDigest(tiny.params!.ctx, ballotCode(tiny.params!.ctx, e.entry.body))));
-    const r = await verifyElection(b);
+    const r = await verifyElection(b, { allowNoLog: true });
     const failed = Object.entries(r.checks).filter(([, s]) => s === 'fail').map(([k]) => k).sort();
     assert(failed.join() === ['chk.ballots.valid', 'chk.tally.aggregate'].join(), `canary: ${failed.join()}`);
     put(f('canary', 'canary-election.json'), b);

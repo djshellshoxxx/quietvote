@@ -1,6 +1,6 @@
 // Export / import bundle (QV-18 §12) and offline verification (§13).
 // The bundle is an in-memory object with a JSON-object form; the deterministic tar container
-// is a transport concern for the CLI (see NOTES.md).
+// is parsed by the shared pure archive module; filesystem and verification policy stay with callers.
 import { b64, b64u, bytesEqual, toHex, unb64, unb64u } from './bytes.ts';
 import {
   parseCheckpoint, verifyLogSignature, witnessStatus,

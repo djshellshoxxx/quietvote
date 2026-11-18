@@ -32,9 +32,9 @@ test('loader: strict parse, closed member set, board export separated', () => {
   assert.ok(!bad.ok && bad.errors[0]!.startsWith('board export invalid'));
 });
 
-test('control election: PASS, V-vocabulary mapped, V4/V13 honestly not_run, report hash recomputes', async () => {
+test('control election: INCOMPLETE without board evidence, V-vocabulary mapped, V4/V13 honestly not_run, report hash recomputes', async () => {
   const r = await verifyBundle(JSON.stringify(tiny()));
-  assert.equal(r.verdict, 'PASS');
+  assert.equal(r.verdict, 'INCOMPLETE');
   for (const id of V_IDS) {
     const want = id === 'V4' || id === 'V13' ? 'not_run' : 'pass';
     assert.equal(r.checks[id].status, want, id);
@@ -43,7 +43,7 @@ test('control election: PASS, V-vocabulary mapped, V4/V13 honestly not_run, repo
   assert.equal(r.reportHash.length, 64);
   assert.equal((await verifyBundle(tiny())).reportHash, r.reportHash, 'deterministic');
   const txt = formatReport(r);
-  assert.match(txt, /VERDICT: PASS/);
+  assert.match(txt, /VERDICT: INCOMPLETE/);
   assert.match(txt, /Checks NOT run: V4, V13/);
   const mutated = { ...r, verdict: 'FAIL' as const };
   assert.notEqual(hashReport(mutated), r.reportHash);
@@ -115,13 +115,13 @@ test('self-test catches a broken verifier: an accepted canary or a rejected cont
 });
 
 test('a failing self-test forces FAIL even when the bundle itself passes', async () => {
-  const skipped = await verifyWithSelfTest(JSON.stringify(tiny()), { skipSelfTest: true });
+  const skipped = await verifyWithSelfTest(JSON.stringify(tiny()), { skipSelfTest: true, allowNoLog: true });
   assert.equal(skipped.verdict, 'PASS');
   assert.ok(skipped.caveats.some((c) => c.includes('self-test skipped')));
   assert.equal(skipped.selfTest, undefined);
   const corpus = loadCorpus();
   const rigged: Corpus = { ...corpus, canaries: [{ id: 'actually-valid', expect: {}, bundle: corpus.control.bundle }] };
-  const r = await verifyWithSelfTest(JSON.stringify(tiny()), { corpus: rigged });
+  const r = await verifyWithSelfTest(JSON.stringify(tiny()), { corpus: rigged, allowNoLog: true });
   assert.equal(r.verdict, 'FAIL');
   assert.equal(r.selfTest?.ok, false);
   assert.match(formatReport(r), /self-test: FAILED/);
@@ -199,8 +199,11 @@ test('qv-verify main: exit codes and output', async () => {
   const err: string[] = [];
   const io = { out: (s: string) => void out.push(s), err: (s: string) => void err.push(s) };
   const f = join(ROOT, 'elections', 'tiny-yesno-3v', 'bundle.json');
-  assert.equal(await verifierMain([f, '--skip-selftest'], io), 0);
-  assert.match(out.join(''), /VERDICT: PASS/);
+  assert.equal(await verifierMain([f, '--skip-selftest'], io), 3);
+  assert.match(out.at(-1)!, /VERDICT: INCOMPLETE/);
+  assert.equal(await verifierMain([f, '--skip-selftest', '--content-only'], io), 0);
+  assert.match(out.at(-1)!, /VERDICT: PASS/);
+  assert.match(out.at(-1)!, /CONTENT-ONLY/);
   assert.equal(await verifierMain([join(ROOT, 'canary', 'canary-election.json'), '--skip-selftest', '--json'], io), 1);
   assert.equal(JSON.parse(out.at(-1)!).verdict, 'FAIL');
   assert.equal(await verifierMain([], io), 2);

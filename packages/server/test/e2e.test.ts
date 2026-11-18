@@ -3,14 +3,18 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { MerkleTree, bundleFromJson, unb64, unb64u, verifyConsistency, verifyInclusion, verifyLog, authorKeyId, b64u, toHex, type WitnessPolicy } from '@quietvote/board';
 import { bytesToHex, jcs } from '@quietvote/crypto';
-import { signRecord, verifyElectionText, PROTO_ID } from '@quietvote/protocol';
+import { signRecord, verifyElectionText, verifyElection, PROTO_ID } from '@quietvote/protocol';
 import { readTar } from '../src/index.ts';
 import { World } from './helpers/world.ts';
 
 const H = bytesToHex;
 
-test('full election over HTTP: 3-of-5 trustees, 22 voters, revotes, spoils, close, tally, export, verifyElection PASS', { timeout: 900_000 }, async () => {
+test('full election over HTTP: 3-of-5 trustees, 22 voters, revotes, spoils, close, tally, export, evidence-gated verification', { timeout: 900_000 }, async () => {
   const w = new World({ seed: 'e2e-http', n: 5, t: 3, voters: 22 });
+  // This positive log-verification fixture uses the existing coordinator header authority.
+  w.owner = w.coord[0]!;
+  const manifest = w.buildManifest.bind(w);
+  w.buildManifest = () => { const m = manifest(); m.bb.log_id = createHash('sha256').update(w.origin).digest('hex'); return m; };
   await w.start();
   try {
     await w.setupOrgAndElection();
@@ -96,7 +100,29 @@ test('full election over HTTP: 3-of-5 trustees, 22 voters, revotes, spoils, clos
     // ---- export feeds the protocol verifier
     const ex = await w.get(`/api/v1/elections/${w.electionId}/export.json`);
     const rep = await verifyElectionText(ex.text);
-    assert.equal(rep.verdict, 'PASS', JSON.stringify(rep.findings.filter((f) => f.cls === 'F')));
+    assert.equal(rep.verdict, 'INCOMPLETE', JSON.stringify(rep.findings.filter((f) => f.cls === 'F')));
+    assert.equal(Object.hasOwn(ex.json, 'board'), false, 'default export wire shape is unchanged');
+    const logged = await w.get(`/api/v1/elections/${w.electionId}/export.json?board=1`, { 'if-none-match': ex.headers.get('etag')! });
+    assert.equal(logged.status, 200, logged.text);
+    assert.equal(logged.headers.get('cache-control'), 'no-store');
+    assert.equal(logged.headers.get('etag'), null);
+    const { board: evidence, ...content } = logged.json;
+    assert.deepEqual({ ...content, log: ex.json.log }, ex.json);
+    for (const record of ex.json.log) assert.deepEqual(content.log.find((r: { seq: number }) => r.seq === record.seq), record);
+    assert.ok(content.log.length > ex.json.log.length, 'evidence export includes board-only controls and tally shares');
+    assert.equal(evidence.tree_size, evidence.entries.length, 'the export includes every board entry, including control notices');
+    assert.ok(evidence.tree_size >= ex.json.log.at(-1).seq + 1);
+    const unresolved = await verifyElection(content, { log: { board: evidence } });
+    assert.equal(unresolved.verdict, 'FAIL', 'unsigned transport metadata cannot authorize the server aggregate signer');
+    assert.ok(unresolved.findings.some((f) => f.code === 'E_LOG_BINDING' && f.detail.includes('author key not authorized')));
+    // This test caller knows the fixture server key independently; do not derive authority from the export.
+    const serverKey = H((await w.server.pool.get(w.electionId))!.srvPk);
+    const trustedLog = { board: evidence, extraAuthorKeys: [serverKey] };
+    const witnessed = await verifyElection(content, { log: trustedLog });
+    assert.equal(witnessed.checks['chk.board.append_only'], 'pass', JSON.stringify(witnessed.findings));
+    // This HTTP fixture deliberately uses quorum zero: valid append evidence alone is incomplete.
+    assert.equal(witnessed.verdict, 'INCOMPLETE');
+    assert.equal((await verifyElection(content, { log: trustedLog, allowNoLog: true })).verdict, 'PASS');
     assert.equal(rep.counts.counted, final.size);
     assert.equal(rep.counts.spoiled, 2);
     assert.deepEqual(Object.values(rep.checks).filter((c) => c === 'fail'), []);

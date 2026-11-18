@@ -8,12 +8,12 @@ const tiny = (): any => JSON.parse(readFileSync(new URL('../../../test-vectors/v
 test('B1-06: unpinned verification discloses the bundle anchor and chosen manifest hash', async () => {
   const b = tiny();
   const r = await verifyBundle(b);
-  assert.equal(r.verdict, 'PASS');
+  assert.equal(r.verdict, 'INCOMPLETE', 'disclosing the anchor does not replace missing log evidence');
   assert.ok(r.caveats.some((c) => /manifest hash.*not.*out.of.band/i.test(c)), r.caveats.join('\n'));
   assert.ok(formatReport(r).includes(b.manifest_hash));
   assert.equal(r.reportHash, hashReport(r));
   const pinned = await verifyBundle(b, { pinnedManifestHash: b.manifest_hash });
-  assert.equal(pinned.verdict, 'PASS');
+  assert.equal(pinned.verdict, 'INCOMPLETE', 'a manifest pin does not replace missing log evidence');
   assert.ok(!pinned.caveats.some((c) => /manifest hash.*not.*out.of.band/i.test(c)));
   assert.ok(formatReport(pinned).includes(b.manifest_hash));
   const mismatch = await verifyBundle(b, { pinnedManifestHash: '00'.repeat(32) });

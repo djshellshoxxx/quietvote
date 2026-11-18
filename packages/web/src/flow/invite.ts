@@ -19,7 +19,7 @@ export function parseFragment(hash: string): InviteFragment {
     const v = part.slice(eq + 1);
     if (k === 'inv') {
       const b = b64uDecode(v);
-      if (b !== undefined && b.length === 16) out.token = b;
+      if (b !== undefined && b.length === 16 && b64uEncode(b) === v) out.token = b;
     } else if (k === 'read') {
       if (/^[A-Za-z0-9_-]{16,64}$/.test(v)) out.readKey = v;
     } else if (k === 'board') {

@@ -61,3 +61,48 @@ The full reasoning is in [OPEN-DECISIONS](../plan/OPEN-DECISIONS.md) §I.
   manifest. No vector changed.
 * **Still open:** stopping after `E_MANIFEST_SIG` (D-92), rules after a published-`T` mismatch (D-93), the `results`
   member after a failure (D-94), the zero-digest spoil without trustee mode (D-95, PY-01), INCOMPLETE (D-96, PY-02).
+
+## Approved report-dependency implementation, 2026-11-16
+
+The preceding "still open" observation for D-92–D-94 is superseded by the
+existing approval recorded in QV-ADR-027, which adopts the recommendations in
+[the 2026-11-04 decision register](../plan/DECISIONS-2026-11-04.md):
+
+- **DIFF-manifest-signature-removed = A:** insufficient valid coordinator
+  signatures stop every dependent check. The verified manifest hash remains
+  `pass`, signatures are `fail`, counts remain zero and no context or results
+  are emitted. Untrusted log content is not examined.
+- **DIFF-count-altered = A:** any failed decryption check, including a published
+  count differing from the independently recovered count, prevents rule
+  evaluation; `chk.result.rules` is `not_run` and no results are emitted.
+- **DIFF-result-flipped = A:** a result mismatch is `E_RESULT`; recomputed results
+  are not emitted as a report outcome when `chk.result.rules` fails.
+
+QV-35-REQ-003/005 now state these approved dependency rules explicitly.
+`verifier-py/tests/test_approved_report_parity.py` checks the unchanged mutation
+corpus plus independently altered signatures/counts and an honest control.
+No vector, expected report, TypeScript implementation or comparator exclusion
+changed. This addendum resolves only these three report-dependency differences;
+other historical errata and unsupported capabilities retain their own scope.
+
+## Approved legacy control-evidence implementation, 2026-11-16
+
+QV-ADR-027 adopts N-12 / D-87 and B1-02 option A. The earlier Python log hold is
+superseded for the existing `qv1-r255-sha2` control-evidence corpus:
+
+- The core rejects an unknown string non-ballot `type` with class-L `E_VERSION`
+  on `chk.encoding.canonical`. It does not consume the body or give it authority.
+- With board evidence, control records must satisfy the closed legacy schema,
+  exact byte/header binding, coordinator header author and distinct coordinator
+  signature quorum on `sig-record(manifest_hash, "control", body)`. Missing,
+  malformed or falsely attributed authority produces fatal log findings.
+- Authenticated notices are reported. Waiver/extension/pause/resume records
+  never replace manifest witness keys/quorum or move manifest time bounds;
+  a sequenced post-close extension is fatal `E_TIME_WINDOW`.
+
+This implements the unknown-type B1-02 row and the existing N-12 / X31-X34
+legacy evidence contract. Other B1-02 rows (known malformed records, first valid
+marker selection and duplicate tally handling), full V13 effects and the
+separately approved versioned B2-05 `control_seq` transition remain distinct
+work. No legacy counter field was added, no existing vector was regenerated,
+and no comparator exclusion or expected report was changed.

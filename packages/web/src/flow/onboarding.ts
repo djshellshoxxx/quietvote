@@ -1,5 +1,6 @@
 // Voter onboarding services (QV-19 §6.1): key generation, import, restore, unlock, registration.
-import { bytesToHex, ed25519Keypair, hexToBytes, sha256, systemRng, utf8, type Rng } from '@quietvote/crypto';
+import { registrationMessage } from '@quietvote/protocol';
+import { bytesToHex, ed25519Keypair, hexToBytes, sha256, systemRng, type Rng } from '@quietvote/crypto';
 import type { RegistrationBody } from '../api/types.ts';
 import {
   DEFAULT_PARAMS, KeyError, adaptParams, defaultDeps, needsRewrap, parseContainer, serializeContainer, unwrapSeed, wrapSeed,
@@ -31,6 +32,15 @@ export class PassphrasePolicyError extends Error {
   }
 }
 
+export class KeySlotOccupiedError extends Error {}
+
+async function saveKey(storage: DeviceStorage, slot: string, container: QvKey1, onlyIfAbsent = false, canInstall?: () => boolean): Promise<void> {
+  if (!onlyIfAbsent) return storage.putKey(slot, container);
+  // No read-then-upsert fallback: hosts without atomic installation must fail closed.
+  if (!storage.installKeyIfAbsent) throw new Error('atomic key installation unavailable');
+  if (!await storage.installKeyIfAbsent(slot, container, canInstall)) throw new KeySlotOccupiedError('key slot already occupied');
+}
+
 export async function createKey(a: {
   storage: DeviceStorage;
   slot: string;
@@ -38,6 +48,8 @@ export async function createKey(a: {
   rng?: Rng;
   deps?: KeystoreDeps;
   params?: KdfParams;
+  onlyIfAbsent?: boolean;
+  canInstall?: () => boolean;
   onProgress?: (f: number) => void;
 }): Promise<CreatedKey> {
   if (!checkPassphrase(a.passphrase).ok) throw new PassphrasePolicyError();
@@ -50,19 +62,19 @@ export async function createKey(a: {
   }
 }
 
-async function storeSeed(seed: Uint8Array, a: { storage: DeviceStorage; slot: string; passphrase: string; deps?: KeystoreDeps | undefined; params?: KdfParams | undefined; onProgress?: ((f: number) => void) | undefined }): Promise<CreatedKey> {
+async function storeSeed(seed: Uint8Array, a: { storage: DeviceStorage; slot: string; passphrase: string; deps?: KeystoreDeps | undefined; params?: KdfParams | undefined; onlyIfAbsent?: boolean | undefined; canInstall?: (() => boolean) | undefined; onProgress?: ((f: number) => void) | undefined }): Promise<CreatedKey> {
   const publicKey = ed25519Keypair(seed).publicKey;
   const w = await wrapSeed(seed, a.passphrase, a.deps ?? defaultDeps(), a.params ?? DEFAULT_PARAMS, a.onProgress);
-  await a.storage.putKey(a.slot, w.container);
+  await saveKey(a.storage, a.slot, w.container, a.onlyIfAbsent, a.canInstall);
   return { container: w.container, publicKey, fingerprint: fingerprintWords(sha256(publicKey)), atFloor: w.atFloor, keyFileText: serializeContainer(w.container) };
 }
 
 /** Imports a `.qvkey` file: validates it, proves the passphrase unlocks it, then stores it unchanged. */
-export async function importKeyFile(a: { storage: DeviceStorage; slot: string; text: string; passphrase: string; deps?: KeystoreDeps }): Promise<{ publicKey: Uint8Array; fingerprint: string[] }> {
+export async function importKeyFile(a: { storage: DeviceStorage; slot: string; text: string; passphrase: string; deps?: KeystoreDeps; onlyIfAbsent?: boolean; canInstall?: () => boolean }): Promise<{ publicKey: Uint8Array; fingerprint: string[] }> {
   const container = parseContainer(a.text, a.deps?.floor);
   const u = await unwrapSeed(container, a.passphrase, a.deps ?? defaultDeps());
   wipe(u.seed);
-  await a.storage.putKey(a.slot, container);
+  await saveKey(a.storage, a.slot, container, a.onlyIfAbsent, a.canInstall);
   return { publicKey: u.publicKey, fingerprint: fingerprintWords(sha256(u.publicKey)) };
 }
 
@@ -95,7 +107,7 @@ export interface Unlocked {
   atFloor: boolean;
 }
 
-export async function unlockKey(a: { storage: DeviceStorage; slot: string; passphrase: string; deps?: KeystoreDeps; now?: () => number; onProgress?: (f: number) => void }): Promise<Unlocked> {
+export async function unlockKey(a: { storage: DeviceStorage; slot: string; passphrase: string; deps?: KeystoreDeps; rewrap?: boolean; now?: () => number; onProgress?: (f: number) => void }): Promise<Unlocked> {
   const container = await a.storage.getKey(a.slot);
   if (container === undefined) throw new KeyError('E_KEY_FORMAT', 'no key on this device');
   const deps = a.deps ?? defaultDeps();
@@ -105,7 +117,7 @@ export async function unlockKey(a: { storage: DeviceStorage; slot: string; passp
     let atFloor = container.m <= deps.floor.m;
     const adapt = adaptParams({ m: container.m, t: container.t, p: container.p }, u.elapsedMs, deps.floor);
     atFloor = adapt.atFloor;
-    if (needsRewrap(container) && u.elapsedMs < 3000) {
+    if (a.rewrap !== false && needsRewrap(container) && u.elapsedMs < 3000) {
       // Stronger parameters are affordable on this device: transparent re-wrap at unlock.
       const w = await wrapSeed(u.seed, a.passphrase, deps, { m: Math.max(container.m, Math.min(DEFAULT_PARAMS.m, container.m * 2)), t: Math.max(container.t, DEFAULT_PARAMS.t), p: container.p }, a.onProgress);
       await a.storage.putKey(a.slot, w.container);
@@ -119,15 +131,16 @@ export async function unlockKey(a: { storage: DeviceStorage; slot: string; passp
   }
 }
 
-const REG_DOMAIN = utf8('QV-REG-v1\0');
+// Exact enrollment framing is shared with CLI/server (QV-ADR-028).
 
 /**
- * Registration request (QV-19 §6.1): `invite_code` carries SHA-256(token) so the server never receives a usable credential
- * (REQ-010); the proof of possession signs (election id, SHA-256(token), pk) under the registration domain.
+ * Registration request (QV-19 §6.1): `invite_code` carries SHA-256(token), itself a usable enrollment bearer.
+ * The raw fragment token is omitted from redemption; the proof of possession signs (election id, SHA-256(token), pk) under the registration domain.
  */
 export async function registrationBody(a: { apiElectionId: string; token: Uint8Array; signer: Signer }): Promise<RegistrationBody> {
+  if (a.token.length !== 16) throw new Error('invalid invite token');
   const h = sha256(a.token);
-  const msg = new Uint8Array([...REG_DOMAIN, ...utf8(a.apiElectionId), 0, ...h, ...a.signer.publicKey]);
+  const msg = registrationMessage(a.apiElectionId, h, a.signer.publicKey);
   return { invite_code: inviteHash(a.token), pk: b64uEncode(a.signer.publicKey), alg: 'ed25519', pop: b64uEncode(await a.signer.sign(msg)) };
 }
 

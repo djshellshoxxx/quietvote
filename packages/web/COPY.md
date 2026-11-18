@@ -133,6 +133,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.key.lockWarn`: Your key will lock in {seconds, plural, one {# second} other {# seconds}} because of inactivity.
 - `qv.key.stayUnlocked`: Stay unlocked
 - `qv.key.lockNow`: Lock key now
+- `qv.key.enrollmentUnavailable`: This election needs an updated invitation. Contact its organizer.
 - `qv.key.registered`: Your key is registered. The organizer will add it to the voter list.
 - `qv.key.onRoll`: You are on the voter list.
 - `qv.key.notYetRoll`: Your key is not on the voter list yet.
@@ -145,6 +146,9 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.key.forgetConfirm`: Remove my key, receipts and drafts from this browser
 - `qv.key.forgetBody`: This removes your voting key, receipts and drafts from this browser. Make sure you have a key file or recovery code first.
 - `qv.key.cancel`: Cancel
+- `qv.key.costWarn`: This key file needs more memory and time than usual to unlock. It asks for {mem} MiB of memory, {passes} passes and {lanes} lanes. On a slow device this can take long or fail. Continue only if you trust the file.
+- `qv.key.costConfirm`: Unlock anyway
+- `qv.key.costCancelled`: Unlock cancelled. Nothing was unlocked.
 
 ## Ballot
 
@@ -169,6 +173,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.ballot.sealed`: Your ballot is sealed.
 - `qv.ballot.sealedAnnounce`: Ballot sealed. The code is on screen.
 - `qv.ballot.code`: Ballot code
+- `qv.ballot.recoveryStorage` **[normative]**: Sending keeps your ballot code here until confirmed or you clear this device, even with receipt saving off.
 - `qv.ballot.codeHelp`: This code is a fingerprint of your sealed ballot. It was created before you chose below.
 - `qv.ballot.choose`: Choose what to do next
 - `qv.ballot.cast`: Send my vote
@@ -243,6 +248,10 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.receipt.afterCloseTitle`: Voting had closed
 - `qv.receipt.checkTitle`: Check a receipt
 - `qv.receipt.enterCode`: Ballot code
+- `qv.receipt.checkCode`: Check ballot code
+- `qv.receipt.codeHelp`: Enter the full ballot code or the seven groups shown when you sealed it. You do not need your voting key or your choices.
+- `qv.receipt.invalidCode`: Enter a full ballot code or all seven displayed groups.
+- `qv.receipt.ambiguousCode`: More than one public entry matches this code. Enter the full code to check a specific ballot.
 - `qv.receipt.orFile`: Or choose a receipt file
 - `qv.receipt.check`: Check
 - `qv.receipt.included`: Included in the public record at entry #{seq} (record size {size}).
@@ -414,7 +423,7 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.verify.running`: Running checks…
 - `qv.verify.verdict.PASS`: Supplied checks passed
 - `qv.verify.verdict.FAIL`: A check failed
-- `qv.verify.verdict.INCOMPLETE`: Incomplete: no result has been published yet
+- `qv.verify.verdict.INCOMPLETE`: Incomplete: more evidence is needed
 - `qv.verify.status.pass`: passed
 - `qv.verify.status.fail`: failed
 - `qv.verify.status.not_run`: not run
@@ -524,6 +533,19 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.org.trusteeFormat`: name, signing key hex
 - `qv.org.logPublicKeyLabel`: Log public key (hex)
 - `qv.org.invalidDate`: invalid date
+- `qv.org.organizationName`: Organization name
+- `qv.org.keyFile`: Organizer key file
+- `qv.org.publicKey`: Organizer public key (hex)
+- `qv.org.keySetupHelp`: Create or import a key once, then unlock it to check its fingerprint. Download a backup. This setup uses the same key as organizer and coordinator.
+- `qv.org.importKey`: Import organizer key
+- `qv.org.unlockFirst`: Create, import or unlock your organizer key before preparing this election.
+- `qv.org.enroll`: Create organization
+- `qv.org.nameRequired`: Enter an organization name first.
+- `qv.org.enrolling`: Creating organization… keep this page open.
+- `qv.org.enrolled`: Organization created. Its ID is {id}.
+- `qv.org.enrollHelp`: Use an existing organization ID, or create an organization with this key and the passphrase below. The server may require a registration token or refuse new organizations.
+- `qv.org.registrationToken`: Organization registration token (if required)
+- `qv.org.enrollRetry`: The request may have reached the server. Re-enter your passphrase and retry with the same organization details. Keep this page open.
 
 ## Help
 

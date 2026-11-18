@@ -106,6 +106,8 @@ export interface VaultDeps {
   /** scrypt log2(N); production default 18. Tests inject a lower value together with allowWeak. */
   logN?: number;
   allowWeak?: boolean;
+  /** Opening budget; defaults to the production creation cost (18). Does not lower sealing strength. */
+  maxLogN?: number;
 }
 
 const AAD = utf8('qv-trustee-bundle/v1');
@@ -143,12 +145,12 @@ export function decodeBundle(plain: Uint8Array): BundleData {
   return d;
 }
 
-export async function readBundle(path: string, pass: string, deps: Pick<VaultDeps, 'allowWeak'>): Promise<BundleData> {
+export async function readBundle(path: string, pass: string, deps: Pick<VaultDeps, 'allowWeak' | 'maxLogN'>): Promise<BundleData> {
   return (await readBundleSealed(path, pass, deps)).data;
 }
 
 /** As `readBundle`, plus the sealed file bytes that were opened (for the compare-before-write check, audit TR-03). */
-export async function readBundleSealed(path: string, pass: string, deps: Pick<VaultDeps, 'allowWeak'>): Promise<{ data: BundleData; sealed: Uint8Array }> {
+export async function readBundleSealed(path: string, pass: string, deps: Pick<VaultDeps, 'allowWeak' | 'maxLogN'>): Promise<{ data: BundleData; sealed: Uint8Array }> {
   if (!(await exists(path))) {
     if (await exists(tombstonePath(path))) throw new TrusteeError('STATE', 'DESTROYED', 'this share was destroyed');
     throw new TrusteeError('USAGE', 'NO_SUCH_FILE', path);
@@ -156,7 +158,7 @@ export async function readBundleSealed(path: string, pass: string, deps: Pick<Va
   const file = await readSecretFile(path);
   let plain: Uint8Array;
   try {
-    plain = await openWithPassphrase(file, pass, { aad: AAD, ...(deps.allowWeak === true ? { allowWeak: true } : {}) });
+    plain = await openWithPassphrase(file, pass, { aad: AAD, maxLogN: deps.maxLogN ?? 18, ...(deps.allowWeak === true ? { allowWeak: true } : {}) });
   } catch (e) {
     if (e instanceof QvCryptoError) {
       if (e.code === 'E_AEAD') throw new TrusteeError('LOCKED', 'BAD_PASSPHRASE', 'wrong passphrase or corrupted file');

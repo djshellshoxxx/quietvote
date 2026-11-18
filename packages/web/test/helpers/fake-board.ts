@@ -38,7 +38,7 @@ export class FakeBoard {
   tamper: { inclusionPath?: boolean; rollbackTo?: number; forkRoot?: boolean } = {};
   private readonly author: Ed25519Keypair;
 
-  constructor(sim: Sim, apiId = 'aaaaaaaaaaaaaaaaaaaaaaaaaa') {
+  constructor(sim: Sim, apiId = sim.manifest.election_id) {
     this.sim = sim;
     this.apiId = apiId;
     this.origin = logOrigin(sim.manifest); // as the real server: quietvote/v1/<base32 election_id> (QV-18 X-21)
@@ -117,7 +117,7 @@ export class FakeBoard {
     const base = `/api/v1/elections/${this.apiId}`;
     if (p === '/api/v1/instance') return this.json(200, { instance_id: 'inst_fake', api_versions: ['1.0'], server_version: '0.0.0', protocol_suites: ['qv1-r255-sha2'], registration_mode: 'token', logging: { ip: false, user_agent: false } });
     if (p === base && method === 'GET') {
-      return this.json(200, { election_id: this.apiId, origin: this.origin, log_pk: this.logPkB64u(), state: this.closed ? 'CLOSED' : 'OPEN', title: this.sim.manifest.title });
+      return this.json(200, { election_id: this.apiId, registration_scheme: 'hashed-pop-v1', origin: this.origin, log_pk: this.logPkB64u(), state: this.closed ? 'CLOSED' : 'OPEN', title: this.sim.manifest.title });
     }
     if (p === `${base}/state`) return this.json(200, { election_id: this.apiId, phase: this.closed ? 'CLOSED' : 'OPEN', tree_size: this.tree.size, witnessed: false, manifest_hash: bytesToHex(this.sim.mh), integrity: 'unwitnessed' });
     if (p === `${base}/roll`) return this.json(200, { items: this.sim.rollHex.map((pk, i) => ({ voter_kid: pk.slice(0, 16), pk: b64uEncode(hex(pk)), alg: 'ed25519', status: 'committed', roll_index: i })), next_cursor: null, roll_size: this.sim.rollHex.length, roll_root: this.sim.manifest.roll.root });
@@ -141,7 +141,9 @@ export class FakeBoard {
       return note ? new Response(note, { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }) : this.problem(503, 'LOG_UNAVAILABLE');
     }
     if (p === `${base}/log/proof/inclusion`) {
-      const seq = Number(url.searchParams.get('seq'));
+      const leaf = url.searchParams.get('leaf_hash');
+      const seq = leaf === null ? Number(url.searchParams.get('seq')) : this.entries.findIndex((e) => b64uEncode(e.leaf) === leaf);
+      if (seq < 0) return this.problem(404, 'NOT_FOUND');
       const size = Number(url.searchParams.get('tree_size') ?? this.tree.size);
       if (!Number.isInteger(seq) || seq >= size || size > this.tree.size) return this.problem(seq >= this.tree.size ? 404 : 400, seq >= this.tree.size ? 'NOT_FOUND' : 'BAD_REQUEST');
       const path = this.tree.inclusionProof(seq, size).map((h) => stdB64(h));

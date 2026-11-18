@@ -48,24 +48,34 @@ export async function sealWithPassphrase(plaintext: Uint8Array, passphrase: stri
   const wrapNonce = rng.bytes(12);
   const payloadNonce = rng.bytes(12);
   const fileKey = rng.bytes(32);
-  const pw = utf8(passphrase.normalize('NFKC'));
-  const wrapKey = await kdf(pw, salt, logN);
-  const head = concatBytes(MAGIC, u8(logN), salt, wrapNonce);
-  const aad = concatBytes(head, opts.aad ?? new Uint8Array(0));
-  const wrapped = new Uint8Array(
-    await globalThis.crypto.subtle.encrypt({ name: 'AES-GCM', iv: new Uint8Array(wrapNonce), additionalData: new Uint8Array(aad), tagLength: 128 }, await aesKey(wrapKey, 'encrypt'), new Uint8Array(fileKey)),
-  );
-  const hdr = concatBytes(head, wrapped, payloadNonce);
-  const pk = payloadKey(fileKey, payloadNonce);
-  const body = new Uint8Array(
-    await globalThis.crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: new Uint8Array(12), additionalData: new Uint8Array(concatBytes(hdr, opts.aad ?? new Uint8Array(0))), tagLength: 128 },
-      await aesKey(pk, 'encrypt'),
-      new Uint8Array(plaintext),
-    ),
-  );
-  wipe(fileKey); wipe(wrapKey); wipe(pw); wipe(pk);
-  return concatBytes(hdr, body);
+  let pw: Uint8Array | undefined;
+  let wrapKey: Uint8Array | undefined;
+  let pk: Uint8Array | undefined;
+  try {
+    pw = utf8(passphrase.normalize('NFKC'));
+    wrapKey = await kdf(pw, salt, logN);
+    const head = concatBytes(MAGIC, u8(logN), salt, wrapNonce);
+    const aad = concatBytes(head, opts.aad ?? new Uint8Array(0));
+    const wrapped = new Uint8Array(
+      await globalThis.crypto.subtle.encrypt({ name: 'AES-GCM', iv: new Uint8Array(wrapNonce), additionalData: new Uint8Array(aad), tagLength: 128 }, await aesKey(wrapKey, 'encrypt'), new Uint8Array(fileKey)),
+    );
+    const hdr = concatBytes(head, wrapped, payloadNonce);
+    pk = payloadKey(fileKey, payloadNonce);
+    const body = new Uint8Array(
+      await globalThis.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: new Uint8Array(12), additionalData: new Uint8Array(concatBytes(hdr, opts.aad ?? new Uint8Array(0))), tagLength: 128 },
+        await aesKey(pk, 'encrypt'),
+        new Uint8Array(plaintext),
+      ),
+    );
+    return concatBytes(hdr, body);
+  } finally {
+    // Best-effort cleanup also covers KDF, key-import and AEAD failures (QV-30 S3).
+    wipe(fileKey);
+    if (pw !== undefined) wipe(pw);
+    if (wrapKey !== undefined) wipe(wrapKey);
+    if (pk !== undefined) wipe(pk);
+  }
 }
 
 /** Throws E_AEAD on a wrong passphrase or any tampering, E_PARSE on a malformed container. */
@@ -74,6 +84,7 @@ export async function openWithPassphrase(
   passphrase: string,
   opts: Pick<SealOpts, 'aad' | 'allowWeak'> & { /** Lower cap for the header work factor, e.g. the value the caller seals with. */ maxLogN?: number } = {},
 ): Promise<Uint8Array> {
+  if (opts.maxLogN !== undefined && (!Number.isInteger(opts.maxLogN) || opts.maxLogN < (opts.allowWeak === true ? 4 : BUNDLE_MIN_LOGN) || opts.maxLogN > BUNDLE_MAX_LOGN)) throw new QvCryptoError('E_ARG', 'scrypt work factor cap out of range');
   if (file.length < HDR + 16 || !ctEqual(file.subarray(0, MAGIC.length), MAGIC)) throw new QvCryptoError('E_PARSE', 'not a QV bundle');
   const logN = file[MAGIC.length]!;
   if (logN > Math.min(BUNDLE_MAX_LOGN, opts.maxLogN ?? BUNDLE_MAX_LOGN) || logN < (opts.allowWeak === true ? 4 : BUNDLE_MIN_LOGN)) throw new QvCryptoError('E_PARSE', 'unacceptable scrypt work factor');
@@ -86,29 +97,38 @@ export async function openWithPassphrase(
   const hdr = file.subarray(0, o);
   const extra = opts.aad ?? new Uint8Array(0);
   const pw = utf8(passphrase.normalize('NFKC'));
-  const wrapKey = await kdf(pw, salt, logN);
-  let fileKey: Uint8Array;
+  let wrapKey: Uint8Array | undefined;
+  let fileKey: Uint8Array | undefined;
+  let pk: Uint8Array | undefined;
   try {
-    fileKey = new Uint8Array(
-      await globalThis.crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(wrapNonce), additionalData: new Uint8Array(concatBytes(head, extra)), tagLength: 128 }, await aesKey(wrapKey, 'decrypt'), new Uint8Array(wrapped)),
-    );
-  } catch {
-    throw new QvCryptoError('E_AEAD', 'wrong passphrase or corrupted bundle');
+    try {
+      wrapKey = await kdf(pw, salt, logN);
+      try {
+        fileKey = new Uint8Array(
+          await globalThis.crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(wrapNonce), additionalData: new Uint8Array(concatBytes(head, extra)), tagLength: 128 }, await aesKey(wrapKey, 'decrypt'), new Uint8Array(wrapped)),
+        );
+      } catch {
+        throw new QvCryptoError('E_AEAD', 'wrong passphrase or corrupted bundle');
+      }
+    } finally {
+      if (wrapKey !== undefined) wipe(wrapKey);
+      wipe(pw);
+    }
+    pk = payloadKey(fileKey, payloadNonce);
+    try {
+      return new Uint8Array(
+        await globalThis.crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: new Uint8Array(12), additionalData: new Uint8Array(concatBytes(hdr, extra)), tagLength: 128 },
+          await aesKey(pk, 'decrypt'),
+          new Uint8Array(file.subarray(o)),
+        ),
+      );
+    } catch {
+      throw new QvCryptoError('E_AEAD', 'bundle payload authentication failed');
+    }
   } finally {
-    wipe(wrapKey); wipe(pw);
-  }
-  const pk = payloadKey(fileKey, payloadNonce);
-  try {
-    return new Uint8Array(
-      await globalThis.crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: new Uint8Array(12), additionalData: new Uint8Array(concatBytes(hdr, extra)), tagLength: 128 },
-        await aesKey(pk, 'decrypt'),
-        new Uint8Array(file.subarray(o)),
-      ),
-    );
-  } catch {
-    throw new QvCryptoError('E_AEAD', 'bundle payload authentication failed');
-  } finally {
-    wipe(fileKey); wipe(pk);
+    // Cover KDF and payload-key derivation exceptions as well as AEAD errors.
+    if (fileKey !== undefined) wipe(fileKey);
+    if (pk !== undefined) wipe(pk);
   }
 }

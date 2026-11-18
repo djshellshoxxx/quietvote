@@ -42,3 +42,4 @@ table{border-collapse:collapse;inline-size:100%}th,td{border:1px solid var(--bor
 .qv-live{font-size:.95rem;color:var(--muted);margin-block:.25rem}
 .qv-standing{border-inline-start:6px solid var(--border);padding-inline-start:1rem;margin-block:.25rem}
 .qv-standing.superseded{border-inline-start-style:double}
+.admin-packet{white-space:pre-wrap;overflow-wrap:anywhere}

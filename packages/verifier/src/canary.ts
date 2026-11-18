@@ -1,3 +1,4 @@
+// Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
 // Built-in known-bad corpus and self-test (QV-34 section 9.4, QV-10-REQ-014, QV-ADR-P34-3).
 // A verifier that accepts any canary, or rejects the known-good control, is broken and must say so.
 import { readFileSync } from 'node:fs';
@@ -75,11 +76,11 @@ export interface SelfTestResult extends SelfTestSummary {
 /** Runs the control (must PASS) and every canary (must be rejected, and fail exactly the named checks). */
 export async function runSelfTest(corpus: Corpus = loadCorpus()): Promise<SelfTestResult> {
   const cases: SelfTestCase[] = [];
-  const ctl = await verifyBundle(corpus.control.bundle as object);
+  const ctl = await verifyBundle(corpus.control.bundle as object, { allowNoLog: true });
   const ctlOk = ctl.verdict === 'PASS';
   cases.push({ id: corpus.control.id, kind: 'control', ok: ctlOk, verdict: ctl.verdict, detail: ctlOk ? 'known-good election accepted' : 'known-good election NOT accepted: verifier rejects valid input' });
   for (const k of corpus.canaries) {
-    const r = await verifyBundle(k.bundle as object);
+    const r = await verifyBundle(k.bundle as object, { allowNoLog: true });
     // QV-34 section 9.3: a mutant is rejected if the verdict is not PASS or at least one named check fails (ignored-ballot
     // and alarm classes legitimately keep the verdict PASS, protocol NOTES X-10/X-11).
     const rejectedOk = r.verdict !== 'PASS' || failedChecks(r).length > 0;
@@ -98,7 +99,7 @@ export async function runSelfTest(corpus: Corpus = loadCorpus()): Promise<SelfTe
     let r: VerifierReport | undefined;
     let threw = false;
     try {
-      r = await verifyBundle(s.input as string | object);
+      r = await verifyBundle(s.input as string | object, { allowNoLog: true });
     } catch {
       threw = true;
     }

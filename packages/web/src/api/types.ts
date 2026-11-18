@@ -11,6 +11,7 @@ export interface Instance {
 }
 
 export interface ElectionSummary {
+  registration_scheme?: string;
   election_id: string;
   origin: string;
   /** Log public key, base64url. */
@@ -90,18 +91,6 @@ export interface RollPage {
   roll_size?: number;
 }
 
-export interface Challenge {
-  challenge_id: string;
-  nonce: string;
-  audience: string;
-  expires_at: string;
-}
-export interface Session {
-  token: string;
-  expires_at: string;
-  role: string;
-  org_id?: string;
-}
 export interface InviteResult {
   /** `code` is present only on the first (non-replayed) response; replays carry `code_withheld: true`. */
   invites: { invite_id: string; code?: string; code_withheld?: boolean; label?: string }[];

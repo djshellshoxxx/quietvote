@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
-import { parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, utf8, type Rng } from '@quietvote/crypto';
+import { jcs, parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, utf8, type Rng } from '@quietvote/crypto';
 import type { Aggregate, Manifest, MultiSignedRecord } from '@quietvote/protocol';
 import { TrusteeError } from './errors.ts';
 import { assertPassphraseStrength, generatePassphrase } from './passphrase.ts';
@@ -9,7 +9,7 @@ import { OVERRIDE_NO_LEDGER, OVERRIDE_UNWITNESSED, Trustee, realTarget, type Pac
 import { atomicWrite, exists, lockPath, readSecretFile } from './fsutil.ts';
 import { ledgerPath } from './ledger.ts';
 import { tombstonePath } from './bundle.ts';
-import { verifyTranscript, type Transcript } from './transcript.ts';
+import { verifyTranscript, type CeremonyMode, type Transcript } from './transcript.ts';
 import type { VaultDeps } from './bundle.ts';
 
 export interface CliIo {
@@ -30,7 +30,11 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   keygen --bundle F [--generate-passphrase]       new identity; prints public key
   join --bundle F --manifest F --manifest-hash HEX [--ceremony-id ID]
   import --bundle F --log F.qvl
-  commit|reveal|shares|verify|finalize|drill --bundle F [--out F.qvp]
+  commit|reveal|shares|verify|drill --bundle F [--out F.qvp]
+  finalize --bundle F
+  export-entry --bundle F --round ROUND [--index N] --out F.json
+      ROUND: r1-commit|r1-dealing|r2-shares|r3-complaints|r4-keyconf|tally-share
+      exports one persisted output for qv online election-submit; no network access
   confirm --bundle F --compared-with 2,3 [--words "w1 .. w6"] [--out F]
   tally-release --bundle F --election F.json [--claimed F] [--override-unwitnessed PHRASE] [--out F]   (election.json carries log_evidence)
   spoil-release --bundle F --election F.json --codes HEX[,HEX...] [--override-unwitnessed PHRASE] [--out F]
@@ -38,24 +42,89 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   backup --bundle F --to F2 [--backup-passphrase-file F] | restore --from F2 --bundle F [--backup-passphrase-file F] [--ledger F.releases] [--override-no-ledger PHRASE]
   destroy --bundle F --audit-close F --confirm "<election title>"
   report-compromise --bundle F --severity suspected|confirmed [--out F]
-  export-transcript --bundle F --out F [--mode airgap-dkg] | cosign-transcript --bundle F --in F --out F | verify-transcript --in F [--witness-key NAME=HEX]
+  export-transcript --bundle F --out F [--mode online-dkg|airgap-dkg|airgap-dealer]
+  cosign-transcript --bundle F --in F --out F | verify-transcript --in F [--witness-key NAME=HEX]
 Passphrase: --passphrase-file F (or QV_TRUSTEE_PASSPHRASE_FILE), otherwise a hidden prompt. Never on the command line.
-Options: --json   Exit codes: 0 ok, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
+Options: --max-kdf-logn 18|19|20 (default 18; opening budget only; 19/20 allow roughly 512 MiB/1 GiB per open). --json   Exit codes: 0 ok, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
+
+/** Only options consumed by that command are accepted; validation precedes prompts and file access. */
+const COMMAND_OPTIONS = new Map<string, readonly string[]>([
+  ['keygen', ['bundle', 'passphrase-file', 'generate-passphrase']],
+  ['join', ['bundle', 'passphrase-file', 'manifest', 'manifest-hash', 'ceremony-id']],
+  ['import', ['bundle', 'passphrase-file', 'log']],
+  ...['commit', 'reveal', 'shares', 'verify', 'drill'].map((cmd): [string, string[]] => [cmd, ['bundle', 'passphrase-file', 'out']]),
+  ['finalize', ['bundle', 'passphrase-file']],
+  ['export-entry', ['bundle', 'passphrase-file', 'round', 'index', 'out']],
+  ['confirm', ['bundle', 'passphrase-file', 'compared-with', 'words', 'out']],
+  ['tally-release', ['bundle', 'passphrase-file', 'election', 'claimed', 'override-unwitnessed', 'out']],
+  ['spoil-release', ['bundle', 'passphrase-file', 'election', 'codes', 'override-unwitnessed', 'out']],
+  ['status', ['bundle', 'passphrase-file']],
+  ['abort', ['bundle', 'passphrase-file', 'reason']],
+  ['restart', ['bundle', 'passphrase-file']],
+  ['backup', ['bundle', 'passphrase-file', 'to', 'backup-passphrase-file']],
+  ['restore', ['from', 'bundle', 'passphrase-file', 'backup-passphrase-file', 'ledger', 'override-no-ledger']],
+  ['destroy', ['bundle', 'passphrase-file', 'audit-close', 'confirm']],
+  ['report-compromise', ['bundle', 'passphrase-file', 'severity', 'out']],
+  ['export-transcript', ['bundle', 'passphrase-file', 'out', 'mode']],
+  ['cosign-transcript', ['bundle', 'passphrase-file', 'in', 'out']],
+  ['verify-transcript', ['in', 'witness-key']],
+]);
+for (const [command, options] of COMMAND_OPTIONS) {
+  if (command !== 'verify-transcript' && command !== 'keygen') COMMAND_OPTIONS.set(command, [...options, 'max-kdf-logn']);
+}
+const OPTIONS = new Set(['json', ...[...COMMAND_OPTIONS.values()].flat()]);
+
+function transcriptMode(value: string | undefined): CeremonyMode {
+  const mode = value ?? 'airgap-dkg';
+  if (mode !== 'online-dkg' && mode !== 'airgap-dkg' && mode !== 'airgap-dealer') {
+    throw new TrusteeError('USAGE', 'USAGE', '--mode must be online-dkg, airgap-dkg or airgap-dealer (value withheld)');
+  }
+  return mode;
+}
+
+function witnessKeys(value: string | undefined): Record<string, string> {
+  if (value === undefined) return {};
+  const match = /^([^=\r\n]+)=([0-9a-f]{64})$/.exec(value);
+  if (match === null || match[0] !== value || match[1]!.trim().length === 0) {
+    throw new TrusteeError('USAGE', 'USAGE', '--witness-key must be NAME=HEX with a nonempty name and 32-byte lowercase hex key (value withheld)');
+  }
+  return Object.fromEntries([[match[1]!, match[2]!]]);
+}
 
 function parseArgs(argv: string[]): { cmd: string; o: Map<string, string>; flags: Set<string> } {
   const [cmd = '', ...rest] = argv;
   const o = new Map<string, string>();
   const flags = new Set<string>();
   const bool = new Set(['json', 'generate-passphrase']);
+  const supported = new Set(['json', ...(COMMAND_OPTIONS.get(cmd) ?? [])]);
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i]!;
-    if (!a.startsWith('--')) throw new TrusteeError('USAGE', 'USAGE', `unexpected argument ${a}`);
+    if (!a.startsWith('--')) throw new TrusteeError('USAGE', 'USAGE', 'unexpected positional argument (value withheld)');
     const k = a.slice(2);
+    // Checked before any value is consumed, and the value is never echoed. The name is echoed only when it is a plain option-shaped word.
+    if (!OPTIONS.has(k)) {
+      const shown = /^[a-z][a-z0-9-]{0,39}$/.test(k) ? `--${k}` : '(name withheld)';
+      throw new TrusteeError('USAGE', 'USAGE', `unknown option ${shown}; run with no arguments for usage`);
+    }
+    if (!supported.has(k)) throw new TrusteeError('USAGE', 'USAGE', `--${k} is not supported by this command`);
+    if (o.has(k) || flags.has(k)) throw new TrusteeError('USAGE', 'USAGE', `duplicate option --${k}`);
     if (bool.has(k)) flags.add(k);
     else {
       const v = rest[++i];
-      if (v === undefined) throw new TrusteeError('USAGE', 'USAGE', `--${k} needs a value`);
+      if (v === undefined || v.startsWith('--')) throw new TrusteeError('USAGE', 'USAGE', `--${k} needs a value`);
       o.set(k, v);
+    }
+  }
+  if (o.has('max-kdf-logn') && !/^(18|19|20)$/.test(o.get('max-kdf-logn')!)) throw new TrusteeError('USAGE', 'USAGE', '--max-kdf-logn must be 18, 19 or 20');
+  if (o.has('mode')) transcriptMode(o.get('mode'));
+  if (o.has('witness-key')) witnessKeys(o.get('witness-key'));
+  if (cmd === 'export-entry') {
+    if (!['r1-commit', 'r1-dealing', 'r2-shares', 'r3-complaints', 'r4-keyconf', 'tally-share'].includes(o.get('round') ?? '') || !o.has('out')) {
+      throw new TrusteeError('USAGE', 'USAGE', 'export-entry requires a supported --round and --out');
+    }
+    const index = o.get('index') ?? '0';
+    if (!/^(0|[1-9][0-9]*)$/.test(index) || !Number.isSafeInteger(Number(index))) {
+      throw new TrusteeError('USAGE', 'USAGE', '--index must be a nonnegative safe integer');
     }
   }
   return { cmd, o, flags };
@@ -106,7 +175,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       if (v === undefined) throw new TrusteeError('USAGE', 'USAGE', `--${k} is required`);
       return v;
     };
-    const vd: VaultDeps = { rng: deps.rng, now: deps.now, ...(deps.logN !== undefined ? { logN: deps.logN } : {}), ...(deps.allowWeak === true ? { allowWeak: true } : {}) };
+    const vd: VaultDeps = { maxLogN: Number(o.get('max-kdf-logn') ?? '18'), rng: deps.rng, now: deps.now, ...(deps.logN !== undefined ? { logN: deps.logN } : {}), ...(deps.allowWeak === true ? { allowWeak: true } : {}) };
     const pass = async (fileOpt: string, envKey: string, q: string): Promise<string> => {
       const f = o.get(fileOpt) ?? env[envKey];
       if (f === undefined) return io.promptSecret(q);
@@ -180,6 +249,14 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
         report({ state: t.state, check_words: r.fingerprint.words.join(' '), check_hex: r.fingerprint.hex, qualified: r.qualified, events: r.events });
         return 0;
       }
+      case 'export-entry': {
+        const t = await open();
+        const entry = await t.exportBoardEntry(need('round'), Number(o.get('index') ?? '0'));
+        try { await atomicWrite(need('out'), jcs(entry), 0o644, { exclusive: true }); }
+        catch { throw new TrusteeError('REFUSED', 'OUT_WRITE_FAILED', 'cannot create entry output; existing files are never overwritten'); }
+        report({ out: need('out'), round: need('round'), index: Number(o.get('index') ?? '0') });
+        return 0;
+      }
       case 'confirm': {
         const t = await open();
         const w = o.get('words');
@@ -246,7 +323,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       }
       case 'export-transcript': {
         const t = await open();
-        const tr = await t.exportTranscript((o.get('mode') ?? 'airgap-dkg') as 'airgap-dkg', { network: 'offline' });
+        const tr = await t.exportTranscript(transcriptMode(o.get('mode')), { network: 'offline' });
         await atomicWrite(need('out'), utf8(JSON.stringify(tr)), 0o644);
         report({ summary_hash: tr.summary_hash, out: need('out') });
         return 0;
@@ -259,10 +336,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
         return 0;
       }
       case 'verify-transcript': {
-        const witnessKeys: Record<string, string> = {};
-        const wk = o.get('witness-key');
-        if (wk !== undefined) witnessKeys[wk.split('=')[0]!] = wk.split('=')[1]!;
-        const r = await verifyTranscript(await jsonOf(need('in')), { witnessKeys });
+        const r = await verifyTranscript(await jsonOf(need('in')), { witnessKeys: witnessKeys(o.get('witness-key')) });
         report({ ...r });
         return r.ok ? 0 : 20;
       }

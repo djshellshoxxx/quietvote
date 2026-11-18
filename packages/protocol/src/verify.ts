@@ -52,12 +52,18 @@ const ALL_CHECKS: CheckId[] = [
 type Entry = { seq: number; entry: unknown };
 
 export interface VerifyElectionOptions {
+  /** Trusted caller opt-out for content-only verification. Never read from the bundle.
+   * Supplied evidence is still verified; only absent evidence or an authenticated
+   * append-only log whose signed manifest explicitly requires zero witnesses may
+   * retain a content-only PASS. Malformed/unchecked supplied logs cannot use it.
+   */
+  allowNoLog?: boolean;
   /** Optional main-thread scheduling; cancellation/callback failure rejects, never returns a partial report. */
   cooperative?: CooperativeVerification;
   /**
    * QV-18 log-layer evidence (C3 step 11): the log export whose entry bodies are the records of `bundle.log`, plus optional
    * witness anchors, externally observed tree heads and voter receipts. Without it `chk.board.*` and `chk.receipts.sample`
-   * stay `not_run` and the report carries the log-integrity caveat.
+   * stay `not_run` and the default verdict is INCOMPLETE unless a fatal finding makes it FAIL.
    */
   log?: LogEvidence;
 }
@@ -115,6 +121,15 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   let logLayer: { m: Manifest; ls: LogStructure; ev: LogEvidence } | undefined;
   let phaseSeqs: PhaseSeqs | undefined;
   let ctxBytes: Uint8Array | undefined;
+  let zeroWitnessPolicy = false;
+  let logUnavailable = false;
+  const unavailableLog = (): void => {
+    logUnavailable = true;
+    for (const c of ['chk.board.append_only', 'chk.board.witness', 'chk.receipts.sample'] as const) {
+      if (R.checks[c] !== 'fail') R.checks[c] = 'not_run';
+    }
+    R.caveats.push('Supplied log evidence could not be fully checked; verification is INCOMPLETE unless another check fails');
+  };
   const finishLog = (): void => {
     if (logLayer === undefined) return;
     const { m, ls, ev } = logLayer;
@@ -143,9 +158,13 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   };
   const fatal = (): boolean => R.findings.some((f) => f.cls === 'F');
   const done = (): VerificationReport => {
-    finishLog();
+    try { finishLog(); } catch { unavailableLog(); }
     for (const f of R.findings) if (f.cls === 'L' || f.cls === 'ALARM') R.counts.ignored[f.code] = (R.counts.ignored[f.code] ?? 0) + 1;
-    R.verdict = fatal() ? 'FAIL' : R.checks['chk.tally.decrypt'] === 'not_run' ? 'INCOMPLETE' : 'PASS';
+    const incompleteLog = R.checks['chk.board.append_only'] !== 'pass' || R.checks['chk.board.witness'] !== 'pass';
+    const contentOnly = !logUnavailable && opts.allowNoLog === true && (opts.log === undefined ||
+      (R.checks['chk.board.append_only'] === 'pass' && zeroWitnessPolicy));
+    if (contentOnly && incompleteLog) R.caveats.push('CONTENT-ONLY verification explicitly requested by the caller; PASS does not establish witnessed log integrity');
+    R.verdict = fatal() ? 'FAIL' : R.checks['chk.tally.decrypt'] === 'not_run' || (incompleteLog && !contentOnly) ? 'INCOMPLETE' : 'PASS';
     return R;
   };
   R.checks['chk.board.append_only'] = 'not_run';
@@ -181,6 +200,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     return done();
   }
   const m = mv.value.manifest;
+  zeroWitnessPolicy = m.bb.witness_quorum === 0;
   R.warnings.push(...mv.value.warnings);
   const mhb = manifestHash(m);
   if (H(mhb) !== b.manifest_hash) {
@@ -227,12 +247,14 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
 
   // ---- C3 (QV-18 log layer): entries <-> records, tree, tree heads, observed views. Witnessing/receipts finish in done().
   if (opts.log !== undefined) {
-    const ls = verifyLogStructure(m, mrec, rollHex, log, opts.log);
-    R.findings.push(...ls.findings);
-    R.warnings.push(...ls.warnings.map((w) => `log: ${w}`));
-    R.checks['chk.board.append_only'] = ls.ok ? 'pass' : 'fail';
-    R.caveats = R.caveats.filter((c) => !c.startsWith('log integrity'));
-    logLayer = { m, ls, ev: opts.log };
+    try {
+      const ls = verifyLogStructure(m, mrec, rollHex, log, opts.log);
+      R.findings.push(...ls.findings);
+      R.warnings.push(...ls.warnings.map((w) => `log: ${w}`));
+      R.checks['chk.board.append_only'] = ls.ok ? 'pass' : 'fail';
+      R.caveats = R.caveats.filter((c) => !c.startsWith('log integrity'));
+      logLayer = { m, ls, ev: opts.log };
+    } catch { unavailableLog(); }
   }
 
   const trusteeKey = (idx: number): string | undefined => m.trustees[idx - 1]?.sign_pk;

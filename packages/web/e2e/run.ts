@@ -8,7 +8,7 @@ import { extname, join } from 'node:path';
 import { bytesToHex, streamRng } from '@quietvote/crypto';
 import { ballotCode, type CastEnvelope } from '@quietvote/protocol';
 import { buildSite, csp } from '../src/build/site.ts';
-import { defaultDeps, serializeContainer, wrapSeed, FLOOR_PARAMS } from '../src/key/keystore.ts';
+import { defaultDeps, parseContainer, serializeContainer, unwrapSeed, wrapSeed, FLOOR_PARAMS } from '../src/key/keystore.ts';
 import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
 import { launchBrowser } from './browser.ts';
 
@@ -43,6 +43,9 @@ const PASS = 'correct horse battery staple';
 const keyFile = join(dist, 'voter.qvkey');
 const w = await wrapSeed(sim.voters[0]!.secretKey.slice(), PASS, { ...defaultDeps(), rng: streamRng('e2e') }, FLOOR_PARAMS);
 writeFileSync(keyFile, serializeContainer(w.container));
+const rivalKeyFile = join(dist, 'rival-organizer.qvkey');
+const rivalKey = await wrapSeed(sim.voters[1]!.secretKey.slice(), PASS, { ...defaultDeps(), rng: streamRng('e2e-rival') }, FLOOR_PARAMS);
+writeFileSync(rivalKeyFile, serializeContainer(rivalKey.container));
 
 const browser = await launchBrowser();
 let failed = 0;
@@ -74,6 +77,94 @@ try {
   await step('home shows How this works', async () => {
     await page.goto(origin + '/');
     await page.getByRole('heading', { name: 'How this works' }).waitFor({ timeout: 10000 });
+  });
+  await step('organizer: concurrent imports keep one key, download backup and prepare editable election settings', async () => {
+    const context = await browser.newContext();
+    let p = await context.newPage();
+    const rival = await context.newPage();
+    const late = await context.newPage();
+    try {
+      // All tabs observe an empty slot. Distinct backups expose any overwrite.
+      for (const [tab, file] of [[p, keyFile], [rival, rivalKeyFile], [late, rivalKeyFile]] as const) {
+        await tab.goto(origin + '/new');
+        await tab.getByLabel('Organizer key file', { exact: true }).setInputFiles(file);
+        await tab.getByLabel('Passphrase', { exact: true }).fill(PASS);
+      }
+      await Promise.all([p, rival].map((tab) => tab.getByRole('button', { name: 'Import organizer key', exact: true }).click()));
+      // Wait for completion, then assert the result separately: an unexpected error
+      // should fail with its UI state instead of hanging on success-only text.
+      const idle = (tab: typeof p) => tab.locator('section[aria-busy="false"]').waitFor({ timeout: 30000 });
+      await Promise.all([p, rival].map(idle));
+      const winners = await Promise.all([p, rival].map((tab) => tab.getByText('Organizer public key (hex)', { exact: true }).count()));
+      if (winners[0]! + winners[1]! !== 1) throw new Error('concurrent organizer imports did not select exactly one winner');
+      const loser = winners[0] ? rival : p;
+      if (await loser.getByText('Your key is locked.', { exact: true }).count() !== 1) throw new Error('losing organizer import did not report the locked key');
+      const winnerIndex = winners[0] ? 0 : 1;
+      const expectedPk = bytesToHex(sim.voters[winnerIndex]!.publicKey);
+      const expectedBackup = serializeContainer(winnerIndex === 0 ? w.container : rivalKey.container);
+      if (winners[1]) p = rival;
+      if (await p.locator('code').textContent() !== expectedPk) throw new Error('organizer key mismatch');
+      // Force the preflight collision as well as the concurrent installation race.
+      await late.getByRole('button', { name: 'Import organizer key', exact: true }).click();
+      await idle(late);
+      if (await late.getByText('Your key is locked.', { exact: true }).count() !== 1) throw new Error('late organizer import did not report the locked key');
+      for (const tab of [p, loser, late]) {
+        if (await tab.getByLabel('Passphrase', { exact: true }).inputValue() !== '') throw new Error('organizer passphrase retained');
+        if (await tab.getByLabel('Organizer key file', { exact: true }).inputValue() !== '') throw new Error('organizer file selection retained');
+        for (const name of ['Create key', 'Import organizer key']) {
+          if (await tab.getByRole('button', { name, exact: true }).isEnabled()) throw new Error('existing organizer could be replaced');
+        }
+      }
+      // A losing tab must read the winner, never restore its own imported key.
+      for (const tab of [loser, late]) {
+        await tab.getByLabel('Passphrase', { exact: true }).fill(PASS);
+        await tab.getByRole('button', { name: 'Unlock key', exact: true }).click();
+        await idle(tab);
+        if (await tab.locator('code').textContent() !== expectedPk) throw new Error('losing tab did not unlock the installed organizer');
+      }
+      const download = p.waitForEvent('download');
+      await p.getByRole('button', { name: 'Download key file', exact: true }).click();
+      const backup = await download;
+      if (backup.suggestedFilename() !== 'organizer.qvkey') throw new Error('organizer backup name mismatch');
+      const backupPath = await backup.path();
+      if (!backupPath) throw new Error('organizer backup download missing');
+      const backupText = readFileSync(backupPath, 'utf8');
+      if (backupText !== expectedBackup) throw new Error('organizer backup changed after competing imports or unlock');
+      const restored = await unwrapSeed(parseContainer(backupText), PASS);
+      try {
+        if (bytesToHex(restored.publicKey) !== expectedPk) throw new Error('organizer backup does not authenticate the installed key');
+      } finally { restored.seed.fill(0); }
+      await p.getByLabel('Name of decision', { exact: true }).fill('Council');
+      await p.getByLabel('Voting method', { exact: true }).selectOption('k-of-n');
+      await p.getByLabel('Question', { exact: true }).fill('Choose the council');
+      await p.getByLabel('Options (one per line)', { exact: true }).fill('A\nB\nC\nD');
+      await p.getByLabel('Maximum choices (k)', { exact: true }).fill('3');
+      await p.getByLabel('Most ballots one voter may cast (1 turns revoting off)', { exact: true }).fill('20');
+      await p.getByLabel('Require at least this many voters (0 for none)', { exact: true }).fill('3');
+      await p.getByLabel('Voting opens', { exact: true }).fill('2027-03-01T08:00');
+      await p.getByLabel('Voting closes', { exact: true }).fill('2027-03-14T17:00');
+      await p.getByLabel('Voter public keys', { exact: true }).fill(sim.rollHex.join('\n'));
+      await p.getByLabel('Trustees', { exact: true }).fill(sim.trusteeKeys.map((key, i) => `T${i + 1},${bytesToHex(key.publicKey)}`).join('\n'));
+      await p.getByRole('button', { name: 'Freeze election', exact: true }).click();
+      await p.getByRole('button', { name: 'Create organization', exact: true }).waitFor();
+      await p.getByRole('button', { name: 'Publish election', exact: true }).waitFor();
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      const sent = p.waitForRequest('**/api/v1/orgs', { timeout: 30000 });
+      await p.route('**/api/v1/orgs', async (route) => {
+        await held;
+        await route.fulfill({ status: 403, contentType: 'application/problem+json', body: JSON.stringify({ code: 'REGISTRATION_CLOSED' }) }).catch(() => undefined);
+      });
+      await p.getByLabel('Organization name', { exact: true }).fill('Council');
+      const publicationPass = p.getByLabel('Passphrase', { exact: true }).last();
+      await publicationPass.fill(PASS);
+      try {
+        await p.getByRole('button', { name: 'Create organization', exact: true }).click();
+        await sent;
+        if (await publicationPass.inputValue() !== '') throw new Error('enrollment retained the passphrase during its pending network request');
+      } finally { release(); }
+      await p.getByText('The request may have reached the server. Re-enter your passphrase and retry with the same organization details. Keep this page open.').waitFor();
+    } finally { await context.close(); }
   });
   await step('overview: step indicator and Election ID check', async () => {
     await page.goto(`${base}#inv=AAAAAAAAAAAAAAAAAAAAAA`);
@@ -190,6 +281,33 @@ try {
     await page.getByText('No receipts are saved on this device.', { exact: true }).waitFor();
     await page.getByRole('link', { name: 'Vote', exact: true }).first().click();
     await page.getByRole('main').getByText('Your key is locked.', { exact: true }).waitFor();
+  });
+  await step('lost response: IndexedDB recovery survives reload with a locked key and uses only reads', async () => {
+    const p = await (await browser.newContext()).newPage();
+    try {
+      await importKey(p, `${base}/key`);
+      await p.getByText('You are on the voter list.').waitFor({ timeout: 30000 });
+      await p.getByRole('link', { name: 'Vote', exact: true }).first().click();
+      await p.getByLabel('YES', { exact: true }).check();
+      await p.getByRole('button', { name: 'Review my choices' }).click();
+      await p.getByRole('button', { name: 'Seal my ballot' }).click();
+      await p.getByRole('button', { name: 'Send my vote' }).waitFor({ timeout: 30000 });
+      board.faults = ['drop-response'];
+      const before = board.entries.length;
+      const postCount = (): number => board.requests.filter((r) => r.method === 'POST').length;
+      const posts = postCount();
+      await p.getByRole('button', { name: 'Send my vote' }).click();
+      await p.getByText('Your ballot was sent but the record has not confirmed it yet. Do not vote again yet. You can check again safely.').waitFor({ timeout: 30000 });
+      if (postCount() !== posts + 1 || board.entries.length !== before + 1) throw new Error('ambiguous send was automatically retried');
+      await p.reload();
+      await p.getByRole('heading', { name: 'Waiting for confirmation', exact: true }).waitFor();
+      if (await p.getByRole('button', { name: 'Review my choices' }).count()) throw new Error('unresolved send allowed a new ballot');
+      await p.getByRole('button', { name: 'Check inclusion now', exact: true }).click();
+      await p.getByText(/Included in the public record at entry/).waitFor();
+      if (postCount() !== posts + 1) throw new Error('reload recovery sent a mutation');
+      await p.getByRole('button', { name: 'Continue', exact: true }).click();
+      await p.getByRole('main').getByText('Your key is locked.', { exact: true }).waitFor();
+    } finally { board.faults = []; await p.context().close(); }
   });
   await step('no CSP / Trusted Types violations and no third-party requests', async () => {
     if (errors.length) throw new Error(errors.join(' | '));

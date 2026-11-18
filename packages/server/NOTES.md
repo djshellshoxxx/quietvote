@@ -45,7 +45,7 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
 * **Roll**: voters auto-approved on registration (no approval policy in the manifest); roll_commit must equal the server's
   approved set and its size must be >= the effective `min_counted_ballots`. Invite->voter link is not stored; replay of
   `(code, same pk)` returns the voter id. Idempotent replay of `POST invites` returns invite ids with `code_withheld:true`
-  (codes are never stored). Registration PoP message: `"QV-REG-v1\0" election_id "\0" pk`.
+  (codes are never stored). Fresh elections use QV-ADR-028 hashed bearer and invite-bound PoP; legacy elections retain their recorded raw-v1 scheme. See the 2026-11-16 addendum below.
 * Spoil `trustees` mode (QV-ADR-020) is accepted only if the manifest enables it; its share relay, storage and tally inclusion are implemented below.
 * `reveal` verification (`verifySpoilReveal`) is done at admission (costly); rejected with E_SPOIL_MISMATCH.
 * Bucket for IPv6 is /64 (finer than the spec's /56; address expansion prevents compressed text leaking host bits into the bucket);
@@ -321,3 +321,153 @@ Report: `docs/reports/security-review-2026-10-21.md`. Regression tests: `test/se
   the held partial upload, then still requires a full upload to complete. The competing archive body is withheld during early refusal;
   production HTTP behavior is unchanged. A missing-release mutation still fails recovery (503 rather than 202). See the report's
   Windows follow-up for the observed reset and qualification boundary.
+
+## KEK startup guard (lane L2)
+* `kek.ts` `loadOrCreateKek` refuses to start when `kek/kek.bin` is missing but `control.sqlite` already holds KEK-wrapped data
+  (`election_registry.dek_wrapped` not NULL, or any `webhook` row). It never writes a replacement KEK in that case. A fresh data
+  directory (no such rows) still creates the KEK. Regression tests: `test/kek-missing.test.ts`. Restore the original `kek.bin` to recover.
+
+## L3 server reliability (tally crash window, delete guard)
+* **Delete guard**: the registry row is written after the election's own state row (`syncState`), so a crash can leave it behind.
+  `ElectionPool.remove` keeps the registry check as a fast refusal, then opens the election (replay heals the registry) and
+  refuses on the replayed `logState`. Test: `test/delete-authoritative-state.test.ts`.
+* **Tally aggregate**: `maybeAggregateLocked` is a no-op once `aggregateSeq` is set (no second aggregate). A close that is durable
+  but has no aggregate (crash in between) is retried when the election is loaded. Test: `test/tally-crash-window.test.ts`.
+
+## S1-02 reverse spoil/cast guard (2026-11-14; AI-assisted, pending CI)
+
+Admission now records the ElGamal ciphertext alpha values from admitted spoils and rejects a later cast if any alpha is reused, regardless of a changed `supersedes` value or ballot code. This mirrors the existing cast-then-spoil exclusion. The projection is rebuilt from the append-only log on runtime replay. Regression: `test/s1-spoil-then-cast-rewrap.test.ts` exercises the reverse order, preserves the existing cast-then-spoil refusal control, and checks the exported verifier result. No wire format, cryptographic primitive, vector, or verifier rule changes. This fix has not yet received a local or hosted test result; do not treat the regression as passing until CI reports it.
+## OPS-A launcher (2026-11-16)
+
+Added `qv-server` with explicit JSON data directory, public audience origin and
+registration mode, strict argument/config validation and `--check-config`, plus
+SIGINT/SIGTERM cleanup through the existing service lifecycle. Real-server
+launcher tests cover readiness and clean shutdown. Deployment examples are
+reviewable scaffolding; Docker/systemd execution, offline restore and the full
+`quietvote doctor` gate remain unqualified. See `deploy/README.md`.
+
+## Durable gossip contact health (BT-13) — 2026-11-16
+
+Control schema migration 5 adds a bounded `gossip_health` table: configured peer hashes and one scheduler
+row. A startup transaction removes rows for unconfigured peers; no URL, IP, election ID or raw exception
+is stored. Last attempt/success/failure times, capped consecutive failures and catalog error codes survive
+restart. Success requires at least one valid log-signed note; a syntactically successful HTTP response
+alone does not reset durable failures. Existing in-memory request counters keep their historical meaning.
+
+Authenticated `/api/v1/admin/status` includes `gossip`: configured/healthy/stale counts, hashed peer
+rows, scheduler state and `stale_after_ms`. A peer is healthy only after a validated exchange, with no
+subsequent failed exchange and no stale/future success timestamp. Staleness uses three configured
+intervals (three minutes when manual) or twice the request timeout, whichever is longer. Monitor
+`healthy_peers < configured_peers`, nonzero consecutive failures and stale scheduler contact externally;
+`scheduler_enabled` distinguishes manual-only deployments. No notification service is added.
+
+Failures and recovery emit safe static log events on outcome/code transitions. DNS/SSRF rejection,
+transport error, HTTP status, truncation, malformed JSON/notes and unexpected sweep failures are distinct.
+Logs omit peer hashes and addresses. A valid fork report still records quarantine evidence; contact health
+does not override election integrity. This measures peer contact, not successful coverage of every election.
+The existing 256-election round limit and enumeration behavior are unchanged. No public health endpoint
+or configuration default is changed. Tests cover real database reopen, outage, malformed response, DNS
+rebinding, recovery, stale contact, scheduler failure and log privacy.
+
+## Interrupted election file cleanup
+
+Control schema v6 records a cleanup cursor atomically with the DELETED tombstone
+and wrapped-DEK removal. The cursor remains until DB, WAL and SHM unlink succeeds;
+completion audit and cursor removal commit together. On startup, before election
+handles or HTTP work exist, the pool resumes every pending cleanup. Existing
+DELETED rows are queued by the migration so older interrupted deletions recover.
+A persistent filesystem failure refuses startup; correct the filesystem problem
+and restart. The tombstone stays inaccessible and its wrapped DEK stays absent.
+Tests: `test/delete-recovery.test.ts` injects an unlink failure after main-file
+removal, exercises failed and successful restart, verifies audit idempotence and
+qualifies migration of a historical tombstone. This does not add export-ack or
+backup-purge policy, overwrite guarantees on SSDs, or recall exported copies.
+
+## Interrupted management request outcomes
+
+With exclusive directory ownership, startup can distinguish orphaned idempotency
+markers from active work. It reserves orphaned keys until their original 24-hour
+expiry and responds with `409 STATE_CONFLICT`, reason
+`IDEMPOTENCY_INTERRUPTED`, `retryable: false`. The operation may have committed;
+inspect its resources/jobs before issuing a new request. A hash mismatch still
+returns `422 IDEMPOTENCY_MISMATCH`. Internal failures and response-cache failures
+also preserve this binding; known API refusals before successful completion
+release it. A currently active request retains the existing retryable
+`IDEMPOTENCY_IN_PROGRESS` behavior. The marker is not an exactly-once transaction
+across the control/election databases. Tests: `test/idempotency-recovery.test.ts`.
+
+Supplemental phase/alert events are staged separately from committed append
+rows and enter SSE/webhook publication only after their own transaction commits.
+A rollback cannot publish a phantom event ID which SQLite might later reuse.
+`test/outbox-rollback.test.ts` injects a commit failure after phase insertion and
+checks callbacks, durable rows, later ID uniqueness and election replay. Phase
+and alert generation still follow the append transaction; cross-database webhook
+enqueue and missing supplemental event recovery remain separate work.
+Cleanup also requires the canonical `elections/<id-prefix>/<id>.sqlite` path
+before any unlink. Malformed tombstone metadata refuses startup without touching
+DB/WAL/SHM targets; correcting the metadata permits cleanup to resume. This is
+an input path boundary, with privately owned filesystem parents still required.
+## Offline local backup recovery
+
+`qv-backup verify|restore` verifies full local server snapshots using an independently
+retained KEK and restores only into a new directory. See
+[the recovery runbook](../../docs/OFFLINE-BACKUP-RESTORE.md) for commands, the required
+minimum-history backup, activation gates and bounded verification claims.
+
+## Durable webhook event bridge — 2026-11-16
+
+Election event rows now forward through a control-database cursor. Each source event's matching delivery rows,
+queue-cap pruning and cursor advance share one transaction. Memory queues and network sends start only after
+commit. Failed forwarding leaves the source row pending; startup scans live elections, and runtime access or
+the next event retries it. Event retention refuses to prune an unforwarded source history. Delivery remains
+at least once with the existing stable ID, bounded queue, body-size cap and terminal-failure policy.
+
+Control schema 7 stores forwarding cursors; election schema 6 records an upgrade floor. Pre-upgrade event
+history has no delivered receipt and is not replayed wholesale. Existing control outbox rows still resume as
+before. Forwarding uses subscriptions still enabled when recovery runs and excludes hooks created after the
+source timestamp; it is not an immutable historical subscription snapshot. Missing/corrupt election storage
+is logged with static tokens and remains pending. No remote delivery guarantee, power-loss or cross-platform
+qualification is claimed. Supplemental phase/witness events that never committed remain a separate gap.
+
+## Atomic control-management replay receipts — 2026-11-16
+
+Organization and webhook creation, and import/backup/self-audit/deletion job admission, now store their
+redacted idempotency response in the same control transaction as the mutation. Job execution is enqueued
+after commit. A cache/audit write failure rolls that mutation back; a lost completion after commit replays
+the original resource/job identifier. Read keys, invite codes, webhook secrets and webhook URLs are not
+added to the plaintext cache. Job inputs still live in memory, so interrupted jobs remain failed on restart.
+
+Webhook removal and its deletion audit now commit atomically; that audit is a restore-floor tombstone.
+DELETE callers may optionally supply Idempotency-Key for durable 204 replay; existing no-key calls remain
+supported. Election creation, invitation creation and quarantine clearing still cross store boundaries and
+retain conservative IDEMPOTENCY_INTERRUPTED handling if their final response cannot be saved.
+
+## Integrated recovery completion — 2026-11-16
+
+This section supersedes the recovery gaps described in the earlier checkpoints
+above. Election schema 7 stores append-completion intents atomically with the
+authenticated log row. Recovery reconstructs supplemental phase/alert events
+using original timestamps; witness event/checkpoint updates are atomic, and
+retention cannot prune unresolved completion evidence. Archive replay removes
+the existing wrapped signing-key material and restores read-only state before
+clearing its intent. A second-crash regression exposed early intent deletion;
+intents now survive until final registry/lifecycle projections commit.
+
+Election schema 8 stores redacted operation receipts in the mutation transaction
+for creation, invitations and quarantine clearing. Startup bridges only the
+matching live interrupted control-marker generation and original expiry. It
+replays no invitation codes, raw credentials or new mutation. Private restore
+floors protect receipt generations/outcomes, invitation terminal/erasure state,
+event cursors and credential revocation/deletion/suspension. Snapshot checksums
+stream in bounded chunks. These are local recovery guarantees, not external
+witness freshness, offsite backup custody or power-loss qualification.
+
+See [the integrated continuation](../../docs/handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md)
+and its server/private-recovery/fresh-review handoffs for the source-specific
+tests and remaining operational boundaries.
+
+### Registration implementation — 2026-11-16 (QV-ADR-028, B2-10)
+
+Fresh elections now use `hashed-pop-v1`, with exact existing web PoP bytes and a distinct verifier hash at rest. Schema 9 preserves existing rows as legacy; no opportunistic signature fallback or destructive migration exists. The authenticated migration-preview route reports outstanding invitations and non-convertibility. Web enrollment works before DKG/roll commitment; the CLI offers token-file enrollment. New invites default to 14 days; unknown/revoked matches used 409 and expired 422. These changes implement the recorded approvals and supersede the historical B3-01 blanket hold above for this narrow endpoint.
+
+D99 pinned-roll membership, group/label enrollment and original invite-to-voter retry linkage remain separate unresolved contracts. External protocol/security review remains required. Exact framing, migration, validation and limits: [implementation report](../../docs/reports/registration-implementation-20261116.md).

@@ -5,10 +5,10 @@ import { bytesToHex, hexToBytes, type Rng } from '@quietvote/crypto';
 import { NO_SUPERSEDES, castDigest, ballotCode, type BallotBody, type CastEnvelope, type SpoilMode } from '@quietvote/protocol';
 import { ApiError, BAD_RESPONSE, uxCodeFor, type UxCode } from '../api/errors.ts';
 import type { ApiClient } from '../api/client.ts';
-import type { DeviceStorage } from '../key/storage.ts';
+import type { DeviceStorage, PendingCast } from '../key/storage.ts';
 import type { Signer } from '../key/signer.ts';
 import { ballotCodeDisplay } from '../util/crockford.ts';
-import { wipe } from '../util/hex.ts';
+import { b64uEncode, wipe } from '../util/hex.ts';
 import { auditLink, auditText, buildAuditPackage, checkAuditPackage, makeSpoilEnvelope, type AuditResult } from './audit.ts';
 import { initialBallotState, reduce, type BallotEvent, type BallotState, type Selections, type SubmissionOutcome } from './ballot-machine.ts';
 import { prepareEntry, type PreparedEntry } from './entries.ts';
@@ -42,7 +42,7 @@ export interface CastReport {
   receipt?: ReceiptFile;
   sequencedAt?: number;
   storageFailed?: boolean;
-  error?: { ux: UxCode | 'E-BOARD-INCL-FAIL' | 'E-BOARD-FORK' | 'E-BOARD-ROLLBACK'; requestId?: string | undefined };
+  error?: { ux: UxCode | 'E-KEY-STORAGE' | 'E-BOARD-INCL-FAIL' | 'E-BOARD-FORK' | 'E-BOARD-ROLLBACK'; requestId?: string | undefined };
 }
 
 export class BallotController {
@@ -141,6 +141,10 @@ export class BallotController {
     const { ctx, signer, api, apiElectionId, origin, logPk } = this.d;
     const codeHex = this.sealed.codeHex;
     const codeDisplay = ballotCodeDisplay(hexToBytes(codeHex, 32));
+    let marker: PendingCast | undefined;
+    let sent = false;
+    let hadPending = false;
+    let posted: Awaited<ReturnType<ApiClient['postEntryWithRetry']>> | undefined;
     try {
       if (!this.pending) {
         const env: CastEnvelope = {
@@ -149,21 +153,26 @@ export class BallotController {
         };
         this.pending = await prepareEntry({ signer, origin, type: 'ballot', record: env, rng: this.d.rng, now: this.now() });
       }
-      const res = await api.postEntryWithRetry(apiElectionId, this.pending.headerB64u, this.pending.bodyB64u);
+      marker = { origin, electionId: apiElectionId, manifestHash: ctx.manifestHashHex, code: codeHex, leafHash: b64uEncode(this.pending.leafHash) };
+      hadPending = (await this.d.storage.getPendingCast(origin, apiElectionId)) !== undefined;
+      await this.d.storage.putPendingCast(marker);
+      sent = true;
+      // A lost response is ambiguous. Only an explicit voter action may retry these same bytes.
+      const res = await api.postEntry(apiElectionId, this.pending.headerB64u, this.pending.bodyB64u);
+      posted = res; // the board has the ballot from here on, whatever verification says
       const info = verifyAppendResult(res, { origin, leafHash: this.pending.leafHash, logPk });
       // W2: the head in the receipt must extend the pinned one (rollback / fork alarms) before it replaces the pin.
       if (info.checkpointNote !== undefined && info.treeSize !== undefined) await this.checkAgainstPin(info.checkpointNote);
       const report: CastReport = { outcome: info.outcome, seq: info.seq, codeHex, codeDisplay, sequencedAt: res.receipt.promise.sequenced_at };
       {
-        const file: ReceiptFile = {
-          format: 'qv-receipt/1', election: this.d.apiElectionId, manifest_hash: ctx.manifestHashHex, ballot_code: codeHex, seq: info.seq,
-          leaf_hash: res.receipt.leaf_hash, receipt: res.receipt, client_build: this.d.clientBuild,
-        };
+        const file = this.receiptFor(res, codeHex, info.seq);
         report.receipt = file;
         try {
-          const settings = await this.d.storage.getSettings();
-          if (settings.rememberReceipts) await this.d.storage.putReceipt({ electionId: this.d.apiElectionId, code: codeHex, seq: info.seq, json: receiptFileText(file) });
-          if (info.checkpointNote !== undefined && info.treeSize !== undefined) await this.d.storage.putHead({ electionId: this.d.apiElectionId, size: info.treeSize, note: info.checkpointNote });
+          await this.keepReceipt(file);
+          if (info.checkpointNote !== undefined && info.treeSize !== undefined) {
+            await this.d.storage.putHead({ electionId: this.d.apiElectionId, size: info.treeSize, note: info.checkpointNote });
+            await this.d.storage.deletePendingCast(marker);
+          }
         } catch {
           // The log's signed receipt remains valid even when this device cannot retain it.
           report.storageFailed = true;
@@ -174,10 +183,13 @@ export class BallotController {
       this.dispatch({ type: 'CAST_RESULT', outcome: info.outcome });
       return report;
     } catch (e) {
-      // W1: anything that is not a definite refusal (4xx with a problem body) may have been recorded: retry the SAME bytes.
+      // W1: a refusal after an earlier uncertain send cannot establish that the original send was not recorded.
       const unknown = e instanceof ApiError && (e.code === 'NETWORK' || e.code === 'TIMEOUT' || e.code === BAD_RESPONSE || e.status >= 500 || (e.status === 429 && e.code !== 'REVOTE_LIMIT'));
-      const ux = e instanceof BoardIntegrityError ? e.code : unknown ? 'E-NET-TIMEOUT' : uxCodeFor(e, true);
-      const rejected = e instanceof ApiError && !unknown;
+      const ux = !sent ? 'E-KEY-STORAGE' : e instanceof BoardIntegrityError ? e.code : unknown ? 'E-NET-TIMEOUT' : uxCodeFor(e, true);
+      const rejected = sent && !hadPending && e instanceof ApiError && !unknown;
+      if (rejected && marker) {
+        try { await this.d.storage.deletePendingCast(marker); } catch { /* Retain the conservative reload gate. */ }
+      }
       const outcome: SubmissionOutcome | undefined = rejected
         ? e.code === 'WRONG_PHASE' && ux === 'E-VOT-CLOSED' ? 'AFTER_CLOSE' : ux === 'E-VOT-DUP' ? 'DUPLICATE_IGNORED' : 'REJECTED'
         : undefined;
@@ -185,6 +197,18 @@ export class BallotController {
         outcome: outcome ?? 'PENDING_UNCONFIRMED', codeHex, codeDisplay,
         error: { ux, requestId: e instanceof ApiError ? e.requestId : undefined },
       };
+      // The board accepted the ballot, so its receipt is kept and offered (the alarm text asks the voter to save the evidence).
+      // W2 exception: a head that forks or rolls back the pinned one is not offered as a receipt. No checkpoint is pinned here.
+      const headConflict = ux === 'E-BOARD-FORK' || ux === 'E-BOARD-ROLLBACK';
+      if (posted !== undefined && !headConflict) {
+        const file = this.receiptFor(posted, codeHex, posted.receipt.seq);
+        report.receipt = file;
+        try {
+          await this.keepReceipt(file);
+        } catch {
+          report.storageFailed = true;
+        }
+      }
       this.lastCast = report;
       if (outcome !== undefined) {
         this.discardSecrets();
@@ -194,6 +218,19 @@ export class BallotController {
       }
       return report;
     }
+  }
+
+  private receiptFor(res: Awaited<ReturnType<ApiClient['postEntryWithRetry']>>, codeHex: string, seq: number): ReceiptFile {
+    return {
+      format: 'qv-receipt/1', election: this.d.apiElectionId, manifest_hash: this.d.ctx.manifestHashHex, ballot_code: codeHex, seq,
+      leaf_hash: res.receipt.leaf_hash, receipt: res.receipt, client_build: this.d.clientBuild,
+    };
+  }
+
+  /** Stores the receipt when the voter chose to remember receipts on this device. Throws if storage fails. */
+  private async keepReceipt(file: ReceiptFile): Promise<void> {
+    const settings = await this.d.storage.getSettings();
+    if (settings.rememberReceipts) await this.d.storage.putReceipt({ electionId: this.d.apiElectionId, code: file.ballot_code, seq: file.seq, json: receiptFileText(file) });
   }
 
   private async checkAgainstPin(note: string): Promise<void> {
@@ -225,7 +262,7 @@ export class BallotController {
         const mode: SpoilMode = o.publishReveal ? 'publish' : 'private';
         const env = await makeSpoilEnvelope(ctx.params, signer, sealed, selections, mode);
         const entry = await prepareEntry({ signer, origin: this.d.origin, type: 'ballot_audit', record: env, rng: this.d.rng, now: this.now() });
-        await this.d.api.postEntryWithRetry(this.d.apiElectionId, entry.headerB64u, entry.bodyB64u);
+        await this.d.api.postEntry(this.d.apiElectionId, entry.headerB64u, entry.bodyB64u);
         posted = true;
       } catch {
         posted = false;

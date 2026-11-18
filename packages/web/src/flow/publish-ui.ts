@@ -4,10 +4,11 @@
 import { ApiClient, type ClientOptions } from '../api/client.ts';
 import { ApiError, uxCodeFor, type UxCode } from '../api/errors.ts';
 import type { Instance } from '../api/types.ts';
-import { KeyError } from '../key/keystore.ts';
+import { KeyError, type KeystoreDeps } from '../key/keystore.ts';
 import type { Signer } from '../key/signer.ts';
 import type { DeviceStorage } from '../key/storage.ts';
 import type { Rng } from '@quietvote/crypto';
+import { b64uEncode } from '../util/hex.ts';
 import { ORGANIZER_SLOT, unlockKey } from './onboarding.ts';
 import { PublishError, inviteList, publishElection, type PublishClient, type PublishForm, type PublishState, type PublishedInvite } from './publish.ts';
 
@@ -40,6 +41,8 @@ export interface PublishRun {
   origin: string;
   rng?: Rng | undefined;
   now?: (() => number) | undefined;
+  /** B3-28: key-store dependencies for the unlock (carries the KDF cost confirm). Defaults to the real key store. */
+  deps?: KeystoreDeps | undefined;
   /** Test seams; the defaults are the real key store and the real ApiClient. */
   unlock?: ((passphrase: string) => Promise<Signer>) | undefined;
   makeClient?: ((o: ClientOptions) => PublishClient & Pick<ApiClient, 'instance'>) | undefined;
@@ -48,6 +51,24 @@ export interface PublishRun {
 /** QV-08 audience of a request to this instance (server auth.ts audienceOf). */
 export function publishAudience(instanceId: string, origin: string): string {
   return `qv:${instanceId}@${origin}`;
+}
+
+/** Explicit organization enrollment using the existing organizer key and server registration policy. */
+export async function enrollOrganization(r: {
+  name: string; token: string; idempotencyKey: string; passphrase: string;
+  storage: DeviceStorage; apiBase: string; origin: string; deps?: KeystoreDeps;
+  unlock?: (passphrase: string) => Promise<Signer>;
+  makeClient?: (o: ClientOptions) => Pick<ApiClient, 'instance' | 'createOrganization'>;
+}): Promise<string> {
+  if (r.name.trim() === '' || r.name.trim().length > 120) throw new PublishError('E-ORG-MANIFEST', 'organization name must contain 1 to 120 characters');
+  const signer = await (r.unlock ? r.unlock(r.passphrase) : unlockKey({ storage: r.storage, slot: ORGANIZER_SLOT, passphrase: r.passphrase, rewrap: false, ...(r.deps ? { deps: r.deps } : {}) }).then((k) => k.signer));
+  try {
+    const make = r.makeClient ?? ((o: ClientOptions) => new ApiClient(o));
+    const instance = await make({ baseUrl: r.apiBase }).instance();
+    const client = make({ baseUrl: r.apiBase, signing: { signer, audience: publishAudience(instance.instance_id, r.origin) } });
+    const result = await client.createOrganization(r.name.trim(), b64uEncode(signer.publicKey), r.idempotencyKey, r.token);
+    return result.org_id;
+  } finally { signer.lock(); }
 }
 
 /** The UX code and detail to show for a failed publish step. */
@@ -74,7 +95,7 @@ export async function runPublish(r: PublishRun): Promise<PublishOutcome> {
     return { kind: 'locked', ux: 'E-KEY-STORAGE' };
   }
   if (stored === undefined) return { kind: 'noKey' };
-  const unlock = r.unlock ?? (async (p: string) => (await unlockKey({ storage: r.storage, slot: ORGANIZER_SLOT, passphrase: p })).signer);
+  const unlock = r.unlock ?? (async (p: string) => (await unlockKey({ storage: r.storage, slot: ORGANIZER_SLOT, passphrase: p, rewrap: false, ...(r.deps === undefined ? {} : { deps: r.deps }) })).signer);
   let signer: Signer;
   try {
     signer = await unlock(r.passphrase);

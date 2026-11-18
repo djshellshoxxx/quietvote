@@ -63,10 +63,14 @@ export class JobRunner {
     return this.queue.filter((q) => q.group === group).length + (this.current?.group === group ? 1 : 0);
   }
 
-  submit(group: string, cap: number, spec: { kind: JobKind; election_id: string | null; params: unknown; created_by: string }, work: Work): JobRow {
+  submit(group: string, cap: number, spec: { kind: JobKind; election_id: string | null; params: unknown; created_by: string }, work: Work, committed?: (row: JobRow) => void): JobRow {
     if (this.stopped) throw new ApiError(503, 'MAINTENANCE', 'server is shutting down');
     if (this.active(group) >= cap) throw new ApiError(503, 'BUSY', 'too many jobs of this kind are queued; retry later', { retryAfter: 30 });
-    const row = this.env.control.createJob({ job_id: randomId(), kind: spec.kind, election_id: spec.election_id, params: JSON.stringify(spec.params ?? {}), created_by: spec.created_by });
+    const row = this.env.control.tx(() => {
+      const created = this.env.control.createJob({ job_id: randomId(), kind: spec.kind, election_id: spec.election_id, params: JSON.stringify(spec.params ?? {}), created_by: spec.created_by });
+      committed?.(created);
+      return created;
+    });
     this.queue.push({ id: row.job_id, group, work });
     void this.pump();
     return row;
@@ -127,7 +131,7 @@ export class JobRunner {
       }
     }
     const cur = this.current;
-    if (cur?.group === 'import') await cur.done;
-    else if (cur) await Promise.race([cur.done, new Promise<void>((r) => setTimeout(r, 5000).unref())]);
+    // Every job may still write persistent state. A timeout must not transfer directory ownership to another process.
+    if (cur) await cur.done;
   }
 }

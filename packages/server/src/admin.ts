@@ -1,6 +1,7 @@
+import { gossipHealthStatus } from './gossip-health.ts';
 // Instance administration (QV-09 §10 `/admin/*`): status, listing, backups, self-audit, quarantine clearing, deletion.
 import { createHash } from 'node:crypto';
-import { chmodSync, mkdirSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, createReadStream, mkdirSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { backup, DatabaseSync } from 'node:sqlite';
 import { MerkleTree, bodyDigest, decodeHeader, hashLeaf, parseCheckpoint, verifyLogSignature, witnessStatus } from '@quietvote/board';
@@ -9,6 +10,7 @@ import { utf8 } from '@quietvote/crypto';
 import type { AuthInfo } from './auth.ts';
 import type { Ctx } from './http.ts';
 import type { ElectionRuntime } from './election.ts';
+import type { ElectionDb } from './electiondb.ts';
 import type { Env } from './env.ts';
 import { JobError, type JobCtl, type JobOutcome } from './jobs.ts';
 import type { ElectionPool } from './pool.ts';
@@ -54,6 +56,7 @@ export function adminStatus(env: Env, pool: ElectionPool): Record<string, unknow
     instance_id: c.instanceId(),
     db: { elections: c.countAllElections(), by_state: c.electionsByState(), open_runtimes: pool.openCount() },
     backups: { last_at: last ?? null },
+    gossip: gossipHealthStatus(env),
     quarantined: q.map((x) => x.election_id),
     quarantine_incidents: q,
     disk: { free_bytes: free },
@@ -63,7 +66,13 @@ export function adminStatus(env: Env, pool: ElectionPool): Record<string, unknow
 
 // ------------------------------------------------------------------------------------------------------------ backup
 
-const sha256File = (p: string): string => createHash('sha256').update(readFileSync(p)).digest('hex');
+async function sha256File(path: string): Promise<string> {
+  const hash = createHash('sha256');
+  // Snapshot size must not determine the process's Buffer allocation. Iteration also
+  // yields between chunks, and destroys/closes the stream if a read fails.
+  for await (const chunk of createReadStream(path, { highWaterMark: 64 * 1024 })) hash.update(chunk);
+  return hash.digest('hex');
+}
 
 /** Consistent online snapshot of control.sqlite and the election databases (node:sqlite `backup`, QV-28 §12). Never contains the KEK. */
 export async function backupWork(env: Env, pool: ElectionPool, jobId: string, scope: 'all' | 'election', electionId: string | undefined, ctl: JobCtl): Promise<JobOutcome> {
@@ -75,14 +84,16 @@ export async function backupWork(env: Env, pool: ElectionPool, jobId: string, sc
     await backup(db, dest);
     chmodSync(dest, 0o600);
     // the copy must open and pass a structural check before it is reported
-    const t = new DatabaseSync(dest, { readOnly: true });
+    const t = new DatabaseSync(dest);
     try {
+      // Finalize a self-contained snapshot: no unmanifested WAL/SHM sidecars are needed for restore.
+      t.exec('PRAGMA journal_mode=DELETE');
       const r = t.prepare('PRAGMA quick_check').get() as { quick_check?: string } | undefined;
       if (r?.quick_check !== 'ok') throw new JobError('BACKUP_VERIFY', `backup of ${name} failed its integrity check`);
     } finally {
       t.close();
     }
-    files.push({ name, bytes: statSync(dest).size, sha256: sha256File(dest) });
+    files.push({ name, bytes: statSync(dest).size, sha256: await sha256File(dest) });
   };
   try {
     const targets: string[] = [];
@@ -91,19 +102,19 @@ export async function backupWork(env: Env, pool: ElectionPool, jobId: string, sc
       targets.push(electionId);
     } else {
       await done(env.control.db, 'control.sqlite');
-      let after: string | undefined;
-      for (;;) {
-        const rows = env.control.listAllElections(undefined, after, 200);
-        if (rows.length === 0) break;
-        for (const r of rows) targets.push(r.election_id);
-        after = rows.at(-1)!.election_id;
-      }
+      // Capture membership from the control snapshot, never from a later live registry view.
+      const snapshot = new DatabaseSync(join(dir, 'control.sqlite'), { readOnly: true });
+      try {
+        for (const row of snapshot.prepare("SELECT election_id FROM election_registry WHERE state<>'DELETED' ORDER BY election_id").iterate()) {
+          targets.push(row['election_id'] as string);
+        }
+      } finally { snapshot.close(); }
     }
     let i = 0;
     for (const id of targets) {
       await ctl.tick();
       const rt = await pool.get(id);
-      if (!rt) continue;
+      if (!rt) throw new JobError('BACKUP_CHANGED', 'an election in the control snapshot is no longer available; retry the backup');
       rt.inUse++;
       try {
         await done(rt.edb.db, `elections/${id}.sqlite`.replace('/', '-'));
@@ -223,7 +234,7 @@ export async function selfAuditWork(env: Env, rt: ElectionRuntime, ctl: JobCtl):
 
 // ------------------------------------------------------------------------------------------------------------ quarantine clear
 
-export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, ack: string, verifiedAgainst: string[], actor: string): Promise<Record<string, unknown>> {
+export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, ack: string, verifiedAgainst: string[], actor: string, committed?: (db: ElectionDb, result: Record<string, unknown>, detail: Record<string, string>) => void): Promise<Record<string, unknown>> {
   const rt0 = await pool.get(id);
   if (!rt0) throw new ApiError(404, 'NOT_FOUND', 'no such election');
   const forced = rt0.forcedQuarantine === undefined ? undefined : (JSON.parse(rt0.forcedQuarantine) as { code: string; incident: string; min_size: number });
@@ -273,7 +284,9 @@ export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, 
     const sz = best.get(w);
     if (sz === undefined || sz < minSize || sz === 0) throw new ApiError(409, 'STATE_CONFLICT', `witness ${w} has not cosigned a stored checkpoint of size >= ${Math.max(1, minSize)}`);
   }
-  rt.clearForcedQuarantine();
-  env.control.audit(actor, 'quarantine.clear', id, { incident, witnesses: [...names].join(',') });
-  return { election_id: id, quarantined: false, incident, verified_against: [...names].map((n) => `witness:${n}`) };
+  const result = { election_id: id, quarantined: false, incident, verified_against: [...names].map((n) => `witness:${n}`) };
+  const detail = { incident, witnesses: [...names].join(',') };
+  rt.clearForcedQuarantine(() => committed?.(rt.edb, result, detail));
+  if (!committed) env.control.audit(actor, 'quarantine.clear', id, detail);
+  return result;
 }

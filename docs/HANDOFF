@@ -1,7 +1,11 @@
 # QuietVote review handoff
 
-Current integration status, commands, source accounting and external review gates
-are in [QUIETVOTE-CONSOLIDATED-NEXT.md](handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md)
+Current continuation status, commands, source accounting and review gates are in
+[QUIETVOTE-TEAMS-CONTINUATION-20261116.md](handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md).
+The [feature ledger](reports/quietvote-teams-feature-ledger-20261116.md) distinguishes
+implemented slices, missing core contracts, held decisions and external checks.
+Earlier consolidation is preserved in
+[QUIETVOTE-CONSOLIDATED-NEXT.md](handoffs/QUIETVOTE-CONSOLIDATED-NEXT.md)
 and [CONSOLIDATION.md](plan/CONSOLIDATION.md).
 
 The historical audit execution handoff is preserved at

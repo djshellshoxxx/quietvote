@@ -282,3 +282,45 @@ def verify_spoil_reveal(manifest: dict, K: RPoint, ctx: bytes, body: dict, revea
         raise QVError("E_SPOIL_MISMATCH", f"reveal cannot be re-encrypted: {exc}")
     if qvjson.jcs(recomputed) != qvjson.jcs(body):
         raise QVError("E_SPOIL_MISMATCH", "reveal does not reproduce the ballot")
+
+
+def verify_private_audit(
+    manifest: dict, K: RPoint, ctx: bytes, roll: set[bytes], env: Any, reveal: Any,
+) -> bytes:
+    """Verify a voter-held reveal against its signed spoil (QV-16 §5.13.1–2).
+
+    Returns the authenticated ballot code. This verifies the envelope, signed reveal
+    commitment and deterministic reproduction, not log inclusion or a counted tally.
+    A zero-digest trustee-mode spoil cannot authenticate this reveal; this does not
+    decide the separate election-level policy for that mode (D-95).
+    """
+    schema_envelope(env)
+    if env["intent"] != "spoil":
+        raise QVError("E_SPOIL_MISMATCH", "private audit requires a spoil envelope")
+    code = verify_envelope(manifest, K, ctx, roll, env)
+
+    # Validate the out-of-band object before encrypt(), which deliberately supplies
+    # empty selections for omitted contests and otherwise ignores unknown contests.
+    # Neither unknown members nor malformed selection values may disappear here.
+    try:
+        qvjson.check_value(reveal)
+        _require_keys(reveal, {"xi", "selections"}, what="private reveal")
+        if not isinstance(reveal["xi"], str) or HEX128.fullmatch(reveal["xi"]) is None:
+            raise QVError("E_SCHEMA", "private reveal.xi must be 64 bytes of lower-case hex")
+        selections = reveal["selections"]
+        contest_ids = {c["id"] for c in manifest["contests"]}
+        if not isinstance(selections, dict) or not set(selections) <= contest_ids:
+            raise QVError("E_SCHEMA", "private reveal contains an unknown contest")
+        if any(not isinstance(v, list) or not all(isinstance(s, str) for s in v)
+               for v in selections.values()):
+            raise QVError("E_SCHEMA", "private reveal selections must be arrays of option IDs")
+        reveal_bytes = qvjson.jcs(reveal)
+    except QVError as exc:
+        raise QVError("E_SPOIL_MISMATCH", f"invalid private reveal: {exc.detail}") from exc
+
+    if H256("reveal", ctx, reveal_bytes).hex() != env["reveal_digest"]:
+        raise QVError("E_SPOIL_MISMATCH", "private reveal does not match the signed digest")
+    if "reveal" in env and qvjson.jcs(env["reveal"]) != reveal_bytes:
+        raise QVError("E_SPOIL_MISMATCH", "published and private reveals differ")
+    verify_spoil_reveal(manifest, K, ctx, env["body"], reveal)
+    return code

@@ -21,7 +21,7 @@ function statsOf(x: unknown, path = ''): [string, Stat][] {
 const N = 12;
 const EXPECTED = { budget: { yes: 4, no: 4 }, topics: { a: 12, b: 6 } };
 
-test('tally bench smoke: fixed N=12 election decrypts exactly the plaintext tally, every phase runs, the full bundle verifies PASS', { timeout: 300_000 }, async () => {
+test('tally bench smoke: fixed N=12 election decrypts exactly the plaintext tally, every phase runs, the core checks run and missing board evidence stays INCOMPLETE', { timeout: 300_000 }, async () => {
   // the fixed pattern itself: independent of the bench's own accounting
   const contests = contestsFor('smoke');
   const tally: Record<string, Record<string, number>> = Object.fromEntries(contests.map((c) => [c.id, Object.fromEntries(c.options.map((op) => [op.id, 0]))]));
@@ -64,7 +64,7 @@ test('tally bench smoke: fixed N=12 election decrypts exactly the plaintext tall
   assert.deepEqual(r.config.fullSizes, [N]);
   assert.equal(r.full.length, 1);
   const f = r.full[0]!;
-  assert.equal(f.verdict, 'PASS');
+  assert.equal(f.verdict, 'INCOMPLETE');
   assert.deepEqual(f.counts.expected, EXPECTED);
   assert.deepEqual(f.counts.coordinator, EXPECTED);
   assert.deepEqual(f.counts.published, EXPECTED);

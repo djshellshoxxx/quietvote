@@ -1,0 +1,53 @@
+{
+  "milestone": "coordinator lifecycle proposal CLI",
+  "date": "2026-11-16",
+  "base_commit": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+  "implementation_commit": "9413026",
+  "test_followup_commit": "4ba569f",
+  "runtime": {
+    "node": "24.22.1",
+    "platform": "Linux"
+  },
+  "checks": [
+    {
+      "command": "node --max-old-space-size=512 node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+      "exit_code": 0
+    },
+    {
+      "command": "node --test --test-concurrency=1 packages/cli/test/*.test.ts",
+      "exit_code": 0,
+      "tests": 65,
+      "passed": 65,
+      "failed": 0,
+      "skipped": 0,
+      "duration_ms": 503911.292477
+    },
+    {
+      "command": "node --test --test-concurrency=1 packages/cli/test/lifecycle.test.ts",
+      "exit_code": 0,
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "overlaps_full_suite": true
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "review": {
+    "fresh_context_ai_review": "no blocking defect reported",
+    "independent_authenticated_archive_probes_passed": 14,
+    "retained_test_commit": "1a44391b9e7ca81cdcb5d2018cda91ea88c4a9b8",
+    "retained_node_test_entries_passed": 15
+  },
+  "unchanged_gates": [
+    "B3-01/D-99 registration",
+    "separate organizer archive authority",
+    "D-92 through D-96 verifier policies",
+    "independent witness/freshness qualification",
+    "external review"
+  ],
+  "scope": "Unsigned proposals only; no signing, submission, time bypass, merge, release, deployment or full-project completion claim."
+}

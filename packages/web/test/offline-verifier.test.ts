@@ -31,7 +31,10 @@ Object.defineProperty(globalThis, 'window', { configurable: true, value: windowE
 const tasks: (() => void)[] = [];
 Object.defineProperty(globalThis, 'setTimeout', { configurable: true, value: (callback: () => void) => { tasks.push(callback); return 0; } });
 await import('../src/verifier/page.ts');
-const good = readFileSync(new URL('../../../test-vectors/v1/elections/tiny-yesno-3v/bundle.json', import.meta.url), 'utf8');
+const read = (file: string): any => JSON.parse(readFileSync(new URL(`../../../test-vectors/v1/elections/${file}`, import.meta.url), 'utf8'));
+// Public positive controls carry genuine authenticated and witnessed log evidence.
+const good = JSON.stringify({ ...read('log-layer-4v/bundle.json'), board: read('log-layer-4v/board.json') });
+const bare = JSON.stringify({ ...read('tiny-yesno-3v/bundle.json'), allowNoLog: true });
 const settle = async (): Promise<void> => { await new Promise<void>((resolve) => setImmediate(resolve)); };
 async function until(predicate: () => boolean): Promise<void> {
   for (let i = 0; i < 1000; i++) {
@@ -109,4 +112,13 @@ test('a current unreadable file fails and permits retry', async () => {
   await until(finished); assert.equal(fail(), true); assert.match(node('out').textContent, /file unreadable/);
   select(async () => good); node('run').dispatch('click');
   await until(finished); assert.equal(pass(), true);
+});
+
+
+test('public offline page keeps missing board evidence incomplete despite an injected option', async () => {
+  select(async () => bare); node('run').dispatch('click');
+  await until(finished);
+  assert.equal(pass(), false);
+  assert.equal(fail(), false);
+  assert.match(node('out').textContent, /Incomplete: more evidence is needed/);
 });

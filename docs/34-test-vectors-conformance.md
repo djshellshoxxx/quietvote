@@ -301,6 +301,20 @@ ElectionGuard publishes a specification (versions 2.1, 2.0, 1.1, 1.0 listed; 2.1
 ### 9.1 Named check registry (`schema/check-ids.json`)
 Stable IDs shared with QV-10 verifier UI (QV-10 §6.4 numbers shown map in order):
 
+The report verdict is `PASS`, `FAIL` or `INCOMPLETE` (QV-ADR-027, PY-02).
+Fatal findings take precedence; without a fatal finding, a `not_run`
+`chk.tally.decrypt` means `INCOMPLETE`. An absent tally is incomplete evidence,
+whereas a rejected or conflicting tally retains its applicable failure. CLI
+verification returns 0, 1 or 3 respectively. This report-enum clarification does
+not modify the existing complete-election vector corpus or its expected reports.
+Under ADR-027 P1/TSV-05, the default API/CLI additionally requires append-only and
+witness checks to pass. The existing cryptographic content corpus is evaluated
+by trusted conformance callers with explicit `allowNoLog: true` /
+`allow_no_log=True`; neither fixture bytes nor expected reports request or grant
+this scope. Supplied log evidence is still checked, and only verified append-only
+evidence with an explicitly zero-witness signed policy can use the exception.
+Unverified or interrupted supplied evidence stays INCOMPLETE; fatal failures win.
+
 | # | Check ID | Meaning |
 |---|---|---|
 | 1 | `chk.manifest.hash` | Manifest hashes to the anchored Election ID / hash |

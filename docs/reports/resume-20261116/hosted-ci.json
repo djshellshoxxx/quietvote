@@ -1,0 +1,87 @@
+{
+  "code_sha": "1c3845d193285c9ab2b19bbb7898b0de430d83c3",
+  "run_id": 43837340020,
+  "url": "https://github.com/djshellshoxxx/quietvote/actions/runs/43837340020",
+  "note": "All source-snapshot jobs completed. The one failed job reached the strict verifier comparison after its Python, vector, build, i18n and licence steps passed; owner-held comparison semantics remain unchanged. Later checkpoint updates change documentation only.",
+  "jobs": [
+    {
+      "id": 133197141708,
+      "name": "typecheck and supply-chain gates",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197141875,
+      "name": "production browser journeys, CSP and automated a11y",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197142012,
+      "name": "test protocol+verifier (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197142035,
+      "name": "test cli+board (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197142044,
+      "name": "test server+web (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197142084,
+      "name": "test cli+board (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197142097,
+      "name": "test trustee+crypto (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197142158,
+      "name": "vectors, Python verifier and production build",
+      "status": "completed",
+      "conclusion": "failure",
+      "failed_steps": [
+        "Compare verifiers within shared capabilities"
+      ]
+    },
+    {
+      "id": 133197142182,
+      "name": "test protocol+verifier (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197142199,
+      "name": "test server+web (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 133197142202,
+      "name": "test trustee+crypto (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failed_steps": []
+    }
+  ]
+}

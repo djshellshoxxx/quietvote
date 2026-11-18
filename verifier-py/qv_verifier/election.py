@@ -6,8 +6,10 @@ list of findings (check id, error code, fatal?, detail).
 
 Design decisions where the specs leave the behaviour open (each is listed in
 docs/errata/spec-errata-log.md):
-  * If the manifest does not hash to the out-of-band anchor, nothing downstream is trusted:
-    every other check is ``not_run`` (QV-ERR-PY-007).
+  * If the manifest does not hash to the out-of-band anchor or lacks its coordinator quorum,
+    dependent checks are ``not_run`` (QV-ERR-PY-007; QV-ADR-027).
+  * Failed tally decryption prevents rule evaluation. Failed rule verification emits no results
+    (QV-ADR-027, approved DIFF-count-altered / DIFF-result-flipped decisions).
   * A tally aggregate that cannot be confirmed (ctx, counted root, aggregate mismatch) makes
     ``chk.tally.decrypt`` and ``chk.result.rules`` ``not_run``: decrypting or evaluating
     unconfirmed aggregates proves nothing (QV-ERR-PY-008).
@@ -16,7 +18,9 @@ docs/errata/spec-errata-log.md):
   * Record signatures: DKG records and ``dkg-*`` markers use scope manifest_hash (QV-16
     §5.6.3 "pre-key scope"), every later record uses ctx; record_type is ``body.type``.
     The tally signature is a convenience signature and is reported only as a note.
-  * Board consistency / witnesses / receipts are ``not_run`` (no STHs in v1 bundles).
+  * Board consistency / witnesses / receipts are ``not_run`` when optional log
+    evidence is absent, capping the default verdict at INCOMPLETE. The stable
+    QV-18 path is composed only when supplied.
   * A stop makes only the checks that have not run yet ``not_run``; checks already completed
     (``chk.manifest.sig`` after App. C steps 2-4, ``chk.keys.trustees`` after steps 5-10) keep their
     result. ``chk.encoding.canonical`` is complete only once the voter envelopes were examined, so a
@@ -33,7 +37,7 @@ from typing import Any
 
 from . import ballot, dkg, ed25519, manifest as manifest_mod, merkle, qvjson, rules
 from .edwards import L as ELL
-from .errors import QVError
+from .errors import QVError, NotImplementedOp
 from .framed_hash import H256
 from .proofs import dec_check, pok_share_check
 from .ristretto import G, R_IDENTITY, RPoint, decode_hex, scalar_decode_hex
@@ -197,7 +201,19 @@ def bsgs(D: RPoint, bound: int) -> int | None:
     return None
 
 
-def verify_bundle(bundle: dict) -> dict:
+def verify_bundle(bundle: dict, *, log: dict | None = None, allow_no_log: bool = False) -> dict:
+    """Verify an election, optionally with independent QV-18 evidence.
+
+    ``log`` contains ``board`` and optional ``receipts``, ``observed``,
+    ``witnesses`` and ``extraAuthorKeys``. Log evidence authenticates legacy
+    control notices independently of the core's class-L unknown-record finding.
+    ``allow_no_log`` is a trusted caller-only content-verification opt-out, never
+    a bundle field. Supplied log failures still fail; unchecked supplied evidence
+    never qualifies. A verified append-only log with an explicit zero-witness
+    manifest policy may retain a prominently caveated content-only PASS.
+    """
+    if log is not None:
+        from . import logcheck
     st = State()
     st.skip("chk.board.append_only", "chk.receipts.sample")
     out: dict[str, Any] = {"counts": {"cast": 0, "spoiled": 0, "counted": 0}}
@@ -205,6 +221,19 @@ def verify_bundle(bundle: dict) -> dict:
         _verify(bundle, st, out)
     except _Stop:
         pass
+    if log is not None and "chk.manifest.sig" in st.completed and not any(
+            st.failed(c) for c in ("chk.manifest.hash", "chk.manifest.sig")):
+        try:
+            logcheck.verify_into(bundle, log, st)
+        except NotImplementedOp:
+            raise
+        except QVError:
+            st.add("chk.board.append_only", "E_LOG_FORMAT", True, "supplied log evidence rejected")
+        except Exception:
+            # Operational failure is not negative evidence about the election.
+            # Existing fatal findings survive; no partial log pass survives.
+            st.skip("chk.board.append_only", "chk.board.witness", "chk.receipts.sample")
+            st.notes.append("Supplied log evidence could not be fully checked; verification is INCOMPLETE unless another check fails")
     checks = {}
     for c in CHECKS:
         if any(f.check == c for f in st.findings):
@@ -214,7 +243,20 @@ def verify_bundle(bundle: dict) -> dict:
         else:
             checks[c] = "pass"
     out["checks"] = checks
-    out["verdict"] = "FAIL" if any(f.fatal for f in st.findings) else "PASS"
+    # QV-ADR-027 / PY-02: an unfinished tally is neither a verified outcome nor
+    # a fatal election failure. Fatal evidence always takes precedence.
+    incomplete_log = any(checks[c] != "pass" for c in ("chk.board.append_only", "chk.board.witness"))
+    zero_witness = (isinstance(bundle, dict) and isinstance(bundle.get("manifest"), dict) and
+                    isinstance(bundle["manifest"].get("body"), dict) and
+                    isinstance(bundle["manifest"]["body"].get("bb"), dict) and
+                    bundle["manifest"]["body"]["bb"].get("witness_quorum") == 0)
+    content_only = allow_no_log is True and (log is None or (
+        checks["chk.board.append_only"] == "pass" and zero_witness))
+    if content_only and incomplete_log:
+        st.notes.append("CONTENT-ONLY verification explicitly requested by the caller; PASS does not establish witnessed log integrity")
+    out["verdict"] = ("FAIL" if any(f.fatal for f in st.findings) else
+                      "INCOMPLETE" if checks["chk.tally.decrypt"] == "not_run" or
+                      (incomplete_log and not content_only) else "PASS")
     out["codes"] = sorted({f.code for f in st.findings})
     out["findings"] = [f.__dict__ for f in st.findings]
     out["notes"] = st.notes
@@ -297,6 +339,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     coord = m["coordinator"]
     if not _coordinator_ok(mh, m, env["sigs"], coord):
         st.add("chk.manifest.sig", "E_MANIFEST_SIG", True, "fewer than m valid coordinator signatures")
+        _stop(st, *ALL_AFTER_MANIFEST)
     roll_root_hex: str | None = None
     try:
         if not all(hex_field(x, 32) for x in roll_hex):
@@ -338,6 +381,14 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         except QVError as ex:
             st.add("chk.encoding.canonical", ex.code, True, f"seq {e['seq']}: {ex.detail}")
             rejected_tally |= is_tally
+            continue
+        body_type = en.get('body', {}).get('type') if isinstance(en.get('body'), dict) else None
+        if isinstance(body_type, str) and body_type not in _RECORD_KEYS:
+            # ADR-027 / B1-02 option A: an unrecognised non-ballot record is
+            # rejected from protocol computation as class L, not an election
+            # veto. Legacy control authority is checked separately with log
+            # evidence (N-12 / X31-X34); this branch grants it no authority.
+            st.add('chk.encoding.canonical', 'E_VERSION', False, f"seq {e['seq']}: unknown record type {body_type}")
             continue
         if not _record_schema_ok(en):
             # QV-16 §5.5 item 7 (closed schemas, "eliminating malleability through junk fields"), App. C step 1
@@ -562,6 +613,10 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         # The only tally record was rejected above (fatal E_SCHEMA/E_VERSION on chk.encoding.canonical);
         # there is no admissible tally to aggregate, decrypt or evaluate.
         _stop(st, "chk.tally.aggregate", "chk.tally.decrypt", "chk.result.rules")
+    if not tally_recs:
+        # No candidate tally was supplied. Retain the completed evidence, but
+        # do not fabricate an aggregate error or report a result (PY-02).
+        _stop(st, "chk.tally.aggregate", "chk.tally.decrypt", "chk.result.rules")
     if len(tally_recs) != 1:
         st.add("chk.tally.aggregate", "E_SCHEMA", True, f"{len(tally_recs)} tally records")
         _stop(st, "chk.tally.decrypt", "chk.result.rules")
@@ -677,11 +732,14 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         st.add("chk.benaloh.spoiled", "E_SPOIL_MISMATCH", False, "tally.spoiled differs from reproduced reveals")
 
     # ------------------------------------------------ C7 results
+    if st.failed("chk.tally.decrypt"):
+        _stop(st, "chk.result.rules")
     try:
         results = [rules.evaluate(m.get("quorum"), mc, counts[mc["id"]], V, n_roll) for mc in m["contests"]]
     except (QVError, KeyError, TypeError, ValueError) as e:
         st.add("chk.result.rules", "E_RESULT", True, f"rule evaluation failed: {e}")
         return
-    out["results"] = results
     if tb.get("results") != results:
         st.add("chk.result.rules", "E_RESULT", True, "published results differ from evaluation")
+    else:
+        out["results"] = results

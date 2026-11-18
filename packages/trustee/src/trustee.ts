@@ -6,11 +6,11 @@ import {
 import {
   PROTO_ID, S, adjudicateDkg, analyzeBallotLog, check, dkgDeal, dkgFinalShare, dkgKeyconf, dkgMakeComplaint, dkgMakeShares,
   dkgReceiveShare, ballotCode, manifestHash, rollRoot, shareToHex, signRecord, trusteeDecryptSpoiled, trusteeDecryptTally, validateManifest, verifyElection,
-  verifyMultiSig, verifySig, countedRoot, obj, hex as hexS, int, lit, str, arr, verifyLogStructure, witnessAnchors,
+  verifyMultiSig, verifySig, countedRoot, obj, hex as hexS, int, lit, str, arr, verifyLogStructure, witnessAnchors, logOrigin,
   type LogEvidence, type Aggregate, type BallotBody, type ComplaintBody, type DealerSecret, type KeyconfBody, type LogEntry,
   type Manifest, type MarkerSeqs, type MultiSignedRecord, type ParsedDealing, type SignedRecord,
 } from '@quietvote/protocol';
-import { witnessStatus, type WitnessPolicy } from '@quietvote/board';
+import { b64u, buildEntry, witnessStatus, type EntryType, type WitnessPolicy } from '@quietvote/board';
 import {
   readBundleSealed, sealBundle, tombstonePath, writeBundle,
   type BundleData, type CompromiseBody, type KeyDestructionBody, type KeycheckBody, type SpoilShareBody, type TallyShareBody, type VaultDeps,
@@ -325,6 +325,46 @@ export class Trustee {
     const mf = this.mf();
     const o = { format: PACKET_FORMAT, manifest_hash: H(mf.mh), ceremony_id: this.d.ceremony_id!, round, from: mf.i, records } as const;
     return { round, bytes: jcs(o), obj: { ...o, records } };
+  }
+
+  /** Export only a persisted output of this device, never an arbitrary caller-supplied record to sign. */
+  async exportBoardEntry(round: string, index = 0): Promise<{ header: string; body: string }> {
+    const { m } = this.mf();
+    if (['ABORTED', 'DISQUALIFIED', 'DESTROYING', 'DESTROYED'].includes(this.d.state)) {
+      throw new TrusteeError('STATE', 'WRONG_STATE', 'this bundle cannot export board entries');
+    }
+    const out = this.d.out;
+    const outputs = new Map<string, { type: EntryType; records: unknown[]; states: readonly TrusteeState[] }>([
+      ['r1-commit', { type: 'dkg_round1', records: [out.commit], states: AT_OR_AFTER.commit }],
+      ['r1-dealing', { type: 'dkg_round1', records: [out.dealing], states: AT_OR_AFTER.reveal }],
+      ['r2-shares', { type: 'dkg_round2', records: [out.shares], states: AT_OR_AFTER.shares }],
+      ['r3-complaints', { type: 'dkg_complaint', records: out.complaints, states: ['COMPLAINING', 'VERIFIED', ...AT_OR_AFTER.finalize] }],
+      ['r4-keyconf', { type: 'key_confirm', records: [out.keyconf], states: AT_OR_AFTER.confirm }],
+      ['tally-share', { type: 'decryption_share', records: [out.release], states: ['RELEASED', 'AUDIT_WAIT'] }],
+    ]);
+    const selected = outputs.get(round);
+    if (selected === undefined) throw new TrusteeError('USAGE', 'USAGE', 'unsupported board export round');
+    if (!Number.isSafeInteger(index) || index < 0) throw new TrusteeError('USAGE', 'USAGE', 'record index must be a nonnegative safe integer');
+    const record = selected.records[index];
+    if (record === undefined) throw new TrusteeError('STATE', 'OUTPUT_NOT_READY', 'no persisted output at that round and index');
+    // commit also saves the unreleased dealing for recovery: persistence alone is not release authorization.
+    this.need(...selected.states);
+    return withLock(this.path, async () => {
+      const current = H(sha256(new Uint8Array(await readFile(this.path))));
+      if (current !== this.sealedHash) throw new TrusteeError('STATE', 'BUNDLE_CHANGED', 'the bundle changed; reopen before exporting');
+      // The server's existing dec-shares format carries the same proofs as the gated, ledger-backed tally release.
+      // No ciphertext or counted set is accepted here, and no new decryption is performed.
+      const body = round === 'tally-share'
+        ? this.sign(this.ctxBytes()!, { proto: PROTO_ID, type: 'dec-shares', j: out.release!.body.j, shares: out.release!.body.shares })
+        : record;
+      const sk = hexToBytes(this.d.sk_sign, 32);
+      try {
+        const entry = buildEntry({ origin: logOrigin(m), type: selected.type, secretKey: sk,
+          publicKey: hexToBytes(this.d.sign_pk, 32), nonce: this.deps.rng.bytes(16),
+          createdAt: Math.floor(this.deps.now().getTime() / 1000), body: jcs(body) });
+        return { header: b64u(entry.headerBytes), body: b64u(entry.body) };
+      } finally { wipe(sk); }
+    });
   }
   private markers(): string[] {
     const names = ['dkg-open', 'dkg-r1-open', 'dkg-r1-close', 'dkg-r2-close', 'dkg-r3-close', 'dkg-final', 'election-open', 'election-close'] as const;

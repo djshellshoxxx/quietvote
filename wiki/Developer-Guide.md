@@ -35,7 +35,7 @@ triage_status=$?
 printf 'strict=%s triage=%s\n' "$strict_status" "$triage_status"
 ```
 
-The triage CLI exits 0 for a consistent report with zero mismatches, **1** for differences and **2** for bad/inconsistent input; Python exclusions never count as agreement. Its [source-pinned test file](https://github.com/djshellshoxxx/quietvote/blob/f9960ffc49d4b4fe4b72b39abcea45332ae93489/scripts/triage-verifier-report.test.mjs) passed **7/7** in hosted [CI 42823551666](https://github.com/djshellshoxxx/quietvote/actions/runs/42823551666), while the unchanged strict comparator failed on three differing reports out of 27. This is diagnostic evidence, not protocol approval, a green CI result, or an independently audited verifier.
+The triage CLI exits 0 for a consistent report with zero mismatches, **1** for differences and **2** for bad/inconsistent input; Python exclusions never count as agreement. Its [source-pinned test file](https://github.com/djshellshoxxx/quietvote/blob/f9960ffc49d4b4fe4b72b39abcea45332ae93489/scripts/triage-verifier-report.test.mjs) passed **7/7** in hosted [CI 42823551666](https://github.com/djshellshoxxx/quietvote/actions/runs/42823551666), while the unchanged strict comparator failed on three differing reports out of 27. This is diagnostic evidence, not protocol approval, a green CI result, or an independently audited verifier. <!-- claims-lint-ignore -->
 
 ### Import cancellation qualification (separate draft)
 

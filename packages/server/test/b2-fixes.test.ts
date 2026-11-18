@@ -3,8 +3,7 @@
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
-import { b64u } from '@quietvote/board';
-import { bytesToHex, ed25519Sign, utf8 } from '@quietvote/crypto';
+import { bytesToHex } from '@quietvote/crypto';
 import { parseQvJson } from '@quietvote/crypto';
 import { verifyElection } from '@quietvote/protocol';
 import { resolveConfig } from '../src/config.ts';
@@ -146,8 +145,7 @@ async function invite(w: World, items: { label: string; contact: string }[], exp
 }
 async function register(w: World, code: string, seed: string): Promise<void> {
   const v = kp('b2fix-reg', seed);
-  const pop = ed25519Sign(v.secretKey, new Uint8Array([...utf8(`QV-REG-v1\0${w.electionId}\0`), ...v.publicKey]));
-  const r = await w.req('POST', `/api/v1/elections/${w.electionId}/registrations`, { invite_code: code, pk: b64u(v.publicKey), alg: 'ed25519', pop: b64u(pop) });
+  const r = await w.req('POST', `/api/v1/elections/${w.electionId}/registrations`, w.registrationBody(code, v));
   assert.equal(r.status, 201, r.text);
 }
 async function rows(w: World): Promise<{ label: string; state: string; l: number; c: number }[]> {

@@ -3,6 +3,7 @@ import {
   argon2idKdfAsync, bytesToHex, ed25519Keypair, hexToBytes, isHex, jcs, parseQvJson, sha256, systemRng, utf8,
   type Rng,
 } from '@quietvote/crypto';
+import { keyPassphraseUnlockCandidates } from '@quietvote/protocol';
 import { wipe } from '../util/hex.ts';
 import { canonicalPassphrase } from './passphrase.ts';
 
@@ -17,7 +18,7 @@ export const FLOOR_PARAMS: Readonly<KdfParams> = Object.freeze({ m: 19456, t: 2,
 /** Upper bound so a hostile key file cannot make the client allocate unbounded memory. */
 export const CEILING_PARAMS: Readonly<KdfParams> = Object.freeze({ m: 262144, t: 10, p: 4 });
 
-export type KeyErrorCode = 'E_KEY_LOCKED' | 'E_KEY_FORMAT' | 'E_KEY_PARAMS' | 'E_KEY_CHECKSUM' | 'E_KEY_MISMATCH';
+export type KeyErrorCode = 'E_KEY_LOCKED' | 'E_KEY_FORMAT' | 'E_KEY_PARAMS' | 'E_KEY_CHECKSUM' | 'E_KEY_MISMATCH' | 'E_KEY_CANCELLED';
 export class KeyError extends Error {
   readonly code: KeyErrorCode;
   constructor(code: KeyErrorCode, message: string) {
@@ -46,6 +47,11 @@ export interface KeystoreDeps {
   kdf: (password: Uint8Array, salt: Uint8Array, prm: KdfParams, onProgress?: (f: number) => void) => Promise<Uint8Array>;
   subtle: SubtleCrypto;
   floor: KdfParams;
+  /**
+   * B3-28: asked before any derivation when the file's parameters exceed the defaults (see `kdfCostDecision`). Resolving false cancels
+   * with `E_KEY_CANCELLED` and no KDF run. Interactive callers must supply it; headless callers that omit it keep the old behaviour.
+   */
+  confirmCost?: ((params: KdfParams) => Promise<boolean>) | undefined;
 }
 
 export function defaultDeps(): KeystoreDeps {
@@ -69,10 +75,20 @@ export function validateParams(prm: KdfParams, floor: KdfParams = FLOOR_PARAMS):
   }
 }
 
+/**
+ * B3-28 (option A): a file whose cost exceeds the defaults in memory, passes or lanes is still valid (floor and ceiling are
+ * unchanged), but the user must confirm before the client spends that memory and time. Pure.
+ */
+export function kdfCostDecision(prm: KdfParams): { confirm: boolean; params: KdfParams } {
+  return { confirm: prm.m > DEFAULT_PARAMS.m || prm.t > DEFAULT_PARAMS.t || prm.p > DEFAULT_PARAMS.p, params: { m: prm.m, t: prm.t, p: prm.p } };
+}
+
 async function importKek(subtle: SubtleCrypto, raw: Uint8Array): Promise<CryptoKey> {
-  const k = await subtle.importKey('raw', raw as BufferSource, 'AES-GCM', false, ['encrypt', 'decrypt']);
-  wipe(raw);
-  return k;
+  try {
+    return await subtle.importKey('raw', raw as BufferSource, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  } finally {
+    wipe(raw);
+  }
 }
 
 export interface WrapResult {
@@ -117,8 +133,12 @@ export async function wrapSeed(
   plain.set(seed, 0);
   plain.set(publicKey, 32);
   const aad = utf8(aadFor(keyId));
-  const ct = new Uint8Array(await deps.subtle.encrypt({ name: 'AES-GCM', iv: iv as BufferSource, additionalData: aad as BufferSource }, key, plain as BufferSource));
-  wipe(plain);
+  let ct: Uint8Array;
+  try {
+    ct = new Uint8Array(await deps.subtle.encrypt({ name: 'AES-GCM', iv: iv as BufferSource, additionalData: aad as BufferSource }, key, plain as BufferSource));
+  } finally {
+    wipe(plain);
+  }
   const container: QvKey1 = {
     v: 1, kdf: 'argon2id', m: used.m, t: used.t, p: used.p, salt: bytesToHex(salt), aead: 'A256GCM', iv: bytesToHex(iv),
     aad: aadFor(keyId), ct: bytesToHex(ct), keyId,
@@ -166,23 +186,31 @@ export async function unwrapSeed(
   now: () => number = () => Date.now(),
 ): Promise<Unwrapped> {
   const c = parseContainer(container, deps.floor);
+  const cost = kdfCostDecision(c);
+  if (cost.confirm && deps.confirmCost !== undefined && !(await deps.confirmCost(cost.params))) {
+    throw new KeyError('E_KEY_CANCELLED', 'unlock cancelled before key derivation');
+  }
   const start = now();
-  const pw = utf8(canonicalPassphrase(passphrase));
-  let kek: Uint8Array;
-  try {
-    kek = await deps.kdf(pw, hexToBytes(c.salt, 16), { m: c.m, t: c.t, p: c.p }, onProgress);
-  } finally {
-    wipe(pw);
+  let plain: Uint8Array | undefined;
+  for (const candidate of keyPassphraseUnlockCandidates(passphrase)) {
+    const pw = utf8(candidate);
+    let kek: Uint8Array;
+    try {
+      kek = await deps.kdf(pw, hexToBytes(c.salt, 16), { m: c.m, t: c.t, p: c.p }, onProgress);
+    } finally {
+      wipe(pw);
+    }
+    const key = await importKek(deps.subtle, kek);
+    try {
+      plain = new Uint8Array(
+        await deps.subtle.decrypt({ name: 'AES-GCM', iv: hexToBytes(c.iv, 12) as BufferSource, additionalData: utf8(c.aad) as BufferSource }, key, hexToBytes(c.ct, 80) as BufferSource),
+      );
+      break;
+    } catch {
+      // QV-ADR-027/B3-25: retry only the distinct legacy NFKC-only spelling.
+    }
   }
-  const key = await importKek(deps.subtle, kek);
-  let plain: Uint8Array;
-  try {
-    plain = new Uint8Array(
-      await deps.subtle.decrypt({ name: 'AES-GCM', iv: hexToBytes(c.iv, 12) as BufferSource, additionalData: utf8(c.aad) as BufferSource }, key, hexToBytes(c.ct, 80) as BufferSource),
-    );
-  } catch {
-    throw new KeyError('E_KEY_LOCKED', 'wrong passphrase or damaged key');
-  }
+  if (plain === undefined) throw new KeyError('E_KEY_LOCKED', 'wrong passphrase or damaged key');
   const seed = plain.slice(0, 32);
   const stored = plain.slice(32, 64);
   wipe(plain);

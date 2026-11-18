@@ -77,7 +77,7 @@ class TestAuditRegressions(unittest.TestCase):
         self.assertEqual(report['checks']['chk.benaloh.spoiled'], 'fail')
 
     def test_B103_approval_without_winners_defaults_one_seat(self):
-        report = verify_bundle(bundle('E5-approval-no-winners'))
+        report = verify_bundle(bundle('E5-approval-no-winners'), allow_no_log=True)
         self.assertEqual(report['verdict'], 'PASS', report['findings'])
 
     def test_B103_yesno_without_rule_is_named_rejection(self):

@@ -1,27 +1,35 @@
 import { FailError, InputError, UsageError } from './args.ts';
 import { cmdBallotAudit, cmdBallotEncrypt } from './cmd-ballot.ts';
+import { cmdVerifyReceipt } from './cmd-receipt.ts';
 import { cmdBoardVerify } from './cmd-board.ts';
+import { cmdElectionDraftRecord } from './cmd-lifecycle.ts';
+import { cmdElectionPrepare } from './cmd-prepare.ts';
+import { cmdElectionSignRecord, cmdElectionExportEntry } from './cmd-packet.ts';
 import { cmdElectionInspect } from './cmd-election.ts';
 import { cmdElectionSpoilCollect } from './cmd-spoil.ts';
 import { cmdKeygen } from './cmd-keygen.ts';
 import { cmdSelftest, cmdVerify } from './cmd-verify.ts';
 import { cmdVectorsCheck } from './cmd-vectors.ts';
+import { cmdPolicyDraftTemplate, cmdPolicyDraftValidate } from './cmd-policy-draft.ts';
 import { EXIT, type Io } from './io.ts';
+import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 
 export const VERSION = '0.1.0';
 
-export const HELP = `qv ${VERSION}: QuietVote command line (offline-friendly, no dependencies)
+export const HELP = `qv ${VERSION}: QuietVote command line (offline verification and online operators)
 
 usage:
   qv --version                     print the version
-  qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>]
+  qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only]
                                    verify an election bundle (V1..V14); runs the canary self-test first
+  qv verify-receipt <receipt.json> --log-key <hex> --origin <origin> --leaf-hash <hex> [--json]
+                                   verify signed promise and inclusion against external anchors (no witness/freshness verdict)
   qv selftest [--json]             run only the canary self-test
   qv keygen --out <file> [--seed-file <f> | --seed-stdin] [--passphrase-file <f> | --passphrase-stdin]
             [--no-passphrase] [--kdf-memory-kib <n>] [--kdf-iterations <n>] [--force] [--json]
                                    create a voter key; seed and passphrase never come from argv; the key file is
                                    passphrase-protected (QVKEY1, Argon2id) unless --no-passphrase
-                                   keep the exact passphrase spelling; web-generated words use lower-case and single spaces
+                                   shared web/CLI word normalization; old CLI keys still need their original spelling
   qv ballot encrypt --election <bundle> --key <keyfile> [--manifest-hash <hex>] [--select contest=opt[,opt]]... --out <file>
                     [--intent cast|spoil] [--supersedes <hex>] [--audit-out <file>] [--publish-reveal]
                     [--passphrase-file <f> | --passphrase-stdin] [--json]
@@ -29,12 +37,47 @@ usage:
   qv board verify <board-bundle|election-bundle> [--log-key <hex>] [--manifest-hash <hex>] [--author-key <hex>]...
                     [--witness-policy <file>] [--pin-file <f>] [--json]
                                    --witness-policy applies only to standalone board bundles
+  qv election prepare <archive.qvb> --manifest-hash <hex> --out <file> [--format election|ceremony] [--json]
+                                   checks archive, pinned manifest and board before preparing trustee inputs;
+                                   accepts regular files up to 64 MiB and 10000 entries; refuses existing outputs
+  qv election draft-record <archive.qvb> --manifest-hash <hex> --kind <phase> --out <body.json> [--json]
+                                   phases: dkg-open, dkg-r1-open, dkg-r1-close, dkg-r2-close, dkg-r3-close,
+                                   dkg-final, roll-commit, election-open, election-close; unsigned, never submitted
+  qv election sign-record --manifest <manifest.json> --manifest-hash <hex> --body <body.json> | --record <record.json>
+                    --key <keyfile> --out <file> [--election <bundle>] [passphrase options] [--json]
+                                   add one coordinator signature; quorum:false means additional signers are needed
+  qv election export-entry --origin <quietvote/v1/id> --type <board-type> --file <signed-record.json>
+                    --key <outer-author-keyfile> --out <packet.json> [passphrase options] [--json]
   qv election inspect <bundle> [--json]
   qv election spoil-collect --election <bundle> --code <hex> --packet <file> [--packet <file>]... [--manifest-hash <hex>]
                     [--post-body-out <dir>] [--json]
                                    combine trustee spoil-share packets for one trustees-mode spoil and decode its selections;
                                    exit 1 if fewer than t shares verify or the code is cast/re-wrapped/not a trustees-mode spoil
+  qv online instance --server <origin> [--json]
+  qv online admin-status --server <origin> --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
+  qv online election-create --server <origin> --audience <qv:id@publicUrl> --key <keyfile>
+                    --org <id> --title <title> --access public|link --idempotency-key <key> [passphrase options] [--json]
+  qv online invites-create --server <origin> --id <id> --count <1..1000> --out <private.json>
+                    --audience <qv:id@publicUrl> --key <keyfile> --idempotency-key <key> [passphrase options] [--read-key-file <file>] [--json]
+                                   reserves an exclusive private output before issuance; bearer codes never appear in stdout
+  qv online enroll --server <origin> --id <id> --key <keyfile> --invite-file <file> [passphrase options] [--read-key-file <file>] [--json]
+                                   enroll in a hashed-pop-v1 election; invite tokens never come from argv
+  qv online registration-preview --server <origin> --id <id> --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
+                                   inspect legacy migration status without changing invites or the election
+  qv online election-inspect --server <origin> --id <id> [--read-key-file <file>] [--json]
+  qv online election-draft --server <origin> --id <id> --file <draft.json>
+                    --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
+  qv online election-tally-draft --server <origin> --id <id> --decrypters <1,2> --out <body.json> [--read-key-file <file>] [--json]
+  qv online election-submit --server <origin> --id <id> --file <signed-entry.json> [--json]
+  qv online election-export --server <origin> --id <id> --out <file> [--format qvb|json]
+                    [--read-key-file <file>] [--json]
+                                   all online commands accept --timeout-ms (1..120000, default 20000);
+                                   server responses and downloaded bundles are not independently verified
   qv vectors check [dir] [--strict] [--json]
+  qv policy-draft template foundation|association|collective --out <draft.json> [--json]
+  qv policy-draft validate <draft.json> [--json]
+                                   unsigned policy planning only; no signatures, group authority or election binding;
+                                   collective preserves a source duration conflict and returns exit 1 with a draft to review
 
 exit codes: 0 ok / PASS, 1 verification or conformance failure, 2 usage error, 3 INCOMPLETE or PARTIAL (nothing failed,
 but something could not be checked: that is not a pass), 4 unreadable or malformed input, 70 internal error.
@@ -43,12 +86,15 @@ but something could not be checked: that is not a pass), 4 unreadable or malform
 type Cmd = (argv: string[], io: Io) => Promise<number>;
 const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   verify: cmdVerify,
+  'verify-receipt': cmdVerifyReceipt,
   selftest: cmdSelftest,
   keygen: cmdKeygen,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
-  election: { inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
+  election: { 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
+  online: { 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
+  'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },
 };
 
 export async function run(argv: string[], io: Io): Promise<number> {

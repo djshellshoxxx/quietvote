@@ -2,16 +2,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { bytesToHex, ed25519Keypair } from '@quietvote/crypto';
+import { bytesToHex, ed25519Keypair, sha256, streamRng } from '@quietvote/crypto';
 import type { ClientOptions } from '../src/api/client.ts';
 import { ApiError } from '../src/api/errors.ts';
 import type { AppendResult, ElectionSummary, Instance, InviteResult } from '../src/api/types.ts';
 import { PublishError, type PublishForm, type PublishState } from '../src/flow/publish.ts';
-import { PUBLISH_UX_CODES, publishAudience, publishFailure, runPublish, type PublishRun } from '../src/flow/publish-ui.ts';
+import { PUBLISH_UX_CODES, enrollOrganization, publishAudience, publishFailure, runPublish, type PublishRun } from '../src/flow/publish-ui.ts';
 import { EN } from '../src/i18n/en.ts';
-import { KeyError, type QvKey1 } from '../src/key/keystore.ts';
+import { DEFAULT_PARAMS, FLOOR_PARAMS, defaultDeps, needsRewrap, wrapSeed, KeyError, type QvKey1 } from '../src/key/keystore.ts';
 import { createSigner } from '../src/key/signer.ts';
-import type { DeviceStorage } from '../src/key/storage.ts';
+import { MemoryStorage, type DeviceStorage } from '../src/key/storage.ts';
+import { ORGANIZER_SLOT } from '../src/flow/onboarding.ts';
 import { b64uEncode } from '../src/util/hex.ts';
 
 const ELECTION = '0123456789abcdef0123456789abcdef';
@@ -149,4 +150,33 @@ test('publish UI: the create view calls runPublish from the publish button, and 
   assert.match(src, /o = await runPublish\(\{/);
   assert.match(src, /prepared = \{ form, rollHex: roll\.keys \};\n\s+add\(publishBox, \[publishSection\(\)\]\);/);
   assert.match(src, /\}, \{ primary: true \}\), out, publishBox\);/);
+});
+
+
+test('organizer enrollment and publishing never rewrap or reinstall a weak key cleared during signing unlock', async () => {
+  const storage = new MemoryStorage();
+  let clearDuringUnlock = false;
+  let writes = 0;
+  const deps = { ...defaultDeps(), rng: streamRng('readonly-organizer-signing'), kdf: async (pw: Uint8Array, salt: Uint8Array) => {
+    if (clearDuringUnlock) await storage.clearAll();
+    return sha256(new Uint8Array([...pw, ...salt]));
+  } };
+  const passphrase = 'correct horse battery staple';
+  const { container } = await wrapSeed(seedOf(1), passphrase, deps, FLOOR_PARAMS);
+  assert.ok(needsRewrap(container, DEFAULT_PARAMS), 'fixture must trigger the default transparent rewrap policy');
+  storage.putKey = async () => { writes++; throw new Error('signing unlock must not write key storage'); };
+  clearDuringUnlock = true;
+  storage.keys.set(ORGANIZER_SLOT, container);
+  const srv = fakeServer();
+  const id = await enrollOrganization({ name: 'Council', token: '', idempotencyKey: 'enroll-key', passphrase,
+    storage, apiBase: '', origin: PAGE, deps,
+    makeClient: () => ({ instance: async () => ({ instance_id: INSTANCE, api_versions: ['v1'], server_version: 'test' }), createOrganization: async () => ({ org_id: 'org', name: 'Council' }) }),
+  });
+  assert.equal(id, 'org');
+  assert.equal(await storage.getKey(ORGANIZER_SLOT), undefined, 'enrollment must not repopulate the cleared slot');
+  storage.keys.set(ORGANIZER_SLOT, container);
+  const published = await runPublish(baseRun(srv, { storage, deps, passphrase, unlock: undefined }));
+  assert.equal(published.kind, 'published');
+  assert.equal(await storage.getKey(ORGANIZER_SLOT), undefined, 'publishing must not repopulate the cleared slot');
+  assert.equal(writes, 0);
 });

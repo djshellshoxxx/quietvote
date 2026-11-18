@@ -15,10 +15,12 @@
     "i18n:check": "node scripts/i18n-check.ts",
     "i18n:extract": "node scripts/i18n-check.ts --json",
     "build": "node src/build/cli.ts",
-    "e2e": "node e2e/run.ts"
+    "e2e": "node e2e/run.ts",
+    "e2e:server": "node e2e/server.ts"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
   },
   "dependencies": {
     "@quietvote/board": "*",

@@ -155,8 +155,19 @@ export const MESSAGE_KEYS = Object.keys(EN) as MessageKey[];
         const mod = await loadModule(args.path, source);
         const tableName = catalogExports[name];
         const messages = stringTable(mod[tableName], tableName);
+        // Catalogs share the source key dictionary. Shipping the long key names five more times costs compressed bytes
+        // without changing translation behavior. Null slots preserve genuinely absent translations and their fallback rules.
+        const enPath = `${i18nDir}en.ts`;
+        const enSource = await readFile(enPath, 'utf8');
+        const keys = Object.keys((await loadModule(enPath, enSource)).EN as Record<string, unknown>);
+        const known = new Set(keys);
+        if (Object.keys(messages).some((key) => !known.has(key))) throw new Error(`${name} catalog contains unknown source keys`);
+        const values = keys.map((key) => messages[key] ?? null);
         return {
-          contents: `${source}\nimport { compactFormatter, registerCompiledMessages } from '../compiled-runtime.ts';\n${registration(tableName, messages)}\n`,
+          contents: `import { MESSAGE_KEYS } from '../en.ts';
+export const ${tableName}: Record<string, string> = Object.fromEntries((${JSON.stringify(values)} as (string | null)[]).flatMap((message, index) => message === null ? [] : [[MESSAGE_KEYS[index], message]]));
+import { compactFormatter, registerCompiledMessages } from '../compiled-runtime.ts';
+${registration(tableName, messages)}\n`,
           loader: 'ts',
           resolveDir: dirname(args.path),
         };

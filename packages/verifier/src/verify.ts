@@ -17,6 +17,8 @@ import {
 export const VERIFIER_TOOL = 'quietvote-verifier/0.1.0';
 
 export interface VerifyBundleOptions {
+  /** Explicit trusted content-only mode; never accepted from the input bundle. */
+  allowNoLog?: boolean;
   /** Manifest hash obtained out of band (hex). Overrides the value inside the bundle, which is attacker-controlled. */
   pinnedManifestHash?: string;
   /** Extra author public keys (hex) accepted for board entries, beyond coordinator/trustee/roll keys of the manifest. */
@@ -123,7 +125,7 @@ export async function verifyBundle(input: string | Uint8Array | object, o: Verif
     if (o.pinnedManifestHash !== undefined) election.manifest_hash = o.pinnedManifestHash;
     const boardJson = loaded.value.boardJson;
     const log = boardJson === undefined ? undefined : logEvidence(boardJson, o);
-    const pr = await verifyElection(election, log === undefined ? {} : { log });
+    const pr = await verifyElection(election, { ...(log === undefined ? {} : { log }), allowNoLog: o.allowNoLog === true });
     let br: BoardVerdict | undefined;
     let boardSkipped: string | undefined;
     const board = loaded.value.board;
@@ -132,8 +134,8 @@ export async function verifyBundle(input: string | Uint8Array | object, o: Verif
       else {
         try {
           br = runBoard(election.manifest.body as Manifest, election.roll, board, o);
-        } catch (e) {
-          boardSkipped = `board verification raised: ${e instanceof Error ? e.message : 'unknown'}`;
+        } catch {
+          boardSkipped = 'board verification could not complete';
         }
       }
     }
@@ -143,7 +145,9 @@ export async function verifyBundle(input: string | Uint8Array | object, o: Verif
       receipt_claims: log.receipts?.length ?? 0,
       observed_heads: log.observed?.length ?? 0,
     };
-    const r = compose(pr, br, boardSkipped, board !== undefined, logInfo);
+    const contentOnly = o.allowNoLog === true && (boardJson === undefined ||
+      (pr.checks['chk.board.append_only'] === 'pass' && election.manifest.body.bb.witness_quorum === 0));
+    const r = compose(pr, br, boardSkipped, board !== undefined, logInfo, contentOnly);
     r.manifestHash = election.manifest_hash;
     r.manifestHashSource = o.pinnedManifestHash === undefined ? 'bundle' : 'caller';
     if (o.pinnedManifestHash === undefined) {
@@ -165,6 +169,7 @@ const both = (a: VStatus, b: VStatus): VStatus => (a === 'fail' || b === 'fail' 
 function compose(
   pr: VerificationReport, br: BoardVerdict | undefined, boardSkipped: string | undefined, hadBoard: boolean,
   logInfo?: Pick<LogLayerSummary, 'witness_keys' | 'receipt_claims' | 'observed_heads'>,
+  contentOnly = false,
 ): VerifierReport {
   const r = blankReport();
   const chk: Record<string, VStatus> = { ...pr.checks };
@@ -253,11 +258,14 @@ function compose(
   set('V13', 'not_run', ['no verifier step exists for steward/operator control entries yet (QV-ADR-022; see NOTES.md)']);
   // V14: completeness. A bundle without a tally record is incomplete, not failed.
   const enc = chk['chk.encoding.canonical']!;
-  const tallyPresent = pr.verdict !== 'INCOMPLETE' && chk['chk.tally.decrypt'] !== 'not_run';
+  const tallyPresent = chk['chk.tally.decrypt'] !== 'not_run';
   set('V14', enc === 'fail' ? 'fail' : tallyPresent && enc === 'pass' ? 'pass' : 'not_run', enc === 'fail' ? ['non-canonical or malformed records present'] : tallyPresent ? [] : ['no tally record in the bundle']);
 
-  // ---- verdict: FAIL if either layer fails; INCOMPLETE if nothing failed but no tally was verified
-  const verdict: Verdict = pr.verdict === 'FAIL' || boardFailed ? 'FAIL' : pr.verdict;
+  // ---- verdict: fatal evidence wins; missing tally/log evidence is incomplete unless explicitly scoped below.
+  const logIncomplete = chk['chk.board.append_only'] !== 'pass' || chk['chk.board.witness'] !== 'pass';
+  const uncheckedSuppliedBoard = hadBoard && (boardSkipped !== undefined || br === undefined || chk['chk.board.append_only'] !== 'pass');
+  const verdict: Verdict = pr.verdict === 'FAIL' || boardFailed ? 'FAIL' :
+    uncheckedSuppliedBoard || (logIncomplete && !contentOnly) ? 'INCOMPLETE' : pr.verdict;
   r.verdict = verdict;
   return seal(r);
 }

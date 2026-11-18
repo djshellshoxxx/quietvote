@@ -811,6 +811,19 @@ Classes: **R** = refuse at admission (server SHOULD not append; verifier does no
 
 In Phase 1 the roll is public, so returning precise codes to submitters leaks nothing; Phase 2/3 specifications must revisit whether eligibility errors may be distinguished from proof errors.
 
+**Approved unknown-record classification (QV-ADR-027, B1-02 option A).** A
+QV-JSON non-ballot record with an unrecognised string `type` is rejected from
+the core protocol computation with class-L `E_VERSION`: `chk.encoding.canonical`
+fails, but that finding alone does not make the election verdict FAIL. In
+particular, the legacy `control` records specified in QV-18 §5.2 are checked by
+the log-evidence layer for coordinator authority, exact body binding and their
+bounded notice semantics. Core rejection never grants authority to a notice or
+permits it to alter witness policy, time bounds, ballot selection or tally data.
+Invalid manifest/ballot/tally handling retains its separately specified rules.
+This clarification implements the unknown-type row only; accepted-marker
+selection, malformed known records and duplicate-tally rules require their own
+conformance coverage and are not inferred from this row.
+
 ### 5.21 Phase boundaries and interface hooks
 
 | Capability | Phase 1 (ADR-005) | Phase 2 (stub) | Phase 3 (stub) |
@@ -1105,7 +1118,7 @@ Verifier: `a_b = [s_b] − [c_b]α_y`, `b_b = [s_b]K − [c_b]β_b` (with `β_1 
 
 ## Appendix C — Full verifier algorithm (check list)
 
-Inputs: the election record (§5.19.2) and the out-of-band `manifest_hash`. Output: PASS or FAIL with located error codes; non-zero exit on FAIL.
+Inputs: the election record (§5.19.2) and the out-of-band `manifest_hash`. Output: PASS, FAIL or INCOMPLETE with located error codes. CLI exits are 0 for PASS, 1 for FAIL and 3 for INCOMPLETE (QV-ADR-027, PY-02).
 
 **C1. Manifest and parameters**
 1. Parse record with QV-JSON; reject on `E_PARSE/E_SCHEMA/E_VERSION`.
@@ -1143,4 +1156,4 @@ Inputs: the election record (§5.19.2) and the out-of-band `manifest_hash`. Outp
 21. Evaluate quorum, threshold/winner and tie-break with exact integers; compare with published `results`.
 
 **C8. Verdict**
-22. Report PASS only if no `F`-class error occurred. Always list: number of cast, spoiled, counted, ignored ballots by error code; unwitnessed-time caveat; `ctx` prefix; verifier version and hash. Also emit machine-readable report (QV-JSON).
+22. An `F`-class error yields FAIL. Otherwise, if `chk.tally.decrypt` is `not_run`, report INCOMPLETE. By default both `chk.board.append_only` and `chk.board.witness` must pass; absent, skipped or unverified evidence yields INCOMPLETE. Only a trusted caller explicitly requesting content-only verification may retain a scoped PASS without supplied log evidence, or with verified append-only evidence and an explicitly zero-witness signed manifest policy. This exception never bypasses supplied malformed, failed or interrupted append verification, or a nonzero witness requirement. A content-only report must prominently state that PASS does not establish witnessed log integrity. Bundle fields cannot request this exception. An absent tally leaves aggregate, decryption and rule checks `not_run` and emits no results. A malformed, rejected or conflicting tally retains its applicable errors and must not be treated as absent. Preserve counts and the context prefix only to the extent their prerequisite evidence was verified. Also list ignored ballots by error code, the unwitnessed-time caveat, verifier version and hash, and emit a machine-readable report (QV-JSON). This implements QV-ADR-027's PY-02 and P1/TSV-05 decisions; TSV-04 operational log-layer interruptions are incomplete unless fatal evidence already exists.

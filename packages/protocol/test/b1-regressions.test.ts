@@ -52,7 +52,7 @@ test('B1-13: manifest envelope and signature members are closed schemas', async 
   for (let i = 0; i < 3; i++) castBallot(sim, i, { budget: ['yes'] });
   closeElection(sim);
   publishTally(sim, [1, 2]);
-  assert.equal((await verifyElection(bundleOf(sim))).verdict, 'PASS');
+  assert.equal((await verifyElection(bundleOf(sim), { allowNoLog: true })).verdict, 'PASS');
   for (const location of ['envelope', 'signature']) {
     const bundle = structuredClone(bundleOf(sim));
     const target = location === 'envelope' ? bundle.manifest : bundle.manifest.sigs[0]!;
@@ -113,7 +113,7 @@ test('B1-11: a key confirmation after dkg-final cannot complete the decrypter qu
   closeElection(sim);
   publishTally(sim, [1, 2, 3]);
   const bundle = structuredClone(bundleOf(sim));
-  assert.equal((await verifyElection(bundle)).verdict, 'PASS', 'timely keyconf control');
+  assert.equal((await verifyElection(bundle, { allowNoLog: true })).verdict, 'PASS', 'timely keyconf content-only control');
   const index = bundle.log.findIndex((e) => (e.entry as { body?: { type?: string } }).body?.type === 'dkg-keyconf');
   const [late] = bundle.log.splice(index, 1);
   assert.ok(late);

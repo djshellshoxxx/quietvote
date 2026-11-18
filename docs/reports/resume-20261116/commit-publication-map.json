@@ -1,0 +1,95 @@
+{
+  "note": "Published commit metadata differs from local metadata because shell pushes were unavailable. Every reconstructed commit tree was compared exactly with its local original. Local IDs in review receipts resolve through this map. The map covers source and prior review commits; the checkpoint commit identifies itself via its Original-local-commit trailer.",
+  "starting_sha": "5382d5f89226a7464025480c3a6be606da79859a",
+  "published_code_sha": "1c3845d193285c9ab2b19bbb7898b0de430d83c3",
+  "commits": [
+    {
+      "local": "754dee0e06828a88e114149df345ceea4f07bf4a",
+      "published": "3b6f96c6fd79eafad525844347e4e8f99c07e5fe"
+    },
+    {
+      "local": "8c5247de20a8cf81ef2e491fa0ae3819b1db5b73",
+      "published": "91e581d4891186a2e6d10d8213749cdb41805399"
+    },
+    {
+      "local": "deb88351d760ce49c910c18425bf46c32eb907ea",
+      "published": "69b7eb7522f700eae5e92fcf7390c530e992c69a"
+    },
+    {
+      "local": "9200218b475348b1171ce531e75c8fe593ae32e5",
+      "published": "1db96d7ca2433ef4ef27393f99a9fc4d09119296"
+    },
+    {
+      "local": "1a203712f18186665879943fb0d4ec6e9ba19bb4",
+      "published": "670653f51fa9233eb10cb700c51be2d58b63b7a1"
+    },
+    {
+      "local": "a2210b997d8bb50cc08c304323894dedc40434c3",
+      "published": "63390e22401291979930effa141e87da9bee6e2f"
+    },
+    {
+      "local": "6c35a33d796ba58182097f7f0223845505e01498",
+      "published": "8ff23a3900789c9de1b6a909570e941439989a73"
+    },
+    {
+      "local": "eccf7e3af5aaf77a176dca8f37bc3c5d73968668",
+      "published": "ac91415ebecbec4a6ad5d45eacf4a44870fe4970"
+    },
+    {
+      "local": "ebb045a633d48ba2ad9ce7ac08620a6f62a69fe1",
+      "published": "d43bdc31108702980ae214d485390359fde5c82a"
+    },
+    {
+      "local": "e37528e9344c6930e1d9e7a6f13339471b4a7bb4",
+      "published": "ccd69748d178da0099a91fc40c9db9e641a310da"
+    },
+    {
+      "local": "8c6d3f7ad807584934291c51e8e2f3547c85c587",
+      "published": "ad9b262c62496040c10e4d65e8cf767b38479bb8"
+    },
+    {
+      "local": "4bcdd0f5224d9e3db56103d62e10273c321ecee3",
+      "published": "c4586a5f7ae40276306d1600d47533ba9de0986c"
+    },
+    {
+      "local": "55609c2cb37366724fd7f21da0050c4dbdbcaa55",
+      "published": "0f4fdec950967d82d548ed846763effb5c1f0aa1"
+    },
+    {
+      "local": "182cb508503c1ee5f6e6410a7beed6abcd02423c",
+      "published": "7207242cb54ff06a75b2205d272bb203bf4017ca"
+    },
+    {
+      "local": "a437e3e06954c6512d5fca96c76d2faf2bae44cd",
+      "published": "e1c48dfa98ed2f72dbb8920da3e188d91465034e"
+    },
+    {
+      "local": "4c3698b25ad9d6a81245792506fdf59485348b99",
+      "published": "2d7e615e016d5aa3d066f83c1a23d7ba98398636"
+    },
+    {
+      "local": "2c0d365aea7fe6a8f398f0eb56eedd9ffd5b9475",
+      "published": "21f5e211b4995865697c7f158309df1b2676dcce"
+    },
+    {
+      "local": "e646630d62b53d709192dff861e45e295a9029ec",
+      "published": "b34107ba501857d277852628dd4d9a2682ae1758"
+    },
+    {
+      "local": "11ac3137c0cc354ef9abe39bfe888ddcf001881a",
+      "published": "e724779f1bba60b1fdd598af1bbc076eacffa766"
+    },
+    {
+      "local": "abe980dc8e0b56c296bf61ee14f0e1bebce416af",
+      "published": "2ac3d1ac0f21d238e5e94b5e7d0b1732d31621f6"
+    },
+    {
+      "local": "c79d8760eb46be51c161e44a4ff46ce6157faa4e",
+      "published": "1c3845d193285c9ab2b19bbb7898b0de430d83c3"
+    },
+    {
+      "local": "aad185b5bdfdbd51b0961cd7169794d088b4473d",
+      "published": "138c3d082888a47630b2a125be91c248ffab0af4"
+    }
+  ]
+}

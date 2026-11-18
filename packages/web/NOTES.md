@@ -24,6 +24,10 @@ remain evidence of the audited revision, not claims that the current tree has pa
   Signed promise-only receipts remain downloadable and optionally stored for inclusion checks; unknown delivery retries the
   same signed bytes with pending copy. A local save failure preserves the verified recorded receipt. “Logged” uses the signed
   promise timestamp. Rejected links no longer claim a newer ballot was recorded; refused ballots do not show receipt proof.
+* L4 (cast delivery honesty): a board alarm (E-BOARD-INCL-FAIL, or a transport failure) raised after the board accepted the
+  ballot POST keeps and stores that receipt, and the failed view offers Save receipt. Fork/rollback heads stay withheld (W2).
+  "Seal a new ballot" renders only where NEW_SEAL is accepted (`canNewSeal`). Unknown-delivery retry is still memory-only:
+  persisting it would mean storing the signed cast entry (ciphertext), so it is not persisted. No new strings; no catalog changed.
 * No-invite key completion checks the committed voter list rather than claiming registration. A 409 is not registration
   success. **Registration remains blocked pending protocol-owner review:** QV-19/QV-04 and QV-09 disagree on invitation/PoP
   bytes; this change does not reconcile them. The existing server-contract negative evidence remains relevant.
@@ -41,8 +45,9 @@ remain evidence of the audited revision, not claims that the current tree has pa
   the result snapshot after lazy chart import. The production regression delivers a real SSE reread while holding the chart
   HTTP response; a newly appended conflicting signed tally must fail before any table is drawn. Both regressions failed
   before these fixes and pass afterward.
-* Paused-state machine reasons/copy, normative one-ballot guarantee wording and web/CLI passphrase normalization remain owner
-  review gates. Existing normal English error/verifier wording was corrected; no guarantee string/review hash was changed,
+* At that consolidation, paused-state machine reasons/copy, normative one-ballot guarantee wording and web/CLI passphrase normalization
+  remained owner review gates. B3-25 normalization is now implemented under the recorded QV-ADR-027 approval (see below).
+  Existing normal English error/verifier wording was corrected; no guarantee string/review hash was changed,
   no translation was endorsed, and every draft locale remains unoffered. Draft normal-string wording needs review against
   the changed English source before release.
 
@@ -132,8 +137,8 @@ All logic is node-testable; `src/ui` and `main.ts` are covered by the e2e only. 
 * Entry bodies are JCS bytes of protocol records/envelopes; ballots use type `ballot`, tests `ballot_audit`. Organizer auth
   challenge message and `bb.log_id = SHA-256(origin)` are my choices (undefined in specs).
 * Organizer management calls (createElection, putDraft, createInvites) are QV-08 signed requests (`api/signing.ts`, mirrors
-  server `auth.ts`), because the server has no `/auth/*` session routes. `authChallenge`/`authSession`/bearer in `ApiClient` are
-  left over from QV-09 and are not used by the server. The audience (`qv:<instance_id>@<publicUrl>`) is supplied by the caller.
+  server `auth.ts`), because the server has no `/auth/*` session routes. The QV-09 challenge/session bearer code (`authChallenge`, `authSession`,
+  `setSessionToken`, the `Challenge`/`Session` types) was removed under QV-ADR-027 (N-20); signed requests are the sole organizer auth. The audience (`qv:<instance_id>@<publicUrl>`) is supplied by the caller.
 * Client derives K/ctx itself by re-running DKG adjudication from the log. Word list is generated (placeholder, QV-19 open question).
 * Sealing runs in a Worker via a Trusted Types policy `qv-default` (script URL only); falls back in-thread.
 * Under hash-pinned CSP the standalone verifier page has inline script/style by spec (QV-19 section 7); index.html has none.
@@ -254,3 +259,65 @@ Deterministic DOM tests exercise cancellation, stale successful/rejected file re
 Required Chromium journeys add mobile/desktop cancel/retry, progress labels, no verification requests and stale-read checks.
 Local Chromium could not launch (`socket() EPERM`); this does not qualify those browser assertions. Hosted exact-candidate
 browser qualification remains required; see `docs/reports/next-offline-20261109.md`.
+
+## Web fixes, second batch (QV-ADR-027)
+
+* N-20: organizer/admin auth is QV-08 signed requests only. The QV-09 challenge/session bearer code is gone from `ApiClient`
+  and `api/types.ts` (test `no-bearer.test.ts`); `docs/09-api-data-contracts.md` section 3.2 and REQ-005/006 still describe it
+  and need the rewrite proposed in the work report.
+* B3-28 (option A): a key file whose Argon2id parameters exceed the defaults in `m`, `t` or `p` needs an explicit confirm before any
+  derivation (`kdfCostDecision`, `KeystoreDeps.confirmCost`); cancel throws `E_KEY_CANCELLED` with no KDF run. Floor and ceiling are
+  unchanged and previously valid files still unlock. Callers that pass no `confirmCost` (headless/tests) keep the old behaviour;
+  the UI key view, recovery-code display and organizer publish unlock all pass it. A cancelled organizer publish unlock shows the
+  generic error (there is no dedicated copy). `qv.key.cost*` locale entries are machine-drafted and unreviewed.
+* B3-06 (decision-free piece only): `uxPresentation` supplies `{time}`/`{seconds}` for the error codes that take them, so the
+  screen no longer falls back to the generic error. When a closed/not-open phase has no known time the unavailable copy is shown.
+  A PAUSED phase and its freshness/authority policy are NOT implemented (owner decision still open). `E-ORG-LANG`,
+  `E-BOARD-STALE` and `E-VERSION` have placeholders but are raised nowhere (test `error-args.test.ts` fails when one starts being).
+* W7: `LiveElection` reports `onRecovered` after the first good refresh following a failure; the status line is then re-derived
+  from the connection state instead of staying at "reload the page".
+
+## Connected organizer console — 2026-11-16
+
+`/e/:id/admin` now works before the key ceremony is complete. An explicit saved
+manifest hash authenticates the manifest and coordinator set. The console
+prepares the existing DKG round markers, roll commitment, bound opening, scheduled
+closing and tally records, then requires a separate Send action. It can review
+and relay bounded public `qv-trustee export-entry` packets without trustee secrets.
+
+Organizer unlocks use `rewrap: false`, lock after each preparation, and discard
+late work after navigation or device clearing. A failed send retains the exact
+public packet for download and explicit retry; no mutation is retried automatically.
+Tally preparation checks the existing full content verifier, including aggregate,
+decryption and result rules, before releasing any packet. Manifest/scoped-record
+checks do not establish board freshness or witness qualification. The server
+remains authoritative for admission. Content verification uses the existing
+verifier behavior without changing policy or report expectations.
+
+Coordinator records can accumulate distinct authorized signatures through public
+packet or record files. Every existing signature and the current action body is
+checked before adding a signature; Send stays disabled until the manifest quorum
+is met. Saved coordinator packets can also be restored without unlocking or
+changing their signed bytes, including after an uncertain POST and page reload.
+Only a receipt authenticated to the pinned log, origin and packet leaf clears a
+pending packet. Malformed, forged or mismatched acknowledgments retain it for retry.
+
+Signing rejects malformed, forged, duplicate or misordered lifecycle markers,
+incorrect opening references, incomplete key confirmations and roll data that
+conflicts with the pinned manifest. Sequence references remain within the wire
+schema's uint32 range. The final focused run passed 23 tests, including ten fresh
+review regressions and all ten coordinator stages over actual HTTP. Build and
+typecheck passed; this does not establish browser acceptance. Registration
+decisions remain held. Native locale review remains outstanding; translations
+are drafts.
+
+## QVKEY1 passphrase compatibility — 2026-11-16
+
+QV-ADR-027/B3-25 now uses one shared existing-web canonicalizer for new CLI and
+web containers. Unlock tries canonical input and then distinct legacy CLI NFKC
+input, at most two KDF derivations. Immutable old-writer fixtures retain legacy
+compatibility; old CLI files still require their original spelling. The version,
+parameter bounds and read-only organizer unlock behavior are unchanged. Password,
+derived-key, encryption plaintext and failed-signer-import PKCS8 buffers are wiped
+on errors. See the [milestone handoff](../../docs/handoffs/QUIETVOTE-PASSPHRASE-COMPATIBILITY-20261116.md)
+for executed cross-client tests, full web unit results and reciprocal review.

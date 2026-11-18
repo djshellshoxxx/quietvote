@@ -8,12 +8,13 @@ import { signRecord } from '@quietvote/protocol';
 import { buildServer } from '../../server/src/index.ts';
 import { bundleOf, castBallot, clone, closeElection, publishTally, setup } from '../../protocol/test/helpers/sim.ts';
 import { buildSite, csp } from '../src/build/site.ts';
+import { fixtureWitnesses, witnessedBoard } from '../test/helpers/witnessed-board.ts';
 import { FakeBoard } from '../test/helpers/fake-board.ts';
 import { launchBrowser } from './browser.ts';
 
 const dir = mkdtempSync(join(tmpdir(), 'qv-verifier-browser-'));
 const dist = join(dir, 'site'); await buildSite(dist);
-const sim = await setup({ seed: 'b3-browser-results', n: 3, t: 2, voters: 4, minCounted: 3 });
+const sim = await setup({ seed: 'b3-browser-results', n: 3, t: 2, voters: 4, minCounted: 3, boundLog: true, witnessQuorum: 2, witnesses: fixtureWitnesses('b3-browser-results') });
 for (let i = 0; i < 4; i++) castBallot(sim, i, { budget: ['yes'], chair: ['ann'] });
 closeElection(sim); publishTally(sim, [1, 2]);
 const good = bundleOf(sim);
@@ -21,8 +22,9 @@ const forged = clone(good);
 const tally = forged.log.find((e) => (e.entry as any).body?.type === 'tally')!;
 const body = (tally.entry as any).body; body.contests[0].options[0].T++;
 const coord = sim.coord[0]!; tally.entry = signRecord(coord.secretKey, coord.publicKey, sim.params!.ctx, body);
-const goodFile = join(dir, 'good.json'), badFile = join(dir, 'bad.json');
-writeFileSync(goodFile, JSON.stringify(good)); writeFileSync(badFile, JSON.stringify(forged));
+const goodFile = join(dir, 'good.json'), badFile = join(dir, 'bad.json'), bareFile = join(dir, 'content-only.json');
+writeFileSync(bareFile, JSON.stringify({ ...good, allowNoLog: true }));
+writeFileSync(goodFile, JSON.stringify({ ...good, board: witnessedBoard(sim, good) })); writeFileSync(badFile, JSON.stringify(forged));
 // Repeated real proofs keep the ballot loop busy without generating a costly large election.
 // The added envelopes are outside the close window and must still be checked before rejection.
 const large = clone(good);
@@ -42,6 +44,11 @@ const mime: Record<string, string> = { '.js': 'text/javascript', '.css': 'text/c
 const site = createServer(async (rq, rs) => {
   const u = new URL(rq.url ?? '/', 'http://x');
   if (u.pathname.startsWith('/api/')) {
+    if (u.pathname.endsWith('/export.json') && u.searchParams.get('board') === '1') {
+      const bundle = board.bundle();
+      rs.writeHead(200, { 'Content-Type': 'application/json' });
+      rs.end(JSON.stringify({ ...bundle, board: witnessedBoard(board.sim, bundle) })); return;
+    }
     if (u.pathname === `/api/v1/elections/${board.apiId}/events` && streamEvents) {
       rs.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' });
       rs.write(': connected\n\n'); eventClients.add(rs);
@@ -71,6 +78,10 @@ try {
   page.on('request', (r) => { if (!r.url().startsWith(origin) && !r.url().startsWith(address.url) && !/^(?:data:|blob:)/.test(r.url())) thirdParty.push(r.url()); });
   const offline = async (base: string) => {
     await page.goto(`${base}/verifier.html`);
+    await page.getByLabel('Election bundle file (JSON)').setInputFiles(bareFile);
+    await page.getByRole('button', { name: 'Run checks' }).click();
+    await page.getByRole('heading', { name: 'Incomplete: more evidence is needed', exact: true }).waitFor({ timeout: 30000 });
+    assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0); checks++;
     await page.getByLabel('Election bundle file (JSON)').setInputFiles(goodFile);
     await page.getByRole('button', { name: 'Run checks' }).click();
     await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });

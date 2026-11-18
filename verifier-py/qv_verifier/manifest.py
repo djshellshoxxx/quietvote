@@ -7,6 +7,8 @@ Error classes, in the order they are checked:
                 lower-case of the exact width, bad timestamp syntax
   E_MANIFEST -- semantic rule violated (ranges, uniqueness, ordering, method/limit rules,
                 tie-break types, bidi controls in free text, privacy floor)
+  E_UNSUPPORTED -- valid manifest requests trustee-decryption spoil mode, which
+                   this implementation explicitly does not implement (ADR-027 PY-01)
 """
 
 from __future__ import annotations
@@ -24,8 +26,9 @@ HEX32 = re.compile(r"^[0-9a-f]{64}$")
 HEX16 = re.compile(r"^[0-9a-f]{32}$")
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-# Bidirectional formatting / mark characters (QV-13; QV-34 §7.2 "bidi control chars in labels").
-BIDI = set("؜‎‏‪‫‬‭‮⁦⁧⁨⁩")
+# Preserve the TS reject list; ADR-027 B1-05 explicitly excludes U+061C.
+# Escaped source keeps this registry reviewable without invisible controls.
+BIDI = set("\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
 METHODS = {"yes-no", "single-choice", "approval", "k-of-n"}
 TIE_TYPES = {"status-quo", "declare-tie", "lexicographic"}
 
@@ -176,9 +179,10 @@ def validate(m: Any, roll_size: int | None = None) -> None:
         m,
         {"proto", "type", "election_id", "title", "created", "voting_open", "voting_close",
          "clock_skew_s", "contests", "roll", "trustees", "n", "t", "coordinator", "ballots", "bb"},
-        {"quorum", "min_counted_ballots", "privacy_ack"},
+        {"quorum", "min_counted_ballots", "privacy_ack", "spoil_trustee_decrypt"},
         "manifest",
     )
+    trustee_spoil = _bool(m["spoil_trustee_decrypt"], "spoil_trustee_decrypt") if "spoil_trustee_decrypt" in m else False
     _hex(m["election_id"], HEX16, "election_id")
     _text(m["title"], "title")
     _ts(m["created"], "created")
@@ -283,6 +287,8 @@ def validate(m: Any, roll_size: int | None = None) -> None:
         _bad("min_counted_ballots below hard floor 3")
     if floor < 10 and not ack:
         _bad("min_counted_ballots < 10 requires privacy_ack: true")
+    if trustee_spoil:
+        raise QVError("E_UNSUPPORTED", "spoil_trustee_decrypt=true is not implemented by this verifier")
 
 
 def manifest_hash(m: dict) -> tuple[bytes, bytes]:

@@ -2,14 +2,26 @@
 // the invite was registered/revoked/expired or the election opened. The same purge also runs lazily whenever invites are touched (app.ts);
 // this timer covers elections nobody touches. It opens each election database briefly (WAL, busy_timeout) and never loads a runtime.
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { SERVER_VERSION } from './election.ts';
 import { ElectionDb } from './electiondb.ts';
 import type { Env } from './env.ts';
 
+export interface RetentionStatus {
+  lastSuccessAt: number | null;
+  lastFailureAt: number | null;
+  consecutiveFailures: number;
+  checkedDatabases: number;
+  failedDatabases: number;
+}
+
 export class RetentionSweeper {
   private readonly env: Env;
   private timer: NodeJS.Timeout | undefined;
-  private running = false;
+  private pending: Promise<number> | undefined;
+  private health: RetentionStatus = { lastSuccessAt: null, lastFailureAt: null, consecutiveFailures: 0, checkedDatabases: 0, failedDatabases: 0 };
+
+  get status(): Readonly<RetentionStatus> { return { ...this.health }; }
 
   constructor(env: Env) {
     this.env = env;
@@ -22,16 +34,26 @@ export class RetentionSweeper {
     this.timer.unref();
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
+    await this.pending?.catch(() => undefined);
   }
 
   /** One sweep over all live, non-imported elections. Returns the number of invite rows purged. Never throws for one bad election. */
-  async runOnce(): Promise<number> {
-    if (this.running) return 0;
-    this.running = true;
+  runOnce(): Promise<number> {
+    if (this.pending) return this.pending;
+    const job = this.sweep();
+    this.pending = job;
+    void job.finally(() => { if (this.pending === job) this.pending = undefined; }).catch(() => undefined);
+    return job;
+  }
+
+  private async sweep(): Promise<number> {
     let total = 0;
+    let checked = 0;
+    let failed = 0;
+    let complete = false;
     try {
       const { control, cfg } = this.env;
       let after: string | undefined;
@@ -40,26 +62,53 @@ export class RetentionSweeper {
         if (page.length === 0) break;
         for (const row of page) {
           if (row.imported === 1 || row.state === 'IMPORTED') continue; // mirrors hold no operator data
+          checked++;
           let edb: ElectionDb | undefined;
+          let bad = false;
           try {
-            edb = new ElectionDb(join(cfg.dataDir, row.db_path), SERVER_VERSION);
+            const path = join(cfg.dataDir, row.db_path);
+            if (!existsSync(path)) throw new Error('missing election database');
+            edb = new ElectionDb(path, SERVER_VERSION);
             const n = edb.purgeInviteData(this.env.nowMs(), cfg.inviteRetentionMs);
             if (n > 0) {
               total += n;
               control.audit('system', 'invite.purge', row.election_id, { rows: n });
             }
           } catch {
-            /* missing/locked/closing: retried at the next sweep */
+            bad = true; // Retry next sweep; persist only aggregate counts, never error text or personal fields.
           } finally {
-            edb?.close();
+            try { edb?.close(); } catch { bad = true; }
+            if (bad) failed++;
           }
           await new Promise<void>((r) => setImmediate(r));
         }
         after = page.at(-1)!.election_id;
         if (page.length < 100) break;
       }
+      complete = failed === 0;
     } finally {
-      this.running = false;
+      let auditFailed = false;
+      let auditError: unknown;
+      try {
+        this.env.control.audit('system', 'retention.sweep', null, { checked, failed, purged: total, complete });
+      } catch (error) {
+        auditFailed = true;
+        auditError = error;
+        complete = false;
+      }
+      this.health.checkedDatabases = checked;
+      this.health.failedDatabases = failed;
+      if (complete) {
+        this.health.lastSuccessAt = this.env.nowMs();
+        this.health.consecutiveFailures = 0;
+      } else {
+        this.health.lastFailureAt = this.env.nowMs();
+        this.health.consecutiveFailures++;
+      }
+      this.env.logger.event('retention_sweep', complete
+        ? { outcome: 'ok' }
+        : { outcome: 'error', error_code: auditFailed ? 'RETENTION_AUDIT_FAILED' : 'RETENTION_SWEEP_FAILED' });
+      if (auditFailed) throw auditError;
     }
     return total;
   }

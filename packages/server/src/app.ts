@@ -1,18 +1,18 @@
 // Application assembly: services + route table (QV-09 §6-§10 subset; see NOTES.md for what is not implemented).
 import { createHash, randomBytes } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
 import {
-  MerkleTree as _M, authorKeyId, b64, b64u, parseCheckpoint, toHex, unb64u, witnessStatus, ENTRY_TYPES,
+  MerkleTree as _M, authorKeyId, b64, b64u, bundleToJson, parseCheckpoint, toHex, unb64u, witnessStatus, ENTRY_TYPES,
   type EntryHeader, type Receipt, type WitnessPolicy,
 } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, ed25519Keypair, ed25519Sign, ed25519Verify, hexToBytes, jcs, sha256, utf8 } from '@quietvote/crypto';
-import { PROTO_ID } from '@quietvote/protocol';
+import { PROTO_ID, registrationMessage } from '@quietvote/protocol';
 import { audienceOf, authenticate, keyIdOf } from './auth.ts';
 import { resolveConfig, type ServerConfig, type ServerOptions } from './config.ts';
 import { ControlDb } from './controldb.ts';
+import { lockDataDirectory } from './data-lock.ts';
 import { SERVER_VERSION, type ElectionRuntime } from './election.ts';
 import type { Env } from './env.ts';
-import { electionBundle, qvb } from './export.ts';
+import { electionBundle, logBundle, qvb } from './export.ts';
 import { registerExtRoutes } from './ext-routes.ts';
 import { GossipService } from './gossip.ts';
 import { RetentionSweeper } from './retention.ts';
@@ -21,7 +21,9 @@ import { createHttpApp, type Ctx, type HttpApp, type Reply, type Route } from '.
 import { loadOrCreateKek, seal, open as unsealBytes } from './kek.ts';
 import { Logger } from './logger.ts';
 import { ElectionPool } from './pool.ts';
+import type { OperationJournal } from './operation-receipts.ts';
 import { ApiError, conflict, forbidden, notFound } from './problem.ts';
+import { canonicalB64u, storedInviteHash } from './registration.ts';
 import { FailureCounter, RateLimiter } from './ratelimit.ts';
 import { SseHub } from './sse.ts';
 import { TargetRejected } from './ssrf.ts';
@@ -58,9 +60,26 @@ function receiptView(r: Receipt): Record<string, unknown> {
 
 export function buildServer(opts: ServerOptions): QuietVoteServer {
   const cfg: ServerConfig = resolveConfig(opts);
-  mkdirSync(cfg.dataDir, { recursive: true, mode: 0o700 });
+  const lock = lockDataDirectory(cfg.dataDir);
+  cfg.dataDir = lock.dataDir;
+  let control: ControlDb | undefined;
+  const cleanup: (() => void | Promise<void>)[] = [];
+  try {
+    control = new ControlDb(cfg.dataDir, cfg.now, SERVER_VERSION);
+    return assembleServer(cfg, control, lock.release, cleanup);
+  } catch (error) {
+    const finish = (): void => { try { control?.close(); } finally { lock.release(); } };
+    if (cleanup.length === 0) finish();
+    else {
+      // Construction can restore an outbox before a later initializer fails. Hold ownership until those callbacks drain.
+      void Promise.all(cleanup.reverse().map((stop) => stop())).then(finish).catch(() => undefined);
+    }
+    throw error;
+  }
+}
+
+function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () => void, cleanup: (() => void | Promise<void>)[]): QuietVoteServer {
   const nowMs = cfg.now;
-  const control = new ControlDb(cfg.dataDir, nowMs, SERVER_VERSION);
   const witnesses = cfg.witnesses.map((w) => ({ name: w.name, alg: 'ed25519' as const, publicKey: hexToBytes(w.publicKey, 32) }));
   const env: Env = {
     cfg, control, kek: loadOrCreateKek(cfg.dataDir), limiter: new RateLimiter(nowMs), failures: new FailureCounter(nowMs),
@@ -68,17 +87,20 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     nowMs, nowSec: () => Math.floor(nowMs() / 1000),
     witnessPolicy: (quorum): WitnessPolicy => ({ witnesses, quorum, noneAcknowledged: quorum === 0 }),
   };
+  control.failInterruptedIdempotency();
   for (const k of cfg.adminKeys) control.seedAdmin(keyIdOf(hexToBytes(k, 32)), hexToBytes(k, 32));
   control.revokeRemovedAdmins(new Set(cfg.adminKeys.map((k) => keyIdOf(hexToBytes(k, 32)))));
+  const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
+  const releaseKey = cfg.releaseSeedHex ? ed25519Keypair(hexToBytes(cfg.releaseSeedHex, 32)) : undefined;
   const pool = new ElectionPool(env);
   const sse = new SseHub(env);
   const webhooks = new WebhookService(env);
+  cleanup.push(() => { webhooks.stop(); return webhooks.idle(); });
   const jobs = new JobRunner(env);
   const gossip = new GossipService(env, pool);
+  cleanup.push(() => gossip.stop());
   const retention = new RetentionSweeper(env);
-  env.onEvent = (who, ev) => webhooks.onEvent(who, ev);
-  const statics = cfg.staticDir ? new StaticAssets(cfg.staticDir) : undefined;
-  const releaseKey = cfg.releaseSeedHex ? ed25519Keypair(hexToBytes(cfg.releaseSeedHex, 32)) : undefined;
+  env.recoverEvents = (who, db) => webhooks.recover(who, db);
 
   // ---------------------------------------------------------------- helpers
   const rtOf = async (c: Ctx): Promise<ElectionRuntime> => {
@@ -114,24 +136,51 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     if (!control.getOrg(o)) throw notFound('organization');
     return o;
   };
-  const idem = async (c: Ctx, principal: string, fn: () => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply> => {
+  const idem = async (c: Ctx, principal: string, fn: (save: (reply: Reply) => void, journal: OperationJournal) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply> => {
     const key = c.header('idempotency-key');
     if (key === undefined || key.length < 8 || key.length > 128 || !/^[\x21-\x7e]+$/.test(key)) throw new ApiError(400, 'BAD_REQUEST', 'Idempotency-Key header (8-128 printable chars) is required');
     const h = new Uint8Array(createHash('sha256').update(`${c.method}\n${c.target}\n`).update(c.body).digest());
-    const prev = control.idem(principal, key);
+    let prev = control.idem(principal, key);
+    if (prev?.status === -1 && prev.expires_at > nowMs()) {
+      pool.recoverResponse(principal, key);
+      prev = control.idem(principal, key);
+    }
     if (prev && prev.expires_at > nowMs()) {
       if (Buffer.compare(Buffer.from(prev.req_sha256), Buffer.from(h)) !== 0) throw new ApiError(422, 'IDEMPOTENCY_MISMATCH', 'Idempotency-Key was used with a different request');
+      if (prev.status === -1) throw new ApiError(409, 'STATE_CONFLICT', 'this request outcome was not recorded; inspect the resource or job before submitting another request', { reason: 'IDEMPOTENCY_INTERRUPTED', retryable: false });
       if (prev.status === 0) throw new ApiError(409, 'IDEMPOTENCY_IN_PROGRESS', 'original request still running', { retryAfter: 1 });
       return { status: prev.status, headers: { 'Idempotent-Replay': 'true' }, json: prev.response ? JSON.parse(Buffer.from(prev.response).toString()) : undefined };
     }
     control.storeIdem(principal, key, c.method, c.path, h, 0, null);
-    try {
-      const r = await fn();
+    let completed = false;
+    let recorded = false;
+    let journaled = false;
+    const expiresAt = control.idem(principal, key)!.expires_at;
+    const journal: OperationJournal = (db, reply, audit) => {
+      const stored = redact ? redact(reply) : reply;
+      db.storeOperationReceipt({ principal, idem_key: key, method: c.method, path: c.path, req_sha256: h, expires_at: expiresAt,
+        status: reply.status, response: stored.json === undefined ? null : JSON.stringify(stored.json),
+        audit_action: audit?.action ?? null, audit_detail: audit ? JSON.stringify(audit.detail ?? {}) : null });
+      journaled = true;
+    };
+    // Control-only mutations call save inside their own transaction so no committed resource can lose its replay receipt.
+    const save = (r: Reply): void => {
       const stored = redact ? redact(r) : r;
       control.storeIdem(principal, key, c.method, c.path, h, r.status, stored.json === undefined ? null : Buffer.from(JSON.stringify(stored.json)));
+      recorded = true;
+    };
+    try {
+      const r = await fn(save, journal);
+      completed = true;
+      if (!recorded) save(r);
       return r;
     } catch (e) {
-      control.dropIdemInProgress(principal, key);
+      // Only a known refusal can release the binding. Internal errors (including response-cache writes after successful work)
+      // can follow committed mutations. Retain them for reconciliation rather than repeat the operation.
+      if (!completed && !journaled && e instanceof ApiError && e.status < 500) control.dropIdemInProgress(principal, key);
+      else {
+        try { control.interruptIdem(principal, key); } catch { /* an unavailable store leaves status=0 for startup recovery */ }
+      }
       throw e;
     }
   };
@@ -234,11 +283,15 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       const pk = unb64u(b.owner_key.pk);
       if (!pk || pk.length !== 32 || !ed25519IsStrictPoint(pk)) throw new ApiError(400, 'BAD_REQUEST', 'owner_key.pk is not a strict Ed25519 key');
       const a = authenticate(env, c.method, c.target, c.header('authorization'), c.body, pk); // proof of possession
-      return idem(c, a.keyId, async () => {
+      return idem(c, a.keyId, async (save) => {
         if (control.keyAnyById(a.keyId)) throw conflict('key already registered');
-        const org = control.tx(() => control.createOrg(b.name, a.keyId, pk));
-        control.audit(a.keyId, 'org.create', org.org_id);
-        return { status: 201, json: { org_id: org.org_id, name: org.name, keys: [{ key_id: a.keyId, role: 'org_owner' }] } };
+        return control.tx(() => {
+          const org = control.createOrg(b.name, a.keyId, pk);
+          control.audit(a.keyId, 'org.create', org.org_id);
+          const reply = { status: 201, json: { org_id: org.org_id, name: org.name, keys: [{ key_id: a.keyId, role: 'org_owner' }] } };
+          save(reply);
+          return reply;
+        });
       });
     },
   });
@@ -301,13 +354,15 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     handler: (c) => {
       const org = orgOf(c);
       const b = c.parse(fObj({ title: req(fStr({ min: 1, max: 200 })), access: opt(fEnum('public', 'link')) }));
-      return idem(c, c.auth!.keyId, async () => {
-        const r = await pool.create(org, b.title, b.access ?? 'public');
-        control.audit(c.auth!.keyId, 'election.create', r.id);
-        return {
+      return idem(c, c.auth!.keyId, async (save, journal) => {
+        const view = (r: Awaited<ReturnType<ElectionPool['create']>>): Reply => ({
           status: 201,
           json: { election_id: r.id, origin: r.origin, log_pk: b64u(r.logPk), log_pk_hex: bytesToHex(r.logPk), state: 'DRAFT', ...(r.readKey ? { read_key: r.readKey } : {}) },
-        };
+        });
+        const r = await pool.create(org, b.title, b.access ?? 'public', (db, made) => journal(db, view(made), { action: 'election.create' }));
+        const reply = view(r);
+        control.tx(() => { control.audit(c.auth!.keyId, 'election.create', r.id); save(reply); });
+        return reply;
       }, (r) => {
         const j = { ...(r.json as Record<string, unknown>) };
         delete j['read_key'];
@@ -326,7 +381,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
         status: 200, etag: `"${rt.log.size}"`,
         json: {
           election_id: rt.id, origin: rt.origin, title: rt.st.manifest?.title ?? row.title, state: rt.state, access: row.access, log_pk: b64u(rt.logPk),
-          server_pk: b64u(rt.srvPk), tree_size: rt.log.size, created_at: toIso(row.created_at / 1000),
+          registration_scheme: row.registration_scheme, server_pk: b64u(rt.srvPk), tree_size: rt.log.size, created_at: toIso(row.created_at / 1000),
           ...(rt.st.mh ? { manifest_hash: b64u(rt.st.mh) } : {}),
         },
       };
@@ -487,31 +542,32 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
       }));
       if ((b.count === undefined) === (b.items === undefined)) throw new ApiError(400, 'BAD_REQUEST', 'exactly one of count or items is required');
       if (b.deliver) throw new ApiError(422, 'VALIDATION_FAILED', 'server-side delivery is not configured');
-      if (['READY', 'OPEN'].includes(rt.state) || rt.terminal) throw new ApiError(403, 'REGISTRATION_CLOSED', 'roll is committed');
-      let exp: number | null = null;
+      let exp: number | null = nowMs() + 14 * 86_400_000;
       if (b.expires_at !== undefined) {
         exp = Date.parse(b.expires_at);
         if (Number.isNaN(exp)) throw new ApiError(400, 'BAD_REQUEST', 'bad expires_at');
       }
-      const dek = unlockDek(rt);
       const n = b.count ?? b.items!.length;
-      return idem(c, c.auth!.keyId, async () => {
+      return idem(c, c.auth!.keyId, async (_save, journal) => {
+        if (['READY', 'OPEN'].includes(rt.state) || rt.terminal) throw new ApiError(403, 'REGISTRATION_CLOSED', 'roll is committed');
+        const dek = unlockDek(rt);
         purgeInvites(rt);
         if (rt.edb.inviteCount() + n > cfg.maxVotersPerElection * 2) throw new ApiError(429, 'RATE_LIMITED', 'too many invites', { retryable: false });
         const out: { invite_id: string; code: string; label?: string }[] = [];
-        const rows = [];
+        const rows: Parameters<ElectionRuntime['edb']['addInvites']>[0] = [];
         for (let i = 0; i < n; i++) {
           const code = randomBytes(16).toString('base64url');
           const id = b64u(randomBytes(16)).slice(0, 26).toLowerCase().replace(/[^a-z2-7]/g, 'a').padEnd(26, 'a');
           const it = b.items?.[i];
           rows.push({
-            invite_id: id, code_hash: sha256(utf8(`QV-INVITE-v1\0${code}`)), label_enc: it?.label ? seal(dek, utf8(it.label), 'label') : null,
+            invite_id: id, code_hash: rt.edb.row().registration_scheme === 'hashed-pop-v1' ? storedInviteHash(sha256(unb64u(code)!)) : sha256(utf8(`QV-INVITE-v1\0${code}`)), label_enc: it?.label ? seal(dek, utf8(it.label), 'label') : null,
             contact_enc: it?.contact ? seal(dek, utf8(it.contact), 'contact') : null, state: 'issued' as const, created_at: nowMs(), expires_at: exp,
           });
           out.push({ invite_id: id, code, ...(it?.label ? { label: it.label } : {}) });
         }
-        rt.edb.addInvites(rows);
-        return { status: 201, json: { invites: out } };
+        const reply = { status: 201, json: { invites: out } };
+        rt.edb.tx(() => { rt.edb.addInvites(rows); journal(rt.edb, reply); });
+        return reply;
       }, (r) => ({ ...r, json: { invites: (r.json as { invites: { invite_id: string }[] }).invites.map((i) => ({ invite_id: i.invite_id, code_withheld: true })) } }));
     },
   });
@@ -543,6 +599,18 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     },
   });
   add({
+    method: 'GET', path: '/api/v1/elections/:id/registration-migration', cls: 'M', auth: 'sig',
+    handler: async (c) => {
+      const rt = await orgElection(c), scheme = rt.edb.row().registration_scheme;
+      const outstanding = Number(rt.edb.db.prepare("SELECT COUNT(*) AS n FROM voter_invite WHERE state IN ('issued','sent')").get()!['n']);
+      return { status: 200, json: { election_id: rt.id, registration_scheme: scheme,
+        target_scheme: 'hashed-pop-v1', outstanding_invites: outstanding,
+        registered_voters: rt.edb.voterCount(), automatic_conversion: false,
+        disposition: scheme === 'hashed-pop-v1' ? 'already_current' : 'legacy_preserved',
+        next_steps: scheme === 'hashed-pop-v1' ? [] : ['Keep existing election and invites on their recorded legacy scheme.', 'Use a new hashed-pop-v1 election for modern enrollment.', 'A future explicit cutover must revoke and reissue outstanding invites; stored hashes cannot be converted.'] } };
+    },
+  });
+  add({
     method: 'POST', path: '/api/v1/elections/:id/registrations', cls: 'A', auth: 'none', body: 'json', maxBody: 4096,
     handler: async (c) => {
       const rt = await rtOf(c);
@@ -556,23 +624,29 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
         env.failures.fail(`reg:${c.bucket}`);
         throw e;
       };
-      const pk = unb64u(b.pk);
-      const pop = unb64u(b.pop);
+      const scheme = rt.edb.row().registration_scheme;
+      if (scheme !== 'hashed-pop-v1' && scheme !== 'legacy-raw-v1') throw new ApiError(503, 'REGISTRATION_UNAVAILABLE', 'unknown registration scheme');
+      const pk = canonicalB64u(b.pk, 32);
+      const pop = canonicalB64u(b.pop, 64);
       if (!pk || pk.length !== 32 || !pop || !ed25519IsStrictPoint(pk)) return fail(new ApiError(400, 'BAD_REQUEST', 'pk is not a strict Ed25519 key'));
-      if (!ed25519Verify(pk, pop, new Uint8Array([...utf8(`QV-REG-v1\0${rt.id}\0`), ...pk]))) return fail(new ApiError(401, 'BAD_SIGNATURE', 'proof of possession invalid'));
-      const inv = rt.edb.inviteByHash(sha256(utf8(`QV-INVITE-v1\0${b.invite_code}`)));
-      if (!inv || inv.state === 'revoked') return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code is not valid'));
-      if (inv.expires_at !== null && inv.expires_at < nowMs()) return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
+      const bearer = canonicalB64u(b.invite_code, scheme === 'hashed-pop-v1' ? 32 : 16);
+      if (!bearer) return fail(new ApiError(400, 'BAD_REQUEST', 'invite encoding does not match the election registration scheme'));
+      const message = scheme === 'hashed-pop-v1' ? registrationMessage(rt.id, bearer, pk) : new Uint8Array([...utf8(`QV-REG-v1\0${rt.id}\0`), ...pk]);
+      if (!ed25519Verify(pk, pop, message)) return fail(new ApiError(401, 'BAD_SIGNATURE', 'proof of possession invalid'));
+      const inv = rt.edb.inviteByHash(scheme === 'hashed-pop-v1' ? storedInviteHash(bearer) : sha256(utf8(`QV-INVITE-v1\0${b.invite_code}`)));
       const kid = b64u(authorKeyId('ed25519', pk));
-      const existing = rt.edb.voter(kid);
+      const existing = rt.edb.voter(kid); // Same lookup shape for unknown and consumed invitations.
+      if (!inv || inv.state === 'revoked') return fail(conflict('invite code is not valid', 'INVITE_USED'));
+      if (inv.state === 'expired') return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
+      if (inv.expires_at !== null && inv.expires_at <= nowMs()) return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
       if (inv.state === 'registered') {
         if (existing) return { status: 201, json: { voter_kid: kid, status: existing.status === 'committed' ? 'approved' : existing.status } };
-        return fail(conflict('invite code already used', 'INVITE_USED'));
+        return fail(conflict('invite code is not valid', 'INVITE_USED'));
       }
       if (existing) throw conflict('this key is already registered');
       if (rt.edb.voterCount() >= cfg.maxVotersPerElection) throw new ApiError(429, 'RATE_LIMITED', 'roll is full', { retryable: false });
       rt.edb.tx(() => {
-        if (!rt.edb.consumeInvite(inv.invite_id, Math.floor(nowMs() / 3_600_000) * 3_600_000)) throw conflict('invite code already used', 'INVITE_USED');
+        if (!rt.edb.consumeInvite(inv.invite_id, Math.floor(nowMs() / 3_600_000) * 3_600_000)) throw conflict('invite code is not valid', 'INVITE_USED');
         rt.edb.addVoter({ voter_kid: kid, pk, alg: 'ed25519', status: 'approved', registered_at: Math.floor(nowMs() / 3_600_000) * 3_600_000 });
       });
       return { status: 201, json: { voter_kid: kid, status: 'approved' } };
@@ -811,7 +885,7 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
         election_id: opt(fStr({ min: 32, max: 32, re: /^[0-9a-f]{32}$/ })),
       }));
       if (b.events.length === 0) throw new ApiError(400, 'BAD_REQUEST', 'events must not be empty');
-      return idem(c, c.auth!.keyId, async () => {
+      return idem(c, c.auth!.keyId, async (save) => {
         if (b.election_id !== undefined) {
           const rt = await pool.get(b.election_id);
           if (!rt || rt.orgId !== org) throw notFound('election');
@@ -819,12 +893,14 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
         if (control.countWebhooks(org) >= cfg.maxWebhooksPerOrg) throw new ApiError(429, 'RATE_LIMITED', 'webhook quota reached for this organization', { retryable: false });
         let made;
         try {
-          made = await webhooks.create(org, b.url, b.events, b.election_id);
+          made = await webhooks.create(org, b.url, b.events, b.election_id, (created) => {
+            control.audit(c.auth!.keyId, 'webhook.create', created.row.webhook_id);
+            save({ status: 201, json: { ...webhooks.view(created.row), secret: created.secret } });
+          });
         } catch (e) {
           if (e instanceof TargetRejected) throw new ApiError(422, 'VALIDATION_FAILED', e.message, { reason: e.code });
           throw e;
         }
-        control.audit(c.auth!.keyId, 'webhook.create', made.row.webhook_id);
         return { status: 201, json: { ...webhooks.view(made.row), secret: made.secret } };
       }, (r) => {
         const j = { ...(r.json as Record<string, unknown>) };
@@ -847,11 +923,18 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     handler: (c) => {
       const org = orgOf(c);
       ownerOnly(c);
-      const w = control.webhook(c.params['wh']!);
-      if (!w || w.org_id !== org) throw notFound('webhook');
-      control.deleteWebhook(w.webhook_id);
-      control.audit(c.auth!.keyId, 'webhook.delete', w.webhook_id);
-      return { status: 204 };
+      const remove = (save?: (reply: Reply) => void): Reply => control.tx(() => {
+        const w = control.webhook(c.params['wh']!);
+        if (!w || w.org_id !== org) throw notFound('webhook');
+        control.deleteWebhook(w.webhook_id);
+        // The audit is the deletion tombstone used by restore floors; it must commit with the removal.
+        control.audit(c.auth!.keyId, 'webhook.delete', w.webhook_id);
+        const reply = { status: 204 };
+        save?.(reply);
+        return reply;
+      });
+      // Existing clients need no idempotency key; clients that supply one can recover an uncertain completion.
+      return c.header('idempotency-key') === undefined ? remove() : idem(c, c.auth!.keyId, async (save) => remove(save));
     },
   });
 
@@ -900,6 +983,11 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
     handler: async (c) => {
       const rt = await readable(c);
       if (!rt.st.manifest) throw new ApiError(409, 'WRONG_PHASE', 'nothing to export before the manifest');
+      if (c.query.get('board') === '1') {
+        // One synchronous snapshot, same read/access/export guards. Do not reuse
+        // the content-only ETag: witness cosignatures may change at the same size.
+        return { status: 200, json: { ...electionBundle(rt, { includeBoardRecords: true }), board: bundleToJson(logBundle(rt)) }, cache: 'no-store' };
+      }
       if (c.header('if-none-match') === exportEtag(rt)) return { status: 304, etag: exportEtag(rt), cache: 'public, max-age=600' };
       const b = cachedExport(rt, 'json');
       return { status: 200, bytes: b.bytes, ranges: true, contentType: 'application/json; charset=utf-8', cache: 'public, max-age=600', etag: b.etag };
@@ -910,22 +998,44 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   registerExtRoutes({ env, pool, jobs, add, idem, readable, intQ });
 
   const http = createHttpApp(env, R, statics);
+  let stopped: Promise<void> | undefined;
+  const stop = (): Promise<void> => {
+    stopped ??= (async () => {
+      sse.closeAll();
+      webhooks.stop();
+      // Signal every producer before awaiting any of them; no live task may write after the directory lock is released.
+      const gossipStopped = gossip.stop();
+      const retentionStopped = retention.stop();
+      const jobsStopped = jobs.stop();
+      const httpStopped = http.close();
+      await Promise.all([gossipStopped, retentionStopped, jobsStopped, httpStopped, webhooks.idle()]);
+      await pool.shutdown();
+      control.close();
+      releaseLock();
+    })();
+    return stopped;
+  };
   return {
     http, env, pool, sse, webhooks, jobs, gossip, retention,
     async start() {
-      retention.start();
-      const a = await http.listen();
-      return { ...a, url: `http://${a.host}:${a.port}` };
+      if (stopped) throw new Error('server has stopped; build a new instance to restart');
+      try {
+        // Recover every live election's durable events even when no client reopens it after a crash.
+        let after: string | undefined;
+        for (;;) {
+          const page = control.listAllElections(undefined, after, 100);
+          for (const row of page) { await pool.recoverStored(row); webhooks.recoverStored(row); }
+          if (page.length < 100) break;
+          after = page.at(-1)!.election_id;
+        }
+        const a = await http.listen();
+        retention.start();
+        return { ...a, url: `http://${a.host}:${a.port}` };
+      } catch (error) {
+        await stop();
+        throw error;
+      }
     },
-    async stop() {
-      sse.closeAll();
-      webhooks.stop();
-      gossip.stop();
-      retention.stop();
-      await jobs.stop();
-      await http.close();
-      await pool.closeAll();
-      control.close();
-    },
+    stop,
   };
 }

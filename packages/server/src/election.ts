@@ -77,6 +77,7 @@ export class ElectionState {
   spoils = new Map<string, number>();
   codeOwner = new Map<string, string>();
   castAlphas = new Set<string>();
+  spoilAlphas = new Set<string>();
   spoiledCodes = new Set<string>();
   openSeq: number | undefined;
   closeSeq: number | undefined;
@@ -198,11 +199,26 @@ export class ElectionRuntime {
     return { tree_size: this.log.size, root: b64(this.log.root()), witnessed: w.witnessed, cosigners: w.cosigners, issued_at: toIso(this.env.nowSec()) };
   }
 
-  private quarantineAlert(out: EventRow[]): void {
+  private quarantineAlert(out: EventRow[], at: number): boolean {
     const q = this.quarantineReason();
-    if (q === undefined || this.alertedQuarantine) return;
-    this.alertedQuarantine = true;
-    this.record(out, 'alert', null, { kind: 'quarantine', detail_code: 'LOG_QUARANTINED' });
+    if (q === undefined || this.alertedQuarantine) return false;
+    out.push(this.edb.insertEvent(at, 'alert', null, JSON.stringify({ kind: 'quarantine', detail_code: 'LOG_QUARANTINED' })));
+    return true;
+  }
+
+  /** Resolve one durable append intent with the projection at exactly that sequence. */
+  private completeAppendEvents(seq: number, from: ElectionStateName, to = this.st.state): EventRow[] {
+    const at = this.edb.appendCompletion(seq);
+    if (at === undefined) return [];
+    const out: EventRow[] = [];
+    let alerted = false;
+    this.edb.tx(() => {
+      if (to !== from) out.push(this.edb.insertEvent(at, 'phase', seq, JSON.stringify({ from, to, seq })));
+      alerted = this.quarantineAlert(out, at);
+      this.edb.finishAppendCompletion(seq);
+    });
+    if (alerted) this.alertedQuarantine = true;
+    return out;
   }
 
   /** Hands committed rows to live streams and to the webhook dispatcher. Never throws. */
@@ -221,6 +237,17 @@ export class ElectionRuntime {
         /* integrations are best effort */
       }
     }
+    this.recoverEvents();
+  }
+
+  /** Retry forwarding from durable rows, including gaps left by a prior process or failed callback. */
+  recoverEvents(): boolean {
+    try {
+      return this.env.recoverEvents?.({ electionId: this.id, orgId: this.orgId }, this.edb) ?? true;
+    } catch {
+      this.env.logger.event('webhook_bridge', { outcome: 'error', note: 'storage_retry_pending' });
+      return false;
+    }
   }
 
   /** Records and publishes events outside an append (cosignatures, alerts). */
@@ -235,6 +262,8 @@ export class ElectionRuntime {
     const at = this.env.control.election(this.id)?.archived_at ?? null;
     if (this.st.state !== 'ARCHIVED' || at === null || this.env.nowMs() - at < 30 * 86400_000) return false;
     if (this.edb.eventBounds() === undefined) return false;
+    if (this.edb.hasAppendCompletions()) return false; // Complete retained intents before their history can be pruned.
+    if (!this.recoverEvents()) return false; // Do not prune a row that was never admitted to the durable bridge.
     this.edb.pruneEvents();
     return true;
   }
@@ -250,6 +279,10 @@ export class ElectionRuntime {
   get state(): ElectionStateName {
     if (this.imported) return 'IMPORTED';
     return effectiveState(this.st.state, this.st.tallyingSince, this.env.nowSec(), this.env.cfg.stalledMaxSec);
+  }
+  /** Lifecycle state as the election's own log replays it; the registry is a projection that can lag it after a crash. */
+  get logState(): ElectionStateName {
+    return this.imported ? 'IMPORTED' : this.st.state;
   }
   get terminal(): boolean {
     return this.imported || TERMINAL.has(this.st.state);
@@ -326,6 +359,7 @@ export class ElectionRuntime {
   // ------------------------------------------------------------------ replay (projection rebuild from the stored log)
 
   private async replay(): Promise<void> {
+    const completions: { seq: number; from: ElectionStateName; to: ElectionStateName }[] = [];
     let from = 0;
     for (;;) {
       const page = this.edb.entries(from, 500);
@@ -339,13 +373,22 @@ export class ElectionRuntime {
         }
         const h = decodeHeader(r.headerBytes);
         if (!h.ok) throw new Error(`stored entry ${r.seq} has a bad header`);
+        const fromState = this.st.state;
         await this.apply(r.seq, h.value.type, rec, r.sequencedAt);
+        // Finish archive key destruction before deleting the intent that causes startup to reopen this election.
+        if (h.value.type === 'audit_close') this.finalizeArchive();
+        // Preserve each sequence's transition, but retain its intent until the final projections are durable.
+        // Syncing historical intermediate states would rewind registry lifecycle fields during replay.
+        if (this.edb.appendCompletion(r.seq) !== undefined) completions.push({ seq: r.seq, from: fromState, to: this.st.state });
       }
       if (!page.more) break;
       from = (page.rows.at(-1)?.seq ?? from) + 1;
     }
     this.syncQuarantineFlags();
     this.syncState();
+    // Only explicit intents permit recovery. A second crash cannot strand stale projections without an intent.
+    // Each event/intent transaction remains atomic; already completed or pruned events are never regenerated.
+    for (const completion of completions) this.completeAppendEvents(completion.seq, completion.from, completion.to);
   }
 
   private syncState(): void {
@@ -388,11 +431,21 @@ export class ElectionRuntime {
   }
 
   /** Lifts a forced quarantine (admin endpoint only). */
-  clearForcedQuarantine(): void {
+  clearForcedQuarantine(committed?: () => void): void {
+    const out: EventRow[] = [];
+    try {
+      this.edb.tx(() => {
+        this.edb.setQuarantine(null);
+        this.record(out, 'alert', null, { kind: 'quarantine_cleared', detail_code: 'ADMIN_CLEARED' });
+        committed?.();
+      });
+    } catch (error) {
+      this.poisoned = true; // Reopen from durable state even when completion failed after COMMIT.
+      throw error;
+    }
     this.forcedQuarantine = undefined;
-    this.edb.setQuarantine(null);
     this.env.control.setQuarantineFlag(this.id, null);
-    this.emitNow((out) => this.record(out, 'alert', null, { kind: 'quarantine_cleared', detail_code: 'ADMIN_CLEARED' }));
+    this.publish(out);
   }
 
   private fire(e: LifecycleEvent['t'], seq: number, at: number): void {
@@ -484,6 +537,7 @@ export class ElectionRuntime {
           st.casts.set(voter, (st.casts.get(voter) ?? 0) + 1);
           if (!st.codeOwner.has(code)) st.codeOwner.set(code, voter);
         } else {
+          collectAlphas(env.body, st.spoilAlphas);
           st.spoils.set(voter, (st.spoils.get(voter) ?? 0) + 1);
           st.spoiledCodes.add(code);
           if (!st.admittedSpoils.has(code)) st.admittedSpoils.set(code, { seq, code, voter, env });
@@ -678,6 +732,7 @@ export class ElectionRuntime {
         // entry events carry no bodies (QV-09 §9); written atomically with the append
         this.record(evs, 'entry', seq, { seq, type: h.type, author: b64u(h.author), leaf_hash: b64u(r.value.receipt.leafHash) });
         this.record(evs, 'checkpoint', seq, this.checkpointData());
+        this.edb.queueAppendCompletion(seq, this.env.nowMs());
       });
     } catch (e) {
       if (this.log.size !== this.edb.store.size()) this.poisoned = true; // in-memory tree ran ahead of the rolled-back DB
@@ -688,12 +743,9 @@ export class ElectionRuntime {
     if (h.type === 'audit_close') this.finalizeArchive();
     this.syncState();
     try {
-      this.edb.tx(() => {
-        if (this.st.state !== from) this.record(evs, 'phase', seq, { from, to: this.st.state, seq });
-        this.quarantineAlert(evs);
-      });
+      evs.push(...this.completeAppendEvents(seq, from)); // Never publish rows whose transaction rolled back (their IDs can be reused).
     } catch {
-      /* the append is durable; a lost phase event is recoverable from the log */
+      this.env.logger.event('append_events', { outcome: 'error', note: 'completion_pending' });
     }
     this.publish(evs);
     this.env.stats.appended++;
@@ -1041,6 +1093,9 @@ export class ElectionRuntime {
       const owner = st.codeOwner.get(code);
       if (owner !== undefined && owner !== voter) throw invalid('E_DUP_CODE', 'ballot code already used by another voter');
       if (st.spoiledCodes.has(code)) throw invalid('E_SPOILED_CODE_CAST', 'this ballot code was spoiled');
+      const alphas = new Set<string>();
+      collectAlphas(env.body, alphas);
+      if ([...alphas].some((a) => st.spoilAlphas.has(a))) throw invalid('E_SPOILED_CODE_CAST', 'cast shares ciphertexts with an admitted spoil (S1-02)');
     } else {
       if ((st.spoils.get(voter) ?? 0) + 1 > m.ballots.max_spoils_per_voter) throw new ApiError(429, 'REVOTE_LIMIT', 'max_spoils_per_voter reached', { reason: 'E_REVOTE_LIMIT', retryable: false });
       if (st.codeOwner.has(code)) throw invalid('E_SPOILED_CODE_CAST', 'this ballot code was already cast');
@@ -1093,6 +1148,7 @@ export class ElectionRuntime {
   /** Posts the tally-aggregate entry once the close checkpoint is witnessed (QV-18 §9.4). Caller holds the mutex. */
   async maybeAggregateLocked(): Promise<void> {
     const st = this.st;
+    if (st.aggregateSeq !== undefined) return; // at most one aggregate per election: never double-count
     if (this.state !== 'CLOSED' || st.closeSeq === undefined || this.srvKeys === undefined || st.params === undefined || st.manifest === undefined) return;
     if (!this.witnessedWithin(st.closeSeq, this.log.size)) return;
     const an = this.ensureAnalysis();
@@ -1115,6 +1171,11 @@ export class ElectionRuntime {
       nonce: new Uint8Array(randomBytes(16)), createdAt: this.env.nowSec(), body: bytes, refs: [st.closeSeq],
     });
     await this.processLocked(e.headerBytes, bytes);
+  }
+
+  /** Startup recovery: a crash after a durable election_close and before its aggregate leaves no aggregate. Retried on load. */
+  async recoverTally(): Promise<void> {
+    await this.queued(() => this.maybeAggregateLocked());
   }
 
   async attachCosignatures(size: number, lines: string[]): Promise<{ accepted: string[]; rejected: string[]; witnessed: boolean }> {
@@ -1142,26 +1203,25 @@ export class ElectionRuntime {
       }
       const beforeNames = witnessStatus(cp.value, policy).valid;
       const had = new Set(this.witnessInfo().cosigners);
-      const r = this.log.attachCosignatures(size, valid, policy);
-      if (!r.ok) throw this.mapBoardErr(r.error.code, r.error.message);
-      const after = parseCheckpoint(r.value.note);
-      const accepted = after.ok ? [...witnessStatus(after.value, policy).valid.keys()].filter((n) => !beforeNames.has(n)) : [];
-      try {
+      const events: EventRow[] = [];
+      const result = this.edb.tx(() => {
+        const r = this.log.attachCosignatures(size, valid, policy);
+        if (!r.ok) throw this.mapBoardErr(r.error.code, r.error.message);
+        const after = parseCheckpoint(r.value.note);
+        const accepted = after.ok ? [...witnessStatus(after.value, policy).valid.keys()].filter((n) => !beforeNames.has(n)) : [];
         const info = this.witnessInfo();
         const fresh = info.cosigners.filter((x) => !had.has(x));
         if (fresh.length > 0) {
           const e = this.edb.store.getEntry(Math.max(0, size - 1));
           const lag = e ? Math.max(0, this.env.nowSec() - e.sequencedAt) : 0;
-          this.emitNow((out) => {
-            for (const wname of fresh) this.record(out, 'witness', null, { witness: wname, lag_seconds: lag, quorum_met: r.value.witnessed });
-            if (info.size === size) this.record(out, 'checkpoint', null, this.checkpointData());
-          });
+          for (const wname of fresh) this.record(events, 'witness', null, { witness: wname, lag_seconds: lag, quorum_met: r.value.witnessed });
+          if (info.size === size) this.record(events, 'checkpoint', null, this.checkpointData());
         }
-      } catch {
-        /* events are best effort relative to the cosignature itself */
-      }
+        return { accepted, rejected, witnessed: r.value.witnessed };
+      });
+      this.publish(events);
       await this.maybeAggregateLocked();
-      return { accepted, rejected, witnessed: r.value.witnessed };
+      return result;
     });
   }
 
@@ -1331,8 +1391,10 @@ export class ElectionRuntime {
   /** Called after an audit_close entry: erase signing keys and make the store read-only (QV-28 §5: deleted at ARCHIVED). */
   finalizeArchive(): void {
     if (this.st.state !== 'ARCHIVED') return;
-    this.edb.eraseKeys();
-    this.edb.store.setReadOnly(true);
+    this.edb.tx(() => {
+      this.edb.eraseKeys();
+      this.edb.store.setReadOnly(true);
+    });
   }
 
   quarantineReason(): string | undefined {

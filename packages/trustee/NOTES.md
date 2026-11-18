@@ -195,3 +195,69 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
 * This adds actionable recovery evidence for handled failures. A hard kill between backup publication and live registration can
   still leave an unregistered copy without running rollback; no transactional crash journal or physical erasure guarantee is added.
   Local coverage is Linux/POSIX. Windows ACL enforcement remains absent; the hosted OS/Node matrix must qualify this candidate.
+
+## CLI unknown options (L1)
+
+* `parseArgs` used to accept any `--name value` pair and ignore names no command reads, so a typo'd option (for example
+  `--passphrase-fil`) let the command run as if the option were absent. Options are now checked against one allowlist of every
+  option the commands read; an unknown option is a USAGE error (exit 2) before any value is consumed and before any state changes.
+* The error names the option only when it is a plain lowercase word (at most 40 characters); otherwise it prints
+  `(name withheld)`. The option's value is never echoed. Known options and their behaviour are unchanged.
+* Follow-up: each command now accepts only the options it consumes. For example, `status --out F` and `status --generate-passphrase`
+  fail before any passphrase prompt or file access. Duplicate value options and flags are refused instead of silently using the
+  last value. `--witness-key` remains a single option; repeated keys are refused rather than dropping earlier values.
+* Unexpected positional arguments are rejected without echoing their contents. A following `--option` cannot be consumed as a
+  missing value. `finalize` does not emit a packet and therefore rejects `--out`; help now lists it separately.
+* Regression tests: `test/cli-unknown-options.test.ts`, `test/cli-argument-safety.test.ts` (including spawned CLI secret canaries).
+
+## Transcript option validation
+
+* `--mode` accepts the three existing transcript modes (`online-dkg`, `airgap-dkg`, `airgap-dealer`); unknown values are usage errors
+  before a secret bundle is opened. This validates existing modes without changing their semantics or the default (`airgap-dkg`).
+* `--witness-key NAME=HEX` requires a nonempty single-line name and exactly 32 bytes of lowercase hex. Missing separators, truncated
+  keys and extra fields fail before the transcript is read; diagnostics withhold the value. A name such as `__proto__` is stored as
+  an own data property rather than interpreted as a prototype setter. The CLI still accepts one witness key per invocation.
+* Regression tests: `test/cli-transcript-options.test.ts`.
+
+## Offline board-entry export (2026-11-16)
+
+* Added `export-entry` to bridge persisted trustee outputs to the existing `qv online election-submit` transport.
+  The command wraps saved DKG outputs in signed board envelopes with the manifest-derived origin. A saved, gated
+  tally release is re-signed in the server's existing `dec-shares` format with exactly the saved proof fields.
+  It accepts no arbitrary payload, origin, private key or ciphertext and never invokes decryption itself.
+* A bundle lock and sealed-file comparison reject stale instances. Failed-save invalidation, destruction and
+  abort gates remain effective. Output publication is exclusive; protected paths and existing files are refused.
+* Review found that `commit` also persists unreleased dealing data for crash recovery. A new regression failed
+  on the initial exporter because it could export that dealing before `reveal`. Each export now enforces the
+  existing command's permitted release states, in addition to requiring saved output. The regression passes.
+* `test/board-export.test.ts` covers envelope signatures/origin, canonical record/proof preservation, missing
+  outputs, missing tally evidence, stale/aborted bundles, unchanged release ledgers and CLI argument/path checks.
+  `test/online-executable.test.ts` exercises actual trustee executables with production RNG/default KDF against
+  the real server, then verifies the final export with the TypeScript and Python tools.
+* This does not finish all-client acceptance: registration, coordinator/voter setup and public-file conversion
+  remain test-harness operations. No protocol vectors, primitives, admission rules or verifier policies change.
+
+## BT-14 opening budget — 2026-11-16
+
+All vault opens, including restore, now pass a caller budget to the crypto
+container opener: default `maxLogN=18`, matching production sealing. The CLI
+accepts `--max-kdf-logn 18|19|20` on bundle commands. Use a higher limit only
+when intentionally opening an existing higher-cost bundle; 19 and 20 permit
+roughly 512 MiB and 1 GiB of scrypt working memory per open. The option never
+reduces sealing strength or authenticates a header. API callers can set
+`VaultDeps.maxLogN`; test-only weak KDF support remains explicit.
+
+The crypto opener rejects noninteger, nonfinite and out-of-range caps with
+`E_ARG` before reading the header. This prevents NaN from disabling the cap.
+The production library maximum remains 20; the container format is unchanged.
+This bounds one open; concurrent processes still require an operator memory
+budget. No host memory benchmark or global process admission limit is claimed.
+Regression coverage is in `test/kdf-budget.test.ts` and crypto second-wave tests.
+Refs: QV-17-REQ-021.
+
+## Shipped public-input preparation — 2026-11-16
+
+The executable acceptance test now calls `qv election prepare` for ceremony `.qvl` inputs and release
+JSON with complete board evidence. It no longer unpacks `.qvb` files in the test harness. Trustee release
+checks, KDF defaults, key custody, protocol rules and the organizer/coordinator authority boundary are
+unchanged. Coordinator setup and voter actions remain harness operations.

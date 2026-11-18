@@ -114,6 +114,15 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 
 ### Notices and control entries (QV-18 §5.2 `notice`, §9.4 waiver, QV-ADR-022): `src/logcheck.ts`
 
+**Approval addendum, 2026-11-16:** QV-ADR-027 adopts decision-register N-12 / D-87
+and B1-02 option A. Its approval supersedes the historical "owner decision
+needed" wording below for the existing closed legacy body, manifest-hash
+coordinator signatures and core class-L unknown-type finding. QV-18 §5.2 and
+QV-16 §5.20/5.21 now state the implemented scope; the Python log-evidence path
+implements all 48 unchanged log vectors. B2-05 `control_seq` is a separate
+versioned transition and is not silently added to this legacy schema. Full V13
+terminal/window/steward effects remain separate from this evidence report.
+
 * **[X-31] Record shape.** No spec defines the body of a waiver or extension in suite v1 (QV-18 §5.2 gives only `{code, text}` with codes
   `witness_waiver`, `extension`, `info`; QV-16 §5.14.3 says the extension record is "not defined in suite v1", OQ-9 "none in v1").
   The verifier therefore uses the record `packages/server` already writes for control entries: `{body: {proto, type: "control",

@@ -5,11 +5,11 @@ import { EXIT, type Io } from './io.ts';
 import { UsageError } from './args.ts';
 
 export async function cmdVerify(argv: string[], io: Io): Promise<number> {
-  const p = parseArgs(argv, { json: 'bool', 'skip-selftest': 'bool', 'manifest-hash': 'value' });
+  const p = parseArgs(argv, { json: 'bool', 'skip-selftest': 'bool', 'manifest-hash': 'value', 'content-only': 'bool' });
   const [file] = needPositional(p, 1, 'verify <bundle>');
   const pin = p.get('manifest-hash');
   if (pin !== undefined && !isHex(pin, 32)) throw new UsageError('--manifest-hash must be 64 lower-case hex digits');
-  const r = await verifyWithSelfTest(readFile(file!), { ...(pin === undefined ? {} : { pinnedManifestHash: pin }), skipSelfTest: p.has('skip-selftest') });
+  const r = await verifyWithSelfTest(readFile(file!), { ...(pin === undefined ? {} : { pinnedManifestHash: pin }), skipSelfTest: p.has('skip-selftest'), allowNoLog: p.has('content-only') });
   if (p.has('json')) printJson(io, r);
   else io.out(formatReport(r));
   return exitCodeFor(r);

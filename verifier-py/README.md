@@ -31,10 +31,40 @@ From the repository root:
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1            # one line per vector
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet    # only non-PASS lines
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --report out.json
+python3 -I verifier-py/qv_verifier verify election.json --board board.json
+python3 -I verifier-py/qv_verifier verify election.json --board board.json --receipts receipts.json --observed observed.json
 ```
 
 Each vector is reported `PASS`, `FAIL` or `NOT-IMPLEMENTED`. The exit status is **1 only if a
 vector FAILs**, 0 otherwise (NOT-IMPLEMENTED does not fail the run), and 2 on usage errors.
+
+`verify` writes the full JSON report to stdout: exit 0 for verdict PASS, 1 for FAIL,
+2 for input/usage errors, and 3 for INCOMPLETE (no fatal finding but tally
+decryption or required log evidence has not completed). A missing tally produces no result; a rejected or
+conflicting tally retains its failure. Exit 3 also denotes an explicitly unsupported capability;
+the shipped 48 log-evidence cases, including legacy controls, are implemented.
+Receipt samples are an array of `{receipt, voter?, code?}`; observed checkpoints are
+an array of signed-note strings. The API is `verify_bundle(bundle, log={"board": board,
+"receipts": samples, "observed": notes})`; omitting log runs the core election
+verifier without board/witness/receipt evidence checks and cannot produce default PASS.
+The CLI also accepts an embedded `board` export; `--board` explicitly selects a separate file. Optional `witnesses` (CLI `--witnesses`) supplies trusted `{name,pk}`
+keys only when the manifest has no witness list. `extraAuthorKeys` (`--extra-author-key`)
+never overrides coordinator, trustee or voter authorization for recognised records.
+
+Default verification requires both `chk.board.append_only` and
+`chk.board.witness` to pass. Missing or unverified log evidence yields
+`INCOMPLETE` (CLI exit 3); fatal evidence still yields `FAIL` (exit 1).
+A completed tally alone does not establish a witnessed election result.
+
+For an explicitly scoped cryptographic content check, trusted callers may set
+`allowNoLog: true` (Python: `allow_no_log=True`), or invoke `--content-only` on
+`qv verify`, `qv-verify`, or Python `verify`. Only the actual Boolean true enables
+this option. A bundle field cannot enable it. The report prominently states that
+content-only PASS does not establish witnessed log integrity. The exception
+allows absent evidence, or a verified append-only log whose signed manifest
+explicitly requires zero witnesses. Supplied malformed, failed, skipped,
+interrupted or otherwise unverified append evidence never qualifies; required
+witnesses cannot be bypassed. Missing tallies remain incomplete in either mode.
 
 About `python -I -m qv_verifier`: from Python 3.11 on, `-I` implies `-P` (safe path), so the
 current directory is **not** put on `sys.path`. `python -I -m qv_verifier …` therefore works only
@@ -57,19 +87,25 @@ cd verifier-py && python3 -I -m unittest
 | Ed25519 | `ed25519.py` | RFC 8032 sign/verify. Strict policy: S < ℓ, canonical and non-small-order A and R, cofactorless equation |
 | Framed hash, label registry | `framed_hash.py` | QV-16 §5.3/§5.4: H256, H512, hs, hs_nz (counter field), 27 labels |
 | QV-JSON / JCS | `qvjson.py` | strict parse (duplicate keys, floats, null, -0, unsafe ints, lone surrogates, non-NFC, control chars, trailing data, BOM); RFC 8785 serialisation |
-| RFC 9162 Merkle, voter roll | `merkle.py` | roll leaves `pk ‖ u32(1)`, sorted, unique, valid non-small-order keys |
+| RFC 9162 Merkle, voter roll | `merkle.py` | roll leaves `pk ‖ u32(1)`; bounded inclusion and consistency proof verification |
 | Sigma proofs | `proofs.py` | Schnorr PoK, DH-reveal DLEQ, CDS 0/1, selection limit, partial decryption |
 | HKDF, AES-256-GCM | `aead.py` | for public adjudication of DKG complaints |
 | DKG adjudication | `dkg.py` | R1, R2, complaints → Q, K, Y_j, transcript hash, ctx |
 | Manifest | `manifest.py` | closed schema + semantic rules + privacy floor; manifest hash |
-| Ballots | `ballot.py` | deterministic encryption from ξ, §5.14.4 checks 1–9, Benaloh reveal reproduction |
+| Ballots | `ballot.py` | deterministic encryption from ξ, §5.14.4 checks 1–9, public and private Benaloh audits with signed reveal-digest binding and exact body reproduction |
 | Rules | `rules.py` | quorum, threshold, tie-breaks, multi-winner (exact integers) |
-| Full election (Appendix C) | `election.py` | the 14 QV-34 §9.1 checks (board/witness/receipts → `not_run`), counts, ctx prefix, results |
+| Full election (Appendix C) | `election.py` | the 14 QV-34 §9.1 checks, optional log evidence, counts, ctx prefix, results |
+| Stable QV-18 log evidence | `logwire.py`, `logcheck.py`, `logio.py` | authenticated entry/record binding, checkpoints/prefix consistency, witness gates/times, fork/rollback and receipt samples |
 | Runner / CLI | `runner.py`, `cli.py`, `__main__.py` | QV-34 §10.3 comparison, applied strictly |
 
-Not implemented: the QV-18 log layer (`log.verify_election`, i.e. checkpoints, consistency and
-inclusion proofs, witness cosignatures, receipts, notices), so `chk.board.*` and
-`chk.receipts.sample` are always `not_run`. Also not implemented: trustee-decryption spoil mode
+All 48 shipped `log.verify_election` cases are implemented. With no log evidence,
+`chk.board.*` and `chk.receipts.sample` remain `not_run`. The **13 notice/control vectors are
+supported under QV-ADR-027's approved legacy schema and coordinator authority**. The core rejects
+unknown non-ballot types as class-L `E_VERSION`; the independent log path checks control signatures,
+header authority and body binding. Notices never waive manifest witness or time requirements.
+See [the control milestone handoff](../docs/handoffs/python-controls-20261116.md) for the precise
+scope and validation. Full V13 control effects and the future signed `control_seq` wire transition
+are separate work. Also not implemented: trustee-decryption spoil mode
 (§5.13.4), the ristretto255 one-way map / hash-to-group, the QV-34 §10.2 stdin/stdout adapter
 protocol, scale vectors, and anything from Phase 2 or 3.
 
@@ -159,8 +195,8 @@ Each is recorded in `docs/errata/spec-errata-log.md`:
 Remaining work for a real second verifier, in priority order:
 
 1. Review by someone other than the author.
-2. The QV-18 log layer: checkpoints, consistency and inclusion proofs, witnesses and receipts,
-   which are the 48 `log.verify_election` vectors.
+2. Qualify the separately approved B2-05 versioned control-counter transition and full V13
+   effects, and independently review the complete 48-case legacy log-evidence implementation.
 3. The QV-34 §10.2 adapter protocol, so the shared runner can drive this verifier.
 4. Constant-time review, if any secret-handling op is ever used outside the test vectors.
 5. Resolving the errata with the spec owner, then regenerating the vectors.

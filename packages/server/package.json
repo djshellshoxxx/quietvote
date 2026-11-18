@@ -17,5 +17,9 @@
     "@quietvote/board": "*",
     "@quietvote/crypto": "*",
     "@quietvote/protocol": "*"
+  },
+  "bin": {
+    "qv-server": "./bin/qv-server.ts",
+    "qv-backup": "./bin/qv-backup.ts"
   }
 }

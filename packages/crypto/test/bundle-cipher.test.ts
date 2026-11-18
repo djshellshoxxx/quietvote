@@ -1,8 +1,76 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openWithPassphrase, sealWithPassphrase, streamRng, utf8 } from '../src/index.ts';
+import { bytesToHex, openWithPassphrase, sealWithPassphrase, streamRng, utf8 } from '../src/index.ts';
 
 const weak = { logN: 10, allowWeak: true } as const;
+
+for (const failInput of ['cleanup passphrase', 'qv-bundle-v1']) {
+  test(`sealing wipes allocated secrets on encoding failure in ${failInput === 'qv-bundle-v1' ? 'KDF' : 'passphrase'}`, async (t) => {
+    const rng = streamRng('cleanup-encoding');
+    let fileKey: Uint8Array | undefined;
+    let passphrase: Uint8Array | undefined;
+    const encode = TextEncoder.prototype.encode;
+    const failure = new Error('injected encoding failure');
+    t.mock.method(TextEncoder.prototype, 'encode', function (this: TextEncoder, input?: string) {
+      if (input === failInput) throw failure;
+      const bytes = encode.call(this, input);
+      if (input === 'cleanup passphrase') passphrase = bytes;
+      return bytes;
+    });
+    await assert.rejects(sealWithPassphrase(utf8('plaintext'), 'cleanup passphrase', {
+      bytes(n) {
+        const bytes = rng.bytes(n);
+        if (n === 32) fileKey = bytes;
+        return bytes;
+      },
+    }, weak), failure);
+    assert.deepEqual(fileKey, new Uint8Array(32));
+    if (failInput === 'qv-bundle-v1') assert.deepEqual(passphrase, new Uint8Array('cleanup passphrase'.length));
+  });
+}
+
+for (const operation of ['importKey', 'encrypt'] as const) {
+  for (const failAt of [1, 2]) {
+    test(`sealing wipes owned secrets when ${operation} ${failAt} rejects`, async (t) => {
+      const rng = streamRng(`cleanup-${operation}-${failAt}`);
+      const drawn: Uint8Array[] = [];
+      const encoded: Uint8Array[] = [];
+      const encode = TextEncoder.prototype.encode;
+      t.mock.method(TextEncoder.prototype, 'encode', function (this: TextEncoder, input?: string) {
+        const bytes = encode.call(this, input);
+        if (input === 'cleanup passphrase') encoded.push(bytes);
+        return bytes;
+      });
+      const subtle = globalThis.crypto.subtle;
+      const original = subtle[operation].bind(subtle);
+      let calls = 0;
+      const failure = new Error('injected crypto failure');
+      t.mock.method(subtle, operation, (...args: Parameters<typeof original>) => {
+        if (++calls === failAt) return Promise.reject(failure);
+        return Reflect.apply(original, subtle, args);
+      });
+      const plaintext = utf8('caller-owned plaintext');
+      await assert.rejects(sealWithPassphrase(plaintext, 'cleanup passphrase', {
+        bytes(n) {
+          const bytes = rng.bytes(n);
+          drawn.push(bytes);
+          return bytes;
+        },
+      }, weak), failure);
+      assert.equal(calls, failAt);
+      assert.equal(encoded.length, 1);
+      assert.deepEqual(encoded[0], new Uint8Array('cleanup passphrase'.length));
+      assert.equal(drawn[3]?.length, 32);
+      assert.deepEqual(drawn[3], new Uint8Array(32), 'file key wiped even on failure');
+      assert.deepEqual(plaintext, utf8('caller-owned plaintext'));
+    });
+  }
+}
+
+test('sealing cleanup preserves existing deterministic container bytes', async () => {
+  const sealed = await sealWithPassphrase(utf8('cleanup compatibility'), 'test passphrase', streamRng('bt15-compat'), { logN: 4, allowWeak: true });
+  assert.equal(bytesToHex(sealed), '515642554e444c3104d206c2bf7846d6f3df6d1c9a45356f4248d899d5da239015a0e91110a77c06bb8d52f3a10371d63b28ab700fdcad06d1eb58cda856f7ff51b982e5eaa2df2ee1b0af41eb4172be9277731ea4978441235c23a06ad6b720b32b955ca846f709c5c414972a1ac17f708586ea4efc8cbdf364417da34bcf4ede9cab0fdda6');
+});
 
 test('bundle cipher round-trips; wrong passphrase, tamper, wrong aad all fail with E_AEAD', async () => {
   const rng = streamRng('bc');

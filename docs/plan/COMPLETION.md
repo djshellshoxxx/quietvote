@@ -1,12 +1,16 @@
 # Completion status (v1 scope)
 
-> Latest implementation continuation: [2026-11-09 next phase](../handoffs/QUIETVOTE-NEXT-PHASE-20261109.md).
+> Current continuation: [2026-11-16 parallel teams and fresh reviews](../handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md).
+> [Feature ledger](../reports/quietvote-teams-feature-ledger-20261116.md) records missing core contracts and held decisions.
+> Earlier receipts below are historical. The project is not complete or release-qualified.
+
+> Historical implementation continuation: [2026-11-09 next phase](../handoffs/QUIETVOTE-NEXT-PHASE-20261109.md).
 > Exact-candidate qualification is recorded on PR #30; protocol-qualified milestone remains blocked.
 
-> Latest continuation: [2026-11-09 integration checkpoint](../handoffs/QUIETVOTE-MILESTONE-20261109.md).
+> Historical continuation: [2026-11-09 integration checkpoint](../handoffs/QUIETVOTE-MILESTONE-20261109.md).
 > The historical receipt below is preserved; the review milestone remains blocked.
 
-## Current consolidation — 2026-10-30
+## Historical consolidation — 2026-10-30
 
 **The consolidated review milestone remains blocked.** The integration branch
 reconciles the useful unmerged implementation histories, but the owner explicitly

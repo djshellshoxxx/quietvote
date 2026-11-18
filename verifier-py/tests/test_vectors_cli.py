@@ -79,7 +79,7 @@ class TestRepositoryVectors(unittest.TestCase):
 
     def test_tiny_election_and_a_local_mutant(self):
         bundle = json.loads((TREE / "elections" / "tiny-yesno-3v" / "bundle.json").read_text())
-        rep = verify_bundle(bundle)
+        rep = verify_bundle(bundle, allow_no_log=True)  # Content-only vector control.
         self.assertEqual(rep["verdict"], "PASS", rep["findings"])
         mut = copy.deepcopy(bundle)
         tally = next(e for e in mut["log"] if e["entry"].get("body", {}).get("type") == "tally")
