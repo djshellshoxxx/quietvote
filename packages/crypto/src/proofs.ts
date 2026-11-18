@@ -12,7 +12,6 @@ import {
   pointToBytes,
   scalarAdd,
   scalarMul,
-  scalarRandomNonZero,
   scalarSub,
   scalarToBytes,
   type Point,
@@ -28,6 +27,8 @@ export interface CompactProof {
 
 const pt = pointToBytes;
 const sc = scalarToBytes;
+/** 32 fresh CSPRNG bytes for a hedged nonce (`rand32` in the QV-16 §5.4 field lists). */
+const rand32 = (rng: Rng): Uint8Array => rng.bytes(32);
 const inRange = (x: Scalar): boolean => typeof x === 'bigint' && x >= 0n && x < ORDER;
 
 function guard(fn: () => boolean): boolean {
@@ -46,8 +47,13 @@ function commit(B1: Point, X1: Point, c: Scalar, s: Scalar): Point {
 
 // ------------------------------------------------------------------ Schnorr PoK (DKG, §5.7.2)
 
+/**
+ * Nonce is hedged (QV-16 §5.4 `pok-nonce`, registry revision 2026-11-04 / QV-ADR-027 C3): it hashes the secret, the
+ * statement context (manifest, i, k), the statement point A and 32 CSPRNG bytes, so a failed RNG cannot repeat u
+ * across different coefficients, dealers or manifests.
+ */
 export function pokProve(manifestHash: Uint8Array, i: number, k: number, a: Scalar, A: Point, rng: Rng): CompactProof {
-  const u = scalarRandomNonZero(rng);
+  const u = hsNz('pok-nonce', sc(a), manifestHash, u8(i), u16(k), pt(A), rand32(rng));
   const R = baseMul(u);
   const c = hs('pok', manifestHash, u8(i), u16(k), pt(A), pt(R));
   return { c, s: scalarAdd(u, scalarMul(c, a)) };
@@ -63,8 +69,9 @@ export function pokVerify(manifestHash: Uint8Array, i: number, k: number, A: Poi
 
 // ------------------------------------------------------------------ Schnorr PoK of final share (§5.7.8)
 
+/** Nonce is hedged (QV-16 §5.4 `pok-share-nonce`): secret s_j, ctx, j, Y_j and 32 CSPRNG bytes. */
 export function shareKeyProve(ctx: Uint8Array, j: number, Yj: Point, sj: Scalar, rng: Rng): CompactProof {
-  const u = scalarRandomNonZero(rng);
+  const u = hsNz('pok-share-nonce', sc(sj), ctx, u8(j), pt(Yj), rand32(rng));
   const R = baseMul(u);
   const c = hs('pok-share', ctx, u8(j), pt(Yj), pt(R));
   return { c, s: scalarAdd(u, scalarMul(c, sj)) };
@@ -80,9 +87,12 @@ export function shareKeyVerify(ctx: Uint8Array, j: number, Yj: Point, proof: Com
 
 // ------------------------------------------------------------------ DH-reveal DLEQ for complaints (§5.7.5)
 
-/** Proves log_G(Ej) == log_R(S). */
+/**
+ * Proves log_G(Ej) == log_R(S). Nonce is hedged (QV-16 §5.4 `cp-dh-nonce`): secret e_j, manifest, (i, j), the statement
+ * points (E_j, R, S) and 32 CSPRNG bytes.
+ */
 export function dhProve(mh: Uint8Array, i: number, j: number, Ej: Point, R: Point, S: Point, ej: Scalar, rng: Rng): CompactProof {
-  const u = scalarRandomNonZero(rng);
+  const u = hsNz('cp-dh-nonce', sc(ej), mh, u8(i), u8(j), pt(Ej), pt(R), pt(S), rand32(rng));
   const a1 = baseMul(u);
   const a2 = pointMul(R, u);
   const c = hs('cp-dh', mh, u8(i), u8(j), pt(Ej), pt(R), pt(S), pt(a1), pt(a2));
@@ -211,7 +221,11 @@ function decChallenge(st: DecStatement, a: Point, b: Point): Scalar {
   return hs('cp-dec', st.ctx, utf8(st.cid), utf8(st.oid), u8(st.j), pt(st.Yj), pt(st.A), pt(st.B), pt(st.M), pt(a), pt(b));
 }
 
-/** Computes M = [s_j]A and the Chaum-Pedersen proof; nonce is hedged (secret, ctx, ids, 32 CSPRNG bytes). */
+/**
+ * Computes M = [s_j]A and the Chaum-Pedersen proof. Nonce is hedged (QV-16 §5.4 `cp-dec-nonce`): secret, ctx, ids, the
+ * ciphertext points pt(A), pt(B) and 32 CSPRNG bytes. Binding (A, B) (registry revision 2026-11-04, CP-02 / B1-12,
+ * QV-ADR-027) stops a failed RNG from repeating u for two different aggregates of the same (ctx, cid, oid).
+ */
 export function decProve(
   st: Omit<DecStatement, 'M'>,
   sj: Scalar,
@@ -219,7 +233,7 @@ export function decProve(
 ): { M: Point; proof: CompactProof } {
   const M = pointMul(st.A, sj);
   const full: DecStatement = { ...st, M };
-  const u = hsNz('cp-dec-nonce', sc(sj), st.ctx, utf8(st.cid), utf8(st.oid), rng.bytes(32));
+  const u = hsNz('cp-dec-nonce', sc(sj), st.ctx, utf8(st.cid), utf8(st.oid), pt(st.A), pt(st.B), rand32(rng));
   const a = baseMul(u);
   const b = pointMul(st.A, u);
   const c = decChallenge(full, a, b);
@@ -272,10 +286,11 @@ export function spoilDecProve(
 ): { M: Point; proof: CompactProof } {
   const M = pointMul(st.alpha, sj);
   const full: SpoilDecStatement = { ...st, M };
-  // The registry's cp-dec-nonce field list is (s_j, ctx, cid, oid, rand32); for spoiled ballots the ballot
-  // code is appended to the oid field so a failed RNG cannot repeat u across different ballots (erratum E-12).
+  // The registry's cp-dec-nonce field list is (s_j, ctx, cid, oid, pt(A), pt(B), rand32); for spoiled ballots the
+  // ballot code is appended to the oid field (erratum E-12; IDs never contain 0x00) and (A, B) = (alpha, beta), so a
+  // failed RNG cannot repeat u across different ballots or ciphertexts (registry revision 2026-11-04, CP-02).
   const oidField = new Uint8Array([...utf8(st.oid), 0, ...st.ballotCode]);
-  const u = hsNz('cp-dec-nonce', sc(sj), st.ctx, utf8(st.cid), oidField, rng.bytes(32));
+  const u = hsNz('cp-dec-nonce', sc(sj), st.ctx, utf8(st.cid), oidField, pt(st.alpha), pt(st.beta), rand32(rng));
   const a = baseMul(u);
   const b = pointMul(st.alpha, u);
   const c = spoilChallenge(full, a, b);

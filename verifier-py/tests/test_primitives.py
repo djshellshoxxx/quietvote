@@ -118,7 +118,25 @@ class TestFramedHash(unittest.TestCase):
         self.assertEqual(cm.exception.code, "E_DOMAIN_UNKNOWN")
         with self.assertRaises(QVError):
             H256("pok", b"")  # pok is an hs label, not H256
-        self.assertEqual(len(LABELS), 27)
+        self.assertEqual(len(LABELS), 30)
+
+    def test_registry_hedged_nonce_labels(self):
+        # QV-16 §5.4 registry revision 2026-11-04 (QV-ADR-027 C3): three hs_nz prover-nonce labels
+        for label in ("pok-nonce", "pok-share-nonce", "cp-dh-nonce", "cp-dec-nonce"):
+            self.assertEqual(LABELS[label], "hs_nz")
+            s, c = hs_nz_full(label, b"secret", b"ctx")
+            digest = hashlib.sha512(frame(label, [b"secret", b"ctx", u32(c)])).digest()
+            self.assertEqual(s, int.from_bytes(digest, "little") % L)
+            with self.assertRaises(QVError) as cm:
+                hs(label, b"x")  # wrong kind
+            self.assertEqual(cm.exception.code, "E_DOMAIN_UNKNOWN")
+            with self.assertRaises(QVError):
+                H256(label, b"x")
+        # near-miss spellings stay unregistered
+        for bad in ("pok_nonce", "cp-dh-nonce ", "pok-nonces"):
+            with self.assertRaises(QVError) as cm:
+                frame(bad, [])
+            self.assertEqual(cm.exception.code, "E_DOMAIN_UNKNOWN")
 
     def test_hs_nz_appends_counter(self):
         s, c = hs_nz_full("enc-nonce", b"x")

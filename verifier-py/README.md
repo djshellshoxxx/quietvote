@@ -133,7 +133,7 @@ cd verifier-py && python3 -I -m unittest
 | edwards25519 field/group | `edwards.py` | extended coordinates, RFC 8032 §5.1 |
 | ristretto255 | `ristretto.py` | RFC 9496 §4.3 decode / encode / equality; strict scalars (< ℓ, never reduced) |
 | Ed25519 | `ed25519.py` | RFC 8032 sign/verify. Strict policy: S < ℓ, canonical and non-small-order A and R, cofactorless equation |
-| Framed hash, label registry | `framed_hash.py` | QV-16 §5.3/§5.4: H256, H512, hs, hs_nz (counter field), 27 labels |
+| Framed hash, label registry | `framed_hash.py` | QV-16 §5.3/§5.4: H256, H512, hs, hs_nz (counter field), 30 labels (registry revision 2026-11-04) |
 | QV-JSON / JCS | `qvjson.py` | strict parse (duplicate keys, floats, null, -0, unsafe ints, lone surrogates, non-NFC, control chars, trailing data, BOM); RFC 8785 serialisation |
 | RFC 9162 Merkle, voter roll | `merkle.py` | roll leaves `pk ‖ u32(1)`; bounded inclusion and consistency proof verification |
 | Sigma proofs | `proofs.py` | Schnorr PoK, DH-reveal DLEQ, CDS 0/1, selection limit, partial decryption |

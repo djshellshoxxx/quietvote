@@ -47,7 +47,7 @@
 | D-16 | Aggregation performed by "anyone" vs trustees | QV-04/QV-16 | Anyone; trustees sign what they decrypt | M1 |
 | D-17 | Minimum aggregated ballots for decryption (ATK-035) and `min_counted_ballots` | QV-11 Q-11-2, QV-06 | ≥2 for oracle control; default 5 for disclosure | M1 |
 | D-18 | Spoiled-ballot authentication (unsigned with anti-spam token) | QV-10 Q-10-3 | Unsigned + eligibility-bound anti-spam token | M1 |
-| D-19 | Hedged nonce labels for DKG PoK/complaint proofs | QV-17 OQ-7 | Add in next revision | M1 |
+| D-19 | Hedged nonce labels for DKG PoK/complaint proofs | QV-17 OQ-7 | Add in next revision. **Resolved 2026-11-04 (QV-ADR-027 C3, with CP-02/B1-12):** QV-16 §5.4 registry revision adds `pok-nonce`, `pok-share-nonce`, `cp-dh-nonce` and binds `pt(A)`, `pt(B)` in `cp-dec-nonce`; implemented in `packages/crypto/src/proofs.ts` (errata E-003/E-004). Unaudited. | M1 |
 | D-20 | Tie-break beacon (drand quicknet vs fail) | QV-20 OQ-4 | Disabled in v1; `fail` | M1 |
 | D-21 | `ballot` header exposes author KeyId in Phase 1 | QV-16 Q1 | Yes for Phase 1; token-based author in Phase 2 | M1 |
 | D-22 | Per-election vs per-group voter keys | QV-19 OQ | Per-election default | M1 |

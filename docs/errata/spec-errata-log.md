@@ -141,3 +141,15 @@ Remaining manifest differences need individual source reconciliation: for
 example QV-16/QV-20 explicitly include threshold `basis:roll`, while the TS schema
 rejects it. Arbitrary reference limits without a spec source are not automatically
 adopted under B1-08. Full trustee-mode spoil cryptography and D-95 remain distinct.
+
+## Registry revision, 2026-11-04 (QV-ADR-027, category B) — landed 2026-11-18 on `38192a5`
+
+Owner-approved defaults from [DECISIONS-2026-11-04](../plan/DECISIONS-2026-11-04.md) §B (CP-02, B1-12, C3). The spec text was
+changed in the same commit as the code; owner approval is not independent cryptographic review. Prover-side only: nonces are
+never transmitted, so verifiers and the wire format are unchanged; vectors with fixed-RNG prover output were regenerated (ids
+and expectations unchanged; three `tagged-*` registry vectors added).
+
+| ID | Spec location | Spec said | Change / evidence | Status |
+|---|---|---|---|---|
+| E-003 | docs/16-crypto-protocol.md §5.4 row `cp-dec-nonce`, §5.13.4, §5.16 (CP-02, B1-12, HANDOFF 3.1) | `cp-dec-nonce` fields `sc(s_j)`, `ctx`, `contest_id`, `option_id`, `rand32`. With a failed RNG two partial decryptions of different aggregates for the same `(ctx, cid, oid)` reuse `u` and reveal `s_j = (s1 − s2)/(c1 − c2)`. The spoil-mode ballot-code fold (E-12 in `proofs.ts`) was undocumented in QV-16. | Fields now `sc(s_j)`, `ctx`, `contest_id`, `option_id`, `pt(A)`, `pt(B)`, `rand32`; spoil mode uses `option_id ‖ 0x00 ‖ ballot_code` and `(α, β)`. `packages/crypto/src/proofs.ts` `decProve`/`spoilDecProve`; tests `packages/crypto/test/conformance-nonce-hedge.test.ts`, `packages/protocol/test/conformance-nonce-hedge.test.ts` (constant RNG; failed before the change). | **Resolved 2026-11-04 (QV-ADR-027)** |
+| E-004 | docs/16-crypto-protocol.md §5.4, §5.7.2, §5.7.5, §5.7.8, §13 OQ-7 (C3, D-19, T-043, N-41) | DKG PoK, share-key PoK (`dkg-keyconf`) and complaint DLEQ nonces were plain CSPRNG (`u ← CSPRNG non-zero`); OQ-7 "add registry labels in next revision". A repeated `u` reveals `a_{i,k}`, `s_j` or `e_j`. | New `hs_nz` labels `pok-nonce` (`sc(a)`, `manifest_hash`, `u8(i)`, `u16(k)`, `pt(A)`, `rand32`), `pok-share-nonce` (`sc(s_j)`, `ctx`, `u8(j)`, `pt(Y_j)`, `rand32`), `cp-dh-nonce` (`sc(e_j)`, `manifest_hash`, `u8(i)`, `u8(j)`, `pt(E_j)`, `pt(R_ij)`, `pt(S)`, `rand32`). `packages/crypto/src/transcript.ts` (registry, 30 labels), `proofs.ts` `pokProve`/`shareKeyProve`/`dhProve`; `verifier-py/qv_verifier/framed_hash.py` registry. Same tests as E-003. | **Resolved 2026-11-04 (QV-ADR-027)** |
