@@ -48,7 +48,7 @@ This spec names QuietVote's components, trust boundaries, and deployment models,
 
 Architecture areas the owner listed, now assigned:
 
-- Client types: browser/PWA proposed (OD-08-03 covers offline); native app not in first release.
+- Client types: browser/PWA proposed; native app not in first release (OD-08-12).
 - Application services and trust boundaries: §3.2.
 - Storage for membership, ballot artifacts, results, and audit records: separate stores per row below.
 - Cryptographic operations and key custody: key inventory required (QV-08-REQ-007); design in QV-16.
@@ -196,3 +196,4 @@ Do not equate self-hosting or decentralization with anonymity, security, or reli
 | OD-08-09 | How is login-to-ballot timing correlation handled? (from QV-16 §9) | No mitigation beyond log separation; batched or delayed submission windows; delayed receipts | Proposed: log separation only for pilot; record residual risk in QV-07 and in the member notice | Project owner, with QV-07 reviewer |
 | OD-08-10 | Is an external identity provider used? | None (registrar issues credentials); federated login via an identity provider | Proposed: none for pilot; revisit under QV-04 | Project owner |
 | OD-08-11 | Which keys do ballot-path rate limits use? | Network address; decision; individual proof | Proposed: decision-level limits first; any address-based limit kept out of ballot logs (REQ-005) | Project owner, with QV-07 reviewer |
+| OD-08-12 | Which client types are supported at launch? | Responsive web only; web plus native app; web plus mobile web | Proposed: responsive web (PWA-capable) only; native app deferred until QV-13 device review | Project owner, with QV-10 and QV-13 input |

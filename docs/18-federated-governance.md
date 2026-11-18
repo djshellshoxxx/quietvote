@@ -20,236 +20,191 @@ Principles:
 
 ## 2. Scope
 
-### Candidate use cases
+**Candidate use cases:** co-ops deciding on a shared purchasing policy, worker collectives coordinating a proposal, or independent online communities agreeing to an opt-in action. The first use case is open (OD-01).
 
-Potential use cases include co-ops deciding on a shared purchasing policy, worker collectives coordinating a proposal, or independent online communities agreeing to an opt-in action. The first use case is open (OD-01).
-
-**Initial scope recommendation (not approved):** Start with portable signed decision records and manual exchange/import. Consider automated federation only after users show that export/import is insufficient (OD-20). Do not require a public directory, token, smart contract, or global membership registry.
+**Initial scope recommendation (not approved):** Start with portable signed decision records and manual exchange/import. Consider automated federation only after users show that export/import is insufficient (OD-18). Do not require a public directory, token, smart contract, or global membership registry.
 
 ### In scope
-- Opt-in shared decisions across more than one independent group, where each group runs its own local ballot.
-- Signed group profiles, decision manifests, group acceptances, group-level results, and verification evidence.
-- Manual exchange and import of these records (Phase 1).
-- Export of a group's federation records in documented formats.
+- Opt-in shared decisions across more than one independent group, each running its own local ballot.
+- Signed group profiles, decision manifests, acceptances, group-level results, and verification evidence.
+- Manual exchange and import (Phase 1), then opt-in federation (Phase 2).
 
 ### Out of scope (non-goals)
 - Merging membership databases, or any mandatory central group registry.
-- Disclosure of rosters or member-level ballots between groups.
-- Public directory, token, smart contract, or global membership registry.
-- Token-weighted influence, universal administrator, or custody of funds.
-- Shared member-level ballots before Phase 3.
+- Disclosing rosters or member-level ballots between groups.
+- Token-weighted influence, a universal administrator, or custody of funds.
 - Public government elections and legally binding corporate elections.
-- Anonymity or coercion-resistance claims beyond the reviewed outcome of QV-16 and QV-17.
-- Software resolution of external property, legal authority, or cross-group disputes. The software records them.
+- Anonymity or coercion-resistance claims beyond what QV-16 and QV-17 establish after review.
+- Software resolution of external property, legal authority, or cross-group disputes.
 
 ### Phases
-
 - **Phase 0:** complete local manifests, eligibility, signed results, and exports.
 - **Phase 1:** portable records and independent verification through manual exchange.
 - **Phase 2:** opt-in federation with invitations, manifest acceptance, group-level results, and explicit combination.
 - **Phase 3:** only if needed, assess shared ballots with anonymous eligibility proofs and a reviewed tally protocol.
 
-Gate criteria between phases are open (OD-20).
-
 ## 3. Actors and user journeys
 
 | Actor | Goal | Preconditions | Main outcome |
 |---|---|---|---|
-| Group administrator | Propose a shared decision and accept it for the group | Group profile published; federation enabled for the group (REQ-009) | Signed acceptance of the exact manifest hash, or a recorded decline |
-| Group member | Understand what the group is joining and vote locally | Group has accepted; local ballot open | Knows the terms; ballot stays within the group |
-| Invited group's administrator | Review an invitation and accept or decline | Invitation received with manifest | Acceptance or decline recorded; no acceptance without action (REQ-010) |
-| Independent verifier (member, observer, or auditor) | Recompute the combined result | Manifest and group artifacts obtained | Same result as publishers, or a recorded mismatch |
-| Relay or coordinator operator | Move records between groups | Role not defined (OD-09) | Records delivered, or delivery marked incomplete; no authority over content |
-| Observer | Check the public record | Public fields defined (OD-12) | Sees only public fields |
+| Group administrator | Propose and accept a shared decision | Federation enabled for the group (REQ-009) | Signed acceptance of the exact manifest hash, or recorded decline |
+| Group member | Know the group's terms and vote locally | Group accepted; local ballot open | Ballot stays within the group |
+| Invited group's administrator | Accept or decline an invitation | Manifest received | Recorded decision; no acceptance without action |
+| Verifier (member, observer, auditor) | Recompute the combined result | Manifest and group artifacts obtained | Same result as publishers, or a recorded mismatch |
+| Relay or coordinator operator | Move records between groups | Role undecided (OD-09) | Records delivered or marked incomplete; no authority over content |
 
-**Normal opt-in journey (Phase 2 design):**
-1. A group administrator drafts a manifest (Section 7).
-2. Each invited group reviews the manifest and its own terms locally.
-3. Each group's authorized key holder accepts the exact manifest hash or declines. Either is recorded.
-4. Each group runs its own local ballot under its own eligibility rules. No roster leaves the group (REQ-002).
-5. Each group publishes its group-level result and verification evidence.
-6. Verifiers recompute the combined result from the manifest and group artifacts (REQ-004).
-7. Conflicts, withdrawals, and missing artifacts are shown as recorded, not resolved silently (Section 7).
+**Opt-in journey (Phase 2 design):**
+1. Administrator drafts a manifest.
+2. Each invited group reviews the manifest and its own terms.
+3. Each group's authorized key holder accepts the exact hash or declines; either is recorded.
+4. Each group runs its local ballot. No roster leaves the group (REQ-002).
+5. Each group publishes its group-level result and evidence.
+6. Verifiers recompute the combined result (REQ-004).
+7. Conflicts, withdrawals, and gaps are shown as recorded (Section 7).
 
 Phase 1 follows the same steps with records moved by hand.
 
 ## 4. Requirements
 
-Requirements marked **Opt-in** apply only to groups that choose federation. Other requirements apply to any shared decision. Priority uses Must, Should, and Could.
+Requirements marked **Opt-in** apply only to groups that choose federation. Priority uses Must, Should, and Could.
 
 | ID | Requirement | Priority | Acceptance criteria | Verification |
 |---|---|---|---|---|
-| QV-18-REQ-001 | **Opt-in:** Each group shall sign acceptance of the exact shared manifest. | Must | A verifier rejects a manifest whose hash differs from the hash the group signed, or whose signature fails against the group's published key. A group without a valid acceptance is listed as not accepted. | Test (hash and signature mutation tests); conformance tests across independent verifiers |
-| QV-18-REQ-002 | **Opt-in:** Groups shall retain local eligibility authority. Federation workflows shall not require upload of complete member rosters. | Must | Exchange and export schemas contain no roster or member-list field; a payload containing one fails schema validation. | Test (schema conformance); review (export privacy review) |
-| QV-18-REQ-003 | **Opt-in:** Shared proposal and rule changes shall be versioned and visible. | Must | Each manifest has a version and content hash. Any change to proposal text or rules produces a new hash. A change after opening is accepted only through the amendment process the manifest declares; otherwise the verifier rejects it. | Test (manifest mutation tests); usability test (participants find the version) |
-| QV-18-REQ-004 | **Opt-in:** Result combination shall be reproducible. | Must | An independent verifier, given only the manifest and exported group artifacts, produces the same combined result and per-group breakdown as the publisher. | Test (cross-implementation test vectors) |
-| QV-18-REQ-005 | **Opt-in:** Withdrawal and nonparticipation shall follow the declared policy. | Must | After a withdrawal recorded before the declared cutoff, the verifier recomputes quorum and result using only manifest rules, and the output flags the withdrawal. | Test (withdrawal and quorum tests) |
-| QV-18-REQ-006 | **Opt-in:** Member-level ballots shall not be disclosed to other groups by default. | Must | Federation exports contain no field that maps a member identifier to a choice. An automated field scan of exports finds none. | Review (export privacy review); test (field scan) |
-| QV-18-REQ-007 | **Opt-in:** No operator shall be able to substitute the shared manifest or a group result without detection. | Must | A modified manifest or result fails signature checks. Two validly signed, different records for one decision are both retained and flagged as a conflict. | Test (conflicting-view simulation; signature tests) |
-| QV-18-REQ-008 | **Opt-in:** Federation records shall be portable. | Must | A group can export profiles, accepted manifests, results, and evidence in documented, versioned formats. Re-importing an export into an independent verifier gives the same verification result. | Test (export/import round trip); review (format documentation) |
-| QV-18-REQ-009 | Federation shall be disabled by default, and single-group voting shall run with no federation component. | Must | With federation disabled, a group creates, runs, and tallies a local ballot with no calls to federation endpoints, confirmed by a test run with those endpoints blocked. | Test (integration with federation endpoints blocked) |
-| QV-18-REQ-010 | **Opt-in:** A group shall join a shared decision only through an explicit, recorded acceptance by an authorized key holder. | Must | No group signature on a manifest exists without a matching acceptance record. An invitation alone is recorded as not accepted. | Test (state transition tests); review (acceptance flow) |
-| QV-18-REQ-011 | **Opt-in:** Each shared decision shall declare opening, closing, and time-zone rules in its manifest. | Must | A manifest without an explicit closing instant or time-zone rule is rejected before opening. Interfaces show every time with its time zone. | Test (schema conformance); usability test |
-| QV-18-REQ-012 | **Opt-in:** Each manifest shall declare ballot method, ballot structure, eligibility cutoff reference, quorum, and result-combination rule before opening. | Must | Opening is refused when any field is missing, and the verifier flags a manifest with a missing field. | Test (schema conformance; opening-gate test) |
-| QV-18-REQ-013 | **Opt-in:** Dissenting group results shall be shown separately when the manifest permits or requires it. | Should | Where the manifest requires a per-group breakdown, the interface and export show each group's result. A combined-only output fails verification. | Test (verifier test); usability test |
-| QV-18-REQ-014 | **Opt-in:** Conflicting signed records shall be preserved and surfaced, not silently resolved. | Must | Two validly signed, different records for the same decision are both stored. Decision status shows "conflict" until resolved under the declared rule. No record is deleted. | Test (conflicting-view simulation); review |
-| QV-18-REQ-015 | **Opt-in:** A shared decision shall be cancelled only through the declared cancellation process, and cancellation shall be signed and visible. | Must | Cancellation without the declared process is rejected. A signed cancellation record appears in history. No result is published for a cancelled decision. | Test (state transition tests) |
-| QV-18-REQ-016 | **Opt-in:** Key rotation and retirement shall be recorded and verifiable. | Must | A rotation record references the prior key. Signatures made after a key's declared retirement point are rejected. Full key history is retrievable. | Test (signature and key-rotation tests); expert review |
-| QV-18-REQ-017 | **Opt-in:** Relay or endpoint outages shall not change a decision outcome silently. | Must | In an outage simulation near closing, affected groups show "delivery incomplete." The result changes only under a rule declared in the manifest, and the change is recorded. | Test (partial-outage simulation) |
-| QV-18-REQ-018 | **Opt-in:** Records shall carry protocol and serialization versions, and unknown versions shall be rejected. | Must | A parser rejects a record with an unknown version, shows a visible error, and does not partially process it. | Test (conformance tests) |
-| QV-18-REQ-019 | **Opt-in:** Per-group results shall be withheld or merged when group size falls below the publication rule in the manifest. | Must | A small-group fixture shows withholding or merging as declared. No output reveals one member's choice under the rule. The rule's value is set by OD-14. | Test (small-group fixtures); review (privacy review) |
-| QV-18-REQ-020 | **Opt-in:** Federation records shall contain only data needed to conduct and verify the decision. | Must | Every record field appears in the data inventory approved under QV-06. Undocumented fields fail schema validation. | Review (data inventory review); test (schema conformance) |
-| QV-18-REQ-021 | **Opt-in:** Members shall be able to see, before their group accepts, what the group is joining and on what terms. | Should | Before the acceptance action, the interface shows the manifest hash, terms, withdrawal rule, and combination rule in plain language. Comprehension tests pass against criteria set before testing. | Test (comprehension testing); review |
-| QV-18-REQ-022 | **Opt-in:** Group and decision identifiers shall not be derived from member identifiers. | Must | Identifier generation is documented. No member identifier appears in any group or decision identifier in exported records. | Review (design review); test (identifier scan of exports) |
+| QV-18-REQ-001 | **Opt-in:** Each group shall sign acceptance of the exact shared manifest. | Must | Verifier rejects a manifest whose hash or signature does not match the group's signed acceptance. | Test (hash and signature mutation); cross-verifier conformance |
+| QV-18-REQ-002 | **Opt-in:** Groups shall retain local eligibility authority. Federation shall not require upload of complete member rosters. | Must | Exchange and export schemas have no roster or member-list field; payloads containing one fail validation. | Test (schema conformance); review (export privacy) |
+| QV-18-REQ-003 | **Opt-in:** Shared proposal and rule changes shall be versioned and visible. | Must | Each change produces a new version and hash. Post-opening changes outside the declared amendment process are rejected. | Test (manifest mutation) |
+| QV-18-REQ-004 | **Opt-in:** Result combination shall be reproducible. | Must | An independent verifier, given only the manifest and exported artifacts, produces the same result and per-group breakdown. | Test (cross-implementation test vectors) |
+| QV-18-REQ-005 | **Opt-in:** Withdrawal and nonparticipation shall follow the declared policy. | Must | After a withdrawal recorded before cutoff, quorum and result are recomputed by manifest rules and the output flags the withdrawal. | Test (withdrawal and quorum) |
+| QV-18-REQ-006 | **Opt-in:** Member-level ballots shall not be disclosed to other groups by default. | Must | Exports contain no field mapping a member identifier to a choice. | Review (export privacy); test (field scan) |
+| QV-18-REQ-007 | **Opt-in:** No operator shall substitute the manifest or a group result without detection. | Must | Modified manifests or results fail signature checks. Two validly signed, different records are both kept and flagged. | Test (conflicting-view simulation) |
+| QV-18-REQ-008 | **Opt-in:** Federation records shall be portable. | Must | Profiles, manifests, results, and evidence export in documented, versioned formats and re-verify identically in an independent verifier. | Test (export/import round trip); review (format docs) |
+| QV-18-REQ-009 | Federation shall be disabled by default. Single-group voting shall run with no federation component. | Must | With federation endpoints blocked, a local ballot is created, run, and tallied with no federation calls. | Test (integration, endpoints blocked) |
+| QV-18-REQ-010 | **Opt-in:** A group shall join only through explicit, recorded acceptance by an authorized key holder. | Must | No group signature on a manifest exists without an acceptance record. An invitation alone is recorded as not accepted. | Test (state transitions); review |
+| QV-18-REQ-011 | **Opt-in:** Manifests shall declare opening, closing, and time-zone rules, plus ballot method, eligibility cutoff reference, quorum, and combination rule, before opening. | Must | Opening is refused if any field is missing. Interfaces show every time with its time zone. | Test (schema and opening gate); usability test |
+| QV-18-REQ-012 | **Opt-in:** Conflicting signed records shall be preserved and surfaced, not silently resolved. | Must | Both records remain. Status shows "conflict" until resolved under the declared rule. Nothing is deleted. | Test (conflicting-view simulation); review |
+| QV-18-REQ-013 | **Opt-in:** Cancellation shall occur only through the declared process, and shall be signed and visible. | Must | Undeclared cancellation is rejected. A cancelled decision publishes no result. | Test (state transitions) |
+| QV-18-REQ-014 | **Opt-in:** Key rotation and retirement shall be recorded and verifiable. | Must | A rotation record references the prior key. Signatures made after the retirement point are rejected. | Test (key-rotation); expert review |
+| QV-18-REQ-015 | **Opt-in:** Outages shall not change an outcome silently. | Must | In a near-closing outage simulation, affected groups show "delivery incomplete." Any outcome change follows a manifest rule and is recorded. | Test (outage simulation) |
+| QV-18-REQ-016 | **Opt-in:** Records shall carry protocol and serialization versions. Unknown versions shall be rejected. | Must | An unknown version produces a visible error and no partial processing. | Test (conformance) |
+| QV-18-REQ-017 | **Opt-in:** Per-group results shall be withheld or merged below the manifest's publication rule. | Must | Small-group fixtures show withholding or merging as declared. The rule value is set by OD-13. | Test (small-group fixtures); privacy review |
+| QV-18-REQ-018 | **Opt-in:** Records shall contain only data needed to conduct and verify the decision. | Must | Every field appears in the QV-06 data inventory. Undocumented fields fail validation. | Review (QV-06 inventory); test (schema) |
+| QV-18-REQ-019 | **Opt-in:** Members shall see what their group is joining, and on what terms, before acceptance. | Should | The acceptance screen shows the manifest hash, terms, withdrawal rule, and combination rule in plain language. | Comprehension test (criteria set before testing) |
+| QV-18-REQ-020 | **Opt-in:** Group and decision identifiers shall not be derived from member identifiers. | Must | No member identifier appears in exported identifiers. | Review (design); test (identifier scan) |
+| QV-18-REQ-021 | **Opt-in:** A per-group breakdown shall be shown when the manifest requires it. | Should | A combined-only output fails verification when the manifest requires a breakdown. | Verifier test; usability test |
 
 ## 5. Data and privacy
 
-- **Data inputs:** group profile fields; proposal text and manifest fields (Section 7); acceptance, withdrawal, cancellation, key-rotation, and conflict records; each group's aggregate result and verification evidence.
-- **Data outputs:** signed manifests and acceptances; group results; verification evidence; exports (REQ-008); the public record, as defined under OD-12.
-- **Data controller/operator:** each group controls its own member data and eligibility. The relay or coordinator role is undecided (OD-09). This spec assumes that operator holds no member data. That assumption must be validated.
-- **Retention and deletion:** Published signed records are designed to be immutable and may not be erasable after publication (see QV-06). Retention periods, deletion of local copies, and handling of copies held by other groups are open (OD-19).
-- **Linkability risks:** stable group identifiers across decisions; repeated participation patterns; timing and traffic volume; group size revealed by counts; small aggregates; exports that let a recipient link a group's records.
-- **Visibility by member, organizer, operator, and observer:**
-  - Members: their own group's records, and the manifest of each decision their group joined.
-  - Group administrators: their group's local data and records. They do not receive other groups' member-level data.
-  - Relay or coordinator operator: transport metadata (sending group, time, size) and any content not encrypted. The manifest is visible to all participants.
-  - Observers: only fields declared public under OD-12.
-- **Privacy properties claimed (design targets, not verified):** no roster or member-level ballot leaves a group by default (REQ-002, REQ-006); signed records make changes detectable (REQ-007).
-- **Privacy properties explicitly not claimed:** anonymity of members or groups; protection from timing or traffic observers; coercion resistance; that a group signature proves legitimate authority or member consent; fairness of the combination rule; that published records can be fully erased.
+- **Data inputs:** group profiles; proposal text and manifest fields; acceptance, withdrawal, cancellation, key-rotation, and conflict records; each group's aggregate result and evidence.
+- **Data outputs:** signed manifests and acceptances; group results; evidence; exports (REQ-008); the public record (OD-12).
+- **Data controller/operator:** each group controls its own members and eligibility. The relay or coordinator role is undecided (OD-09). This spec assumes that operator holds no member data, which must be validated.
+- **Retention and deletion:** signed published records are designed to be immutable and may not be erasable (see QV-06). Retention and handling of copies held by other groups are open (OD-17).
+- **Linkability risks:** stable group identifiers; repeated participation patterns; timing and traffic volume; group size revealed by counts; small aggregates; exports that let a recipient link records.
+- **Visibility:** members see their group's records and the manifests of decisions their group joined. Administrators see their own group's data, not other groups' member-level data. The operator sees transport metadata (sending group, time, size) and any unencrypted content. The manifest is visible to all participants. Observers see only fields declared public (OD-12).
+- **Privacy properties claimed (design targets, not verified):** no roster or member-level ballot leaves a group by default (REQ-002, REQ-006); changes are detectable (REQ-007).
+- **Privacy properties explicitly not claimed:** anonymity of members or groups; protection from timing or traffic observers; coercion resistance; that a group signature proves legitimate authority or member consent; fairness of the combination rule; full erasure of published records.
 
 ## 6. Security and abuse cases
 
-This section covers only the cases listed. Compromised member devices, coercion, the legitimacy of group rules, and the correctness of cryptographic components are assessed under QV-07 and QV-16.
+This section covers only the cases listed. Compromised devices, coercion, legitimacy of group rules, and correctness of cryptographic components are assessed under QV-07 and QV-16.
 
 | Case | Attacker/cause | Impact | Mitigation | Residual risk |
 |---|---|---|---|---|
-| Operator suppresses or delays one group's messages | Relay or coordinator operator | One group excluded or outcome delayed | Multiple relays (candidate, OD-08); signed artifacts; visible delivery status (REQ-017) | Suppression is visible only if another path shows the record exists. No delivery guarantee. |
-| Different proposal or result views sent to different groups | Operator or compromised relay | Groups decide on different texts or totals | Signed manifest hashes; conflict preservation (REQ-014) | Detection requires comparison between groups; undetected if no comparison occurs |
-| Signing key theft, or weak recovery used to impersonate a group | Attacker with key access; weak recovery process | False acceptance or result under a group's identity | Key rotation records (REQ-016); group-local acceptance; custody and recovery design (OD-06) | Signatures prove key use, not authorization. Compromise time may not be establishable from signatures. |
-| Participation patterns reveal interests or relationships | Observer; relay operator | Group-level interests or partnerships exposed | Minimal public metadata (REQ-020); public/private record choice (OD-12) | Public participation is visible by design |
-| Timing and traffic volume identify which group acted | Network observer; relay operator | Group activity linked to timing | None specified. Batching or delay to be evaluated. | Exposed; no timing protection is claimed |
-| Small aggregate results reveal individual choices | Other groups; observers | A member's choice inferred in a small group | Publication rule (REQ-019, OD-14) | Inference remains possible above the rule's threshold |
-| Majority imposes a result on a dissenting or nonparticipating group | Participating groups | Unfair outcome for a minority | Declared quorum and combination rule (REQ-005, REQ-012); dissent display (REQ-013) | Software cannot make a rule fair; the rule must be accepted in advance (OD-03) |
-| Local members challenge a representative's decision to federate | Dissenting members | Legitimacy dispute | Group-local ratification (OD-11); visible terms (REQ-021) | Challenge process undefined |
-| Manifest or record mutation, or replay | Attacker with relay access | Altered terms or reused records | Hash and signature checks (REQ-001, REQ-007); version checks (REQ-018) | Depends on signature scheme choice (OD-05) |
+| Operator suppresses or delays one group's messages | Relay or coordinator operator | Group excluded or outcome delayed | Multiple relays (OD-08); visible delivery status (REQ-015) | Visible only if another path shows the record. No delivery guarantee. |
+| Different proposal or result views sent to different groups | Operator or compromised relay | Groups decide on different texts or totals | Signed manifest hashes; conflict preservation (REQ-012) | Needs cross-group comparison to detect |
+| Signing-key theft or weak recovery used to impersonate a group | Key thief; weak recovery process | False acceptance or result under a group's identity | Rotation records (REQ-014); custody design (OD-06) | Signatures prove key use, not authorization; compromise time may be unknowable |
+| Participation patterns reveal interests or relationships | Observer; operator | Group interests or partnerships exposed | Minimal public metadata (REQ-018); OD-12 | Public participation is visible by design |
+| Timing and traffic volume identify which group acted | Network observer; operator | Group activity linked to timing | None specified; batching or delay to be evaluated | Exposed; no timing protection claimed |
+| Small aggregates reveal individual choices | Other groups; observers | A member's choice inferred | Publication rule (REQ-017, OD-13) | Inference possible above the rule's threshold |
+| Majority imposes a result on a dissenting or nonparticipating group | Participating groups | Unfair outcome for a minority | Declared quorum and combination rule (REQ-005); breakdown (REQ-021) | Software cannot make a rule fair; rule must be accepted in advance (OD-03) |
+| Local members challenge a representative's decision to federate | Dissenting members | Legitimacy dispute | Group-local ratification (OD-11); visible terms (REQ-019) | Challenge process undefined |
 
 ## 7. Interfaces, contracts, and dependencies
 
-### API and schema contracts
+**Group profile** (signed, versioned): group identifier, public keys, protocol versions, exchange endpoint or method, administrative authorization policy, public governance documents, contact and dispute channels. It must not require publishing member identities.
 
-- **Group profile** (signed, versioned): group identifier, public keys, protocol versions, exchange endpoint or method, administrative authorization policy, public governance documents, and contact and dispute channels. It must not require publishing member identities.
-- **Decision manifest** (signed, immutable): unique decision identifier; participating group identifiers; proposal text or content hash plus retrievable text; exact rule versions accepted by each group; ballot method and structure; local eligibility cutoff or policy reference; group-level quorum and combination rule; opening and closing conditions with time-zone semantics; data each group shares or publishes; amendment, challenge, recount, withdrawal, and cancellation rules; protocol and serialization versions.
-- **Acceptance record:** a group signature over the exact manifest hash. A signature proves acceptance by a key, not that the key holder had legitimate authority or that members consented.
-- **Group result artifact:** the group's aggregate result and verification evidence. Evidence form follows QV-16.
-- **Withdrawal, cancellation, conflict, and key-rotation records:** schemas to be defined under QV-09.
+**Decision manifest** (signed, immutable): unique decision identifier; participating group identifiers; proposal text or hash plus retrievable text; exact rule versions accepted by each group; ballot method and structure; eligibility cutoff reference; quorum and combination rule; opening and closing conditions with time-zone semantics; data each group shares; amendment, challenge, recount, withdrawal, and cancellation rules; protocol and serialization versions.
 
-### Local participation
+**Acceptance record:** a group signature over the exact manifest hash. It proves acceptance by a key, not legitimate authority or member consent.
 
-Each group keeps its eligibility process local. The initial model is that each group runs its own local ballot and publishes an aggregate result with verification evidence. A shared-ballot design using privacy-preserving credentials adds a stronger credential and protocol requirement (OD-02).
+**Group result artifact:** aggregate result and verification evidence (form per QV-16). **Withdrawal, cancellation, conflict, and key-rotation records:** schemas to be defined under QV-09.
 
-### Result combination
+**Local participation:** each group runs its own ballot and publishes an aggregate result with evidence. A shared-ballot design needs stronger credentials and protocols (OD-02).
 
-The manifest defines the rule: one-group-one-vote, member-weighted, quorum-gated, or another explicit rule. Candidate methods:
-- Combine group-level aggregate results using a public deterministic rule.
-- Verify each group's signed tally artifacts independently.
-- Later, evaluate encrypted combination of group totals or shared encrypted ballots.
+**Result combination:** the manifest defines the rule. Candidates: combine group aggregates by a public deterministic rule; verify each group's signed tally independently; later, evaluate encrypted combination. Dissenting results are shown separately when policy permits, and a single total must not hide disagreement. Abstentions, unequal group sizes, nonparticipation, and withdrawal are open (OD-03, OD-04).
 
-Show dissenting group results separately when policy permits. A single total must not conceal disagreement. Treatment of abstentions, unequal group sizes, nonparticipation, and withdrawal is open (OD-03, OD-04).
-
-### Failure and retry behavior
+**Failure and retry behavior:**
 
 | Scenario | Required behavior | Evidence preserved |
 |---|---|---|
-| Group signing key compromised during an open decision | Group revokes the key through the rotation process. Decision is flagged. Continuation or restart follows the manifest rule (OD-16). | Rotation record; signatures as recorded; flag |
-| Relay unavailable near closing | Closing follows manifest time rules. Affected groups show "delivery incomplete." No silent extension or exclusion. | Delivery attempts and status |
-| Relay censors or delays a group's records | Non-delivery is detected only where another path shows the record. The decision shows the gap. | Records held and received |
-| Conflicting records for one decision | Both retained. Status "conflict." Resolution follows the declared rule and member process. | Both signed records |
-| Malformed or conflicting manifest | Opening refused. Malformed record rejected with a visible error. | Rejected record and reason |
-| Group withdraws | Withdrawal recorded. Quorum and result recomputed under the declared rule. The manifest states whether the result changes after cutoff. | Withdrawal record; before and after results where policy requires |
-| Challenged local result | Local record remains. Federation record references the challenge. Combined-result handling follows OD-16. | Challenge record |
-| Lost local evidence | Group cannot silently reconstruct it. Copies held by other groups remain. The gap is recorded. | Gap record |
-| Group fork (competing keys claim one group identity) | Both key histories preserved. Members informed. Software does not choose a canonical group. | Both key histories |
-| Group split into separate groups | New group identity. Source history unchanged. No automatic inheritance (QV-19 fork rules). | Source records unchanged |
-| Several groups unreachable | Handled by the declared nonparticipation rule (REQ-005). Decision reports which groups responded. | Participation status per group |
+| Group key compromised during an open decision | Revoke and rotate; flag the decision; continuation or restart follows OD-15 | Rotation record; signatures as recorded |
+| Relay unavailable near closing | Closing follows manifest rules; affected groups show "delivery incomplete"; no silent extension | Delivery attempts and status |
+| Relay censors or delays a group's records | Gap shown where another path reveals the record | Records held and received |
+| Conflicting records for one decision | Both kept; status "conflict"; resolved per declared rule | Both signed records |
+| Malformed or conflicting manifest | Opening refused; record rejected with visible reason | Rejected record and reason |
+| Group withdraws, or quorum changes | Recomputed under declared rule; manifest states whether result changes after cutoff | Withdrawal record; before and after results where policy requires |
+| Challenged local result | Local record kept; federation record references challenge | Challenge record |
+| Lost local evidence | Not silently reconstructed; other groups' copies kept; gap recorded | Gap record |
+| Group fork (competing keys for one identity) | Both key histories kept; members informed; no canonical group chosen by software | Both key histories |
+| Group split | New identity; source history unchanged; no automatic inheritance (QV-19) | Source records unchanged |
 
-### Upstream dependencies
-- QV-03: decision lifecycle, quorum, dispute, and rule acceptance. Its roles matrix is incomplete.
-- QV-04: each group's local eligibility and cutoff.
-- QV-06: data inventory and retention. Its inventory is incomplete (blocks REQ-020).
-- QV-07: threat model for relays, keys, and recovery.
-- QV-16: signature, verification, and log designs.
-- QV-17: credential formats, needed only for Phase 3.
+**Upstream dependencies:** QV-03 (lifecycle, quorum, disputes; roles matrix incomplete), QV-04 (local eligibility and cutoff), QV-06 (data inventory; incomplete, blocks REQ-018), QV-07 (relay, key, and recovery threats), QV-16 (signatures, verification, logs), QV-17 (credentials, Phase 3 only).
 
-### Downstream consumers
-- Each group's local ballot system.
-- Independent verifier.
-- Group export and exit (QV-19).
-- Relay or coordinator hosting (QV-08, OD-09).
-- Support and incident handling (QV-12).
+**Downstream consumers:** local ballot systems; independent verifier; group export and exit (QV-19); relay hosting (QV-08); support and incidents (QV-12).
 
-### Versioning and compatibility
-
-Every record carries protocol and serialization versions (REQ-018). Unknown versions are rejected. Compatibility and version-support policy is open (OD-21).
+**Versioning and compatibility:** every record carries protocol and serialization versions (REQ-016). The compatibility policy is open (OD-18).
 
 ## 8. UX, accessibility, and localization
 
-- **Key screens:** group profile and terms; manifest review and acceptance; invitation and decline; per-group results and dissent view; conflict and withdrawal notices; export and import.
-- **Plain-language explanations:** an acceptance means the group's key accepted this exact text, not that every member agreed (REQ-021). The combined result follows a stated rule. Software cannot make that rule fair.
-- **Keyboard and screen-reader requirements:** acceptance and results views operable by keyboard and readable by assistive technology. Hashes and identifiers shown in a form that can be compared character by character.
-- **Low-bandwidth and device constraints:** manifests and records retrievable as plain text. Manual exchange (Phase 1) works without a connection to federation endpoints.
-- **Localization requirements:** manifest language is part of the signed text (OD-18). Interface text and explanations are translated before any group accepts, without changing meaning.
+- **Key screens:** group terms; manifest review and acceptance; invitations and declines; per-group results and dissent view; conflict and withdrawal notices; export and import.
+- **Plain-language explanations:** acceptance means the group's key accepted this exact text, not that every member agreed. The combined result follows a stated rule that software cannot make fair (REQ-019).
+- **Keyboard and screen-reader:** acceptance and results views operable by keyboard and readable by assistive technology. Hashes shown in a form that can be compared character by character.
+- **Low-bandwidth and device:** manifests and records retrievable as plain text. Phase 1 manual exchange works without federation endpoints.
+- **Localization:** manifest language is part of the signed text (OD-16). Interface text is translated before any group accepts, without changing meaning.
 
 ## 9. Operations
 
-- **Configuration:** federation off by default (REQ-009). Per-group settings for exchange method (OD-08) and key storage (OD-06).
-- **Monitoring and audit:** record every acceptance, decline, withdrawal, cancellation, conflict, and key rotation in signed history. Monitor delivery status per group. Logs must not join member identity to participation timing (see QV-16).
-- **Backup, recovery, and deletion:** signing keys and history backed up under the custody design (OD-06). Deletion limits follow Section 5 and OD-19.
-- **Incident response:** key-compromise procedure to revoke, rotate, record, and notify participants of affected decisions. Not yet written. Expert review required.
-- **Support and escalation:** group administrators first. Disputes route through the QV-03 process. Operator escalation through QV-12.
+- **Configuration:** federation off by default (REQ-009); per-group exchange method (OD-08) and key storage (OD-06).
+- **Monitoring and audit:** record every acceptance, decline, withdrawal, cancellation, conflict, and rotation in signed history. Monitor delivery per group. Do not join member identity to participation timing (QV-16).
+- **Backup, recovery, and deletion:** keys and history backed up under OD-06. Deletion limits per Section 5 and OD-17.
+- **Incident response:** key-compromise procedure to revoke, rotate, record, and notify affected participants. Not yet written. Expert review required.
+- **Support and escalation:** group administrators first; disputes through QV-03; operator escalation through QV-12.
 
 ## 10. Testing and verification
 
-- **Unit tests:** manifest canonicalization and hashing; signature verification; schema validation; state transitions for acceptance, withdrawal, and cancellation.
-- **Integration tests:** two-group exchange by manual import (Phase 1); quorum and withdrawal recomputation; federation-disabled path (REQ-009); version rejection (REQ-018).
+- **Unit tests:** manifest hashing; signature verification; schema validation; acceptance, withdrawal, and cancellation transitions.
+- **Integration tests:** two-group manual import; quorum and withdrawal recomputation; federation-disabled path (REQ-009); version rejection (REQ-016).
 - **End-to-end tests:** invitation through verified result, and partial outage near closing (Phase 2 only).
-- **Security/privacy tests:** manifest and result mutation; replay; conflicting views; key rotation and retired-key rejection; export field scan; small-group suppression; identifier scan.
-- **Independent review or audit:** expert cryptography and protocol review before Phase 2 release (OD-05, OD-06, OD-07). Privacy review of exports (REQ-006, REQ-020). Comprehension testing of acceptance and results (REQ-021).
-- **Release-blocking criteria:** all Must requirements verified. Federation off by default. OD-02, OD-05, OD-07, OD-08, and OD-09 closed, or deferred with rationale in the decision log, before Phase 2 release. Interoperable test vectors pass on more than one independent verifier implementation.
+- **Security/privacy tests:** manifest and result mutation; replay; conflicting views; retired-key rejection; export field scan; small-group suppression; identifier scan.
+- **Independent review or audit:** expert cryptography and protocol review before Phase 2 (OD-05, OD-06, OD-07); export privacy review (REQ-006, REQ-018); comprehension testing (REQ-019).
+- **Release-blocking criteria:** all Must requirements verified; federation off by default; OD-02, OD-05, OD-07, OD-08, and OD-09 closed or deferred with rationale in the decision log; interoperable test vectors pass on more than one independent verifier.
 
 ## 11. Constraints and assumptions
 
-**Constraints**
-- No new cryptographic primitives; use reviewed, version-pinned implementations (QV-16).
-- No token, smart contract, public ledger, public directory, or global membership registry is required.
-- Each group keeps its own roster. The federation layer receives no roster.
+**Constraints:** no new cryptographic primitives (QV-16); no token, smart contract, public ledger, public directory, or global registry required; each group keeps its own roster.
 
-**Assumptions requiring validation**
+**Assumptions requiring validation:**
 - Groups can keep signing keys secure enough for the decision's stakes [UNVERIFIED].
-- Groups are willing to share aggregate results and evidence with other groups.
+- Groups are willing to share aggregate results and evidence.
 - Participants understand that a signed acceptance is not member consent.
 - Group clocks are close enough for deadlines [UNVERIFIED].
-- Manual exchange is sufficient for early use (recommendation; not validated).
+- Manual exchange suffices for early use (recommendation; not validated).
 
-**Reference inputs** (not selected dependencies)
-- [W3C Verifiable Credentials Data Model 2.0](https://www.w3.org/TR/2025/REC-vc-data-model-2.0-20250515/) and [DID Core](https://www.w3.org/TR/did-core/) for identity and credential interoperability concepts.
-- [W3C ActivityPub](https://www.w3.org/TR/activitypub/) for federation concepts. It is not a governance or voting protocol.
-- [RFC 9162 — Certificate Transparency v2.0](https://www.rfc-editor.org/rfc/rfc9162.html) for append-only logs and consistency proofs. A single log can still equivocate without monitoring.
-- Key-management and signature references cited in QV-16 (FIPS 186-5; NIST SP 800-57 Part 1 Rev. 5).
+**Reference inputs** (not selected dependencies): [W3C Verifiable Credentials Data Model 2.0](https://www.w3.org/TR/2025/REC-vc-data-model-2.0-20250515/) and [DID Core](https://www.w3.org/TR/did-core/) for identity and credential concepts; [W3C ActivityPub](https://www.w3.org/TR/activitypub/) for federation concepts (not a governance or voting protocol); [RFC 9162 — Certificate Transparency v2.0](https://www.rfc-editor.org/rfc/rfc9162.html) for append-only logs (a single log can still equivocate without monitoring); signature and key-management references cited in QV-16.
 
 ## 12. Open questions
 
-Each open question is tracked as a decision in Section 14.
+Each question is tracked as a decision in Section 14.
 
 | Question | Owner | Target review | Resolution |
 |---|---|---|---|
-| Which candidate use case is first? (OD-01) | Project owner | Before Phase 1 design | Pending |
-| Local-result aggregation or shared member ballot? (OD-02) | Project owner; expert reviewer | Before Phase 2 design | Pending |
-| Weighting, quorum, and withdrawal treatment? (OD-03, OD-04) | Project owner | Before Phase 2 design | Pending |
-| Public or private records? (OD-12) | Project owner | Before Phase 1 build | Pending |
-| Group discovery and invitation? (OD-10) | Project owner | Before Phase 2 design | Pending |
-| Group identity, signatures, and key recovery? (OD-05, OD-06) | Expert reviewer; project owner | Before Phase 1 build | Pending |
-| Local ratification of federation? (OD-11) | Project owner | Before Phase 2 design | Pending |
-| Dissent representation and cross-jurisdiction constraints? (OD-13, OD-15) | Project owner; legal review | Before Phase 2 design | Pending |
+| First use case (OD-01) | Project owner | Before Phase 1 design | Pending |
+| Aggregate results or shared ballot (OD-02) | Project owner; expert reviewer | Before Phase 2 design | Pending |
+| Weighting, quorum, withdrawal (OD-03, OD-04) | Project owner | Before Phase 2 design | Pending |
+| Public or private records (OD-12) | Project owner | Before Phase 1 build | Pending |
+| Keys, identity, recovery (OD-05, OD-06) | Expert reviewer; project owner | Before Phase 1 build | Pending |
+| Discovery and invitation (OD-10) | Project owner | Before Phase 2 design | Pending |
+| Local ratification (OD-11) | Project owner | Before Phase 2 design | Pending |
+| Dissent, legal constraints (OD-13, OD-14) | Project owner; legal review | Before Phase 2 design | Pending |
 
 ## 13. Approval and change history
 
@@ -261,151 +216,25 @@ Changes to approved requirements must be recorded in the decision log and traced
 
 ## 14. Open decisions
 
-Each entry lists the question, candidates, trade-offs, what is needed to decide, and the owner. Every entry requires expert review before it is closed.
+Every item below requires expert review before it is closed. Owners are roles; no person is assigned.
 
-### OD-01 — First use case
-- **Question:** Which candidate use case should the first shared decision support?
-- **Candidates:** (a) shared purchasing policy for co-ops; (b) coordinated proposal for worker collectives; (c) opt-in action for independent online communities.
-- **Trade-offs:** (a) involves money-related rules that may fall outside software scope; (b) likely needs strong local ratification; (c) membership rules may be least defined.
-- **Needed to decide:** user research with prospective groups; policy review under QV-03; entry in the decision log.
-- **Owner:** Project owner. Expert review required (product and policy).
-
-### OD-02 — Local-result aggregation or shared member ballot
-- **Question:** Do groups exchange aggregate results only, or do members cast a shared ballot?
-- **Candidates:** (a) aggregate results with verification evidence (initial model); (b) shared ballot with privacy-preserving credentials (Phase 3).
-- **Trade-offs:** (a) keeps rosters local and is simpler, but reveals group-level totals; (b) reduces group-level exposure but needs credential and protocol review (QV-16, QV-17).
-- **Needed to decide:** protocol comparison under QV-16; threat-model review under QV-07.
-- **Owner:** Project owner; expert reviewer. Expert review required.
-
-### OD-03 — Result-combination rule and weighting
-- **Question:** How are group results combined?
-- **Candidates:** one-group-one-vote; member-weighted; quorum-gated; another explicit rule.
-- **Trade-offs:** member weighting favors large groups and reveals group size; one-group-one-vote can outweigh member counts; quorum gates add stall risk.
-- **Needed to decide:** agreement from each prospective group before a decision is opened; fairness review.
-- **Owner:** Project owner. Expert review required.
-
-### OD-04 — Quorum, abstention, nonparticipation, and withdrawal
-- **Question:** How do quorum and results treat abstentions, unequal group sizes, nonparticipation, and withdrawal?
-- **Candidates:** exclude non-responding groups from the total; count them as no; hold the decision until a quorum responds.
-- **Trade-offs:** exclusion lets a few groups decide; counting as no lets a minority block; holding risks indefinite stall.
-- **Needed to decide:** QV-03 quorum policy; worked examples with the chosen weighting.
-- **Owner:** Project owner. Expert review required.
-
-### OD-05 — Signature scheme for group keys, manifests, and results
-- **Question:** Which signature scheme signs profiles, manifests, acceptances, and results?
-- **Candidates:** elliptic-curve signatures; RSA-based signatures; other signature families (maturity for this use [UNVERIFIED]).
-- **Trade-offs:** key and signature size; verifier library support; ease of independent implementation; long-term verifiability.
-- **Needed to decide:** cryptographic review; test vectors; the FIPS 186-5 reference from QV-16.
-- **Owner:** Expert reviewer (cryptography); project owner. Expert review required.
-
-### OD-06 — Group key custody, rotation, and recovery
-- **Question:** Who holds group signing keys, and how are they rotated and recovered?
-- **Candidates:** single key held by an administrator; threshold signing by several members; hardware-backed keys; rotation with cross-signing by the prior key.
-- **Trade-offs:** single keys are simple and fragile; threshold signing spreads trust and adds coordination cost; recovery paths can be exploited (REQ-016).
-- **Needed to decide:** key-management design under QV-07 and SP 800-57 guidance cited in QV-16; recovery exercises.
-- **Owner:** Expert reviewer (cryptography); project owner. Expert review required.
-
-### OD-07 — Ordering and agreement for shared records
-- **Question:** Is any ordering, log, or consensus mechanism needed for shared records?
-- **Candidates:** none (groups compare manifest hashes directly); append-only signed log with independent witnesses (RFC 9162 pattern); single coordinator ordering; multi-party agreement protocol (applicability [UNVERIFIED]); distributed ledger.
-- **Trade-offs:** no mechanism leaves equivocation undetected unless groups compare; a log needs monitors; a coordinator is a single point of control; a ledger adds permanence and metadata exposure, and is not required.
-- **Needed to decide:** threat-model review of equivocation; monitor and witness design; metadata analysis for any ledger.
-- **Owner:** Expert reviewer; project owner. Expert review required.
-
-### OD-08 — Transport and exchange method
-- **Question:** How do records move between groups?
-- **Candidates:** manual file exchange (Phase 1); group-hosted endpoints pulled by peers; relay or inbox service (ActivityPub-style concept); multiple independent relays; peer-to-peer.
-- **Trade-offs:** manual exchange is slow but avoids operators; endpoints expose group availability; relays enable censorship and metadata exposure; multiple relays add cost.
-- **Needed to decide:** threat-model review; availability targets under QV-08; transport security under QV-16.
-- **Owner:** Project owner; expert reviewer. Expert review required.
-
-### OD-09 — Relay and coordinator role and trust model
-- **Question:** Does any party coordinate federation, and what may it see or do?
-- **Candidates:** no coordinator; coordinator designated per decision; several operators; QuietVote-hosted operator; group-run operators.
-- **Trade-offs:** no coordinator maximizes control but may stall delivery; a hosted operator is convenient but sees metadata; several operators spread trust and raise coordination cost.
-- **Needed to decide:** QV-08 hosting models; QV-07 operator trust assumptions; metadata review.
-- **Owner:** Project owner. Expert review required.
-
-### OD-10 — Group discovery and invitation
-- **Question:** How do groups find one another?
-- **Candidates:** invitation only; a self-published group profile in an optional directory; no directory.
-- **Trade-offs:** invitation only limits discovery but reduces exposure; a directory helps discovery but publicizes group existence and interests.
-- **Needed to decide:** privacy review of group-existence disclosure; user research.
-- **Owner:** Project owner. Expert review required.
-
-### OD-11 — Local ratification of federation participation
-- **Question:** How do a group's members approve its federation?
-- **Candidates:** administrator decision; member vote under QV-03 policy; hybrid with a notice period.
-- **Trade-offs:** administrator decision is fast but invites legitimacy challenges; a member vote is slower and needs its own privacy design.
-- **Needed to decide:** QV-03 decision lifecycle; challenge process definition.
-- **Owner:** Project owner. Expert review required.
-
-### OD-12 — Public and private record scope
-- **Question:** Which federation records are public?
-- **Candidates:** fully public; visible to participating groups only; tiered, with manifests and results public and evidence restricted.
-- **Trade-offs:** public records aid verification and cannot be withdrawn once published; restricted records limit observers and weaken independent checks.
-- **Needed to decide:** QV-06 retention analysis; verification requirements from QV-11.
-- **Owner:** Project owner. Expert review required.
-
-### OD-13 — Dissent representation
-- **Question:** When is a dissenting group's result shown separately?
-- **Candidates:** always; only when the manifest requires it; only in aggregate form with suppression.
-- **Trade-offs:** always-shown reveals minority positions and small-group detail; manifest-driven display depends on policy; aggregate form hides disagreement.
-- **Needed to decide:** usability testing; small-group analysis (OD-14).
-- **Owner:** Project owner. Expert review required.
-
-### OD-14 — Small-group publication rule
-- **Question:** Below what group size are per-group results withheld or merged?
-- **Candidates:** a fixed rule set by QuietVote; a rule set per manifest; no per-group publication at all.
-- **Trade-offs:** a fixed rule is predictable but may fit no group; per-manifest rules vary in protection; no publication limits transparency.
-- **Needed to decide:** inference analysis under QV-06 and QV-07; the threshold value itself, not yet chosen.
-- **Owner:** Project owner; expert reviewer. Expert review required.
-
-### OD-15 — Cross-jurisdiction constraints and scope fit
-- **Question:** Do shared decisions across groups in different jurisdictions carry legal duties, and do they fit the README's initial scope of internal decisions?
-- **Candidates:** restrict federation to one jurisdiction; allow cross-border with published terms; defer federation until scope is extended.
-- **Trade-offs:** restriction limits use cases; cross-border terms add legal exposure; deferral delays Phase 2.
-- **Needed to decide:** legal review; project-owner decision on scope.
-- **Owner:** Project owner; legal review. Expert review required.
-
-### OD-16 — Amendment, challenge, recount, cancellation, and conflict rules
-- **Question:** What process governs changes, challenges, and conflicts in shared decisions?
-- **Candidates:** the group-local process only; a manifest-declared process agreed in advance; cancel and restart for any change after opening.
-- **Trade-offs:** local-only process cannot resolve cross-group conflicts; declared process is predictable but must be fixed before opening; restart is clear but costly.
-- **Needed to decide:** QV-03 amend and dispute policy; worked failure scenarios from Section 7.
-- **Owner:** Project owner. Expert review required.
-
-### OD-17 — Time semantics across groups
-- **Question:** How are opening and closing instants defined across time zones and clocks?
-- **Candidates:** one shared instant in UTC; local time per group with a declared reference; a closing instant plus grace rule.
-- **Trade-offs:** a shared instant is unambiguous but needs clear display; local times feel natural but invite disputes; grace rules delay results.
-- **Needed to decide:** QV-08 time-handling decision; clock-accuracy assumption (Section 11).
-- **Owner:** Project owner. Expert review required.
-
-### OD-18 — Multilingual manifests
-- **Question:** What does the signed hash cover when a manifest exists in several languages?
-- **Candidates:** one signed manifest per language; one canonical language with non-binding translations; one signed manifest with all languages inside.
-- **Trade-offs:** per-language signing is exact but multiplies acceptances; canonical-language signing is simple but may disadvantage readers; combined signing is complex.
-- **Needed to decide:** QV-13 localization requirements; comprehension testing.
-- **Owner:** Project owner. Expert review required.
-
-### OD-19 — Retention and deletion of federation records
-- **Question:** How long are federation records and copies kept, and what can be deleted?
-- **Candidates:** retain signed records permanently; retain for a declared period; delete local copies only.
-- **Trade-offs:** permanent records support verification but resist erasure; declared periods support deletion but may break later verification.
-- **Needed to decide:** QV-06 retention review; legal review (OD-15).
-- **Owner:** Project owner. Expert review required.
-
-### OD-20 — Gate criteria for automated federation
-- **Question:** What evidence shows that export and import are insufficient and automated federation is justified?
-- **Candidates:** user-reported need recorded in the decision log; measured failure of manual exchange in pilots; no gate, with manual exchange as default.
-- **Trade-offs:** a stated gate prevents premature automation but is hard to measure; no gate risks building before need is shown.
-- **Needed to decide:** pilot design; measurable criteria (none defined yet).
-- **Owner:** Project owner. Expert review required.
-
-### OD-21 — Compatibility and version-support policy
-- **Question:** How long are old protocol versions supported, and how are they migrated?
-- **Candidates:** support the current version only; support one prior version for a declared period; permanent read support for signed records.
-- **Trade-offs:** current-only is simple but can strand records; prior-version support adds maintenance; permanent read support adds verifier burden.
-- **Needed to decide:** QV-09 versioning policy; export format review (REQ-008).
-- **Owner:** Project owner; expert reviewer. Expert review required.
+| ID | Question | Candidates | Trade-offs | Needed to decide | Owner |
+|---|---|---|---|---|---|
+| OD-01 | Which use case is first? | Shared purchasing (co-ops); coordinated proposal (worker collectives); opt-in action (online communities) | Purchasing may touch money rules outside scope; proposals need strong ratification; communities may have weakest membership rules | User research; QV-03 policy review | Project owner. Expert review required. |
+| OD-02 | Aggregate results or shared member ballot? | Aggregate results with evidence; shared ballot with anonymous credentials | Aggregates keep rosters local but expose group totals; shared ballots need credential and protocol review | QV-16 protocol comparison; QV-07 threat review | Project owner; expert reviewer. Expert review required. |
+| OD-03 | Combination rule and weighting | One-group-one-vote; member-weighted; quorum-gated; other | Member weighting favors large groups and reveals size; quorum gates can stall | Agreement from each prospective group before opening; fairness review | Project owner. Expert review required. |
+| OD-04 | Quorum, abstention, nonparticipation, withdrawal | Exclude non-responders; count as no; hold until quorum | Exclusion lets few groups decide; "no" lets a minority block; holding risks stall | QV-03 quorum policy; worked examples | Project owner. Expert review required. |
+| OD-05 | Signature scheme for profiles, manifests, acceptances, results | Elliptic-curve; RSA-based; other families (maturity [UNVERIFIED]) | Signature size; verifier support; independent implementation; long-term verification | Cryptographic review; test vectors; FIPS 186-5 (QV-16) | Expert reviewer (cryptography). Expert review required. |
+| OD-06 | Key custody, rotation, and recovery | Single administrator key; threshold signing; hardware-backed keys; cross-signed rotation | Single keys are fragile; thresholds add coordination; recovery can be exploited | Key design under QV-07 and SP 800-57 (QV-16); recovery drills | Expert reviewer. Expert review required. |
+| OD-07 | Ordering or agreement for shared records | None (direct hash comparison); signed log with witnesses (RFC 9162 pattern); coordinator ordering; multi-party agreement (applicability [UNVERIFIED]); ledger | No mechanism leaves equivocation undetected unless groups compare; logs need monitors; coordinators control order; ledgers add permanence and metadata exposure | Equivocation threat review; monitor design; metadata analysis | Expert reviewer. Expert review required. |
+| OD-08 | Transport and exchange method | Manual files; group endpoints pulled by peers; relay or inbox (ActivityPub-style); several relays; peer-to-peer | Manual is slow but avoids operators; endpoints expose availability; relays enable censorship and metadata exposure | Threat review; QV-08 availability; QV-16 transport | Project owner; expert reviewer. Expert review required. |
+| OD-09 | Relay or coordinator role and trust | No coordinator; per-decision coordinator; several operators; QuietVote-hosted; group-run | No coordinator may stall delivery; hosted operator sees metadata; several operators raise coordination cost | QV-08 hosting models; QV-07 trust assumptions | Project owner. Expert review required. |
+| OD-10 | Group discovery and invitation | Invitation only; optional self-published directory; no directory | Invitation limits discovery and exposure; directory publicizes existence and interests | Privacy review; user research | Project owner. Expert review required. |
+| OD-11 | Local ratification of federation | Administrator decision; member vote under QV-03; hybrid with notice | Administrator decision is fast but invites challenge; member vote is slower and needs its own privacy design | QV-03 lifecycle; challenge process | Project owner. Expert review required. |
+| OD-12 | Public or private record scope | Fully public; participating groups only; tiered | Public records aid verification but cannot be withdrawn; restricted records weaken independent checks | QV-06 retention analysis; QV-11 verification needs | Project owner. Expert review required. |
+| OD-13 | Dissent display and small-group publication rule | Always show; manifest-driven; aggregate with suppression; threshold value (not chosen) | Always-shown reveals minority positions; manifest-driven depends on policy; suppression hides disagreement | Usability testing; inference analysis under QV-06 and QV-07 | Project owner; expert reviewer. Expert review required. |
+| OD-14 | Cross-jurisdiction constraints and fit with README scope | Restrict to one jurisdiction; cross-border with published terms; defer until scope extended | Restriction limits use; cross-border adds legal exposure; the README limits initial scope to internal decisions | Legal review; project-owner scope decision | Project owner; legal review. Expert review required. |
+| OD-15 | Amendment, challenge, cancellation, conflict, and time semantics | Group-local process only; manifest-declared process; cancel and restart after opening; UTC instant or local times with declared reference | Local process cannot resolve cross-group conflicts; declared process must be fixed before opening; restart is costly; UTC is unambiguous but needs display | QV-03 amend and dispute policy; QV-08 time handling | Project owner. Expert review required. |
+| OD-16 | Multilingual manifests | One signed manifest per language; canonical language with non-binding translations; one manifest with all languages | Per-language signing is exact but multiplies acceptances; canonical text may disadvantage readers | QV-13 localization; comprehension testing | Project owner. Expert review required. |
+| OD-17 | Retention and deletion of federation records | Permanent signed records; declared retention period; local copies only deletable | Permanent records aid verification but resist erasure; declared periods may break later verification | QV-06 retention review; legal review (OD-14) | Project owner. Expert review required. |
+| OD-18 | Gate for automated federation and compatibility policy | Gate by logged user need or measured manual-exchange failure; current version only; one prior version; permanent read support | A gate is hard to measure; current-only can strand records; prior versions add maintenance | Pilot design; QV-09 versioning; export review (REQ-008) | Project owner; expert reviewer. Expert review required. |
