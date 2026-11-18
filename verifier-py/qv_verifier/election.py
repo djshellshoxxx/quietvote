@@ -484,8 +484,8 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     st.complete("chk.keys.trustees")  # App. C steps 5-10 are done
 
     # ------------------------------------------------ C3 window markers
-    # Only authenticated markers can occupy a phase. Earlier junk and later
-    # duplicates remain visible without replacing the first valid signature set.
+    # Only authenticated markers can occupy a phase. Earlier junk and identical
+    # repeats remain log-only; differing authenticated bodies are fatal (ADR-027 / P10).
     window_markers: dict[str, tuple[int, dict]] = {}
     for seq, en in later_markers:
         name = en["body"].get("name")
@@ -494,6 +494,10 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         if not _coordinator_ok(ctx, en["body"], en.get("sigs"), coord):
             st.add(None, "E_SIG", False, f"seq {seq}: window marker signature")
         elif name in window_markers:
+            if qvjson.jcs(en["body"]) != qvjson.jcs(window_markers[name][1]["body"]):
+                st.add("chk.time.window", "E_MARKERS", True,
+                       f"seq {seq}: conflicting marker {name}: body differs from the first authenticated marker")
+                _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
             st.add(None, "E_MARKERS", False, f"seq {seq}: duplicate marker {name}")
         else:
             window_markers[name] = (seq, en)
