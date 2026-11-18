@@ -53,9 +53,9 @@ The existing suite includes an actual issuer executable and real HTTP server;
 the four new probes exercise controlled filesystem/network interleavings through
 the shipped CLI dispatcher. No expectation or acceptance gate was weakened.
 
-## Independent author cross-review
+## Author cross-review
 
-The implementation author independently reviewed exact repair `7092ddb` and ran
+The implementation author reviewed the source of exact repair `7092ddb` and ran
 all four new regressions on their equivalent cherry-pick `dc41c01`: 4 passed,
 0 failed, 0.669 seconds. They confirmed the pre-send check runs after unlock and
 outside the network-error handler, preserving a known-not-sent refusal; no scoped

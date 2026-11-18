@@ -78,7 +78,7 @@ log append, delete it in the transaction that records the phase event, and resol
 replaying the log; do not regenerate previously pruned historical events. This is a proposal, not implemented.
 
 Final focused bridge/retry/rollback/deletion/shutdown run: **22 pass, 0 fail/skip**.
-Fresh agent `fresh_server_review` independently reviewed the current changes and ran bridge recovery +
+Fresh agent `fresh_server_review` reviewed the current source changes and ran bridge recovery +
 management-response recovery: **10 pass, 0 fail/skip**. It found no unresolved blocker in this slice.
 This remains AI review, not external security acceptance. The first full run still has the superseded
 startup failure and must not be described as final-candidate green.

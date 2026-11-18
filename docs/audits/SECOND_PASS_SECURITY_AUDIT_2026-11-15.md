@@ -1,7 +1,7 @@
 # QuietVote — Second-Pass Security Audit
 
 **Date:** 2026-11-15  
-**Audited ref:** `integration/quietvote-completion`  
+**Reviewed ref:** `integration/quietvote-completion`\
 **Observed integration head:** `35a450045861c860f3d592ff414cc46c56f438d0` (from branch comparison)  
 **Comparison branch:** `chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114`  
 **Scope:** Additional source review, cross-branch comparison, existing audit-note reconciliation, verifier semantics, server controls, trustee/client notes, CI and release posture.
@@ -10,11 +10,11 @@
 
 ## Executive summary
 
-This pass identified one new high-severity ballot-protocol defect in the audited integration branch, confirmed several earlier assurance blockers, and found important gaps in operational key custody and evidence handling.
+This pass identified one new high-severity ballot-protocol defect in the reviewed integration branch, confirmed several earlier assurance blockers, and found important gaps in operational key custody and evidence handling.
 
 ### Highest-priority issues
 
-1. **S1-02 — reverse-order spoil/cast ciphertext reuse:** the integration branch can admit a cast ballot whose ciphertexts were already publicly opened by an earlier spoil. The opposite order is checked. A separate divergent branch contains the proposed guard and regression test; neither is present on the audited integration ref.
+1. **S1-02 — reverse-order spoil/cast ciphertext reuse:** the integration branch can admit a cast ballot whose ciphertexts were already publicly opened by an earlier spoil. The opposite order is checked. A separate divergent branch contains the proposed guard and regression test; neither is present on the reviewed integration ref.
 2. **Verifier completeness — overall PASS with V4 not_run:** the TypeScript verifier can return the protocol verifier's PASS even when no board export is supplied and the bulletin-board checks remain not_run.
 3. **Manifest authenticity — caller pin optional:** absent an out-of-band manifest hash, a verifier checks consistency against the bundle's own hash and emits a caveat, but may still return PASS.
 4. **Rollback/equivocation:** database-local checkpoint history is not an independent high-water mark. Gossip can detect a peer-ahead view, but outbound gossip is disabled by default unless configured.
@@ -31,13 +31,13 @@ The repository has meaningful controls: strict request signing, replay protectio
 ### QV2P-01 — Reverse-order spoil/cast ciphertext reuse
 
 **Severity:** HIGH  
-**Status:** Present on audited integration branch; proposed repair exists on a divergent branch.  
+**Status:** Present on reviewed integration branch; proposed repair exists on a divergent branch.\
 **Evidence type:** Direct source comparison plus a regression-test/PoC artifact on the separate branch. Not executed in this pass.
 
 **Affected files**
 - `packages/server/src/election.ts`
 - `packages/protocol/src/ballot.ts`
-- `packages/server/test/s1-spoil-then-cast-rewrap.test.ts` (exists on the separate S1-02 branch, absent on audited integration)
+- `packages/server/test/s1-spoil-then-cast-rewrap.test.ts` (exists on the separate S1-02 branch, absent on reviewed integration)
 - `docs/audit/2026-11-11/poc/s1-spoil-then-cast-rewrap.repro.ts` (historical related evidence)
 
 **Observed defect**
@@ -398,7 +398,7 @@ Consumers that use the exported convenience reader directly on untrusted `.qvb` 
 ### QV2P-17 — Security disclosure policy is not operational
 
 **Severity:** MEDIUM  
-**Status:** Confirmed documentation gap on audited ref.
+**Status:** Confirmed documentation gap on reviewed ref.
 
 **Affected file:** `SECURITY.md`
 
@@ -441,7 +441,7 @@ Decide and implement the registry signature policy and dependency allowlist stra
 - **V13 operator-control verification:** remains not implemented.
 - **Python board/log verifier:** remains incomplete.
 - **Client SRI gaps:** remain documented.
-- **SECURITY.md placeholders:** remain on the audited integration ref.
+- **SECURITY.md placeholders:** remain on the reviewed integration ref.
 
 ### Positive controls verified by source inspection
 
@@ -458,7 +458,7 @@ Decide and implement the registry signature policy and dependency allowlist stra
 
 1. The import path does have worker-thread verification for protocol and board/log checks. The remaining concern is that some upload parsing, archive/checksum processing, staging and replay work still occurs in the main process; it is inaccurate to describe all import proof verification as main-thread-only.
 2. The server package exposes a `buildServer()` service assembly with `start()` and `stop()`. The package still lacks a standalone production launcher/start script and TLS termination, but the server service itself is not wholly absent.
-3. The separate S1-02 branch is not integrated. The audited integration branch still lacks the reverse-order ciphertext guard and its regression test.
+3. The separate S1-02 branch is not integrated. The reviewed integration branch still lacks the reverse-order ciphertext guard and its regression test.
 
 ---
 

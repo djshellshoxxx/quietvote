@@ -758,7 +758,11 @@
       "head": "claude/dazzling-cerf-n8ha3g",
       "head_sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+      "closed_at": "2026-11-18T03:24:03Z"
     },
     {
       "number": 2,
@@ -767,7 +771,11 @@
       "head": "docs/readme-and-wiki",
       "head_sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
       "action": "close_obsolete",
-      "reason": "Documentation describes no application/no UI and old spec filenames; current README/wiki/spec index supersede its useful navigation."
+      "reason": "Documentation describes no application/no UI and old spec filenames; current README/wiki/spec index supersede its useful navigation.",
+      "final_state": "closed",
+      "final_disposition": "obsolete_documentation",
+      "final_checked_head_sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+      "closed_at": "2026-11-18T03:24:01Z"
     },
     {
       "number": 3,
@@ -776,7 +784,11 @@
       "head": "claude/quietvote-finish-1",
       "head_sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+      "closed_at": "2026-11-18T03:23:58Z"
     },
     {
       "number": 6,
@@ -785,7 +797,11 @@
       "head": "claude/quietvote-audit-qa-1",
       "head_sha": "563eec8659184e32771244088d59acc5035fa798",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "563eec8659184e32771244088d59acc5035fa798",
+      "closed_at": "2026-11-18T03:23:56Z"
     },
     {
       "number": 7,
@@ -794,7 +810,11 @@
       "head": "claude/quietvote-audit-web-verifier-1",
       "head_sha": "e1421698626a4defd744a50ed2f9337066793d6e",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+      "closed_at": "2026-11-18T03:23:54Z"
     },
     {
       "number": 8,
@@ -803,7 +823,11 @@
       "head": "claude/quietvote-audit-trustee-1",
       "head_sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+      "closed_at": "2026-11-18T03:23:52Z"
     },
     {
       "number": 9,
@@ -812,7 +836,11 @@
       "head": "claude/quietvote-audit-server-1",
       "head_sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+      "closed_at": "2026-11-18T03:23:50Z"
     },
     {
       "number": 10,
@@ -821,7 +849,11 @@
       "head": "claude/quietvote-audit-crypto-protocol-1",
       "head_sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+      "closed_at": "2026-11-18T03:23:48Z"
     },
     {
       "number": 11,
@@ -830,7 +862,11 @@
       "head": "claude/quietvote-audit-board-cli-1",
       "head_sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+      "closed_at": "2026-11-18T03:23:46Z"
     },
     {
       "number": 12,
@@ -839,7 +875,11 @@
       "head": "claude/quietvote-complete-1",
       "head_sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+      "closed_at": "2026-11-18T03:23:44Z"
     },
     {
       "number": 13,
@@ -848,7 +888,11 @@
       "head": "claude/quietvote-web-triage-1",
       "head_sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+      "closed_at": "2026-11-18T03:23:42Z"
     },
     {
       "number": 14,
@@ -857,7 +901,11 @@
       "head": "claude/quietvote-spoil-wiring-1",
       "head_sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+      "closed_at": "2026-11-18T03:23:40Z"
     },
     {
       "number": 15,
@@ -866,7 +914,11 @@
       "head": "claude/quietvote-ci-gates-1",
       "head_sha": "57ba6cd779e7621603cd36179887379e942b5e63",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+      "closed_at": "2026-11-18T03:23:38Z"
     },
     {
       "number": 16,
@@ -875,7 +927,11 @@
       "head": "claude/quietvote-cli-spoil-collect-1",
       "head_sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+      "closed_at": "2026-11-18T03:23:36Z"
     },
     {
       "number": 17,
@@ -884,7 +940,11 @@
       "head": "claude/quietvote-trustee-hardening-1",
       "head_sha": "f0423305cb4571b584a7b9454ed774d006663613",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "f0423305cb4571b584a7b9454ed774d006663613",
+      "closed_at": "2026-11-18T03:23:34Z"
     },
     {
       "number": 20,
@@ -893,7 +953,11 @@
       "head": "claude/sharp-archimedes-tu76rh",
       "head_sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
+      "closed_at": "2026-11-18T03:23:32Z"
     },
     {
       "number": 21,
@@ -902,7 +966,11 @@
       "head": "claude/docs-screenshots",
       "head_sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
       "action": "close_obsolete",
-      "reason": "Documentation describes no application/no UI and old spec filenames; current README/wiki/spec index supersede its useful navigation."
+      "reason": "Documentation describes no application/no UI and old spec filenames; current README/wiki/spec index supersede its useful navigation.",
+      "final_state": "closed",
+      "final_disposition": "obsolete_documentation",
+      "final_checked_head_sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+      "closed_at": "2026-11-18T03:23:30Z"
     },
     {
       "number": 22,
@@ -911,7 +979,11 @@
       "head": "integration/quietvote-consolidated-20261030",
       "head_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+      "closed_at": "2026-11-18T03:23:28Z"
     },
     {
       "number": 24,
@@ -920,7 +992,11 @@
       "head": "chatgpt/quietvote-visual-ci-signed-20261102",
       "head_sha": "06e089895d94dd1710afd5113fec2a01a235e979",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+      "closed_at": "2026-11-18T03:23:25Z"
     },
     {
       "number": 25,
@@ -929,7 +1005,11 @@
       "head": "chatgpt/quietvote-trustee-fixture-paths-20261102",
       "head_sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+      "closed_at": "2026-11-18T03:23:24Z"
     },
     {
       "number": 26,
@@ -938,7 +1018,11 @@
       "head": "claude/clever-gates-uqd5p1",
       "head_sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+      "closed_at": "2026-11-18T03:23:22Z"
     },
     {
       "number": 27,
@@ -947,7 +1031,9 @@
       "head": "claude/laughing-volta-61srfa",
       "head_sha": "2aaf0a01816afb256a804c23dd45de86eca2a993",
       "action": "retain_unique_residual",
-      "reason": "Five unique patches remain; recover reviewed approved slices separately. No wholesale merge of stale migrations, rejected WIP or claims exemptions."
+      "reason": "Five unique patches remain; recover reviewed approved slices separately. No wholesale merge of stale migrations, rejected WIP or claims exemptions.",
+      "final_state": "open",
+      "final_disposition": "selective residual recovery"
     },
     {
       "number": 28,
@@ -956,7 +1042,11 @@
       "head": "chatgpt/quietvote-ci-action-pin-guard-20261104",
       "head_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+      "closed_at": "2026-11-18T03:23:20Z"
     },
     {
       "number": 29,
@@ -965,7 +1055,11 @@
       "head": "codex/quietvote-consolidation-audit-20261104",
       "head_sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+      "closed_at": "2026-11-18T03:23:18Z"
     },
     {
       "number": 30,
@@ -974,7 +1068,11 @@
       "head": "codex/quietvote-milestone-20261109",
       "head_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+      "closed_at": "2026-11-18T03:23:16Z"
     },
     {
       "number": 31,
@@ -983,7 +1081,11 @@
       "head": "chatgpt/zero-codex-continuation-spec-20261109",
       "head_sha": "d5c79981870646cb79feee75f87bd68333bf5159",
       "action": "archive_then_close",
-      "reason": "Historical scheduled-lane blueprint; archive with source/date and superseded-holds notice, not an active directive."
+      "reason": "Historical scheduled-lane blueprint; archive with source/date and superseded-holds notice, not an active directive.",
+      "final_state": "closed",
+      "final_disposition": "contained_preserved_historical_plan",
+      "final_checked_head_sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+      "closed_at": "2026-11-18T03:23:14Z"
     },
     {
       "number": 32,
@@ -992,7 +1094,11 @@
       "head": "chatgpt/zero-codex/verifier-triage-20261110",
       "head_sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+      "closed_at": "2026-11-18T03:23:12Z"
     },
     {
       "number": 33,
@@ -1001,7 +1107,11 @@
       "head": "chatgpt/zero-codex/audit-rate-config-20261110",
       "head_sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+      "closed_at": "2026-11-18T03:23:10Z"
     },
     {
       "number": 34,
@@ -1010,7 +1120,11 @@
       "head": "chatgpt/zero-codex/docs-wiki-sections-20261110",
       "head_sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+      "closed_at": "2026-11-18T03:23:08Z"
     },
     {
       "number": 35,
@@ -1019,7 +1133,11 @@
       "head": "chatgpt/zero-codex/import-preabort-20261110",
       "head_sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+      "closed_at": "2026-11-18T03:23:06Z"
     },
     {
       "number": 36,
@@ -1028,7 +1146,11 @@
       "head": "chatgpt/zero-codex/job-start-recovery-20261110",
       "head_sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+      "closed_at": "2026-11-18T03:23:04Z"
     },
     {
       "number": 37,
@@ -1037,7 +1159,11 @@
       "head": "chatgpt/zero-codex/seal-worker-lifecycle-20261110",
       "head_sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+      "closed_at": "2026-11-18T03:23:03Z"
     },
     {
       "number": 38,
@@ -1046,7 +1172,11 @@
       "head": "chatgpt/zero-codex/pool-delete-diagnostic-20261110",
       "head_sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+      "closed_at": "2026-11-18T03:23:01Z"
     },
     {
       "number": 39,
@@ -1055,7 +1185,11 @@
       "head": "chatgpt/zero-codex/board-reader-lengths-20261110",
       "head_sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+      "closed_at": "2026-11-18T03:22:59Z"
     },
     {
       "number": 40,
@@ -1064,7 +1198,11 @@
       "head": "chatgpt/zero-codex/crockford-display-grouping-20261110",
       "head_sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+      "closed_at": "2026-11-18T03:22:57Z"
     },
     {
       "number": 41,
@@ -1073,7 +1211,11 @@
       "head": "chatgpt/zero-codex/election-inspect-counters-20261110",
       "head_sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+      "closed_at": "2026-11-18T03:22:54Z"
     },
     {
       "number": 42,
@@ -1082,7 +1224,11 @@
       "head": "claude/wonderful-hypatia-9yszin",
       "head_sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+      "closed_at": "2026-11-18T03:22:52Z"
     },
     {
       "number": 43,
@@ -1091,7 +1237,9 @@
       "head": "integration/quietvote-completion",
       "head_sha": "f895b1a3f895595d62fc3ecd29dad496296e3672",
       "action": "retain_canonical_draft",
-      "reason": "Retain as sole cumulative main-target review; update obsolete body after integration. Main merge requires separate readiness review."
+      "reason": "Retain as sole cumulative main-target review; update obsolete body after integration. Main merge requires separate readiness review.",
+      "final_state": "open",
+      "final_disposition": "canonical cumulative draft"
     },
     {
       "number": 44,
@@ -1100,7 +1248,11 @@
       "head": "claude/exciting-hawking-r0evza",
       "head_sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+      "closed_at": "2026-11-18T03:22:50Z"
     },
     {
       "number": 45,
@@ -1109,7 +1261,11 @@
       "head": "claude/haiku-T01-baseline",
       "head_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
       "action": "close_subsumed",
-      "reason": "Exact T01 source is already an ancestor of integration f895b1a; preserve report through integration."
+      "reason": "Exact T01 source is already an ancestor of integration f895b1a; preserve report through integration.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+      "closed_at": "2026-11-18T03:22:48Z"
     },
     {
       "number": 46,
@@ -1118,7 +1274,11 @@
       "head": "chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114",
       "head_sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+      "closed_at": "2026-11-18T03:22:46Z"
     },
     {
       "number": 47,
@@ -1127,7 +1287,9 @@
       "head": "codex/quietvote-resume-20261116",
       "head_sha": "153ac6b2d066d4c4ed9b912ab3193477115eb872",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "merged during baseline consolidation"
     },
     {
       "number": 48,
@@ -1136,7 +1298,11 @@
       "head": "codex/quietvote-trustee-acceptance-20261116",
       "head_sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+      "closed_at": "2026-11-18T03:22:43Z"
     },
     {
       "number": 49,
@@ -1145,7 +1311,11 @@
       "head": "codex/quietvote-continue-20261116",
       "head_sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+      "closed_at": "2026-11-18T03:22:41Z"
     },
     {
       "number": 50,
@@ -1154,7 +1324,11 @@
       "head": "codex/quietvote-finish-20261116",
       "head_sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+      "closed_at": "2026-11-18T03:22:40Z"
     },
     {
       "number": 51,
@@ -1163,7 +1337,11 @@
       "head": "codex/quietvote-completion-20261116",
       "head_sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+      "closed_at": "2026-11-18T03:22:38Z"
     },
     {
       "number": 52,
@@ -1172,7 +1350,11 @@
       "head": "codex/quietvote-teams-20261116",
       "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
       "action": "close_after_integration",
-      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate."
+      "reason": "Exact PR head is an ancestor of candidate 66dcfaf. Close as superseded only after canonical integration contains the candidate.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+      "closed_at": "2026-11-18T03:22:36Z"
     },
     {
       "number": 54,
@@ -1181,7 +1363,9 @@
       "head": "integration/qualified-stack-20261116",
       "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
       "action": "merge_into_integration",
-      "reason": "Green cumulative baseline c6a4df5, preserving integration-only T01 receipt. Fresh ref/CI check required before merge."
+      "reason": "Green cumulative baseline c6a4df5, preserving integration-only T01 receipt. Fresh ref/CI check required before merge.",
+      "final_state": "closed",
+      "final_disposition": "merged during baseline consolidation"
     },
     {
       "number": 55,
@@ -1190,11 +1374,15 @@
       "head": "codex/quietvote-reviewed-milestones-20261116",
       "head_sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
       "action": "repair_then_integrate",
-      "reason": "Cumulative latest reviewed milestones; current CI server/web shards fail. Repair, re-review and qualify, then retarget/merge or supersede through canonical integration PR."
+      "reason": "Cumulative latest reviewed milestones; current CI server/web shards fail. Repair, re-review and qualify, then retarget/merge or supersede through canonical integration PR.",
+      "final_state": "closed",
+      "final_disposition": "contained_source",
+      "final_checked_head_sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+      "closed_at": "2026-11-18T03:22:34Z"
     }
   ],
   "authorization_note": "ADR-027 accepts recommended A-D defaults. Historical generic holds are not fresh owner approval blocks. Implementation must still preserve contracts, migrations, review and evidence.",
-  "scope_note": "Ancestry and patch-equivalence accounting; no fresh execution or independent security qualification implied. No remote mutations performed by this audit.",
+  "scope_note": "The initial topology audit was read-only. Its original source classifications are preserved; final publication and PR dispositions below record authorized integration and closure actions.",
   "selected_port": {
     "commit": "d6c3be005b09c4299cbd7a906dc9d81a6276ccc9",
     "source": "07fd61c83c89dd220403fe8df5dab4b3533b79de",
@@ -1227,5 +1415,31 @@
   "candidate_branch": "integration/quietvote-reviewed-20261117",
   "source_branches_retained": true,
   "remaining_integration_pr": 27,
-  "canonical_main_draft_pr": 43
+  "canonical_main_draft_pr": 43,
+  "initial_discovery_refs": {
+    "candidate": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+    "integration": "f895b1a3f895595d62fc3ecd29dad496296e3672"
+  },
+  "published_candidate": {
+    "sha": "8686e625270826bc0776596a1bbaf434832f4afd",
+    "tree": "f8e11e87605b7155b5cd4d7fe31a7e3f0f71c7d7",
+    "equivalent_local_head": "2af439963267ecbd8e7a5272d882a3647e98a07c",
+    "pr": 56
+  },
+  "canonical_merge": {
+    "branch": "integration/quietvote-completion",
+    "sha": "38192a5498a7b6fdc612c8e6c240a8596626d579",
+    "tree": "f8e11e87605b7155b5cd4d7fe31a7e3f0f71c7d7",
+    "parents": [
+      "44f73ca8c52511d8587d8381ef7a5c589c4626af",
+      "8686e625270826bc0776596a1bbaf434832f4afd"
+    ]
+  },
+  "final_open_pull_requests": [
+    27,
+    43
+  ],
+  "final_open_count": 2,
+  "closed_as_superseded_or_obsolete": 45,
+  "publication_receipt": "consolidation-publication-20261117.json"
 }

@@ -75,7 +75,7 @@ run before secret writes and before reporting success. A renamed but still-priva
 original receives the response; its replacement is untouched and no success is
 claimed. Unlinked or newly public descriptors receive no bearer bytes.
 
-The implementation author independently reviewed that repair and ran all four
+The implementation author reviewed the source of that repair and ran all four
 new review regressions on its local cherry-pick `dc41c01`: 4 passed, 0 failed or
 skipped, 0.669 seconds. No further scoped blocker was found. Integrate `7092ddb`
 once; `dc41c01` is its alias, not another fix. The reviewer's separate receipt also

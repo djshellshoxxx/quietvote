@@ -1,0 +1,622 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-17",
+  "timezone": "America/Los_Angeles",
+  "observed_at_utc": "2026-11-18 03:24:50 UTC",
+  "repository": "djshellshoxxx/quietvote",
+  "published_candidate": {
+    "sha": "8686e625270826bc0776596a1bbaf434832f4afd",
+    "tree": "f8e11e87605b7155b5cd4d7fe31a7e3f0f71c7d7",
+    "equivalent_local_head": "2af439963267ecbd8e7a5272d882a3647e98a07c",
+    "pr": 56
+  },
+  "canonical_merge": {
+    "branch": "integration/quietvote-completion",
+    "sha": "38192a5498a7b6fdc612c8e6c240a8596626d579",
+    "tree": "f8e11e87605b7155b5cd4d7fe31a7e3f0f71c7d7",
+    "parents": [
+      "44f73ca8c52511d8587d8381ef7a5c589c4626af",
+      "8686e625270826bc0776596a1bbaf434832f4afd"
+    ]
+  },
+  "exact_candidate_ci": {
+    "run_id": 44227868083,
+    "url": "https://github.com/djshellshoxxx/quietvote/actions/runs/44227868083",
+    "head_sha": "8686e625270826bc0776596a1bbaf434832f4afd",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 134545389916,
+        "name": "vectors, Python verifier and production build",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:05:07Z",
+        "completed_at": "2026-11-18T03:08:43Z"
+      },
+      {
+        "id": 134545390166,
+        "name": "production browser journeys, CSP and automated a11y",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:06:09Z",
+        "completed_at": "2026-11-18T03:08:08Z"
+      },
+      {
+        "id": 134545390269,
+        "name": "test trustee+crypto (node 22, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:05:10Z",
+        "completed_at": "2026-11-18T03:08:32Z"
+      },
+      {
+        "id": 134545390365,
+        "name": "test protocol+verifier (node 22, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:06:19Z",
+        "completed_at": "2026-11-18T03:08:30Z"
+      },
+      {
+        "id": 134545390417,
+        "name": "test cli+board (node 22, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:07:28Z",
+        "completed_at": "2026-11-18T03:20:06Z"
+      },
+      {
+        "id": 134545390473,
+        "name": "test cli+board (node 24, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:08:33Z",
+        "completed_at": "2026-11-18T03:20:26Z"
+      },
+      {
+        "id": 134545390658,
+        "name": "test server+web (node 22, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:10:51Z",
+        "completed_at": "2026-11-18T03:13:28Z"
+      },
+      {
+        "id": 134545390701,
+        "name": "test protocol+verifier (node 24, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:08:36Z",
+        "completed_at": "2026-11-18T03:10:51Z"
+      },
+      {
+        "id": 134545390886,
+        "name": "test trustee+crypto (node 24, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:10:41Z",
+        "completed_at": "2026-11-18T03:15:22Z"
+      },
+      {
+        "id": 134545390896,
+        "name": "test server+web (node 24, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:08:45Z",
+        "completed_at": "2026-11-18T03:10:49Z"
+      },
+      {
+        "id": 134545391628,
+        "name": "typecheck and supply-chain gates",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:11:13Z",
+        "completed_at": "2026-11-18T03:11:46Z"
+      }
+    ],
+    "workspace_tests": {
+      "node22": {
+        "packages": {
+          "board": 78,
+          "cli": 113,
+          "crypto": 93,
+          "protocol": 370,
+          "server": 294,
+          "trustee": 113,
+          "verifier": 38,
+          "web": 326
+        },
+        "total": 1425,
+        "failed": 0,
+        "skipped": 0
+      },
+      "node24": {
+        "packages": {
+          "board": 78,
+          "cli": 113,
+          "crypto": 93,
+          "protocol": 370,
+          "server": 294,
+          "trustee": 113,
+          "verifier": 38,
+          "web": 326
+        },
+        "total": 1425,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    "python_units": 221,
+    "cli_vectors": {
+      "passed": 420,
+      "failed": 0,
+      "unrun": 0
+    },
+    "python_corpus": {
+      "passed": 282,
+      "failed": 0,
+      "unsupported": 0
+    },
+    "shared_report_comparison": {
+      "agreed": 27,
+      "different": 0,
+      "excluded_capabilities": [
+        "chk.board.append_only",
+        "chk.board.witness",
+        "chk.receipts.sample"
+      ]
+    },
+    "browser": {
+      "verifier": 26,
+      "automated_accessibility": 49,
+      "status": "passed hosted required browser job",
+      "manual_assistive_technology_qualified": false
+    },
+    "build": "passed unchanged size budgets",
+    "typecheck": "passed",
+    "dependency_lockfile_audit": "passed; npm audit reported zero vulnerabilities"
+  },
+  "pull_request_cleanup": {
+    "initial_open": 49,
+    "closed_as_superseded_or_obsolete": 45,
+    "closed_details": [
+      {
+        "number": 55,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "66dcfafa885bdbd82cae808c33cebe0d7f8a21ab",
+        "closed_at": "2026-11-18T03:22:34Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/55"
+      },
+      {
+        "number": 52,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "c6a4df56351f560656377729df3a33192fe940b9",
+        "closed_at": "2026-11-18T03:22:36Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/52"
+      },
+      {
+        "number": 51,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "5566c88c5e42d57fc1e50e2539d91aba16f2a30f",
+        "closed_at": "2026-11-18T03:22:38Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/51"
+      },
+      {
+        "number": 50,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "0f98f88e1cda009c9a42b45dbb6ae9ed36cbbf85",
+        "closed_at": "2026-11-18T03:22:40Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/50"
+      },
+      {
+        "number": 49,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "86f85d52e195cf56d644c8a7af900133e8e9cc3e",
+        "closed_at": "2026-11-18T03:22:41Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/49"
+      },
+      {
+        "number": 48,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "bc32cb2752bb07d133deb408ee5a8ee69a731c8e",
+        "closed_at": "2026-11-18T03:22:43Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/48"
+      },
+      {
+        "number": 46,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "03f2f0c888be4a32081cf642a747b6cb1597e178",
+        "closed_at": "2026-11-18T03:22:46Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/46"
+      },
+      {
+        "number": 45,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "5c63db82979e7ba1647bdddea6dbef432da95177",
+        "closed_at": "2026-11-18T03:22:48Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/45"
+      },
+      {
+        "number": 44,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "8d6e0961be8f57bf3c124e7b979afbb5ed904582",
+        "closed_at": "2026-11-18T03:22:50Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/44"
+      },
+      {
+        "number": 42,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "a5c903272c21bbf5f38787eea041ebd90a1f7f85",
+        "closed_at": "2026-11-18T03:22:52Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/42"
+      },
+      {
+        "number": 41,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "1cfc10d997e44b6b8b0127cd658851e18621f287",
+        "closed_at": "2026-11-18T03:22:54Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/41"
+      },
+      {
+        "number": 40,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "5ca8b530a06a3124e76c1bc93c0a81fcdd6e934a",
+        "closed_at": "2026-11-18T03:22:57Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/40"
+      },
+      {
+        "number": 39,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "0352bca8c1831d30be030dc1f8f266b761903ef9",
+        "closed_at": "2026-11-18T03:22:59Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/39"
+      },
+      {
+        "number": 38,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "5cf359224f4ae25993c4cc4b30fb659c1d4f0a64",
+        "closed_at": "2026-11-18T03:23:01Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/38"
+      },
+      {
+        "number": 37,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "11c8ca23fbc5e70179cfbfc25f51bd71f5adb760",
+        "closed_at": "2026-11-18T03:23:03Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/37"
+      },
+      {
+        "number": 36,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "c4a89598058324fab970f99fc9abaabe8f647aa1",
+        "closed_at": "2026-11-18T03:23:04Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/36"
+      },
+      {
+        "number": 35,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "67683185aa9d3d218c054f75f291ad24b5a770a4",
+        "closed_at": "2026-11-18T03:23:06Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/35"
+      },
+      {
+        "number": 34,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "571c9f0d7c22ba6f047c497817a8609b5389e334",
+        "closed_at": "2026-11-18T03:23:08Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/34"
+      },
+      {
+        "number": 33,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "0dac28bd9c0bc11a7bb02d8d6d9b6b5264ae0ae9",
+        "closed_at": "2026-11-18T03:23:10Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/33"
+      },
+      {
+        "number": 32,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "61ddc6dcc262d5a53ce5ecfac5347e2416212492",
+        "closed_at": "2026-11-18T03:23:12Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/32"
+      },
+      {
+        "number": 31,
+        "result": "closed_superseded",
+        "classification": "contained_preserved_historical_plan",
+        "merged": false,
+        "head_sha": "d5c79981870646cb79feee75f87bd68333bf5159",
+        "closed_at": "2026-11-18T03:23:14Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/31"
+      },
+      {
+        "number": 30,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "ab84f16136184cb1fa0fa67b41e113424e134ba8",
+        "closed_at": "2026-11-18T03:23:16Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/30"
+      },
+      {
+        "number": 29,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "934357fd21a4a9e667e253fe00e0c0acab556560",
+        "closed_at": "2026-11-18T03:23:18Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/29"
+      },
+      {
+        "number": 28,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "51851c10c5ac33cd89f05f9e0af44fd43b41b930",
+        "closed_at": "2026-11-18T03:23:20Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/28"
+      },
+      {
+        "number": 26,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "761da0a45c538aa2232ee5511eb84e3fc1ca4e21",
+        "closed_at": "2026-11-18T03:23:22Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/26"
+      },
+      {
+        "number": 25,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "a222037328e3aceed1b8c177002b5dc4652e3339",
+        "closed_at": "2026-11-18T03:23:24Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/25"
+      },
+      {
+        "number": 24,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "06e089895d94dd1710afd5113fec2a01a235e979",
+        "closed_at": "2026-11-18T03:23:25Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/24"
+      },
+      {
+        "number": 22,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "aae414e6f303d277cf1c5f79d7e2a34c47c45f42",
+        "closed_at": "2026-11-18T03:23:28Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/22"
+      },
+      {
+        "number": 21,
+        "result": "closed_superseded",
+        "classification": "obsolete_documentation",
+        "merged": false,
+        "head_sha": "e671fd1d9d19127ded0e0ea85e16d97d9d1bff2d",
+        "closed_at": "2026-11-18T03:23:30Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/21"
+      },
+      {
+        "number": 20,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "2a02bd3249f3c988ef5afd8e9559fa13a959bdef",
+        "closed_at": "2026-11-18T03:23:32Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/20"
+      },
+      {
+        "number": 17,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "f0423305cb4571b584a7b9454ed774d006663613",
+        "closed_at": "2026-11-18T03:23:34Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/17"
+      },
+      {
+        "number": 16,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "709729a5763c99940d075c3bc8e53b40b2fd95fb",
+        "closed_at": "2026-11-18T03:23:36Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/16"
+      },
+      {
+        "number": 15,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "57ba6cd779e7621603cd36179887379e942b5e63",
+        "closed_at": "2026-11-18T03:23:38Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/15"
+      },
+      {
+        "number": 14,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "fe8b75e8cf4c3fbdef92500bc80130074c980da2",
+        "closed_at": "2026-11-18T03:23:40Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/14"
+      },
+      {
+        "number": 13,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "e9d4cd3416371c2c825ee855c5f84f39c4a53b2d",
+        "closed_at": "2026-11-18T03:23:42Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/13"
+      },
+      {
+        "number": 12,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "fdc552aa0fb769116b25223e7d6e75dd70adc913",
+        "closed_at": "2026-11-18T03:23:44Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/12"
+      },
+      {
+        "number": 11,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "8770aae07e5bb3897e2e64c2bbe14bf01ecc200c",
+        "closed_at": "2026-11-18T03:23:46Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/11"
+      },
+      {
+        "number": 10,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "55aff9ad1efab30c00eb145a46de3c2daabd6c26",
+        "closed_at": "2026-11-18T03:23:48Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/10"
+      },
+      {
+        "number": 9,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "6b3208551acdfa45313d85b67a9f4adf3e3f25a8",
+        "closed_at": "2026-11-18T03:23:50Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/9"
+      },
+      {
+        "number": 8,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "f0973a12b7bcdb81918679079bc3726c66b14c4c",
+        "closed_at": "2026-11-18T03:23:52Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/8"
+      },
+      {
+        "number": 7,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "e1421698626a4defd744a50ed2f9337066793d6e",
+        "closed_at": "2026-11-18T03:23:54Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/7"
+      },
+      {
+        "number": 6,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "563eec8659184e32771244088d59acc5035fa798",
+        "closed_at": "2026-11-18T03:23:56Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/6"
+      },
+      {
+        "number": 3,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "e56403b6b30f5d438b2f5f04e7fd5b76e8626c6b",
+        "closed_at": "2026-11-18T03:23:58Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/3"
+      },
+      {
+        "number": 2,
+        "result": "closed_superseded",
+        "classification": "obsolete_documentation",
+        "merged": false,
+        "head_sha": "29313c369aeda4f1ab2503ca3437c5bd22025a09",
+        "closed_at": "2026-11-18T03:24:01Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/2"
+      },
+      {
+        "number": 1,
+        "result": "closed_superseded",
+        "classification": "contained_source",
+        "merged": false,
+        "head_sha": "d75d4a20c6b92c35ddfcbcdaeb4a1dbf1b7fba1d",
+        "closed_at": "2026-11-18T03:24:03Z",
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/1"
+      }
+    ],
+    "other_original_prs_merged": [
+      47,
+      54
+    ],
+    "new_consolidation_pr_merged": 56,
+    "final_open": [
+      27,
+      43
+    ],
+    "final_open_count": 2,
+    "unexpected_moved_heads": []
+  },
+  "preservation": {
+    "original_remote_branches": 59,
+    "original_tips_contained": 55,
+    "branches_deleted": 0,
+    "main_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+    "main_merged": false,
+    "original_local_source_bundle": "docs/provenance/quietvote-review-20261117.bundle",
+    "excluded_w15_bundle": "docs/provenance/quietvote-w15-residual-20261117.bundle",
+    "excluded_w15_commit": "e4212219635291a002b68d6b27a9714df23d7df2"
+  },
+  "documentation_followup": {
+    "scope": "README and docs only; runtime, test, dependency and workflow paths remain identical to the qualified candidate",
+    "claims_lint": {
+      "candidate_findings": 19,
+      "final_findings": 0,
+      "policy": "unchanged; narrow source/agent-review wording corrections"
+    },
+    "keyless_and_ipv6_status": "updated from historical in-progress wording to included",
+    "first_hosted_merge_dco": "44f73ca has no sign-off; recorded without rewriting history",
+    "published_candidate_and_final_runtime_merge_dco": "matching publisher author sign-offs verified"
+  },
+  "w15_disposition": {
+    "active_runtime_included": false,
+    "gzip_all_javascript_bytes": 204814,
+    "required_max_exclusive_bytes": 204800,
+    "minimum_reduction_bytes": 15,
+    "focused_passed": 14,
+    "focused_failed": 1,
+    "browser_scenarios_qualified": false
+  },
+  "release_qualified": false
+}

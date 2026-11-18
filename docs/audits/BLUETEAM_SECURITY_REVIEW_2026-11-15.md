@@ -28,7 +28,7 @@ These controls do not offset the outstanding election-integrity and assurance bl
 
 ### BT-01 — Reverse-order spoil/cast ciphertext reuse
 **Severity: HIGH — release blocker**  
-**Status: Confirmed present on the audited integration ref; repair exists on a divergent branch.**
+**Status: Confirmed present on the reviewed integration ref; repair exists on a divergent branch.**
 
 The integration branch records cast ciphertext components in `castAlphas` and rejects a spoil that overlaps a previously admitted cast. It does not maintain the corresponding `spoilAlphas` set or reject a later cast that reuses ciphertexts from an earlier publicly revealed spoil. The separate `chatgpt/quietvote-s1-02-reverse-spoil-guard-20261114` branch contains the symmetric set tracking, cast-side rejection, and a focused regression test.
 
