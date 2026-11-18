@@ -43,7 +43,11 @@ accept case, whitespace and hyphen variants; other phrases retain NFKC-normalize
 older CLI-created keys, including capitalization, spaces and hyphens. Both clients can unlock those files using a distinct
 legacy NFKC fallback (at most two KDF attempts). The container stays version 1; no key file is rewritten merely by unlocking.
 
-`board verify --witness-policy` applies to standalone board bundles; election bundles use their manifest policy and refuse that option.
+`board verify --witness-policy` applies to standalone board bundles. A clean standalone result remains `PARTIAL` (exit 3)
+when either `--log-key` or `--witness-policy` is omitted, because the corresponding bundle field is self-attested.
+Obtain both anchors from a trusted source, such as the independently checked manifest; copying the bundle's own policy
+into a file does not establish trust. Author-key and body checks must also pass for `VERIFIED` (exit 0), and actual
+verification failures remain `FAILED` (exit 1). Election bundles use their signed manifest policy and refuse the external-policy option.
 
 ## `qv election spoil-collect` (coordinator, offline)
 

@@ -38,7 +38,8 @@ usage:
   qv ballot audit --election <bundle> --ballot <audit-file|envelope> [--manifest-hash <hex>] [--json]
   qv board verify <board-bundle|election-bundle> [--log-key <hex>] [--manifest-hash <hex>] [--author-key <hex>]...
                     [--witness-policy <file>] [--pin-file <f>] [--json]
-                                   --witness-policy applies only to standalone board bundles
+                                   standalone VERIFIED needs --log-key and --witness-policy from trusted sources
+                                   election bundles use their signed manifest policy and refuse --witness-policy
   qv election prepare <archive.qvb> --manifest-hash <hex> --out <file> [--format election|ceremony] [--json]
                                    checks archive, pinned manifest and board before preparing trustee inputs;
                                    accepts regular files up to 64 MiB and 10000 entries; refuses existing outputs

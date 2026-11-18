@@ -304,7 +304,7 @@ test('ballot encrypt: usage and failure exit codes', async () => {
 
 // ---------------------------------------------------------------- board verify
 
-test('board verify: standalone bundle is PARTIAL (3) without author keys, VERIFIED (0) with them, FAILED (1) when tampered', async () => {
+test('board verify: standalone bundle is PARTIAL (3) without anchors and author keys, VERIFIED (0) with them, FAILED (1) when tampered', async () => {
   const dir = tmp();
   const bj = makeBoardJson();
   const file = writeJson(dir, 'board.json', bj);
@@ -312,7 +312,8 @@ test('board verify: standalone bundle is PARTIAL (3) without author keys, VERIFI
   assert.equal(partial.code, 3);
   assert.match(partial.out, /BOARD INTEGRITY: PARTIAL/);
   assert.match(partial.out, /not a pass/);
-  const args = ['--log-key', hexOf(LOGK.publicKey), '--author-key', hexOf(COORD.publicKey)];
+  const policy = writeJson(dir, 'policy.json', { quorum: 0, none_acknowledged: true, witnesses: [] });
+  const args = ['--log-key', hexOf(LOGK.publicKey), '--author-key', hexOf(COORD.publicKey), '--witness-policy', policy];
   const ok = await qv(['board', 'verify', file, ...args, '--json']);
   assert.equal(ok.code, 0, ok.out);
   assert.equal(JSON.parse(ok.out).integrity, 'VERIFIED');

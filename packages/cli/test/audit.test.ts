@@ -25,14 +25,15 @@ test('BC-01: board verify never reports a pass on a bundle whose log key is only
   const dir = tmp();
   const bj = makeBoardJson();
   const file = writeJson(dir, 'board.json', bj);
+  const policy = writeJson(dir, 'policy.json', { quorum: 0, none_acknowledged: true, witnesses: [] });
   // attacker re-signs the whole log under their own key and ships that key inside the bundle
-  const noLogKey = await qv(['board', 'verify', file, '--author-key', hexOf(COORD.publicKey), '--json']);
+  const noLogKey = await qv(['board', 'verify', file, '--author-key', hexOf(COORD.publicKey), '--witness-policy', policy, '--json']);
   assert.equal(noLogKey.code, 3, noLogKey.out);
   const v = JSON.parse(noLogKey.out);
   assert.equal(v.integrity, 'PARTIAL');
-  assert.ok(v.warnings.some((w: string) => /self-attested/.test(w)));
-  // pinning the key restores the pass
-  const pinned = await qv(['board', 'verify', file, '--author-key', hexOf(COORD.publicKey), '--log-key', hexOf(LOGK.publicKey)]);
+  assert.ok(v.warnings.some((w: string) => /log key.*self-attested/.test(w)));
+  // Supplying both trusted anchors restores the pass (ADR-027 BC-02).
+  const pinned = await qv(['board', 'verify', file, '--author-key', hexOf(COORD.publicKey), '--log-key', hexOf(LOGK.publicKey), '--witness-policy', policy]);
   assert.equal(pinned.code, 0, pinned.out);
 });
 
@@ -133,7 +134,8 @@ test('fuzz: random argv never yields an internal error, a crash, or output conta
 test('mutation: random byte flips in a board bundle file never produce exit 0 (or a crash)', async () => {
   const dir = tmp();
   const text = JSON.stringify(makeBoardJson());
-  const args = ['--log-key', hexOf(LOGK.publicKey), '--author-key', hexOf(COORD.publicKey)];
+  const policy = writeJson(dir, 'policy.json', { quorum: 0, none_acknowledged: true, witnesses: [] });
+  const args = ['--log-key', hexOf(LOGK.publicKey), '--author-key', hexOf(COORD.publicKey), '--witness-policy', policy];
   assert.equal((await qv(['board', 'verify', writeJson(dir, 'ok.json', JSON.parse(text)), ...args])).code, 0);
   const r = rng(11);
   const generatorIdx = text.indexOf('"generator"');
