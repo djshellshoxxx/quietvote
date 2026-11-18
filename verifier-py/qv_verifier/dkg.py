@@ -22,12 +22,26 @@ from .recordfields import integer, valid_body
 SHARE_INFO_PREFIX = b"qv1-r255-sha2/dkg-share"
 
 
-def _first_timely(records: list[dict], who_key: str, who: int, lo: int, hi: int) -> dict | None:
-    """First record (by seq) from `who` with lo < seq < hi."""
-    for r in sorted(records, key=lambda r: r["seq"]):
-        if valid_body(r["body"]) and integer(r["seq"]) and r["body"].get(who_key) == who and lo < r["seq"] < hi:
-            return r
-    return None
+def _unique_timely(records: list[dict], who: int, hi: int, lo: int | None = None) -> dict | None:
+    """One distinct timely body per dealer; exact repeats do not create a fork.
+
+    ADR-027 / QV-ERR-PY-009 makes conflicting authenticated records an
+    equivocation, independent of input order. Commit has only an upper bound;
+    dealing/shares also have their phase's strict lower bound.
+    """
+    chosen = None
+    encoded = None
+    for r in records:
+        if (not integer(r.get("seq")) or not valid_body(r.get("body")) or
+                r["body"].get("i") != who or r["seq"] >= hi or
+                (lo is not None and r["seq"] <= lo)):
+            continue
+        body_bytes = qvjson.jcs(r["body"])
+        if chosen is None:
+            chosen, encoded = r, body_bytes
+        elif body_bytes != encoded:
+            return None
+    return chosen
 
 
 def _decode_dealing(body: dict, t: int):
@@ -67,7 +81,6 @@ def adjudicate(mh: bytes, n: int, t: int, markers: dict[str, int], records: dict
     r1_close = markers["dkg-r1-close"]
     r2_close = markers["dkg-r2-close"]
     r3_close = markers["dkg-r3-close"]
-    dkg_open = markers['dkg-open']
 
     commits = records.get("commits", [])
     dealings_recs = records.get("dealings", [])
@@ -78,8 +91,8 @@ def adjudicate(mh: bytes, n: int, t: int, markers: dict[str, int], records: dict
     dealing: dict[int, dict] = {}
     decoded: dict[int, Any] = {}
     for i in range(1, n + 1):
-        com = _first_timely(commits, "i", i, dkg_open, r1_open)
-        dl = _first_timely(dealings_recs, "i", i, r1_open, r1_close)
+        com = _unique_timely(commits, i, r1_open)
+        dl = _unique_timely(dealings_recs, i, r1_close, r1_open)
         if com is None or dl is None:
             continue
         body = dl["body"]
@@ -106,11 +119,15 @@ def adjudicate(mh: bytes, n: int, t: int, markers: dict[str, int], records: dict
     pkg: dict[int, dict[int, dict]] = {}
     R2 = []
     for i in R1:
-        rec = _first_timely(shares_recs, "i", i, r1_close, r2_close)
+        rec = _unique_timely(shares_recs, i, r2_close, r1_close)
         if rec is None:
             continue
         try:
             entries = rec["body"]["shares"]
+            # A valid-proof complaint can identify a false accuser even when
+            # the accused was already excluded for an incomplete R2 package.
+            # Preserve its actual published entries for that independent check.
+            pkg[i] = {e["j"]: e for e in entries}
             if [e["j"] for e in entries] != [j for j in R1 if j != i]:
                 continue
             for e in entries:
@@ -123,7 +140,7 @@ def adjudicate(mh: bytes, n: int, t: int, markers: dict[str, int], records: dict
         R2.append(i)
 
     # ---- Round 3: complaints, adjudicated publicly
-    disq: set[int] = set()
+    disq: set[int] = set(R1) - set(R2)
     for rec in sorted(complaints, key=lambda r: r["seq"]):
         if not (r2_close < rec["seq"] < r3_close):
             continue  # late (or premature): ignored
@@ -154,7 +171,7 @@ def adjudicate(mh: bytes, n: int, t: int, markers: dict[str, int], records: dict
                 dealer_bad = G.mul(y) != feldman_eval(decoded[i][1], j)
         disq.add(i if dealer_bad else j)
 
-    Q = [i for i in R2 if i not in disq]
+    Q = [i for i in R1 if i not in disq]
     if len(Q) < t:
         raise QVError("E_DKG_QUORUM", f"|Q| = {len(Q)} < t = {t}")
 

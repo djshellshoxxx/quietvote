@@ -770,9 +770,9 @@ Manifest + coordinator signatures; roll; DKG records (commit, dealing, shares, c
 #### 5.19.3 Outcome evaluation (exact integer arithmetic)
 
 Let `V` = participants (counted voters), `N_roll = roll.size`.
-1. **Quorum.** `fraction`: met iff `V·den ≥ num·N_roll`. `count`: met iff `V ≥ n`. Absent: met. If not met, outcome `no-quorum` for every contest.
-2. **yes-no / threshold rule.** With `y = T_yes`, `n_ = T_no`, basis `yes+no`: pass iff `y·den > num·(y + n_)` if `strict`, else `≥`; basis `counted`: replace `(y+n_)` by `V`; basis `roll`: replace `(y+n_)` by `N_roll` (conformance addition from QV-03/QV-20 `eligible` base). Equality of `y` and `n_` is a *tie* only if the rule cannot decide (e.g. simple majority with `y = n_`): then `tie_break` applies.
-3. **single-choice / k-of-n / approval:** select the `w` options (`w = 1` for single-choice, manifest `winners` for others — defined by QV-20) with greatest `T_o`; ties at the cut-off are resolved by `tie_break`; `declare-tie` ⇒ outcome `tie`.
+1. **Quorum.** `fraction`: met iff `V·den ≥ num·N_roll`. `count` uses `{type:"count", value:n}` and is met iff `V ≥ n`; `n` is not a wire field (QV-ADR-027 / QV-ERR-PY-003). Absent: met. If not met, outcome `no-quorum` for every contest.
+2. **yes-no / threshold rule.** With `y = T_yes`, `n_ = T_no`, basis `yes+no`: pass iff `y·den > num·(y + n_)` if `strict`, else `≥`; basis `counted`: replace `(y+n_)` by `V`; basis `roll`: replace `(y+n_)` by `N_roll` (conformance addition from QV-03/QV-20 `eligible` base). Under the approved QV-ADR-027 / QV-ERR-PY-003 reading, a failed **strict** rule is a tie only at exact threshold equality (`y·den == num·base`); then `tie_break` applies. Equal yes/no counts alone do not create a tie. Inclusive equality passes normally.
+3. **single-choice / k-of-n / approval:** select the `w` options (`w = 1` for single-choice, manifest `winners` for others — defined by QV-20) with greatest `T_o`; rank by descending count and then ascending option ID (including when every option wins). Ties at the cut-off are resolved by `tie_break`; `declare-tie` ⇒ outcome `tie`. The default for `k-of-n` without `winners` is `selection_limit`; approval defaults to one winner (QV-ADR-027 / QV-ERR-PY-003).
 4. All comparisons use big-integer or 64-bit-safe integers; `T_o ≤ V ≤ N_roll ≤ 2^31` in suite v1, so `num·V` fits 64-bit. Floating point shall not be used (QV-16-REQ-024).
 
 ### 5.20 Error and invalid-ballot taxonomy
@@ -820,9 +820,14 @@ the log-evidence layer for coordinator authority, exact body binding and their
 bounded notice semantics. Core rejection never grants authority to a notice or
 permits it to alter witness policy, time bounds, ballot selection or tally data.
 Invalid manifest/ballot/tally handling retains its separately specified rules.
-This clarification implements the unknown-type row only; accepted-marker
-selection, malformed known records and duplicate-tally rules require their own
-conformance coverage and are not inferred from this row.
+The later per-row ADR-027 reconciliation also rejects malformed non-tally records
+and unknown protocol versions as class L. Invalid signatures cannot occupy a
+marker phase: the first valid coordinator threshold wins, with ignored noise and
+later duplicates reported. Missing required DKG markers remain fatal; missing
+authenticated open/close leaves verification incomplete. Identical canonical
+tally bodies are log-only duplicates; different later bodies are fatal
+`E_RESULT`. Malformed current-suite tally bodies remain fatal and unexamined.
+See the [individual rulings and paired conformance coverage](errata/spec-errata-log.md#approved-non-ballot-and-outcome-reconciliation-2026-11-16).
 
 ### 5.21 Phase boundaries and interface hooks
 

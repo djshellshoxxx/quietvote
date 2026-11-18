@@ -95,7 +95,7 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
   };
   const r = await esbuild({ ...common, format: 'iife', entryPoints: ['src/verifier/page.ts'], outdir: 'out', plugins: [stubCatalogs] });
   const js = new TextDecoder().decode(r.outputFiles![0]!.contents).replace(/<\/script/gi, '<\\/script').replace(/<script/gi, (m) => `<\\x73${m.slice(2)}`).replace(/<!--/g, '<\\x21--');
-  const css = 'body{font:1.1rem/1.6 system-ui,sans-serif;max-inline-size:44rem;margin:1rem auto;padding-inline:16px;background:#fff;color:#14213d}@media(prefers-color-scheme:dark){body{background:#10151f;color:#eef2f8}}label{display:block;font-weight:600;margin-block-start:1rem}input,button{font:inherit;min-block-size:44px}:focus-visible{outline:3px solid #b45309;outline-offset:2px}.sr{position:absolute;clip-path:inset(50%);inline-size:1px;block-size:1px}';
+  const css = 'body{font:1.1rem/1.6 system-ui,sans-serif;max-inline-size:44rem;margin:1rem auto;padding-inline:16px;background:#fff;color:#14213d}@media(prefers-color-scheme:dark){body{background:#10151f;color:#eef2f8}}label{display:block;font-weight:600;margin-block-start:1rem}input,textarea,button{font:inherit;min-block-size:44px}:focus-visible{outline:3px solid #b45309;outline-offset:2px}.sr{position:absolute;clip-path:inset(50%);inline-size:1px;block-size:1px}';
   const sh = `sha256-${hashOf('sha256', js, 'base64')}`;
   const st = `sha256-${hashOf('sha256', css, 'base64')}`;
   const policy = `default-src 'none'; script-src '${sh}'; style-src '${st}'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'`;
@@ -105,6 +105,7 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
 <p>A checker you didn’t download or compare yourself can lie. Compare this file’s SHA-256 with the signed release manifest.</p>
 <label for="file">Election bundle file (JSON)</label><input id="file" type="file" accept="application/json">
 <label for="anchor">Election ID you were told (from your organizer, not from this page)</label><input id="anchor" type="text" autocomplete="off" spellcheck="false">
+<label for="author-keys">Additional public signing keys (optional)</label><p id="author-keys-help">Use keys obtained separately from a trusted source. Enter up to 32 keys, one per line, each with 64 lower-case hexadecimal digits.</p><textarea id="author-keys" rows="3" maxlength="2080" autocomplete="off" spellcheck="false" aria-describedby="author-keys-help"></textarea>
 <p><button id="run" type="button">Run checks</button> <button id="cancel" type="button" disabled>Cancel verification</button></p><progress id="progress" aria-label="Verification work in current stage" max="1" value="0" hidden></progress><p id="progress-detail"></p><div id="out" aria-busy="false"></div><div id="live" class="sr" role="status" aria-live="polite"></div></main>
 <script>${js}</script></body></html>
 `;

@@ -418,6 +418,8 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.verify.sourceServer`: This server
 - `qv.verify.file`: Election bundle file (JSON)
 - `qv.verify.anchor`: Election ID you were told (from your organizer, not from this page)
+- `qv.verify.authorKeys`: Additional public signing keys (optional)
+- `qv.verify.authorKeysHint`: Use keys obtained separately from a trusted source. Enter up to 32 keys, one per line, each with 64 lower-case hexadecimal digits.
 - `qv.verify.anchorHint`: Optional but strongly recommended. Without it, a copy of a different election would also pass.
 - `qv.verify.run`: Run checks
 - `qv.verify.running`: Running checks…

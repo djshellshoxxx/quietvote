@@ -22,9 +22,9 @@ stacked on PR #51. It is not a completed-project or release declaration.
 
 | Capability | Delivered in this continuation | Qualification boundary |
 |---|---|---|
-| Coordinator CLI lifecycle | Authenticated archive-driven body generation for all existing DKG, roll, open and close markers; existing signing/framing/relay commands remain explicit. | 65-test CLI lane, independent hostile-record probes; real-client registration still uses the existing fixture contract. |
+| Coordinator CLI lifecycle | Authenticated archive-driven body generation for all existing DKG, roll, open and close markers; existing signing/framing/relay commands remain explicit. | Initial 65-test CLI lane and independent hostile-record probes; the later combined journey uses real invitation issuance and enrollment. |
 | Connected organizer console | Pinned manifest, ceremony/open/close/tally preparation, trustee packet relay, partial coordinator co-signing, saved exact packet recovery, explicit review/send and authenticated acknowledgement handling. | Integrated web suite 312/312; hosted real-browser evidence is recorded in the continuation handoff. Native accessibility and translation review remain separate. |
-| Combined executable acceptance | Actual server, coordinator/voter and trustee processes complete one election, exact 2-of-3 share release and tally, TypeScript verification and Python shared-report comparison. | Successful lane run 693.7 seconds; witness quorum zero and fixture enrollment. Later integrated candidate requires its own CI receipt. |
+| Combined executable acceptance | Actual server, coordinator/voter and trustee processes complete one election, real CLI invitation issuance and enrollment, exact 2-of-3 share release and tally, TypeScript verification and Python shared-report comparison. | Checkpoint 3 hosted CLI suites pass on Node 22/24. Witness quorum zero remains explicit; later evidence-default changes need their own receipt. |
 | Crash recovery | Durable webhook bridge, supplemental-event intents, atomic management responses/deletion tombstones, archived-election cleanup, mutation receipts and repeated-crash projection recovery. | Integrated server suite 269/269 plus three subsequently integrated independent floor probes; pending intents survive failures instead of silently losing state. |
 | Private restore and backup hashing | Streamed checksums; revoked/deleted/suspended security-state floors, invitation terminal state, event cursors and operation-receipt generation/response checks. | Local adversarial snapshots and crash tests; no claim of independent witness/WAL freshness, offsite custody or live disaster-recovery qualification. |
 | ElGamal rerandomization | Explicit-randomness additive library operation; identity/zero/cancellation rejection and plaintext-preservation coverage. | Crypto suite 93/93 plus independent review probes; required external crypto/protocol review is not replaced by agent review. |
@@ -33,6 +33,11 @@ stacked on PR #51. It is not a completed-project or release declaration.
 | CLI/web key portability | Shared QVKEY1 canonicalization, at most two KDF attempts with distinct legacy spelling, immutable legacy fixtures and signer temporary-buffer cleanup. | B3-25 follows existing ADR-027 approval; old CLI files may still require their original spelling. Trustee QVTB is a different format. |
 | Modern enrollment | First-voter enrollment before DKG through real web/API/CLI paths, exact invite-bound proof, protected stored bearer verifier, persistent scheme discriminator and non-destructive migration preview. | Fresh elections use the modern scheme; legacy rows retain their original format/expiry. D99 pinned membership, group labels and historical invite/voter linkage remain distinct gaps. |
 | Unsigned governance planning | Bounded policy/template validator and actual `qv policy-draft` CLI, with source conflicts exposed as diagnostics. | The T3 duration conflict remains visible. This does not implement signed GroupRules, ratification, proposal history, membership or dispute authority. |
+| Evidence-required public verification | TS/Python strict defaults require authenticated append and witness evidence; explicit content-only callers carry scope caveats. Board evidence export contains every public body. | Fresh independent verdict review passed; latest combined hosted qualification is in progress. Supplemental author keys require explicit caller trust, never unsigned transport metadata. |
+| CLI DKG and Python manifest compatibility | Actual CLI vector adapter now runs all 420 cases including DKG; Python implements accepted U+061C and `spoil_trustee_decrypt=false` compatibility. | Unchanged corpus; independent integration review. Trustee-mode spoil cryptography remains unsupported with a named refusal. |
+| Python conformance interface | Actual bounded QV-34 JSONL handshake/operations with confined directory-relative file input and explicit unsupported capabilities. | Fifteen process/transport tests pass; no complete-profile claim. Unsupported platform file primitives remain explicit. |
+| Approved semantic parity | Record anomalies, authenticated marker selection, duplicate/conflicting tally behavior, DKG equivocation/complaints, excluded casts, count quorum and outcome ties/order. | Fresh review additionally repaired degenerate identity DH statements. Shared corpus/comparator unchanged; remaining manifest bounds are individually tracked. |
+| Signed GroupRules foundation | Isolated signed and externally pinned histories, old-authority amendments, fork/replay handling, independent Python verifier and actual offline prepare/co-sign/export/verify CLI. | Fresh core review passes; client review underway. Governed manifests and actual ratification evidence remain unfinished, so unratified amendments stay INCOMPLETE. |
 
 The source-specific validation receipts, fresh review findings and remaining
 contract work are tracked in the [continuation handoff](../handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md).
@@ -91,8 +96,12 @@ and `E_KEY_ROTATED` found no corresponding implementation at the baseline.
 These are cross-package protocol additions. Preparatory schema and state-model
 work can proceed from an explicit design, but wiring a private UI-only model into
 an election would not satisfy the signed/exported/independently verified contract.
-The explicit registration and authority holds remain applicable; recommendations
-in the older draft spec are not recorded owner decisions.
+The historical blanket registration/parity holds are superseded by accepted
+ADR-027/028 choices and the implementations above. The missing governance modules
+remain core work. Isolated versioned contracts can be implemented under the
+continuation task; a proposed encoding is not an implicit change to suite-v1
+acceptance. Conflicting timing/remedy semantics must stay explicit and cannot be
+treated as successful authorization without their evidence contract.
 
 ## Remote branch accounting
 

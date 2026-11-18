@@ -31,7 +31,7 @@ import { checkPassphrase, generatePassphrase } from '../key/passphrase.ts';
 import type { Signer } from '../key/signer.ts';
 import type { DeviceStorage } from '../key/storage.ts';
 import { DEFAULT_SETTINGS } from '../key/storage.ts';
-import { canShowResults, verificationSummary, verifyLoadedElection, verifyPublicBundleText } from '../flow/verification.ts';
+import { canShowResults, parseAuthorKeyInput, verificationSummary, verifyLoadedElection, verifyPublicBundleText } from '../flow/verification.ts';
 import { LockTimer } from '../key/lock.ts';
 import { ballotCodeDisplay, electionIdOf, sameElectionId, spokenForm } from '../util/crockford.ts';
 import { b64uDecode, b64uEncode } from '../util/hex.ts';
@@ -324,6 +324,7 @@ export function startApp(env: AppEnv): void {
   }
 
   let routeEpoch = 0;
+  let resultsEpoch = 0;
   const currentRoute = (epoch: number): boolean => epoch === routeEpoch;
   async function route(): Promise<void> {
     const epoch = ++routeEpoch;
@@ -818,52 +819,74 @@ export function startApp(env: AppEnv): void {
     void ctx;
   }
 
+  function authorKeyInput(): HTMLTextAreaElement {
+    return h('textarea', { rows: 3, maxlength: 2080, autocomplete: 'off', spellcheck: false }) as HTMLTextAreaElement;
+  }
+
   async function resultsView(L: Loaded, ctx: ElectionContext, head: Child[], epoch = routeEpoch): Promise<void> {
     if (!currentRoute(epoch)) return;
+    const view = ++resultsEpoch;
     if (!ctx.tally) {
       render(t('qv.results.title'), ...head, heading(t('qv.results.title')), h('p', {}, t('qv.results.notYet')));
-      // the tally can arrive while the page is open (live): then draw it without a reload
       repaint = () => { if (L.ctx?.tally) void resultsView(L, L.ctx, head, epoch); };
       return;
     }
-    render(t('qv.results.title'), ...head, heading(t('qv.results.title')), h('p', {}, t('qv.verify.running')));
-    const snapshot = [...L.records];
-    // Evidence is checked against the already loaded and pinned record snapshot.
-    // A concurrent append cannot replace that snapshot with unverified contents.
-    let board: unknown;
-    try { board = (await L.api.exportWithBoard(L.apiId) as { board?: unknown })?.board; } catch { /* absent evidence remains INCOMPLETE */ }
-    const report = await verifyLoadedElection(snapshot, ctx, await fullRoll(L), board);
-    if (!currentRoute(epoch)) return;
-    if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
-    if (!canShowResults(report)) {
-      render(t('qv.results.title'), ...head, heading(t('qv.results.title')), errorBox('E-VER-FAIL', { id: Object.entries(report.checks).find(([,v]) => v === 'fail')?.[0] ?? report.findings[0]?.code ?? 'tally' }), ...reportContent(report));
-      repaint = () => { void resultsView(L, L.ctx ?? ctx, head, epoch); };
-      return;
-    }
-    // The chart code is a separate chunk, fetched only when a tally exists. Without it the table below still shows every number.
-    const charts = await import('./charts.ts').catch(() => undefined);
-    if (!currentRoute(epoch)) return;
-    if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
-    const sections = (): HTMLElement[] => {
-      const cur = ctx;
-      const tally = ctx.tally!;
-      return tally.results.map((res) => {
-        const c = cur.manifest.contests.find((x) => x.id === res.contest);
-        const opts = tally.contests.find((x) => x.id === res.contest)?.options ?? [];
-        const label = (id: string): string => c?.options.find((o) => o.id === id)?.label ?? id;
-        const text = opts.map((o) => `${label(o.id)} ${o.T}`).join(', ');
-        const winners = res.outcome.kind === 'winners' ? res.outcome.winners ?? [] : [];
-        return h('section', {}, h('h2', {}, c?.title ?? res.contest),
-          charts ? charts.renderBarChart({ t, rtl: tr.dir === 'rtl' }, c?.title ?? res.contest, { options: opts.map((o) => ({ id: o.id, label: label(o.id), count: o.T })), winners }) : null,
-          h('table', {}, h('caption', {}, c?.title ?? res.contest), h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, t('qv.results.option')), h('th', { scope: 'col' }, t('qv.results.count')))),
-            h('tbody', {}, ...opts.map((o) => h('tr', {}, h('th', { scope: 'row' }, label(o.id)), h('td', {}, String(o.T)))))),
-          h('p', {}, t('qv.results.summary', { text })), h('p', {}, t('qv.results.participation', { count: res.participation })),
-          h('p', {}, t('qv.results.quorum', { met: String(res.quorum_met) })),
-          h('p', {}, res.outcome.kind === 'winners' ? t('qv.results.outcome.winners', { names: winners.map(label) }) : t(`qv.results.outcome.${res.outcome.kind}` as MessageKey)));
-      });
-    };
-    render(t('qv.results.title'), ...head, heading(t('qv.results.title')), ...reportContent(report), ...sections(), h('details', {}, h('summary', {}, t('qv.results.how')), h('p', {}, t('qv.results.howBody')), link('/verify', t('qv.nav.verify'))));
+    const keys = authorKeyInput(), out = h('div', {});
+    let generation = 0;
+    const current = (run: number): boolean => currentRoute(epoch) && view === resultsEpoch && run === generation;
+    keys.addEventListener('input', () => { generation++; clear(out); out.textContent = t('qv.verify.run'); });
+    render(t('qv.results.title'), ...head, heading(t('qv.results.title')),
+      field(t('qv.verify.authorKeys'), keys, t('qv.verify.authorKeysHint')),
+      btn(t('qv.verify.run'), () => check(keys.value), { primary: true }), out);
+    // A live append creates a fresh view without carrying user pins into an automatic run.
     repaint = () => { void resultsView(L, L.ctx ?? ctx, head, epoch); };
+    async function check(keyText: string): Promise<void> {
+      const run = ++generation;
+      clear(out); out.textContent = t('qv.verify.running');
+      try {
+        const extraAuthorKeys = parseAuthorKeyInput(keyText);
+        const snapshot = [...L.records];
+        let board: unknown;
+        try { board = (await L.api.exportWithBoard(L.apiId) as { board?: unknown })?.board; } catch { /* absent evidence remains INCOMPLETE */ }
+        if (!current(run)) return;
+        const roll = await fullRoll(L);
+        if (!current(run)) return;
+        const report = await verifyLoadedElection(snapshot, ctx, roll, board, extraAuthorKeys);
+        if (!current(run)) return;
+        if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
+        clear(out);
+        if (!canShowResults(report)) {
+          add(out, [errorBox('E-VER-FAIL', { id: Object.entries(report.checks).find(([,v]) => v === 'fail')?.[0] ?? report.findings[0]?.code ?? 'tally' }), ...reportContent(report)]);
+          return;
+        }
+        const charts = await import('./charts.ts').catch(() => undefined);
+        if (!current(run)) return;
+        if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
+        const sections = (): HTMLElement[] => {
+          const cur = ctx;
+          const tally = ctx.tally!;
+          return tally.results.map((res) => {
+            const c = cur.manifest.contests.find((x) => x.id === res.contest);
+            const opts = tally.contests.find((x) => x.id === res.contest)?.options ?? [];
+            const label = (id: string): string => c?.options.find((o) => o.id === id)?.label ?? id;
+            const text = opts.map((o) => `${label(o.id)} ${o.T}`).join(', ');
+            const winners = res.outcome.kind === 'winners' ? res.outcome.winners ?? [] : [];
+            return h('section', {}, h('h2', {}, c?.title ?? res.contest),
+              charts ? charts.renderBarChart({ t, rtl: tr.dir === 'rtl' }, c?.title ?? res.contest, { options: opts.map((o) => ({ id: o.id, label: label(o.id), count: o.T })), winners }) : null,
+              h('table', {}, h('caption', {}, c?.title ?? res.contest), h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, t('qv.results.option')), h('th', { scope: 'col' }, t('qv.results.count')))),
+                h('tbody', {}, ...opts.map((o) => h('tr', {}, h('th', { scope: 'row' }, label(o.id)), h('td', {}, String(o.T)))))),
+              h('p', {}, t('qv.results.summary', { text })), h('p', {}, t('qv.results.participation', { count: res.participation })),
+              h('p', {}, t('qv.results.quorum', { met: String(res.quorum_met) })),
+              h('p', {}, res.outcome.kind === 'winners' ? t('qv.results.outcome.winners', { names: winners.map(label) }) : t(`qv.results.outcome.${res.outcome.kind}` as MessageKey)));
+          });
+        };
+        add(out, [...reportContent(report), ...sections(), h('details', {}, h('summary', {}, t('qv.results.how')), h('p', {}, t('qv.results.howBody')), link('/verify', t('qv.nav.verify')))]);
+      } catch (e) {
+        if (!current(run)) return;
+        clear(out); add(out, [h('h2', {}, t('qv.verify.verdict.FAIL')), h('p', {}, e instanceof Error ? e.message : t('qv.err.E-GEN-UNKNOWN.body'))]);
+      }
+    }
+    await check('');
   }
 
   const checkMessages: Record<string, MessageKey> = {
@@ -899,24 +922,35 @@ export function startApp(env: AppEnv): void {
   function verifyView(): void {
     const file = h('input', { type: 'file', accept: 'application/json' }) as HTMLInputElement;
     const anchor = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
-    const out = h('div', {});
+    const out = h('div', {}), keys = authorKeyInput();
+    const epoch = routeEpoch;
+    let generation = 0;
+    const current = (run: number): boolean => currentRoute(epoch) && run === generation;
+    const invalidate = (): void => { generation++; clear(out); say.say(t('qv.verify.run')); };
+    file.addEventListener('change', invalidate);
+    anchor.addEventListener('input', invalidate);
+    keys.addEventListener('input', invalidate);
     render(t('qv.nav.verify'), heading(t('qv.verify.title')), h('p', {}, t('qv.phish.verifierwarn')), field(t('qv.verify.file'), file), field(t('qv.verify.anchor'), anchor, t('qv.verify.anchorHint')),
+      field(t('qv.verify.authorKeys'), keys, t('qv.verify.authorKeysHint')),
       btn(t('qv.verify.run'), async () => {
         const f = file.files?.[0]; if (!f) return;
-        const epoch = routeEpoch;
+        const run = ++generation;
+        const anchorText = anchor.value;
         clear(out); out.textContent = t('qv.verify.running');
         try {
+          const extraAuthorKeys = parseAuthorKeyInput(keys.value);
           if (f.size > 64 * 1024 * 1024) throw new Error('file exceeds 67108864 bytes');
           const text = await f.text();
-          const rep = await verifyPublicBundleText(text);
+          if (!current(run)) return;
+          const rep = await verifyPublicBundleText(text, { extraAuthorKeys });
           let mism = false;
-          if (anchor.value.trim() !== '') { try { const mh = (JSON.parse(text) as { manifest_hash: string }).manifest_hash; mism = !sameElectionId(anchor.value, electionIdOf(hexToBytes(mh, 32))); } catch { mism = true; } }
-          if (!currentRoute(epoch)) return;
+          if (anchorText.trim() !== '') { try { const mh = (JSON.parse(text) as { manifest_hash: string }).manifest_hash; mism = !sameElectionId(anchorText, electionIdOf(hexToBytes(mh, 32))); } catch { mism = true; } }
+          if (!current(run)) return;
           clear(out);
           add(out, [...reportContent(rep, mism), h('p', {}, t('qv.verify.counts', { cast: rep.counts.cast, counted: rep.counts.counted, spoiled: rep.counts.spoiled })), h('p', {}, t('qv.verify.scope')),
             btn(t('qv.verify.download'), () => download('qv-verify-report.json', JSON.stringify(rep, null, 2)))]);
           say.say(t(`qv.verify.verdict.${verificationSummary(rep, mism).verdict}`));
-        } catch (e) { clear(out); add(out, [h('h2', {}, t('qv.verify.verdict.FAIL')), h('p', {}, e instanceof Error ? e.message : t('qv.err.E-GEN-UNKNOWN.body'))]); say.say(t('qv.verify.verdict.FAIL'), true); }
+        } catch (e) { if (!current(run)) return; clear(out); add(out, [h('h2', {}, t('qv.verify.verdict.FAIL')), h('p', {}, e instanceof Error ? e.message : t('qv.err.E-GEN-UNKNOWN.body'))]); say.say(t('qv.verify.verdict.FAIL'), true); }
       }, { primary: true }), out);
   }
 

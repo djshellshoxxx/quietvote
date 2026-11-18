@@ -106,3 +106,38 @@ marker selection and duplicate tally handling), full V13 effects and the
 separately approved versioned B2-05 `control_seq` transition remain distinct
 work. No legacy counter field was added, no existing vector was regenerated,
 and no comparator exclusion or expected report was changed.
+
+
+## Approved non-ballot and outcome reconciliation, 2026-11-16
+
+QV-ADR-027 adopted B1-02 option A and the B1-07 recommendation to resolve each
+silent/ambiguous row using the reference behavior. The following individual
+rulings are now implemented independently in Python and exercised by both
+implementations against unchanged public audit fixtures. No vector corpus,
+expected report or comparator exclusion was changed.
+
+| Row | Adopted behavior | Distinguishing evidence |
+|---|---|---|
+| B1-02 / QV-ERR-PY-007 | Malformed non-tally records and unsupported record versions are class L, rejected from computation; malformed current-suite tally schemas remain fatal. No admissible tally leaves decryption/rules unexamined and yields INCOMPLETE absent another fatal finding. | `E13-C3-close-with-binding`, malformed-record and unsupported-tally-version regressions |
+| B1-02 / QV-ERR-PY-015 | Only a valid coordinator threshold can occupy a marker phase. First valid wins; bad signatures and later duplicates are visible log-only findings. Missing required DKG markers remain fatal; missing authenticated open/close leaves the result INCOMPLETE. | `E7-bad-close-then-good`, forged DKG/roll/close probes |
+| B1-02 / P3 | Compare canonical tally **bodies**, not signatures: exact repeats are log-only duplicates; a different later body is fatal `E_RESULT`, even when the first tally independently verifies. | `E17-tally-posted-twice`, `K-P3-second-tally-differs` |
+| QV-ERR-PY-003 quorum | A count quorum has the canonical field `value`; `{type:"count",n:...}` is not an alternate encoding. Met iff participation ≥ value. | `E2-count-quorum`, boundary and old-field rejection tests |
+| QV-ERR-PY-003 ties | After a strict threshold fails, apply tie-break only at exact integer equality `yes*den == num*basis`. Equal yes/no counts by themselves do not create a tie. Inclusive equality passes normally. | `E3-tie-basis-counted`, `E3b-2of3-status-quo-yes`, direct strict/inclusive cases |
+| QV-ERR-PY-003 winner order | Rank descending count, then ascending option ID; this order also applies when every option wins and to the above-cutoff group. | `E4-kofn-winner-order` |
+| QV-ERR-PY-009 duplicates | A dealer's distinct timely commit/dealing/share bodies constitute equivocation and exclude that phase record. Exact-body repeats and out-of-window conflicts do not. Input iteration order cannot select a preferred fork. | `D1-duplicate-different-commit`, reversed-input and identical/late-repeat checks |
+| QV-ERR-PY-009 commit cutoff | Commit must precede `dkg-r1-open`; QV-16 §5.7.3 provides no additional `dkg-open` lower bound. Dealings/shares retain their strict phase bounds. | `D4-commit-before-dkg-open` |
+| QV-ERR-PY-009 complaints | An R1 member's actual published share entry remains evidence for a valid-proof complaint even when its overall R2 package is incomplete. False accusers are still disqualified; existing R2 exclusion is never removed. | `D3-complaint-vs-R2-disqualified` |
+| QV-ERR-PY-010 excluded casts | Only accepted, non-spoiled casts advance supersedes, the limit counter and code ownership. An excluded later cast leaves the earlier accepted vote counted. | `E15-excluded-latest-cast` |
+| B1-08 explicit bound | QV-16 §7 fixes suite-v1 roll ≤ 2^20. Enforce it on signed pinned size and supplied roll size. | Boundary tests without allocating a million-key roll |
+
+Report metadata distinguishes unassociated log findings with `check:null`; these
+still carry code, fatality and detail, but do not falsely mark a completed named
+check failed. This is ordinary report JSON, not signed QV-JSON or a wire-format
+change. Default log/witness evidence policy and fatal-evidence precedence are
+unchanged. Authenticated board evidence may independently reject the supplied
+log; content-only success is not a witnessed-election claim.
+
+Remaining manifest differences need individual source reconciliation: for
+example QV-16/QV-20 explicitly include threshold `basis:roll`, while the TS schema
+rejects it. Arbitrary reference limits without a spec source are not automatically
+adopted under B1-08. Full trustee-mode spoil cryptography and D-95 remain distinct.

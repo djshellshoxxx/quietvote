@@ -13,7 +13,8 @@ from .errors import QVError
 MAX_JSON_BYTES = 64 << 20
 
 
-def load_json(path: Path):
+def parse_json(raw: bytes):
+    """Decode bounded transport JSON, including redacted null board bodies."""
     def pairs(items):
         out = {}
         for k, v in items:
@@ -30,8 +31,6 @@ def load_json(path: Path):
         if abs(parsed) > (1 << 53) - 1:
             raise QVError('E_PARSE', 'unsafe JSON integer')
         return parsed
-    with path.open('rb') as f:
-        raw = f.read(MAX_JSON_BYTES + 1)
     if len(raw) > MAX_JSON_BYTES:
         raise QVError('E_PARSE', f'JSON exceeds {MAX_JSON_BYTES} byte input limit')
     try:
@@ -39,6 +38,12 @@ def load_json(path: Path):
                           parse_float=forbidden, parse_constant=forbidden, parse_int=integer)
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise QVError('E_PARSE', f'invalid JSON: {exc}') from exc
+
+
+def load_json(path: Path):
+    with path.open('rb') as f:
+        raw = f.read(MAX_JSON_BYTES + 1)
+    return parse_json(raw)
 
 
 def vector_input(root: Path, inp: dict) -> tuple[dict, dict]:

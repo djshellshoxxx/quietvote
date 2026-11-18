@@ -1,0 +1,57 @@
+{
+  "production_commit": "81287168d1683e9fc4453727a9de3f7ca7c295e5",
+  "base_commit": "28d9e23",
+  "python_full": {
+    "passed": 181,
+    "failed": 0,
+    "seconds": 140.613
+  },
+  "typescript_paired": {
+    "passed": 13,
+    "failed": 0,
+    "seconds": 4.882964943
+  },
+  "python_corpus": {
+    "total": 282,
+    "passed": 282,
+    "failed": 0,
+    "not_implemented": 0,
+    "matched_file_hashes": 79
+  },
+  "existing_strict_comparator": {
+    "cases": 27,
+    "agree": 27,
+    "differences": 0,
+    "excluded_capabilities_unchanged": [
+      "chk.board.append_only",
+      "chk.board.witness",
+      "chk.receipts.sample"
+    ]
+  },
+  "expanded_audit_comparison": {
+    "cases": 10,
+    "agree": 10,
+    "compared": [
+      "verdict",
+      "all 14 checks",
+      "counts.cast",
+      "counts.spoiled",
+      "counts.counted",
+      "results",
+      "codes"
+    ],
+    "excluded": [
+      "TypeScript-only counts.ignored counters",
+      "implementation-specific finding text"
+    ]
+  },
+  "typecheck": "passed",
+  "source_status": "frozen for fresh review; external review and final integrated CI not claimed",
+  "corpus_changed": false,
+  "comparator_changed": false,
+  "first_full_run": {
+    "tests": 179,
+    "failed": 2,
+    "cause": "obsolete unsupported-version and conflicting-tally classification assertions; updated against independently tested TypeScript behavior; focused6 and final181 pass"
+  }
+}

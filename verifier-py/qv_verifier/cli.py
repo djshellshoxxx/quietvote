@@ -25,6 +25,15 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("dir")
     v.add_argument("--quiet", action="store_true", help="print only non-PASS lines")
     v.add_argument("--report", metavar="FILE", help="also write a JSON report to FILE")
+    adapter = sub.add_parser('adapter', help='serve the QV-34 offline JSON Lines adapter')
+    adapter.add_argument('--tree', required=True, help='explicit root for relative artifact paths')
+    adapter.add_argument('--content-only', action='store_true', help='explicitly scope election operations to content verification for corpus comparison')
+    governance = sub.add_parser('governance', help='verify the isolated signed-rule history profile')
+    governance_commands = governance.add_subparsers(dest='governance_cmd', required=True)
+    rules = governance_commands.add_parser('verify', help='verify pinned rule history; this is not an election verdict')
+    rules.add_argument('export')
+    rules.add_argument('--identity-key', required=True, help='independently obtained group identity public key (lowercase hex)')
+    rules.add_argument('--genesis-hash', required=True, help='independently obtained founding rule hash (lowercase hex)')
     verify = sub.add_parser('verify', help='verify an election JSON bundle with optional QV-18 evidence')
     verify.add_argument('bundle')
     verify.add_argument('--content-only', action='store_true', help='explicitly permit a scoped PASS without witnessed log integrity; supplied evidence is still checked')
@@ -36,6 +45,23 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     if args.cmd == "vectors":
         return main_vectors(args.dir, quiet=args.quiet, report_path=args.report)
+    if args.cmd == 'adapter':
+        from .adapter import main_adapter
+        return main_adapter(args.tree, content_only=args.content_only)
+    if args.cmd == 'governance':
+        from .governance import RulesError, read_export, verify_group_rules_json
+        try:
+            report = verify_group_rules_json(read_export(args.export), identity_key=args.identity_key,
+                                             genesis_rules_hash=args.genesis_hash)
+        except RulesError as exc:
+            report = {'scope': 'signed-group-rules', 'status': 'INVALID', 'versions': 0,
+                      'pending_ratifications': [], 'errors': [{'code': exc.code, 'message': str(exc)}]}
+        except (OSError, ValueError):
+            print(json.dumps({'status': 'ERROR', 'error': 'E_IO',
+                              'detail': 'cannot read bounded regular governance input'}), file=sys.stderr)
+            return 2
+        print(json.dumps(report, indent=2))
+        return {'VERIFIED': 0, 'INVALID': 1, 'INCOMPLETE': 3}[report['status']]
     if args.cmd == 'verify':
         try:
             bundle = load_json(Path(args.bundle))

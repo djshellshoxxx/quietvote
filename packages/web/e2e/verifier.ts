@@ -9,6 +9,7 @@ import { buildServer } from '../../server/src/index.ts';
 import { bundleOf, castBallot, clone, closeElection, publishTally, setup } from '../../protocol/test/helpers/sim.ts';
 import { buildSite, csp } from '../src/build/site.ts';
 import { fixtureWitnesses, witnessedBoard } from '../test/helpers/witnessed-board.ts';
+import { supplementalAuthorFixture } from '../test/helpers/supplemental-author.ts';
 import { FakeBoard } from '../test/helpers/fake-board.ts';
 import { launchBrowser } from './browser.ts';
 
@@ -31,7 +32,12 @@ const large = clone(good);
 const envelope = good.log.find((e) => (e.entry as any).intent === 'cast')!;
 for (let i = 0; i < 80; i++) large.log.push({ seq: large.log.at(-1)!.seq + 1, entry: clone(envelope.entry) });
 const largeFile = join(dir, 'large.json'); writeFileSync(largeFile, JSON.stringify(large));
+const supplemental = await supplementalAuthorFixture();
+const supplementalFile = join(dir, 'supplemental.json'); writeFileSync(supplementalFile, supplemental.untrustedText);
 let board = new FakeBoard(sim);
+let extraAuthor: typeof supplemental.author | undefined;
+let waitForExport: Promise<void> | undefined;
+let exportRequested: (() => void) | undefined;
 let waitForElection: Promise<void> | undefined;
 let electionRequested: (() => void) | undefined;
 let waitForCharts: Promise<void> | undefined;
@@ -45,9 +51,10 @@ const site = createServer(async (rq, rs) => {
   const u = new URL(rq.url ?? '/', 'http://x');
   if (u.pathname.startsWith('/api/')) {
     if (u.pathname.endsWith('/export.json') && u.searchParams.get('board') === '1') {
+      if (waitForExport) { exportRequested?.(); await waitForExport; }
       const bundle = board.bundle();
       rs.writeHead(200, { 'Content-Type': 'application/json' });
-      rs.end(JSON.stringify({ ...bundle, board: witnessedBoard(board.sim, bundle) })); return;
+      rs.end(JSON.stringify({ ...bundle, board: witnessedBoard(board.sim, bundle, extraAuthor) })); return;
     }
     if (u.pathname === `/api/v1/elections/${board.apiId}/events` && streamEvents) {
       rs.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' });
@@ -97,6 +104,23 @@ try {
   };
   await offline(origin); // all matching generated _headers policies enforced together
   await offline(address.url); // actual server StaticAssets policy, no routing interception
+  // Independently supplied public pins are opt-in on both upload surfaces.
+  for (const path of ['/verify', '/verifier.html']) {
+    await page.goto(`${origin}${path}`);
+    const input = page.getByLabel('Additional public signing keys (optional)', { exact: true });
+    await page.getByLabel('Election bundle file (JSON)').setInputFiles(supplementalFile);
+    assert.equal(await input.inputValue(), '');
+    await page.getByRole('button', { name: 'Run checks' }).click();
+    await page.getByRole('heading', { name: 'A check failed', exact: true }).waitFor({ timeout: 30000 });
+    await input.fill(supplemental.key);
+    assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'Run checks' }).click();
+    await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
+    await input.fill('ab'.repeat(32));
+    assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'Run checks' }).click();
+    await page.getByRole('heading', { name: 'A check failed', exact: true }).waitFor({ timeout: 30000 }); checks++;
+  }
   // The real standalone page yields during cryptographic work. Cancellation and retry must remain usable.
   for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
     await page.setViewportSize(viewport);
@@ -162,9 +186,32 @@ try {
   await page.goto(`${origin}/e/${board.apiId}/results`);
   await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
   assert.ok(await page.getByRole('table').count() > 0); checks++;
+  // Live result keys are used only by an explicit run; edits discard a pending board response.
+  board = new FakeBoard(supplemental.sim); extraAuthor = supplemental.author;
+  await page.goto(`${origin}/e/${board.apiId}/results`);
+  await page.getByRole('heading', { name: 'A check failed', exact: true }).waitFor({ timeout: 30000 });
+  const liveKeys = page.getByLabel('Additional public signing keys (optional)', { exact: true });
+  assert.equal(await liveKeys.inputValue(), '');
+  await liveKeys.fill(supplemental.key);
+  assert.equal(await page.getByRole('table').count(), 0);
+  await page.getByRole('button', { name: 'Run checks' }).click();
+  await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
+  assert.ok(await page.getByRole('table').count() > 0);
+  let releaseExport!: () => void;
+  waitForExport = new Promise<void>((resolve) => { releaseExport = resolve; });
+  const exportPending = new Promise<void>((resolve) => { exportRequested = resolve; });
+  await page.getByRole('button', { name: 'Run checks' }).click(); await exportPending;
+  await liveKeys.fill('ab'.repeat(32));
+  const exportDelivered = page.waitForResponse((r) => r.url().includes('/export.json?board=1'));
+  releaseExport(); waitForExport = undefined; await exportDelivered; await page.waitForLoadState('networkidle');
+  assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
+  assert.equal(await page.getByRole('table').count(), 0);
+  await page.getByRole('button', { name: 'Run checks' }).click();
+  await page.getByRole('heading', { name: 'A check failed', exact: true }).waitFor({ timeout: 30000 }); checks++;
+  extraAuthor = undefined;
   const forgedSim = { ...sim, log: forged.log };
   board = new FakeBoard(forgedSim);
-  await page.reload();
+  await page.goto(`${origin}/e/${board.apiId}/results`);
   await page.getByText('The result is not established. Export the evidence and report it.', { exact: true }).waitFor({ timeout: 30000 });
   assert.equal(await page.getByRole('table').count(), 0, 'forged tally never renders numbers'); checks++;
   await page.goto(`${origin}/verify`);

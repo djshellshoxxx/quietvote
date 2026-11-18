@@ -61,7 +61,7 @@ export function witnessKeys(seed: string): Ed25519Keypair[] {
 }
 
 /** Log export for `b` (manifest at seq 0, protocol log entries at their seq). */
-export function buildBoard(sim: Sim, b: ElectionBundle, heads: Head[], o: { logKey?: Ed25519Keypair; seed?: string } = {}): BoardView {
+export function buildBoard(sim: Sim, b: ElectionBundle, heads: Head[], o: { logKey?: Ed25519Keypair; seed?: string; author?: (rec: Record<string, any>, manifest: boolean) => [EntryType, Ed25519Keypair] } = {}): BoardView {
   const origin = logOrigin(b.manifest.body);
   const logKey = o.logKey ?? kp(o.seed ?? 'x', 'log');
   const recs: [number, unknown][] = [[0, b.manifest], ...b.log.map((e): [number, unknown] => [e.seq, e.entry])];
@@ -69,7 +69,7 @@ export function buildBoard(sim: Sim, b: ElectionBundle, heads: Head[], o: { logK
   const headers: Uint8Array[] = [];
   const entries: LogBundle['entries'] = [];
   for (const [seq, rec] of recs) {
-    const [type, who] = typeAndAuthor(sim, rec as Record<string, any>, seq === 0);
+    const [type, who] = (o.author ?? ((r, m) => typeAndAuthor(sim, r, m)))(rec as Record<string, any>, seq === 0);
     const body = jcs(rec);
     const e = buildEntry({
       origin, type, secretKey: who.secretKey, publicKey: who.publicKey, nonce: sha256(utf8(`nonce-${seq}`)).slice(0, 16),

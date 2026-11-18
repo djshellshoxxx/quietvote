@@ -17,7 +17,7 @@ def quorum_met(quorum: dict | None, V: int, roll_size: int) -> bool:
     if quorum.get("type") == "fraction":
         return V * quorum["den"] >= quorum["num"] * roll_size
     if quorum.get("type") == "count":
-        return V >= quorum["n"]
+        return V >= quorum["value"]
     raise QVError("E_RULES", "unknown quorum type")
 
 
@@ -34,9 +34,10 @@ def _yes_no(contest: dict, counts: dict, V: int, roll_size: int) -> dict:
     passed = lhs > rhs if rule["strict"] else lhs >= rhs
     if passed:
         return {"kind": "passed"}
-    if y != n_:
+    if not (rule["strict"] and lhs == rhs):
         return {"kind": "rejected"}
-    # y == n_: the rule could not decide -> tie_break (QV-16 §5.19.3 item 2, Appendix A.7)
+    # ADR-027 / QV-ERR-PY-003: exact equality at a strict threshold invokes
+    # the declared tie-break; equality of yes/no counts alone does not.
     tb = contest["tie_break"]
     if tb["type"] == "status-quo":
         return {"kind": "passed" if tb["option"] == "yes" else "rejected", "reason": "tie-break"}
@@ -59,7 +60,7 @@ def _multi(contest: dict, counts: dict) -> dict:
         w = 1  # QV-20 §5.3: single winner unless the manifest specifies otherwise.
     else:
         raise QVError("E_RULES", "number of winners undefined")
-    ranked = sorted(ids, key=lambda o: -counts.get(o, 0))
+    ranked = sorted(ids, key=lambda o: (-counts.get(o, 0), o))
     if w >= len(ids):
         return {"kind": "winners", "winners": ranked}
     cut = counts.get(ranked[w - 1], 0)

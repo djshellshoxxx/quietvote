@@ -88,3 +88,13 @@ with the offline CLI. These pure helpers return in-memory byte views; they perfo
 filesystem access, network access or cryptographic trust decision. Callers bound input bytes and file
 counts, then verify the manifest, authors, board and protocol for their own workflow. This supersedes
 the earlier note assigning all container/checksum handling to CLI/server. No new dependency is added.
+
+## Keyless receipt refusal — 2026-11-17
+
+`BoardLogOptions.secretKey` is optional for mirrors and erased signing keys.
+Without it, `append` (including duplicates), `getReceipt`, and `checkpoint`
+return `QV_BOARD_READ_ONLY` before writing or signing. No placeholder key is
+created. Reads, stored checkpoints, inclusion/consistency proofs and audits stay
+available. Existing callers with a signing key retain their receipt behavior.
+This implements QV-ADR-027 B2-12's interim refusal using the existing Result API;
+it adds no receipt format or database migration.
