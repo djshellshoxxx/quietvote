@@ -27,6 +27,7 @@ const options = {
 test('ordinary app build precompiles ICU deterministically within gzip budgets', async () => {
   const appOptions = {
     ...options,
+    charset: 'utf8' as const,
     splitting: true,
     chunkNames: '[name]-[hash]',
     metafile: true,
