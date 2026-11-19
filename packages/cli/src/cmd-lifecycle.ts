@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { bytesToHex } from '@quietvote/crypto';
 import {
-  PROTO_ID, S, adjudicateDkg, check, manifestHash, rollRoot, verifyKeyconf, verifyMultiSig, verifySig,
+  PROTO_ID, CONTROL_ACTIONS, CONTROL_REASONS, CONTROL_ENTRY, S, adjudicateDkg, check, manifestHash, rollRoot, verifyKeyconf, verifyMultiSig, verifySig,
   type CommitBody, type ComplaintBody, type DealingBody, type KeyconfBody, type MarkerBody, type MarkerName,
   type MarkerSeqs, type MultiSignedRecord, type RollCommitBody, type Schema, type SharesBody, type SignedRecord,
 } from '@quietvote/protocol';
@@ -13,23 +13,39 @@ import { prepareElectionArchive } from './cmd-prepare.ts';
 import { EXIT, type Io } from './io.ts';
 
 const DKG = ['dkg-open', 'dkg-r1-open', 'dkg-r1-close', 'dkg-r2-close', 'dkg-r3-close', 'dkg-final'] as const;
-const KINDS = [...DKG, 'roll-commit', 'election-open', 'election-close'] as const;
+const KINDS = [...DKG, 'roll-commit', 'election-open', 'election-close', ...CONTROL_ACTIONS] as const;
 type Kind = typeof KINDS[number];
 const ENTRY: Record<Kind, string> = {
   'dkg-open': 'ceremony_start', 'dkg-r1-open': 'notice', 'dkg-r1-close': 'notice', 'dkg-r2-close': 'notice',
   'dkg-r3-close': 'notice', 'dkg-final': 'joint_key', 'roll-commit': 'roll_commit',
   'election-open': 'election_open', 'election-close': 'election_close',
+  pause: 'notice', resume: 'notice', invalidate: 'notice', 'security-notice': 'notice',
+  'audit-close': 'audit_close', cancel: 'election_cancel', abort: 'ceremony_abort',
 };
 
 export async function cmdElectionDraftRecord(argv: string[], io: Io): Promise<number> {
-  const p = parseArgs(argv, { 'manifest-hash': 'value', kind: 'value', out: 'value', json: 'bool' });
+  const p = parseArgs(argv, { 'manifest-hash': 'value', kind: 'value', reason: 'value', out: 'value', json: 'bool' });
   const [path] = needPositional(p, 1, 'election draft-record <archive.qvb>');
   const pin = pinnedHash(p), kindArg = needFlag(p, 'kind'), out = needFlag(p, 'out');
   if (pin === undefined) throw new UsageError('--manifest-hash is required');
   if (!KINDS.includes(kindArg as Kind)) throw new UsageError(`--kind must be one of ${KINDS.join(', ')}`);
   const kind = kindArg as Kind;
-  const { content } = prepareElectionArchive(path!, pin);
+  const isControl = (CONTROL_ACTIONS as readonly string[]).includes(kind);
+  const reason = p.get('reason');
+  if (reason !== undefined && (!isControl || !(CONTROL_REASONS as readonly string[]).includes(reason))) {
+    throw new UsageError('--reason requires a control action and a catalog code');
+  }
+  const { content, controlSeq } = prepareElectionArchive(path!, pin);
   const m = content.manifest.body, mh = manifestHash(m);
+  if (isControl) {
+    if (controlSeq >= Number.MAX_SAFE_INTEGER) throw new FailError('control sequence is exhausted');
+    const body = { proto: PROTO_ID, type: 'control', action: kind, control_seq: controlSeq + 1, ...(reason === undefined ? {} : { reason }) };
+    try { writeFileSync(out, JSON.stringify(body) + '\n', { flag: 'wx', mode: 0o600 }); }
+    catch { throw new InputError('cannot create output; existing files are never overwritten'); }
+    printJson(io, { file: out, kind, entry_type: CONTROL_ENTRY[kind], manifest_hash: pin, control_seq: body.control_seq,
+      signed: false, admitted: false, board_structure_verified: true, witness_quorum_verified: false, freshness_verified: false });
+    return EXIT.ok;
+  }
   const markers = new Map<MarkerName, { seq: number; rec: MultiSignedRecord<MarkerBody> }>();
   const rolls: { seq: number; body: RollCommitBody }[] = [];
   const commits: { seq: number; body: CommitBody }[] = [], dealings: { seq: number; body: DealingBody }[] = [];

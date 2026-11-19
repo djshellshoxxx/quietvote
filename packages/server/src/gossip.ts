@@ -124,6 +124,7 @@ export interface Judged {
  */
 export function judge(env: Env, rt: ElectionRuntime, theirs: Checkpoint, theirNote: string, source: 'inbound' | 'outbound'): Judged {
   const a = assess(rt, theirs, theirNote);
+  rt.recordExternalAnchor(theirNote);
   const now = env.nowMs();
   rt.edb.recordGossip(textFingerprint(theirs), theirs.size, theirs.root, now, a.consistent, env.cfg.gossipSeenMax, SEEN_RETENTION_MS);
   if (a.evidence === undefined) return { assessment: a, recorded: false };
@@ -146,6 +147,51 @@ export function gossipAnswer(rt: ElectionRuntime, a: Assessment, theirSize: numb
     latest_note: a.latestNote ?? null, consistent: a.consistent, relation: a.relation, tree_size: rt.log.size,
     ...(a.proof !== undefined ? { proof: { old_size: theirSize, new_size: rt.log.size, path: a.proof } } : {}),
   };
+}
+
+/**
+ * Startup rollback acquisition uses the existing authenticated gossip contract, not invented witness URLs.
+ * Every configured public peer must answer within one bounded parallel round. Unavailable or invalid answers
+ * leave signing disabled. Link-election identifiers are never disclosed to these public peers.
+ */
+export async function acquireStartupAnchors(env: Env, rt: ElectionRuntime, freshlyCreated = false): Promise<boolean> {
+  if (rt.imported || rt.registry.access !== 'public' || env.cfg.gossipPeers.length === 0 || (rt.log.size === 0 && freshlyCreated)) return true;
+  // A restored pre-manifest draft may once have signed a later history. Without a stored signed head the existing
+  // gossip protocol cannot query it without signing first, so a reopened empty log stays read-only.
+  const note = rt.edb.store.latestCheckpoint()?.note;
+  if (note === undefined) return false;
+  const resolver = env.cfg.gossipResolver ?? systemResolver;
+  const transport = env.cfg.gossipTransport ?? httpsTransport();
+  const peers = [...new Set(env.cfg.gossipPeers.map((p) => p.replace(/\/+$/, '')))];
+  const one = async (peer: string): Promise<string[] | undefined> => {
+    const target = await validateTarget(`${peer}/api/v1/gossip/checkpoints`, resolver);
+    const answer = await transport({ url: target.url, ip: target.ip, family: target.family,
+      timeoutMs: env.cfg.gossipTimeoutMs, maxResponseBytes: 32 * 1024, captureBody: true,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': 'quietvote-gossip/1' },
+      body: Buffer.from(JSON.stringify({ note })) });
+    if (answer.truncated || (answer.status !== 200 && answer.status !== 409)) return undefined;
+    const body = parseQvJson(answer.body ?? new Uint8Array()) as Record<string, unknown>;
+    if (answer.status === 200) return typeof body['latest_note'] === 'string' ? [body['latest_note']] : undefined;
+    const evidence = body['evidence'] as { notes?: unknown } | undefined;
+    return Array.isArray(evidence?.notes) && evidence.notes.length > 0 && evidence.notes.length <= 2 && evidence.notes.every((n) => typeof n === 'string') ? evidence.notes as string[] : undefined;
+  };
+  const bounded = (peer: string): Promise<string[] | undefined> => new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(undefined), env.cfg.gossipTimeoutMs);
+    // A late DNS/transport result never mutates election state after the round timed out.
+    void one(peer).then((value) => { clearTimeout(timer); resolve(value); }, () => { clearTimeout(timer); resolve(undefined); });
+  });
+  const answers = await Promise.all(peers.map(bounded));
+  let complete = true;
+  for (const notes of answers) {
+    if (!notes?.length) { complete = false; continue; }
+    for (const candidate of notes) {
+      const cp = ownSignedNote(rt, candidate);
+      if (!cp) { complete = false; continue; }
+      judge(env, rt, cp, candidate, 'outbound');
+    }
+  }
+  if (!complete) env.logger.event('gossip_exchange', { outcome: 'error', error_code: 'GOSSIP_STARTUP_INCOMPLETE' });
+  return complete;
 }
 
 // ---------------------------------------------------------------------------------------------------- outbound

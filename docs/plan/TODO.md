@@ -1,5 +1,11 @@
 # QuietVote consolidated TODO
 
+The current source reconciliation is [UNFINISHED_WORK](../audits/UNFINISHED_WORK.md).
+Earlier entries below are historical requirements and can describe code since
+implemented. In particular, ElGamal rerandomization is present, election
+registration and pinned membership have current implementations, and completed
+recovery slices must be assessed using the new exact-source receipts.
+
 ## Current integration delta — 2026-10-30
 
 This older backlog remains a requirement inventory, not proof of current source

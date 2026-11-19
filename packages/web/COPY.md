@@ -71,6 +71,8 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.election.v1.none`: I don't have it
 - `qv.election.v1.confirmed`: Election ID confirmed on this device.
 - `qv.election.v1.typeIt`: Type the Election ID you were given
+- `qv.election.rulesAck`: I have read these rules and privacy limits
+- `qv.election.rulesAckHint`: Optional. This note stays on this device.
 - `qv.election.notFound`: We could not find this election on this server.
 - `qv.election.langNotice`: This election is written in {languages}.
 
@@ -315,6 +317,8 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.err.E-VOT-OVERVOTE.body`: You can choose up to {k}. You've chosen {x}.
 - `qv.err.E-VOT-ONEBALLOT.title`: You've already voted
 - `qv.err.E-VOT-ONEBALLOT.body`: This election allows one ballot per person. Your first ballot counts.
+- `qv.err.E-VOT-LIMIT.title`: Ballot limit reached
+- `qv.err.E-VOT-LIMIT.body`: This submission was not accepted. Check your latest receipt and the election's ballot limits.
 - `qv.err.E-VOT-REJECTED-PROOF.title`: Your ballot couldn't be accepted
 - `qv.err.E-VOT-REJECTED-PROOF.body`: Your device produced a ballot that failed the checks. Nothing was recorded. Reload this page and try again; if it happens again, report it with the reference.
 - `qv.err.E-VOT-DUP.title`: This exact ballot is already recorded
@@ -395,6 +399,11 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 
 - `qv.device.shared` **[normative]**: On a shared or public computer? Choose "Clear this device" when you finish. This removes your voting key, receipts and drafts from this browser.
 - `qv.device.cleared` **[normative]**: This device has been cleared. If you saved your receipt file, you can still check your ballot later.
+- `qv.device.settings`: Device settings
+- `qv.device.sharedToggle`: This is a shared or public device
+- `qv.device.rememberHelp`: Receipt saving affects only new receipts.
+- `qv.device.unconfirmed`: Could not confirm saved settings.
+- `qv.device.retry`: Read device settings again
 
 ## Status chips
 
@@ -423,6 +432,9 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.verify.anchorHint`: Optional but strongly recommended. Without it, a copy of a different election would also pass.
 - `qv.verify.run`: Run checks
 - `qv.verify.running`: Running checks…
+- `qv.verify.progressLabel`: Verification work in current stage
+- `qv.verify.progress`: Checked {done} of {total} items in this stage. This is progress, not a result.
+- `qv.verify.cancelled`: Verification cancelled. No report was produced.
 - `qv.verify.verdict.PASS`: Supplied checks passed
 - `qv.verify.verdict.FAIL`: A check failed
 - `qv.verify.verdict.INCOMPLETE`: Incomplete: more evidence is needed

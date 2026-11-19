@@ -4,6 +4,13 @@
 import type { MessageKey } from '../en.ts';
 
 export const PT_BR = {
+  "qv.device.unconfirmed": "Não foi possível confirmar as configurações salvas.",
+  "qv.election.rulesAck": "Li estas regras e limites de privacidade",
+  "qv.election.rulesAckHint": "Opcional. Esta anotação fica neste dispositivo.",
+  "qv.device.settings": "Configurações do dispositivo",
+  "qv.device.sharedToggle": "Este dispositivo é compartilhado ou público",
+  "qv.device.rememberHelp": "Salvar recibos afeta apenas os novos.",
+  "qv.device.retry": "Ler as configurações do dispositivo novamente",
   "qv.admin.help": "Use o hash do manifesto salvo para verificar esta eleição. Revise cada pacote público antes de enviar. Os guardiões mantêm as chaves secretas em sua ferramenta. Estas verificações não confirmam a atualização do registro nem a aprovação das testemunhas.",
   "qv.admin.pin": "Hash do manifesto salvo (64 caracteres hexadecimais)",
   "qv.admin.action": "Ação do organizador",
@@ -299,6 +306,9 @@ export const PT_BR = {
   'qv.verify.anchorHint': 'Opcional, mas muito recomendado. Sem ele, uma cópia de outra eleição também passaria.',
   'qv.verify.run': 'Executar verificações',
   'qv.verify.running': 'Executando verificações…',
+  'qv.verify.progressLabel': "Verificação na etapa atual",
+  'qv.verify.progress': "{done} de {total} itens verificados nesta etapa. Isto indica o progresso, não um resultado.",
+  'qv.verify.cancelled': "Verificação cancelada. Nenhum relatório foi gerado.",
   'qv.verify.verdict.PASS': 'Todas as verificações aprovadas',
   'qv.verify.verdict.FAIL': 'Uma verificação falhou',
   'qv.verify.verdict.INCOMPLETE': 'Incompleta: são necessárias mais evidências',
@@ -443,6 +453,8 @@ export const PT_BR = {
   'qv.err.E-VOT-OVERVOTE.body': 'Você pode escolher até {k}. Você escolheu {x}.',
   'qv.err.E-VOT-ONEBALLOT.title': 'Você já votou',
   'qv.err.E-VOT-ONEBALLOT.body': 'Esta eleição permite uma cédula por pessoa. A sua primeira cédula conta.',
+  'qv.err.E-VOT-LIMIT.title': 'Limite de cédulas atingido',
+  'qv.err.E-VOT-LIMIT.body': 'Este envio não foi aceito. Confira seu último recibo e os limites de cédulas da eleição.',
   'qv.err.E-VOT-REJECTED-PROOF.title': 'Não foi possível aceitar a sua cédula',
   'qv.err.E-VOT-REJECTED-PROOF.body': 'Seu dispositivo gerou uma cédula que não passou nas verificações. Nada foi registrado. Recarregue esta página e tente de novo; se acontecer de novo, informe com a referência.',
   'qv.err.E-VOT-DUP.title': 'Esta cédula exata já está registrada',

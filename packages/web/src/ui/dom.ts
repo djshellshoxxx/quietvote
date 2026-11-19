@@ -30,9 +30,9 @@ export class Announcer {
     this.polite = polite;
     this.assertive = assertive;
   }
-  say(msg: string, urgent = false): void {
+  say(msg: string, urgent = false, current: () => boolean = () => true): void {
     const r = urgent ? this.assertive : this.polite;
     r.textContent = '';
-    setTimeout(() => (r.textContent = msg), 30);
+    setTimeout(() => { if (current()) r.textContent = msg; }, 30);
   }
 }

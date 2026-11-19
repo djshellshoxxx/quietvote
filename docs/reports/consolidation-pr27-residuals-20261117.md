@@ -1,5 +1,7 @@
 # QuietVote PR #27 residual integration review — 2026-11-17
 
+> N-32(b) follow-up: the [recorded PUBLIC export implementation](recorded-public-exports-20261118.md) completes the ARCHIVED export/explicit-acknowledgement/notice-grace slice using additive election migration **11**, after pinned membership consumed version 10. Its report records focused verification and remaining integration gates. The source audit below retains the earlier candidate's absent-feature and next-migration findings as historical context.
+
 > Consolidation update: the /56 and keyless receipt slices are included in published candidate `8686e625270826bc0776596a1bbaf434832f4afd`, preserving the reviewed local repairs `fffa143` and `4b93752`. Combined typecheck and 26 focused tests passed. The sections below retain the original source audit; completion statuses and the W15 disposition are updated here.
 
 Read-only source audit against current consolidation candidate `25d26aa3dc35127015100ace20419c57509ed338`, with the original `66dcfafa885bdbd82cae808c33cebe0d7f8a21ab` checked for provenance. The reviewed paths have the same relevant behavior at both commits. The separately reviewed IPv6 repair is `d6c3be005b09c4299cbd7a906dc9d81a6276ccc9`. The keyless repair is covered by its [separate verification receipt](keyless-receipts-consolidation-20261117.md); both are included in the published candidate.

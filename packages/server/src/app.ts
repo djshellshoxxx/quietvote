@@ -227,6 +227,8 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       witness_quorum: { required: w.required, have: w.have },
       ...(rt.st.mh ? { manifest_hash: b64u(rt.st.mh) } : {}),
       phase_seq: st.phaseSeq,
+      control_seq: st.controlSeq,
+      next_control_seq: st.controlSeq < Number.MAX_SAFE_INTEGER ? st.controlSeq + 1 : null,
       integrity: rt.edb.hasPermanentEvidence() ? 'compromised' : quarantine ? 'quarantined' : w.required > 0 && !w.witnessed ? 'unwitnessed' : 'ok',
       gates,
     };
@@ -540,6 +542,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       if (c.auth!.role !== 'org_owner' && c.auth!.role !== 'instance_admin') throw forbidden('owner only');
       const b = c.parse(fObj({ confirm: req(fStr({ min: 1, max: 200 })) }));
       if (b.confirm !== (rt.st.manifest?.title ?? rt.edb.row().title)) throw new ApiError(422, 'VALIDATION_FAILED', 'confirm must equal the election title');
+      await pool.assertDeletable(rt.id);
       await pool.remove(rt.id);
       return { status: 202, json: { state: 'done' } };
     },
@@ -1029,7 +1032,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   });
   void audienceOf;
 
-  registerExtRoutes({ env, pool, jobs, add, idem, readable, intQ });
+  registerExtRoutes({ env, pool, jobs, add, idem, readable, orgElection, intQ });
 
   const http = createHttpApp(env, R, statics);
   let stopped: Promise<void> | undefined;

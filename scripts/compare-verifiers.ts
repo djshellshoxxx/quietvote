@@ -1,6 +1,6 @@
 // Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
-// Differential check of the shared full-election corpus. Unsupported Python
-// board/receipt capabilities are listed explicitly, never counted as agreement.
+// Differential check of the shared full-election content corpus. Board/receipt
+// checks are outside this harness scope, never counted as agreement here.
 // Protocol ambiguities remain failures here; this script does not pick a side.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -39,7 +39,7 @@ json.dump(rows, sys.stdout)
 if (py.error || py.status !== 0) throw new Error(`Python verifier process failed: ${py.error?.message ?? py.stderr}`);
 const python = JSON.parse(py.stdout) as { id: string; report?: any; error?: string }[];
 assert.equal(python.length, cases.length, 'Python must return every case');
-const unsupported = new Set(['chk.board.append_only', 'chk.board.witness', 'chk.receipts.sample']);
+const excluded = new Set(['chk.board.append_only', 'chk.board.witness', 'chk.receipts.sample']);
 const rows: { id: string; ts_verdict: string; python_verdict: string; compared: string[]; skipped: string[]; differences: string[] }[] = [];
 for (let i = 0; i < cases.length; i++) {
   const c = cases[i]!;
@@ -58,7 +58,7 @@ for (let i = 0; i < cases.length; i++) {
     };
     compare('verdict', ts.verdict, pr.verdict);
     for (const [check, status] of Object.entries(ts.checks)) {
-      if (unsupported.has(check)) {
+      if (excluded.has(check)) {
         skipped.push(`${check}: Python not implemented`);
         continue;
       }
@@ -77,6 +77,6 @@ else {
   for (const row of failures) console.error(`${row.id}\n${row.differences.map((d) => `  ${d}`).join('\n')}`);
   console.log(`cross-verifier: ${rows.length - failures.length}/${rows.length} agree within shared capabilities; ${failures.length} disagree`);
   console.log(`Verdicts agree on ${verdictAgreements}/${rows.length}; report differences remain failures pending the documented errata decisions.`);
-  console.log(`Excluded capabilities (not agreement): ${[...unsupported].join(', ')}`);
+  console.log(`Excluded from this content-only comparison (not agreement): ${[...excluded].join(', ')}`);
 }
 process.exitCode = failures.length ? 1 : 0;

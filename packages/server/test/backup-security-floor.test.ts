@@ -60,6 +60,15 @@ test('private restore cannot downgrade the recorded registration scheme', async 
   await refuses(downgraded, original);
 });
 
+test('private restore retains independent runtime anchors even when the public history is unchanged', async () => {
+  const absent = changed('control', (db) => db.exec('DROP TABLE runtime_anchor; DELETE FROM schema_migration WHERE version=8; PRAGMA user_version=7'));
+  assert.deepEqual((await verifyBackup(absent, key)).elections, (await verifyBackup(original, key)).elections);
+  await refuses(absent, original);
+  const rt = (await w.server.pool.get(w.electionId))!;
+  const lowered = changed('control', (db) => db.prepare('UPDATE runtime_anchor SET tree_size=0,root=? WHERE election_id=?').run(rt.log.root(0), w.electionId));
+  await refuses(lowered, original);
+});
+
 test('private restore preserves an attached pinned roll beyond request expiry without changing public history', async () => {
   const members = w.voters.map((voter) => Buffer.from(voter.publicKey).toString('hex')).sort();
   const expiredRequests = changed('control', (db) => db.exec('UPDATE idempotency SET expires_at=1; UPDATE replay_nonce SET expires_at=1'));
@@ -71,7 +80,7 @@ test('private restore preserves an attached pinned roll beyond request expiry wi
     // Recreate a genuine schema-9 copy: that version could publish a pinned
     // manifest without possessing its full list. Opening it migrates only the
     // disposable verification copy; the source snapshot remains unchanged.
-    db.exec('DROP TABLE pinned_roll; DELETE FROM schema_migration WHERE version=10; PRAGMA user_version=9');
+    db.exec('DROP TABLE export_record; DROP TABLE pinned_roll; DELETE FROM schema_migration WHERE version>=10; PRAGMA user_version=9');
   }, bound);
   const currentReport = await verifyBackup(bound, key);
   const legacyReport = await verifyBackup(legacy, key);

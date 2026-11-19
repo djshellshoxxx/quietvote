@@ -2,11 +2,12 @@ import { bytesToHex, jcs, parseQvJson, pointToBytes, type Point } from '@quietvo
 import { aggregate, analyzeBallotLog, analyzeBallotLogCooperatively, collectAlphas, countedRoot, type Finding, type FindingClass } from './ballotlog.ts';
 import { ballotCode, type ElectionParams } from './ballot.ts';
 import { checkpoint, VerificationSchedulingError, type CooperativeVerification } from './cooperative.ts';
+import { advanceControlSeq, checkControlRecord, type ControlBody } from './controls.ts';
 export type { CooperativeVerification, VerificationProgress } from './cooperative.ts';
 export { VerificationSchedulingError } from './cooperative.ts';
 import { adjudicateDkg, verifyKeyconf, type DkgOutcome, type MarkerSeqs } from './dkg.ts';
 import {
-  verifyLogStructure, verifyReceiptClaims, verifyWitnessing, type LogEvidence, type LogStructure, type PhaseSeqs,
+  CONTROL_ENTRY, verifyLogStructure, verifyReceiptClaims, verifyWitnessing, type LogEvidence, type LogStructure, type PhaseSeqs,
 } from './logcheck.ts';
 import { effectiveMinCounted, manifestHash, rollRoot, validateManifest } from './manifest.ts';
 import { verifyMultiSig, verifySig } from './records.ts';
@@ -283,6 +284,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   };
 
   let recordsCompleted = 0;
+  let controlSeq = 0;
   for (const { seq, entry } of log) {
     if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'records', completed: recordsCompleted++, total: log.length });
     const o = entry as Record<string, unknown> | null;
@@ -314,6 +316,30 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
       return false;
     };
     switch (type) {
+      case 'control': {
+        // Keep the established content-only treatment of an entirely legacy prefix.
+        if (!Object.hasOwn(body, 'control_seq') && controlSeq === 0) {
+          F('E_VERSION', 'unknown record type control', seq, 'L');
+          R.checks['chk.encoding.canonical'] = 'fail';
+          break;
+        }
+        const malformed = checkControlRecord(entry);
+        if (malformed !== null) { noteBad('E_SCHEMA', seq, malformed); break; }
+        const rec = entry as MultiSignedRecord<ControlBody>;
+        if (!Object.hasOwn(CONTROL_ENTRY, rec.body.action)) { noteBad('E_SCHEMA', seq, 'unknown control action'); break; }
+        if (!verifyMultiSig(mhb, rec, m.coordinator.keys, m.coordinator.m)) {
+          F('E_SIG', 'control lacks m valid coordinator signatures', seq, 'L');
+          break;
+        }
+        const next = advanceControlSeq(controlSeq, rec.body);
+        if (!next.ok) {
+          R.checks['chk.time.window'] = 'fail';
+          F(next.error, next.detail ?? 'invalid control sequence', seq);
+          return done();
+        }
+        controlSeq = next.value;
+        break;
+      }
       case 'marker': {
         if (bad(S.multiSigned(S.marker))) break;
         const rec = entry as MultiSignedRecord<MarkerBody>;
@@ -466,8 +492,15 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   for (const { seq, rec } of pendingCtxMarkers) {
     if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'markers', completed: markersCompleted++, total: pendingCtxMarkers.length });
     if (verifyMultiSig(dkg.ctx, rec, m.coordinator.keys, m.coordinator.m)) {
-      if (markers.has(rec.body.name)) F('E_MARKERS', `duplicate marker ${rec.body.name}`, seq, 'L');
-      else markers.set(rec.body.name, { seq, body: rec.body, rec });
+      const previous = markers.get(rec.body.name);
+      if (previous === undefined) markers.set(rec.body.name, { seq, body: rec.body, rec });
+      else if (H(jcs(previous.body)) === H(jcs(rec.body))) F('E_MARKERS', `duplicate marker ${rec.body.name}`, seq, 'L');
+      else {
+        // QV-ADR-027 / P10: authenticated body equivocation makes the voting window untrustworthy.
+        F('E_MARKERS', `conflicting marker ${rec.body.name}: body differs from the first authenticated marker`, seq);
+        R.checks['chk.time.window'] = 'fail';
+        return done();
+      }
     } else F('E_SIG', 'election marker lacks m valid coordinator signatures', seq, 'L');
   }
   const open = markers.get('election-open');

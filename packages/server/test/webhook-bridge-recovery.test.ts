@@ -103,10 +103,10 @@ test('upgrade floors pre-cursor history without replaying already delivered even
     const rel = w.server.env.control.election(w.electionId)!.db_path;
     await w.server.stop();
     const oldElection = new DatabaseSync(join(w.dir, rel));
-    oldElection.exec("DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5");
+    oldElection.exec("DROP TABLE export_record; DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5");
     oldElection.close();
     const oldControl = new DatabaseSync(join(w.dir, 'control.sqlite'));
-    oldControl.exec('DROP TABLE webhook_event_cursor; DELETE FROM schema_migration WHERE version=7; PRAGMA user_version=6');
+    oldControl.exec('DROP TABLE runtime_anchor; DROP TABLE webhook_event_cursor; DELETE FROM schema_migration WHERE version>=7; PRAGMA user_version=6');
     oldControl.close();
     await w.start();
     await w.server.webhooks.idle();
@@ -141,10 +141,10 @@ test('legacy pending webhook retries survive bridge migration with their origina
     const rel = w.server.env.control.election(w.electionId)!.db_path;
     await w.server.stop();
     const oldElection = new DatabaseSync(join(w.dir, rel));
-    oldElection.exec("DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5");
+    oldElection.exec("DROP TABLE export_record; DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM meta WHERE key='webhook_bridge_floor'; DELETE FROM schema_migration WHERE version>=6; PRAGMA user_version=5");
     oldElection.close();
     const oldControl = new DatabaseSync(join(w.dir, 'control.sqlite'));
-    oldControl.exec('DROP TABLE webhook_event_cursor; DELETE FROM schema_migration WHERE version=7; PRAGMA user_version=6');
+    oldControl.exec('DROP TABLE runtime_anchor; DROP TABLE webhook_event_cursor; DELETE FROM schema_migration WHERE version>=7; PRAGMA user_version=6');
     oldControl.close();
     status = 200; w.tick(61);
     await w.start(); await w.server.webhooks.idle();

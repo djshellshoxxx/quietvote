@@ -19,6 +19,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { lstatSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RegistryRow, WebhookRow } from './controldb.ts';
+import { anchoredEvents } from './runtime-anchor.ts';
 import { ElectionDb, type EventRow } from './electiondb.ts';
 import { SERVER_VERSION } from './election.ts';
 import type { Env } from './env.ts';
@@ -130,6 +131,7 @@ export class WebhookService {
       db = new ElectionDb(path, SERVER_VERSION);
       const row = db.row();
       if (row.election_id !== reg.election_id || row.org_id !== reg.org_id) throw new Error('election registry mismatch');
+      if (!anchoredEvents(this.env.control, db)) return false;
       return this.recover({ electionId: reg.election_id, orgId: reg.org_id }, db);
     } catch {
       this.env.logger.event('webhook_bridge', { outcome: 'error', note: 'election_recovery_pending' });

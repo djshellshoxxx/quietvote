@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import {
   BoardLog, MAX_BODY, authorKeyId, b64, b64u, buildEntry, checkEntry, decodeHeader, nonceKey, parseCheckpoint, toHex, witnessStatus,
+  verifyLogSignature,
   type EntryHeader, type EntryType, type Receipt,
 } from '@quietvote/board';
 import {
@@ -12,7 +13,7 @@ import {
   type Ed25519Keypair,
 } from '@quietvote/crypto';
 import {
-  NO_SUPERSEDES, S, adjudicateDkg, aggregate, analyzeBallotLog, ballotCode, buildTallyFromAggregate, castEnvelopeSchema, check, checkDealing,
+  NO_SUPERSEDES, CONTROL_ENTRY, S, advanceControlSeq, checkControlRecord, adjudicateDkg, aggregate, analyzeBallotLog, ballotCode, buildTallyFromAggregate, castEnvelopeSchema, check, checkDealing,
   countedRoot, dealingCommitHash, effectiveMinCounted, manifestHash, manifestSchema, rollRoot, shareFromHex, shareKey,
   collectAlphas, collectSpoilShares, decryptSpoiled, signRecord, spoilEnvelopeSchema, spoilShareRecordSchema, tallySchema, validateManifest, verifyEnvelope, verifyKeyconf, verifyMultiSig, verifySig, verifySpoilReveal, PROTO_ID,
   type Aggregate, type BallotAnalysis, type CastEnvelope, type CommitBody, type ComplaintBody, type DealingBody, type DkgOutcome,
@@ -24,7 +25,7 @@ import { ElectionDb, type EventRow } from './electiondb.ts';
 import type { Env } from './env.ts';
 import { toIso } from './util.ts';
 import { transition, typeAllowed, effectiveState, TERMINAL, type LifecycleEvent } from './lifecycle.ts';
-import { ApiError, conflict, forbidden, invalid, wrongPhase } from './problem.ts';
+import { ApiError, conflict, forbidden, invalid, notFound, wrongPhase } from './problem.ts';
 import {
   ACTION_ENTRY, DKG_STEP_MARKERS, aggregateSchema, controlSchema, decSharesSchema,
   type AggregateBody, type ControlBody, type DecSharesBody,
@@ -33,6 +34,8 @@ import { Mutex } from './util.ts';
 import { open as unseal } from './kek.ts';
 import { randomBytes } from 'node:crypto';
 import { samePinnedRoll, type PinnedRoll } from './pinned-roll.ts';
+import { anchorMatches } from './runtime-anchor.ts';
+import { acquireStartupAnchors } from './gossip.ts';
 
 export const SERVER_VERSION = '0.1.0';
 const ZERO32 = '00'.repeat(32);
@@ -58,6 +61,7 @@ interface Validated {
 export class ElectionState {
   state: ElectionStateName = 'DRAFT';
   phaseSeq: Record<string, number> = {};
+  controlSeq = 0;
   manifest: Manifest | undefined;
   manifestRec: MultiSignedRecord<Manifest> | undefined;
   mh: Uint8Array | undefined;
@@ -130,6 +134,10 @@ export class ElectionRuntime {
   private readonly trusteeByKid = new Map<string, { pk: Uint8Array; index: number }>();
   private readonly reg: RegistryRow;
   private readonly tallyDrafts = new Map<string, TallyBody>();
+  private signingReady = false;
+  private startupCheck: Promise<void> | undefined;
+  private freshlyCreated = false;
+  private closed = false;
 
   private constructor(env: Env, reg: RegistryRow, edb: ElectionDb, logSk: Uint8Array | undefined, srvSk: Uint8Array | undefined) {
     const row = edb.row();
@@ -139,7 +147,8 @@ export class ElectionRuntime {
     this.origin = row.origin;
     this.orgId = row.org_id;
     this.imported = row.imported === 1;
-    this.forcedQuarantine = typeof row.quarantine === 'string' && row.quarantine.startsWith('{"code":') ? row.quarantine : undefined;
+    const quarantine = typeof reg.quarantine === 'string' && reg.quarantine.startsWith('{"code":') ? reg.quarantine : row.quarantine;
+    this.forcedQuarantine = typeof quarantine === 'string' && quarantine.startsWith('{"code":') ? quarantine : undefined;
     this.edb = edb;
     this.logPk = new Uint8Array(row.log_pk);
     this.srvPk = new Uint8Array(row.srv_pk);
@@ -147,10 +156,11 @@ export class ElectionRuntime {
     this.log = new BoardLog({
       origin: row.origin, store: edb.store, ...(logSk === undefined ? {} : { secretKey: logSk }), publicKey: this.logPk,
       clock: () => env.nowSec(), resolveAuthorKey: (h) => this.resolveAuthor(h), maxClockSkew: 86400,
+      canSign: () => this.signaturesAllowed(),
     });
   }
 
-  static async open(env: Env, reg: RegistryRow): Promise<ElectionRuntime> {
+  static async open(env: Env, reg: RegistryRow, freshlyCreated = false): Promise<ElectionRuntime> {
     const edb = new ElectionDb(join(env.cfg.dataDir, reg.db_path), SERVER_VERSION);
     try {
       const row = edb.row();
@@ -163,7 +173,9 @@ export class ElectionRuntime {
         if (row.srv_sk_enc) srvSk = unseal(dek, row.srv_sk_enc, 'srv_sk');
       }
       const rt = new ElectionRuntime(env, reg, edb, logSk, srvSk);
+      rt.freshlyCreated = freshlyCreated;
       await rt.replay();
+      await rt.refreshRollbackGuard();
       return rt;
     } catch (e) {
       edb.close();
@@ -171,7 +183,87 @@ export class ElectionRuntime {
     }
   }
 
+  private localAnchorMatches(): boolean {
+    return this.imported || anchorMatches(this.env.control.runtimeAnchor(this.id), this.origin, this.logPk, this.log);
+  }
+
+  /** Synchronous gate also protects direct BoardLog signing and duplicate receipt paths. */
+  private signaturesAllowed(): boolean {
+    try {
+      return this.signingReady && !this.poisoned && this.env.control.election(this.id) !== undefined &&
+        this.quarantineReason() === undefined && this.localAnchorMatches();
+    } catch { this.poisoned = true; return false; }
+  }
+
+  private requireSigningReady(): void {
+    if (this.poisoned) throw new ApiError(503, 'LOG_UNAVAILABLE', 'election recovery is required');
+    if (!this.env.control.election(this.id)) throw notFound('election');
+    if (this.quarantineReason() !== undefined || !this.localAnchorMatches()) throw new ApiError(503, 'QUARANTINED', 'log is quarantined; reads still work');
+    if (!this.signingReady) throw new ApiError(503, 'LOG_UNAVAILABLE', 'startup checkpoint acquisition is incomplete; reads still work');
+  }
+
+  /** Destructive operations must honor the same recovery floor even when they do not produce a signature. */
+  assertHealthy(): void {
+    this.requireSigningReady();
+  }
+
+  /** Called only after the election transaction committed, before events or signed outcomes escape. */
+  private persistRuntimeAnchor(): void {
+    if (this.imported) return;
+    try {
+      if (!this.localAnchorMatches()) {
+        const floor = this.env.control.runtimeAnchor(this.id);
+        this.markQuarantine('ROLLBACK_SUSPECTED', floor?.tree_size ?? 0, 'rollback');
+        throw new ApiError(503, 'QUARANTINED', 'stored log does not reproduce its independent runtime anchor');
+      }
+      const result = this.env.control.raiseRuntimeAnchor(this.id, this.origin, this.logPk, this.log.size, this.log.root());
+      if (result === 'conflict' || result === 'older') {
+        this.markQuarantine('ROLLBACK_SUSPECTED', this.env.control.runtimeAnchor(this.id)?.tree_size ?? 0, 'rollback');
+        throw new ApiError(503, 'QUARANTINED', 'runtime anchor refused a rollback or conflicting head');
+      }
+    } catch (error) {
+      this.poisoned = true; // Committed append/intents remain recoverable, but this handle must expose nothing more.
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(503, 'LOG_UNAVAILABLE', 'runtime anchor persistence failed; recovery is required');
+    }
+  }
+
+  /** A bounded startup check may be retried after unavailable peers recover; reads remain usable meanwhile. */
+  async refreshRollbackGuard(): Promise<void> {
+    if (this.signingReady || this.poisoned || this.quarantineReason() !== undefined) return;
+    if (this.startupCheck) return this.startupCheck;
+    const work = async (): Promise<void> => {
+      if (!this.localAnchorMatches()) {
+        const floor = this.env.control.runtimeAnchor(this.id);
+        this.markQuarantine('ROLLBACK_SUSPECTED', floor?.tree_size ?? 0, 'rollback');
+        return;
+      }
+      if (!this.imported) this.persistRuntimeAnchor();
+      const acquired = this.imported || await acquireStartupAnchors(this.env, this, this.freshlyCreated);
+      this.signingReady = acquired && this.quarantineReason() === undefined && this.localAnchorMatches();
+    };
+    this.startupCheck = work().finally(() => { this.startupCheck = undefined; });
+    return this.startupCheck;
+  }
+
+  /** Keep authenticated external evidence outside the election DB too; never adopt unauthenticated peer claims. */
+  recordExternalAnchor(note: string): void {
+    if (this.imported) return;
+    const parsed = parseCheckpoint(note);
+    if (!parsed.ok || parsed.value.origin !== this.origin || !verifyLogSignature(parsed.value, this.logPk)) return;
+    const cp = parsed.value;
+    try {
+      const result = this.env.control.raiseRuntimeAnchor(this.id, this.origin, this.logPk, cp.size, cp.root);
+      if (result === 'conflict') this.markQuarantine('EQUIVOCATION', cp.size, 'equivocation');
+      if (cp.size <= this.log.size && !Buffer.from(this.log.root(cp.size)).equals(cp.root)) this.env.control.markRuntimeAnchorConflict(this.id);
+    } catch (error) { this.poisoned = true; throw error; }
+  }
+
   close(): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.poisoned = true;
+    this.signingReady = false;
     for (const s of [...this.subscribers]) {
       try {
         s.close();
@@ -224,6 +316,7 @@ export class ElectionRuntime {
 
   /** Hands committed rows to live streams and to the webhook dispatcher. Never throws. */
   private publish(rows: EventRow[]): void {
+    if (!this.signaturesAllowed()) return;
     for (const r of rows) {
       for (const s of [...this.subscribers]) {
         try {
@@ -243,6 +336,7 @@ export class ElectionRuntime {
 
   /** Retry forwarding from durable rows, including gaps left by a prior process or failed callback. */
   recoverEvents(): boolean {
+    if (!this.signaturesAllowed()) return false;
     try {
       return this.env.recoverEvents?.({ electionId: this.id, orgId: this.orgId }, this.edb) ?? true;
     } catch {
@@ -483,6 +577,8 @@ export class ElectionRuntime {
 
   /** Lifts a forced quarantine (admin endpoint only). */
   clearForcedQuarantine(committed?: () => void): void {
+    if (!this.localAnchorMatches()) throw new ApiError(409, 'STATE_CONFLICT', 'restore the log history recorded by the independent runtime anchor before clearing quarantine');
+    this.persistRuntimeAnchor(); // Legacy quarantines may predate migration 8; clearing must not enable unanchored receipts.
     const out: EventRow[] = [];
     try {
       this.edb.tx(() => {
@@ -495,6 +591,7 @@ export class ElectionRuntime {
       throw error;
     }
     this.forcedQuarantine = undefined;
+    this.signingReady = true; // Admin clear has already rechecked independent witness evidence.
     this.env.control.setQuarantineFlag(this.id, null);
     this.publish(out);
   }
@@ -510,6 +607,16 @@ export class ElectionRuntime {
   /** Applies an already-admitted entry to the in-memory projection. */
   private async apply(seq: number, type: EntryType, rec: unknown, at: number): Promise<void> {
     const st = this.st;
+    if ((rec as { body?: { type?: string } })?.body?.type === 'control') {
+      const r = rec as MultiSignedRecord<ControlBody>;
+      if (!st.manifest || !st.mh || checkControlRecord(r) !== null || CONTROL_ENTRY[r.body.action] !== type ||
+          !verifyMultiSig(st.mh, r, st.manifest.coordinator.keys, st.manifest.coordinator.m)) {
+        throw new Error('stored control record failed authentication');
+      }
+      const next = advanceControlSeq(st.controlSeq, r.body);
+      if (!next.ok) throw new Error('stored control record has an invalid control sequence');
+      st.controlSeq = next.value;
+    }
     switch (type) {
       case 'manifest': {
         const r = rec as MultiSignedRecord<Manifest>;
@@ -745,14 +852,17 @@ export class ElectionRuntime {
   }
 
   outcomeFor(seq: number, duplicate: boolean): AppendOutcome {
+    this.requireSigningReady();
     const r = this.log.getReceipt(seq);
-    if (!r.ok && r.error.code === 'QV_BOARD_READ_ONLY') throw this.mapBoardErr(r.error.code, r.error.message);
+    if (!r.ok && (r.error.code === 'QV_BOARD_READ_ONLY' || r.error.code === 'QV_BOARD_QUARANTINE')) throw this.mapBoardErr(r.error.code, r.error.message);
     if (!r.ok) throw new ApiError(500, 'INTERNAL', 'receipt unavailable');
     return { status: r.value.inclusion ? 'included' : 'sequenced', receipt: r.value, duplicate, seq };
   }
 
   /** Public entry point for POST log/entries. */
   async append(headerBytes: Uint8Array, body: Uint8Array): Promise<AppendOutcome> {
+    await this.refreshRollbackGuard();
+    this.requireSigningReady();
     const pre = this.precheck(headerBytes, body, false);
     if ('dup' in pre) return pre.dup;
     return this.queued(() => this.processLocked(headerBytes, body));
@@ -770,7 +880,7 @@ export class ElectionRuntime {
   }
 
   private async processLocked(headerBytes: Uint8Array, body: Uint8Array): Promise<AppendOutcome> {
-    if (this.poisoned) throw new ApiError(503, 'LOG_UNAVAILABLE', 'election runtime is being reloaded');
+    this.requireSigningReady();
     const pre = this.precheck(headerBytes, body, true); // re-check under the lock (state may have moved)
     if ('dup' in pre) return pre.dup;
     const h = pre.header;
@@ -800,6 +910,7 @@ export class ElectionRuntime {
       throw e;
     }
     void receipt;
+    this.persistRuntimeAnchor();
     await this.apply(seq, h.type, v.rec, at);
     if (h.type === 'audit_close') this.finalizeArchive();
     this.syncState();
@@ -1009,6 +1120,11 @@ export class ElectionRuntime {
     const r = rec as MultiSignedRecord<ControlBody>;
     this.multi(r, mh, h);
     if (ACTION_ENTRY[r.body.action] !== h.type) throw invalid('E_SCHEMA', `action ${r.body.action} does not belong in a ${h.type} entry`);
+    const next = advanceControlSeq(this.st.controlSeq, r.body);
+    if (!next.ok) throw new ApiError(409, 'STATE_CONFLICT', 'control sequence is stale or out of order', {
+      reason: 'CONTROL_SEQUENCE', body: { control_seq: this.st.controlSeq,
+        next_control_seq: this.st.controlSeq < Number.MAX_SAFE_INTEGER ? this.st.controlSeq + 1 : null },
+    });
     return r.body;
   }
 
@@ -1214,6 +1330,8 @@ export class ElectionRuntime {
     const st = this.st;
     if (st.aggregateSeq !== undefined) return; // at most one aggregate per election: never double-count
     if (this.state !== 'CLOSED' || st.closeSeq === undefined || this.srvKeys === undefined || st.params === undefined || st.manifest === undefined) return;
+    await this.refreshRollbackGuard();
+    this.requireSigningReady();
     if (!this.witnessedWithin(st.closeSeq, this.log.size)) return;
     const an = this.ensureAnalysis();
     const floor = effectiveMinCounted(st.manifest, st.rollSet!.size);

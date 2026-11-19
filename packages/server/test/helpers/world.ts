@@ -82,6 +82,7 @@ export class World {
   Q: number[] = [];
   rollHex: string[] = [];
   last = new Map<string, string>();
+  controlSeq = 0;
   audience = '';
   witnesses: Ed25519Keypair[] = [];
 
@@ -170,7 +171,11 @@ export class World {
   }
   async post(type: EntryType, who: Ed25519Keypair, rec: unknown, election = this.electionId, origin = this.origin): Promise<Resp> {
     const e = this.entry(type, who, rec, origin);
-    return this.submit(e.headerBytes, e.body, election);
+    const result = await this.submit(e.headerBytes, e.body, election);
+    const body = (rec as { body?: { type?: string; control_seq?: number } })?.body;
+    if ((result.status === 200 || result.status === 201) && election === this.electionId && body?.type === 'control' &&
+        body.control_seq !== undefined) this.controlSeq = Math.max(this.controlSeq, body.control_seq);
+    return result;
   }
   async submit(header: Uint8Array, body: Uint8Array, election = this.electionId): Promise<Resp> {
     return this.req('POST', `/api/v1/elections/${election}/log/entries`, { header: b64u(header), body: b64u(body) });
@@ -201,7 +206,7 @@ export class World {
     return this.multi(scope, { proto: PROTO_ID, type: 'marker', name, ...extra } as { type: string });
   }
   control(action: string, reason?: string) {
-    return this.multi(this.mh, { proto: PROTO_ID, type: 'control', action, ...(reason ? { reason } : {}) } as { type: string });
+    return this.multi(this.mh, { proto: PROTO_ID, type: 'control', action, control_seq: this.controlSeq + 1, ...(reason ? { reason } : {}) } as { type: string });
   }
 
   // ---- setup stages

@@ -11,6 +11,7 @@ export interface BackupSecurityFloor {
   nonces: Map<string, Row>;
   requests: Map<string, Row>;
   eventCursors: Map<string, Row>;
+  runtimeAnchors: Map<string, Row>;
   invites: Map<string, Map<string, Row>>;
   registrationSchemes: Map<string, string>;
   pinnedRolls: Map<string, Row>;
@@ -34,6 +35,7 @@ export function controlSecurityFloor(db: DatabaseSync): BackupSecurityFloor {
     nonces: rows(db, 'SELECT key_id,nonce,expires_at FROM replay_nonce', ['key_id', 'nonce']),
     requests: rows(db, 'SELECT principal,idem_key,method,path,req_sha256,status,response,expires_at FROM idempotency', ['principal', 'idem_key']),
     eventCursors: rows(db, 'SELECT election_id,event_id FROM webhook_event_cursor', ['election_id']),
+    runtimeAnchors: rows(db, 'SELECT election_id,origin,log_pk,tree_size,root,conflicted FROM runtime_anchor', ['election_id']),
     invites: new Map(),
     registrationSchemes: new Map(),
     pinnedRolls: new Map(),
@@ -96,6 +98,13 @@ export function preservesSecurityFloor(candidate: BackupSecurityFloor, floor: Ba
   for (const [id, old] of floor.eventCursors) {
     const next = candidate.eventCursors.get(id);
     if (!next || Number(next['event_id']) < Number(old['event_id'])) return false;
+  }
+  for (const [id, old] of floor.runtimeAnchors) {
+    const next = candidate.runtimeAnchors.get(id);
+    if (!next || !fields(next, old, ['origin', 'log_pk']) || Number(next['tree_size']) < Number(old['tree_size']) ||
+        (next['tree_size'] === old['tree_size'] && !fields(next, old, ['root'])) ||
+        (old['conflicted'] === 1 && next['conflicted'] !== 1)) return false;
+    // A larger candidate root is checked against the complete minimum backup's public log prefix by verifyCopy.
   }
   for (const [election, receipts] of floor.operationReceipts) {
     for (const [id, old] of receipts) {

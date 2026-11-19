@@ -11,9 +11,8 @@ export async function readLanguagePreference(storage: Pick<DeviceStorage, 'getSe
 
 /** Save a UI language without replacing unrelated device settings. */
 export async function writeLanguagePreference(
-  storage: Pick<DeviceStorage, 'getSettings' | 'putSettings'>,
+  storage: Pick<DeviceStorage, 'updateSettings'>,
   language: string,
 ): Promise<void> {
-  const settings = await storage.getSettings();
-  await storage.putSettings({ ...settings, language });
+  await storage.updateSettings((settings) => ({ ...settings, language }));
 }

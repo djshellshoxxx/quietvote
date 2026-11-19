@@ -16,6 +16,7 @@ import {
   bundleOf, buildManifest, castBallot, clone, closeElection, defaultContests, kp, multiSign, publishTally, setup, spoilBallot, type Faults, type Sim,
 } from '../helpers/sim.ts';
 import { generateLogLayer } from './loglayer.ts';
+import { generateControlSequences } from './controls.ts';
 
 const H = bytesToHex;
 const J = (o: unknown): string => JSON.stringify(o, null, 2) + '\n';
@@ -531,6 +532,8 @@ export async function generateAll(): Promise<Map<string, string>> {
     assert(r.verdict === m.verdict, `mutant ${m.id}: verdict ${r.verdict}`);
     put(f(mutDir, `${m.id}.json`), { id: m.id, base: 'elections/tiny-yesno-3v/bundle.json', expect: { verdict: m.verdict, failed_checks: m.checks.slice().sort(), codes: m.codes }, bundle: b });
   }
+
+  await generateControlSequences(put, tinyB);
 
   // canary: wrong aggregate + forged CDS proof in a counted ballot
   { const b = clone(tinyB);

@@ -10,6 +10,7 @@ WorkingDirectory=/opt/quietvote
 StateDirectory=quietvote
 StateDirectoryMode=0700
 UMask=0077
+ExecStartPre=/usr/bin/node /opt/quietvote/scripts/vendor.mjs check
 ExecStartPre=/usr/bin/node /opt/quietvote/packages/server/bin/qv-server.ts --config /etc/quietvote/server.json --check-config
 ExecStart=/usr/bin/node /opt/quietvote/packages/server/bin/qv-server.ts --config /etc/quietvote/server.json
 Restart=on-failure

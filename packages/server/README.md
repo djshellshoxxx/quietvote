@@ -4,6 +4,8 @@ See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
 
 ## Executable and local operations
 
+Prepare dependencies from the repository root with `npm ci --ignore-scripts` followed by `npm run vendor:install`. Before starting a checked-out candidate, `npm run vendor:check` verifies the installed cryptographic bytes and resolution against the recorded vendor snapshot.
+
 Run `node packages/server/bin/qv-server.ts --config /absolute/path/server.json`
 from the repository root. Use `--check-config` for strict configuration validation
 without data/key creation. See [launcher configuration and deployment examples](../../deploy/README.md)

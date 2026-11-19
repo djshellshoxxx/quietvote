@@ -98,7 +98,7 @@ test('review: schema8 null-expiry legacy invitations retain their original redem
     const db = new DatabaseSync(dbPath);
     try {
       db.prepare('UPDATE voter_invite SET code_hash=?,expires_at=NULL WHERE invite_id=?').run(legacyHash, issued.invite_id);
-      db.exec('DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DELETE FROM schema_migration WHERE version>=9; PRAGMA user_version=8');
+      db.exec('DROP TABLE export_record; DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DELETE FROM schema_migration WHERE version>=9; PRAGMA user_version=8');
     } finally { db.close(); }
     w.clock += 20 * 86_400_000;
     await w.start();

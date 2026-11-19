@@ -3,9 +3,9 @@
 import { authorKeyId, checkEntry, hashLeaf, type EntryType } from '@quietvote/board';
 import { bytesToHex, hexToBytes, jcs, parseQvJson, systemRng, utf8, type Rng } from '@quietvote/crypto';
 import {
-  PROTO_ID, S, check, logOrigin, manifestHash, manifestSchema, recordDigest, rollRoot, tallySchema,
+  PROTO_ID, CONTROL_ENTRY, S, advanceControlSeq, checkControlRecord, check, logOrigin, manifestHash, manifestSchema, recordDigest, rollRoot, tallySchema,
   validateManifest, verifyElection, verifyMultiSig, verifySig,
-  type ElectionBundle, type Manifest, type MarkerBody, type MultiSignedRecord, type RollCommitBody, type TallyBody,
+  type ControlBody, type ElectionBundle, type Manifest, type MarkerBody, type MultiSignedRecord, type RollCommitBody, type TallyBody,
 } from '@quietvote/protocol';
 import type { ApiClient } from '../api/client.ts';
 import type { AppendResult } from '../api/types.ts';
@@ -18,7 +18,7 @@ import { verifyAppendResult } from './receipt.ts';
 
 export const ADMIN_ACTIONS = ['dkg-open', 'dkg-r1-open', 'dkg-r1-close', 'dkg-r2-close', 'dkg-r3-close', 'dkg-final', 'roll-commit', 'election-open', 'election-close', 'tally'] as const;
 export type AdminAction = typeof ADMIN_ACTIONS[number];
-export interface AdminSnapshot { election: ElectionBundle; manifest: Manifest; pin: string }
+export interface AdminSnapshot { election: ElectionBundle; manifest: Manifest; pin: string; controlSeq: number }
 export interface AdminPacket { header: string; body: string }
 export interface PreparedAdminAction { packet: AdminPacket; record: unknown; quorum: boolean }
 export const MAX_ADMIN_BYTES = 1024 * 1024;
@@ -51,11 +51,20 @@ export function adminSnapshot(input: unknown, pin: string, electionId: string): 
   if (m.election_id !== electionId || e.manifest_hash !== pin || bytesToHex(mh) !== pin ||
       !verifyMultiSig(mh, e.manifest, m.coordinator.keys, m.coordinator.m)) throw new AdminError('pin');
   let previous = 0;
+  let controlSeq = 0;
   for (const row of e.log) {
     if (row === null || typeof row !== 'object' || !Number.isSafeInteger(row.seq) || row.seq > 0xffffffff || row.seq <= previous) throw new AdminError('input');
     previous = row.seq;
+    const record = row.entry as MultiSignedRecord<ControlBody> | undefined;
+    if (record?.body?.type === 'control') {
+      if (checkControlRecord(record) !== null || !Object.hasOwn(CONTROL_ENTRY, record.body.action) ||
+          !verifyMultiSig(mh, record, m.coordinator.keys, m.coordinator.m)) throw new AdminError('state');
+      const next = advanceControlSeq(controlSeq, record.body);
+      if (!next.ok) throw new AdminError('state');
+      controlSeq = next.value;
+    }
   }
-  return { election: e, manifest: m, pin };
+  return { election: e, manifest: m, pin, controlSeq };
 }
 
 function manifestRecords(s: AdminSnapshot): { markers: Map<string, number>; roll?: { seq: number; body: RollCommitBody } } {

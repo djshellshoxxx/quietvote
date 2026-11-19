@@ -28,7 +28,7 @@ export const TIMEOUT = 'TIMEOUT';
 export const BAD_RESPONSE = 'BAD_RESPONSE';
 
 export type UxCode =
-  | 'E-NET-OFFLINE' | 'E-NET-TIMEOUT' | 'E-VOT-NOTONROLL' | 'E-VOT-CLOSED' | 'E-VOT-NOTOPEN' | 'E-VOT-ONEBALLOT'
+  | 'E-NET-OFFLINE' | 'E-NET-TIMEOUT' | 'E-VOT-NOTONROLL' | 'E-VOT-CLOSED' | 'E-VOT-NOTOPEN' | 'E-VOT-ONEBALLOT' | 'E-VOT-LIMIT'
   | 'E-VOT-REJECTED-PROOF' | 'E-VOT-DUP' | 'E-VOT-SUPERSEDED-LOST' | 'E-BOARD-STALE' | 'E-API-RATE' | 'E-API-UNAVAILABLE'
   | 'E-READ-KEY' | 'E-ORG-MANIFEST' | 'E-GEN-UNKNOWN';
 
@@ -44,7 +44,9 @@ export function uxCodeFor(e: unknown, submitting = false): UxCode {
     case 'PINNED_ROLL_MISMATCH':
     case 'PINNED_ROLL_IMMUTABLE': return 'E-ORG-MANIFEST';
     case 'WRONG_PHASE': return /clos/i.test(e.detail ?? '') ? 'E-VOT-CLOSED' : /not.*open|before/i.test(e.detail ?? '') ? 'E-VOT-NOTOPEN' : 'E-API-UNAVAILABLE';
-    case 'REVOTE_LIMIT': return 'E-VOT-ONEBALLOT';
+    // The same API code covers any ballot quota and the separate test-ballot quota.
+    // It does not prove a one-ballot election or which earlier ballot is counted.
+    case 'REVOTE_LIMIT': return 'E-VOT-LIMIT';
     case 'ENTRY_INVALID': return e.reason === 'E_SUPERSEDES' || e.reason === 'SUPERSEDED' ? 'E-VOT-SUPERSEDED-LOST' : 'E-VOT-REJECTED-PROOF';
     case 'MALFORMED_ENTRY':
     case 'VALIDATION_FAILED': return 'E-VOT-REJECTED-PROOF';

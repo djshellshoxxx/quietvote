@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { bytesToHex } from '@quietvote/crypto';
-import { fullElection, waitJob } from './helpers/full.ts';
+import { fullElection } from './helpers/full.ts';
 import { kp } from './helpers/world.ts';
 
 const admin = kp('admin', 'admin1');
@@ -26,9 +26,10 @@ test('a stale DRAFT registry does not allow deleting an OPEN election', { timeou
     await w.start();
 
     const r = await w.signed('DELETE', `/api/v1/admin/elections/${id}`, { confirm: reg.title }, admin, w.idemKey());
-    assert.equal(r.status, 202, r.text);
-    const job = await waitJob(w, r.json.job_id, admin);
-    assert.equal(job.state, 'failed', `an OPEN election must not be deleted: ${JSON.stringify(job)}`);
+    assert.equal(r.status, 409, r.text);
+    assert.match(r.json.detail, /state must be/);
+    assert.equal(w.server.env.control.db.prepare("SELECT COUNT(*) AS n FROM job WHERE kind='delete'").get()?.['n'], 0,
+      'authoritative preflight must refuse before a deletion job is accepted');
     assert.equal(w.server.env.control.election(id)?.state, 'OPEN', 'the registry is healed from the log');
     assert.ok(existsSync(join(w.dir, reg.db_path)), 'the election database must survive a refused deletion');
     assert.equal((await w.get(`/api/v1/elections/${id}`)).status, 200);

@@ -1,5 +1,5 @@
 // control.sqlite (QV-28 §8.1): organizations, keys, election registry, idempotency, replay nonces, operator audit.
-// It holds no election content beyond the registry row (QV-28-REQ-019).
+// It holds registry/recovery metadata, never ballot or identity content (QV-28-REQ-019).
 import type { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import { all, closeDb, get, openDb, run, tx, type Migration } from './db.ts';
@@ -140,7 +140,29 @@ CREATE TABLE webhook_event_cursor (
 ) STRICT;
 `,
   },
+  {
+    version: 8,
+    name: 'runtime_rollback_anchor',
+    // Kept outside the election DB and retained with deletion tombstones. Never rewrite older migrations.
+    sql: `
+CREATE TABLE runtime_anchor (
+  election_id TEXT PRIMARY KEY REFERENCES election_registry(election_id),
+  origin TEXT NOT NULL, log_pk BLOB NOT NULL CHECK (length(log_pk)=32),
+  tree_size INTEGER NOT NULL CHECK (tree_size>=0), root BLOB NOT NULL CHECK (length(root)=32),
+  conflicted INTEGER NOT NULL DEFAULT 0 CHECK (conflicted IN (0,1))
+) STRICT;
+`,
+  },
 ];
+
+export interface RuntimeAnchor {
+  election_id: string;
+  origin: string;
+  log_pk: Uint8Array;
+  tree_size: number;
+  root: Uint8Array;
+  conflicted: number;
+}
 
 export interface GossipHealthRow {
   peer_id: string;
@@ -248,7 +270,8 @@ export class ControlDb {
   private readonly now: () => number;
   constructor(dataDir: string, now: () => number, appVersion: string) {
     this.now = now;
-    this.db = openDb({ path: join(dataDir, 'control.sqlite'), applicationId: 0x51564343, synchronous: 'NORMAL', migrations: MIGRATIONS, appVersion });
+    // Recovery anchors must survive power loss before any corresponding signed result is released.
+    this.db = openDb({ path: join(dataDir, 'control.sqlite'), applicationId: 0x51564343, synchronous: 'FULL', migrations: MIGRATIONS, appVersion });
   }
   close(): void {
     closeDb(this.db);
@@ -314,6 +337,34 @@ export class ControlDb {
   }
   election(id: string): RegistryRow | undefined {
     return get<RegistryRow>(this.db, "SELECT * FROM election_registry WHERE election_id=? AND state<>'DELETED'", id);
+  }
+  runtimeAnchor(id: string): RuntimeAnchor | undefined {
+    return get<RuntimeAnchor>(this.db, 'SELECT * FROM runtime_anchor WHERE election_id=?', id);
+  }
+  /** Only callers that authenticated the log identity/history may supply a new head. Never lowers a floor. */
+  raiseRuntimeAnchor(id: string, origin: string, logPk: Uint8Array, size: number, root: Uint8Array): 'advanced' | 'unchanged' | 'older' | 'conflict' {
+    if (!Number.isSafeInteger(size) || size < 0 || logPk.length !== 32 || root.length !== 32) throw new Error('invalid runtime anchor');
+    return this.tx(() => {
+      const old = this.runtimeAnchor(id);
+      if (old) {
+        if (old.conflicted || old.origin !== origin || !Buffer.from(old.log_pk).equals(logPk) ||
+            (old.tree_size === size && !Buffer.from(old.root).equals(root))) {
+          run(this.db, 'UPDATE runtime_anchor SET conflicted=1 WHERE election_id=?', id);
+          return 'conflict';
+        }
+        if (old.tree_size > size) return 'older';
+        if (old.tree_size === size) return 'unchanged';
+        run(this.db, 'UPDATE runtime_anchor SET tree_size=?,root=? WHERE election_id=?', size, root, id);
+      } else {
+        const reg = this.election(id);
+        if (!reg || reg.imported === 1) throw new Error('runtime anchor requires an owned election');
+        run(this.db, 'INSERT INTO runtime_anchor(election_id,origin,log_pk,tree_size,root) VALUES (?,?,?,?,?)', id, origin, logPk, size, root);
+      }
+      return 'advanced';
+    });
+  }
+  markRuntimeAnchorConflict(id: string): void {
+    run(this.db, 'UPDATE runtime_anchor SET conflicted=1 WHERE election_id=?', id);
   }
   countElections(orgId: string): number {
     return get<{ n: number }>(this.db, "SELECT COUNT(*) AS n FROM election_registry WHERE org_id=? AND state<>'DELETED'", orgId)?.n ?? 0;

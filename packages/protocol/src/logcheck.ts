@@ -12,7 +12,7 @@ import {
 import type { Finding, FindingClass } from './ballotlog.ts';
 import { manifestHash, validTs } from './manifest.ts';
 import { verifyMultiSig } from './records.ts';
-import { PROTO, S, check, lit, obj, str } from './schema.ts';
+import { advanceControlSeq, checkControlRecord, type ControlBody } from './controls.ts';
 import { err, ok, type ErrorCode, type Hex, type Manifest, type MultiSignedRecord, type Result } from './types.ts';
 
 const H = bytesToHex;
@@ -132,17 +132,11 @@ export const CONTROL_ENTRY: Readonly<Record<string, EntryType>> = {
 };
 export type NoticeKind = 'pause' | 'resume' | 'invalidate' | 'security-notice' | 'witness-waiver' | 'extension' | 'audit-close' | 'cancel' | 'abort';
 
-/**
- * Closed schema (QV-16 §4 rule 7: unknown fields are an error) of a control record: QV-18 §5.2 notice body `{code, text}`
- * carried as the server's `{proto, type: "control", action, reason?}`. No field can carry a quorum, a witness set or a
- * time, so no notice can restate a gate (X-32).
- */
-const CONTROL_RECORD = S.multiSigned(obj({ proto: lit(PROTO), type: lit('control'), action: str(32) }, { reason: str(256) }));
-
 /** An authenticated, well-formed notice/control entry. Recognised notices are reported; none is ever applied (X-32). */
 export interface NoticeRef {
   seq: number;
   kind: NoticeKind;
+  control_seq?: number;
 }
 
 const MARKER_TYPE: Record<string, EntryType> = {
@@ -284,6 +278,7 @@ export function verifyLogStructure(
   for (const s of bySeq.keys()) if (s < 1 || s >= n) F('E_LOG_BINDING', 'protocol log entry has no counterpart in the log', s);
   const redacted = new Set(b.redactions.map((r) => r.seq));
   const seen = new Set<string>();
+  let controlSeq = 0;
   for (let i = 0; i < n; i++) {
     const e = b.entries[i]!;
     tree.appendLeaf(e.headerBytes);
@@ -324,7 +319,11 @@ export function verifyLogStructure(
     out.headers[i] = h;
     if (bind.control === true) {
       const n = checkControl(m, mh, rec, i, F);
-      if (n !== undefined) out.notices.push(n);
+      if (n !== undefined) {
+        const next = advanceControlSeq(controlSeq, (rec as MultiSignedRecord<ControlBody>).body);
+        if (!next.ok) F(next.error, next.detail ?? 'invalid control sequence', i);
+        else { controlSeq = next.value; out.notices.push(n); }
+      }
     } else if (h.type === 'notice' && bind.types === undefined) {
       // X-33: a `notice` entry must carry a DKG round marker (X-22) or a control record. Anything else is a notice kind
       // this verifier cannot interpret, so it fails closed rather than being skipped (QV-18 §5.2 closed code list,
@@ -389,12 +388,12 @@ function checkControl(
   seq: number,
   F: (code: ErrorCode, d: string, seq?: number) => void,
 ): NoticeRef | undefined {
-  const e = check(CONTROL_RECORD, rec);
+  const e = checkControlRecord(rec);
   if (e !== null) {
     F('E_LOG_FORMAT', `control/notice record malformed (closed schema; a notice cannot carry a quorum, witness set or time): ${e}`, seq);
     return undefined;
   }
-  const r = rec as MultiSignedRecord<{ type: string; action: string }>;
+  const r = rec as MultiSignedRecord<ControlBody>;
   if (!Object.hasOwn(CONTROL_ENTRY, r.body.action)) {
     F('E_LOG_BINDING', `unknown notice kind '${r.body.action}': fail closed (QV-18 §5.2)`, seq);
     return undefined;
@@ -403,7 +402,7 @@ function checkControl(
     F('E_LOG_BINDING', `notice '${r.body.action}' lacks ${m.coordinator.m} valid coordinator record signature(s) (QV-18 REQ-052, QV-ADR-022)`, seq);
     return undefined;
   }
-  return { seq, kind: r.body.action as NoticeKind };
+  return { seq, kind: r.body.action as NoticeKind, ...(r.body.control_seq === undefined ? {} : { control_seq: r.body.control_seq }) };
 }
 
 /** Parses a note and requires origin + log signature. Returns the reason string on failure. */

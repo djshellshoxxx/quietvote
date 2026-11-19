@@ -104,7 +104,8 @@ export function prepareElectionArchive(path: string, pin: string) {
   }
   const structure = verifyLogStructure(m, content.manifest, content.roll, content.log, { board, extraAuthorKeys: [serverKey] });
   if (!structure.ok) throw new FailError(`archive verification refused: ${structure.findings.map((f) => f.code).join(', ')}`);
-  return { content, board, serverKey };
+  const controlSeq = structure.notices.reduce((current, notice) => notice.control_seq ?? current, 0);
+  return { content, board, serverKey, controlSeq };
 }
 
 export async function cmdElectionPrepare(argv: string[], io: Io): Promise<number> {

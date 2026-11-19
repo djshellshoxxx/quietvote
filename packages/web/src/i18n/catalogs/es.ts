@@ -4,6 +4,13 @@
 import type { MessageKey } from '../en.ts';
 
 export const ES = {
+  "qv.device.unconfirmed": "No se pudieron confirmar los ajustes guardados.",
+  "qv.election.rulesAck": "He leído estas reglas y límites de privacidad",
+  "qv.election.rulesAckHint": "Opcional. Esta nota se queda en este dispositivo.",
+  "qv.device.settings": "Ajustes del dispositivo",
+  "qv.device.sharedToggle": "Este dispositivo es compartido o público",
+  "qv.device.rememberHelp": "Guardar recibos solo afecta a los nuevos.",
+  "qv.device.retry": "Volver a leer los ajustes del dispositivo",
   "qv.admin.help": "Usa el hash del manifiesto guardado para comprobar esta elección. Revisa cada paquete público antes de enviarlo. Los custodios mantienen sus claves secretas en su herramienta. Estas comprobaciones no confirman la actualidad del registro ni la aprobación de testigos.",
   "qv.admin.pin": "Hash del manifiesto guardado (64 caracteres hexadecimales)",
   "qv.admin.action": "Acción del organizador",
@@ -299,6 +306,9 @@ export const ES = {
   'qv.verify.anchorHint': 'Opcional, pero muy recomendable. Sin él, una copia de otra elección también pasaría.',
   'qv.verify.run': 'Ejecutar comprobaciones',
   'qv.verify.running': 'Ejecutando comprobaciones…',
+  'qv.verify.progressLabel': "Trabajo de verificación en la etapa actual",
+  'qv.verify.progress': "Se comprobaron {done} de {total} elementos en esta etapa. Esto indica el progreso, no un resultado.",
+  'qv.verify.cancelled': "Verificación cancelada. No se generó ningún informe.",
   'qv.verify.verdict.PASS': 'Todas las comprobaciones superadas',
   'qv.verify.verdict.FAIL': 'Una comprobación falló',
   'qv.verify.verdict.INCOMPLETE': 'Incompleta: se necesitan más pruebas',
@@ -443,6 +453,8 @@ export const ES = {
   'qv.err.E-VOT-OVERVOTE.body': 'Puede elegir hasta {k}. Usted eligió {x}.',
   'qv.err.E-VOT-ONEBALLOT.title': 'Ya votó',
   'qv.err.E-VOT-ONEBALLOT.body': 'En esta elección cada persona puede emitir una sola papeleta. Su primera papeleta cuenta.',
+  'qv.err.E-VOT-LIMIT.title': 'Límite de papeletas alcanzado',
+  'qv.err.E-VOT-LIMIT.body': 'Este envío no fue aceptado. Revise su último recibo y los límites de papeletas de la elección.',
   'qv.err.E-VOT-REJECTED-PROOF.title': 'No se pudo aceptar su papeleta',
   'qv.err.E-VOT-REJECTED-PROOF.body': 'Su dispositivo generó una papeleta que no pasó las comprobaciones. No se registró nada. Recargue esta página e intente de nuevo; si vuelve a pasar, repórtelo con la referencia.',
   'qv.err.E-VOT-DUP.title': 'Esta papeleta exacta ya está registrada',

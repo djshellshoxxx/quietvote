@@ -3,14 +3,15 @@
 import { closeSync, constants as fsc, fstatSync, openSync, readSync, writeFileSync } from 'node:fs';
 import { MAX_BODY, b64u, buildEntry, isEntryType, isValidOrigin } from '@quietvote/board';
 import { bytesToHex, jcs, parseQvJson, wipe } from '@quietvote/crypto';
-import { PROTO_ID, S, check, lit, obj, oneOf, str, manifestHash, manifestSchema, signRecordRaw, tallySchema, verifySig, type Manifest, type Sig } from '@quietvote/protocol';
+import { S, check, controlAdmissionSchema, manifestHash, manifestSchema, signRecordRaw, tallySchema, verifySig, type Manifest, type Sig } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs } from './args.ts';
 import { PASSPHRASE_FLAGS, electionContext, pinnedHash, printJson } from './common.ts';
 import { loadVoterKey } from './cmd-keygen.ts';
+import { prepareElectionArchive } from './cmd-prepare.ts';
 import { EXIT, type Io } from './io.ts';
 
 // Existing server control actions (QV-18); no witness-waiver or extension authority is introduced.
-const controlBody = obj({ proto: lit(PROTO_ID), type: lit('control'), action: oneOf('pause', 'resume', 'invalidate', 'security-notice', 'audit-close', 'cancel', 'abort') }, { reason: str(256) });
+const controlBody = controlAdmissionSchema;
 
 function objectFile(path: string): Record<string, unknown> {
   let fd: number | undefined;
@@ -69,7 +70,12 @@ export async function cmdElectionSignRecord(argv: string[], io: Io): Promise<num
   if (contextScope) {
     const ec = await electionContext(needFlag(p, 'election'), pin);
     scope = ec.params.ctx;
-  } else if (p.has('election')) throw new UsageError('--election applies only to context-scoped open, close and tally records');
+  } else if (b.type === 'control') {
+    const { controlSeq } = prepareElectionArchive(needFlag(p, 'election'), pin);
+    if (controlSeq >= Number.MAX_SAFE_INTEGER || b['control_seq'] !== controlSeq + 1) {
+      throw new FailError('control_seq is stale or out of order for the authenticated archive; prepare a new control from the current archive');
+    }
+  } else if (p.has('election')) throw new UsageError('--election applies to controls and context-scoped open, close and tally records');
   const single = b.type === 'tally';
   const sigs: Sig[] = [];
   if (prior !== undefined) {
@@ -89,7 +95,8 @@ export async function cmdElectionSignRecord(argv: string[], io: Io): Promise<num
   } finally { wipe(key.seed); }
   const quorum = single || sigs.length >= m.coordinator.m;
   output(out, single ? { body: b, sig: sigs[0] } : { body: b, sigs });
-  printJson(io, { file: out, signatures: sigs.length, quorum, manifest_hash: pin, scope: contextScope ? 'context' : 'manifest', admitted: false });
+  printJson(io, { file: out, signatures: sigs.length, quorum, manifest_hash: pin, scope: contextScope ? 'context' : 'manifest', admitted: false,
+    ...(b.type === 'control' ? { control_seq: b['control_seq'], board_structure_verified: true, freshness_verified: false } : {}) });
   return EXIT.ok;
 }
 

@@ -20,9 +20,22 @@ manifest->`manifest`; marker dkg-open->`ceremony_start`; markers r1-open..r3-clo
 dkg-commit+dkg-dealing->`dkg_round1`; dkg-shares->`dkg_round2`; complaint->`dkg_complaint`; keyconf->`key_confirm`;
 roll-commit->`roll_commit`; election-open/close->`election_open`/`election_close`; cast->`ballot`; spoil->`ballot_audit`;
 tally->`tally_result`. Bodies are the JCS bytes of the protocol record and must be canonical (E_NONCANONICAL otherwise).
-Server-level records (`records.ts`, not in the protocol verifier, excluded from `export.json`, present in `.qvb`):
-`control` (pause/resume/invalidate/security-notice in `notice`; audit-close->`audit_close`; cancel->`election_cancel`;
-abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `dec-shares` (trustee, `decryption_share`).
+Controls are included in `export.json` so their signed ordering can be independently checked:
+pause/resume/invalidate/security-notice in `notice`; audit-close->`audit_close`; cancel->`election_cancel`;
+abort->`ceremony_abort`. Derived server records remain `.qvb`-only:
+`tally-aggregate` (server key, `tally_aggregate`) and `dec-shares` (trustee, `decryption_share`).
+
+New control admission implements QV-ADR-027 B2-16 C-lite: optional `reason` is a QV-07 section 15.2
+catalog code shared with the CLI, never arbitrary public text. `OTHER` has no text field. Historical
+signed controls are replayed without rewriting or re-admitting them under this new-input restriction.
+The offline verifiers preserve their existing legacy read contract. The separate B2-05
+sequence contract is described below; neither feature proves a snapshot is the latest history.
+
+New control admission implements QV-ADR-027 B2-16 C-lite: optional `reason` is a QV-07 section 15.2
+catalog code shared with the CLI, never arbitrary public text. `OTHER` has no text field. Historical
+signed controls are replayed without rewriting or re-admitting them under this new-input restriction.
+The offline verifiers preserve their existing legacy read contract. This admission change alone does
+not add control sequencing or authenticated freshness.
 
 ## Spec ambiguities / errata
 * **Auth**: QV-08 (signed requests, `Authorization: QV-Sig keyid,ts,nonce,sig`, +-120 s, nonce cache) was implemented, NOT QV-09's
@@ -51,7 +64,10 @@ abort->`ceremony_abort`), `tally-aggregate` (server key, `tally_aggregate`), `de
 * IPv6 network buckets use /56 (QV-29 §6.1; approved QV-ADR-027 N-32(a)), so all 256 constituent /64s share one allowance.
   Address expansion preserves compressed spellings and zone handling; IPv4 and IPv4-mapped addresses retain /24 grouping.
   This selective recovery of PR #27's `07fd61c` is covered by the SRV-002 and `ratelimit-ipv6.test.ts` regressions.
-  Archive deletes erase the DEK and files but do not require an acknowledged export (N-32(b) remains separate).
+  ARCHIVED deletion additionally requires a recorded PUBLIC export of the final tree and an explicit signed acknowledgement,
+  or 30 days after an explicit signed deletion notice for that snapshot. Merely downloading bytes never acknowledges delivery.
+  Election migration 11 stores immutable bounded snapshot bytes, so later checkpoint cosignatures cannot change a recorded download.
+  See [the implementation note](../../docs/reports/recorded-public-exports-20261118.md) for expiry, job recovery and remaining terminal-state policy.
 * `max_per_voter`/`max_spoils` overruns answer 429 `REVOTE_LIMIT` with `retryable:false` (QV-09 table).
 
 ## Event stream and webhooks (QV-09 §9, §6.3; QV-09-REQ-010/014)
@@ -181,7 +197,7 @@ an upload; raise it (hard max 120 s) for large bundles. (g) Unlike QV-28 §11.4,
 6 h cycle is not implemented), `POST .../quarantine/clear` (needs `ack` = incident id, `verified_against` = `witness:<election-policy name>` entries, a fresh replay + full
 audit, log size >= the largest size our key signed for, a stored checkpoint of at least that size cosigned by each named witness; `fork`/`inconsistent`
 evidence is permanent -> 409 `COMPROMISED`; this uses stored cosignatures, it does not query witnesses live), `DELETE /admin/elections/{id}` (`confirm` = title; same state
-preconditions as the org delete: DRAFT, ARCHIVED, CANCELLED, ABORTED, IMPORTED; the export-acknowledged / 30-day-grace rule of QV-28 §11.2 is still not enforced).
+preconditions as the org delete: DRAFT, ARCHIVED, CANCELLED, ABORTED, IMPORTED; ARCHIVED additionally requires the recorded final PUBLIC export and explicit acknowledgement or 30 days after its signed deletion notice).
 Idempotency lookup precedes precondition checks on the admin POST/DELETE routes, so a replay after completion returns the stored job.
 
 **Range.** `export.qvb` / `export.json` set `Accept-Ranges: bytes`; exactly one range -> 206 + `Content-Range`; multi-range, malformed, `a>b`, `-0`, start >= length,
@@ -382,8 +398,9 @@ A persistent filesystem failure refuses startup; correct the filesystem problem
 and restart. The tombstone stays inaccessible and its wrapped DEK stays absent.
 Tests: `test/delete-recovery.test.ts` injects an unlink failure after main-file
 removal, exercises failed and successful restart, verifies audit idempotence and
-qualifies migration of a historical tombstone. This does not add export-ack or
-backup-purge policy, overwrite guarantees on SSDs, or recall exported copies.
+qualifies migration of a historical tombstone. The later [recorded export slice](../../docs/reports/recorded-public-exports-20261118.md)
+adds the ARCHIVED export condition before tombstoning. Backup-purge policy,
+overwrite guarantees on SSDs and recall of exported copies remain outside these changes.
 
 ## Interrupted management request outcomes
 
@@ -502,3 +519,31 @@ Change (test-only; production code and defaults are unchanged): `WorldOpts.fresh
 `connection: close` on every World request, and the e2e enables it and closes its direct `export.qvb` fetch. Every
 World request failure now names the method, path and idle time, so a recurrence is diagnosable from the CI log.
 No assertion, timeout or test was removed. Server suite 294/294 locally (Node 22).
+
+## Signed control counters (QV-ADR-027 B2-05)
+
+New control admission requires `control_seq` and checks it after coordinator record
+quorum and outer-author authorization, under the existing serialized append path.
+The value must be exactly one above `ElectionState.controlSeq`. Rejection does not
+append, consume a number or change lifecycle state. Exact outer-packet duplicate
+retries still return the original receipt; fresh envelopes around an old signed
+counter receive `409 STATE_CONFLICT` with reason `CONTROL_SEQUENCE`.
+
+Replay authenticates stored control shapes, quorum signatures and entry bindings,
+then derives the same counter. Historical unsequenced controls may form a prefix;
+the first new control is one, regardless of prefix length. An entirely legacy
+archive stays readable, including recognized imported witness-waiver/extension
+notices that this server does not newly admit. After the first sequenced control,
+an unsequenced control is an invalid downgrade. No database migration or invented
+counter on historical signed bytes is used.
+
+Content exports retain controls, including terminal controls. Import requires each
+numbered control in `election.json` and checks every physical control's inner
+authority and order after board authorization. Historical archives may omit
+unnumbered controls from their old content-only export; these records are still
+authenticated from the physical log and retain their original bytes on replay.
+
+Public state adds `control_seq` and `next_control_seq` (null if exhausted). These
+are operational hints from the server. Signing clients derive authority and order
+from a verified archive, not from that unauthenticated state response. The counter
+does not establish checkpoint freshness or protection against every rollback.

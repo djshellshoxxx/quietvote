@@ -627,6 +627,81 @@
       ]
     },
     {
+      "id": "tagged-pok-nonce",
+      "comment": "preimage includes the trailing u32(counter=0) field",
+      "input": {
+        "label": "pok-nonce",
+        "kind": "hs_nz",
+        "fields_hex": [
+          "36a4db93c10c6fd75d0cb173fe95d7d8071ddfb1a4f3f2435c47e3e1cb5e7f88",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d7368613200000009706f6b2d6e6f6e6365000000040000002036a4db93c10c6fd75d0cb173fe95d7d8071ddfb1a4f3f2435c47e3e1cb5e7f8800000009636f6e746573742d3100000001070000000400000000",
+          "scalar_hex": "2c85f6a39a5e9f92dedb1db0d1a314545340c2118e9b0fbaa263adaa9b1d3609",
+          "counter_field_hex": "00000000"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-pok-share-nonce",
+      "comment": "preimage includes the trailing u32(counter=0) field",
+      "input": {
+        "label": "pok-share-nonce",
+        "kind": "hs_nz",
+        "fields_hex": [
+          "bd0c0bdd383e9770263f3069ba42918c740f7851dd39218d4bbf03d12b656f00",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000f706f6b2d73686172652d6e6f6e63650000000400000020bd0c0bdd383e9770263f3069ba42918c740f7851dd39218d4bbf03d12b656f0000000009636f6e746573742d3100000001070000000400000000",
+          "scalar_hex": "86d908df8bdc3268171e5d469fbbd0acb94c33f46e982061650851594ef54803",
+          "counter_field_hex": "00000000"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
+      "id": "tagged-cp-dh-nonce",
+      "comment": "preimage includes the trailing u32(counter=0) field",
+      "input": {
+        "label": "cp-dh-nonce",
+        "kind": "hs_nz",
+        "fields_hex": [
+          "c287093892da23727907c80ab23c06d5c5b81c60f395fb06d333cbe60b4ca070",
+          "636f6e746573742d31",
+          "07"
+        ]
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "preimage_hex": "000000085156312d484153480000000d7176312d723235352d736861320000000b63702d64682d6e6f6e63650000000400000020c287093892da23727907c80ab23c06d5c5b81c60f395fb06d333cbe60b4ca07000000009636f6e746573742d3100000001070000000400000000",
+          "scalar_hex": "4e163b30763dd6a815182601ba57b648774afb9a6ffc21d539243f8e30125603",
+          "counter_field_hex": "00000000"
+        }
+      },
+      "tags": [
+        "kat",
+        "label-registry"
+      ]
+    },
+    {
       "id": "tagged-reveal",
       "input": {
         "label": "reveal",

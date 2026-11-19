@@ -8,7 +8,7 @@ import { writeTar } from './tar.ts';
 /** Entry types whose bodies are protocol records the verifier understands. */
 const PROTOCOL_TYPES = new Set([
   'ceremony_start', 'joint_key', 'roll_commit', 'election_open', 'election_close', 'dkg_round1', 'dkg_round2', 'dkg_complaint',
-  'key_confirm', 'ballot', 'ballot_audit', 'tally_result',
+  'key_confirm', 'ballot', 'ballot_audit', 'tally_result', 'audit_close', 'election_cancel', 'ceremony_abort',
 ]);
 
 export function electionBundle(rt: ElectionRuntime, opts: { includeBoardRecords?: boolean } = {}): ElectionBundle {
@@ -23,7 +23,7 @@ export function electionBundle(rt: ElectionRuntime, opts: { includeBoardRecords?
       const isNotice = r.type === 'notice';
       if (!opts.includeBoardRecords && !PROTOCOL_TYPES.has(r.type) && !isNotice) continue;
       const rec = parseQvJson(r.body) as { body?: { type?: string } };
-      if (!opts.includeBoardRecords && isNotice && rec.body?.type !== 'marker') continue; // legacy content-only export
+      if (!opts.includeBoardRecords && isNotice && rec.body?.type !== 'marker' && rec.body?.type !== 'control') continue;
       log.push({ seq: r.seq, entry: rec });
     }
     if (!page.more) break;

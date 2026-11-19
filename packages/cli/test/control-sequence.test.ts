@@ -1,0 +1,57 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { bytesToHex } from '@quietvote/crypto';
+import { expectedLogId, verifyMultiSig } from '@quietvote/protocol';
+import { World } from '../../server/test/helpers/world.ts';
+import { exportQvb } from '../../server/test/helpers/full.ts';
+import { qv, writeJson } from './helpers.ts';
+
+test('CLI drafts and signs the next control from authenticated history and refuses stale counters', async () => {
+  const w = new World({ seed: 'cli-control-sequence', n: 3, t: 2, voters: 3 });
+  w.owner = w.coord[0]!;
+  await w.start();
+  try {
+    await w.setupOrgAndElection(); await w.registerVoters();
+    const build = w.buildManifest.bind(w);
+    w.buildManifest = () => { const m = build(); m.bb.log_id = expectedLogId(w.origin); return m; };
+    assert.equal((await w.publishManifest()).status, 201);
+    await w.ok('ceremony_start', w.coord[0]!, w.marker('dkg-open', w.mh));
+    const pin = bytesToHex(w.mh), initial = join(w.dir, 'initial.qvb');
+    writeFileSync(initial, await exportQvb(w));
+    const body = join(w.dir, 'body.json');
+    const draft = await qv(['election', 'draft-record', initial, '--manifest-hash', pin, '--kind', 'security-notice', '--reason', 'OTHER', '--out', body]);
+    assert.equal(draft.code, 0, draft.err);
+    assert.equal(JSON.parse(draft.out).control_seq, 1);
+    assert.equal(JSON.parse(draft.out).freshness_verified, false);
+    assert.deepEqual(JSON.parse(readFileSync(body, 'utf8')), { proto: 'qv1-r255-sha2', type: 'control', action: 'security-notice', control_seq: 1, reason: 'OTHER' });
+    const manifest = writeJson(w.dir, 'manifest.json', w.manifest);
+    const key = (i: number) => writeJson(w.dir, `coordinator-${i}.json`, { format: 'qv-voter-key/v1', public_key: bytesToHex(w.coord[i]!.publicKey), seed: bytesToHex(w.coord[i]!.secretKey) });
+    const keys = [key(0), key(1)], first = join(w.dir, 'first.json'), second = join(w.dir, 'second.json');
+    const args = ['election', 'sign-record', '--manifest', manifest, '--manifest-hash', pin];
+    let signed = await qv([...args, '--election', initial, '--key', keys[0]!, '--body', body, '--out', first]);
+    assert.equal(signed.code, 0, signed.err);
+    assert.equal(JSON.parse(signed.out).quorum, false);
+    signed = await qv([...args, '--election', initial, '--key', keys[1]!, '--record', first, '--out', second]);
+    assert.equal(signed.code, 0, signed.err);
+    const record = JSON.parse(readFileSync(second, 'utf8'));
+    assert.equal(verifyMultiSig(w.mh, record, w.manifest.coordinator.keys, w.manifest.coordinator.m), true);
+    assert.equal((await w.post('notice', w.coord[0]!, record)).status, 201);
+    const current = join(w.dir, 'current.qvb'); writeFileSync(current, await exportQvb(w));
+    const refused = join(w.dir, 'refused.json');
+    const stale = await qv([...args, '--election', current, '--key', keys[0]!, '--body', body, '--out', refused]);
+    assert.equal(stale.code, 1, stale.err);
+    assert.match(stale.err, /stale or out of order/);
+    assert.equal(existsSync(refused), false);
+    const next = join(w.dir, 'next.json');
+    const nextDraft = await qv(['election', 'draft-record', current, '--manifest-hash', pin, '--kind', 'security-notice', '--out', next]);
+    assert.equal(nextDraft.code, 0, nextDraft.err);
+    assert.equal(JSON.parse(readFileSync(next, 'utf8')).control_seq, 2);
+    const tampered = writeJson(w.dir, 'tampered.json', { ...record, body: { ...record.body, control_seq: 2 } });
+    const invalid = await qv([...args, '--election', current, '--key', keys[0]!, '--record', tampered, '--out', refused]);
+    assert.equal(invalid.code, 1, invalid.err);
+    assert.match(invalid.err, /prior coordinator signature/);
+    assert.equal(existsSync(refused), false);
+  } finally { await w.stop(); }
+});

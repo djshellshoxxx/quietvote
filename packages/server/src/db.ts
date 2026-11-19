@@ -56,7 +56,7 @@ export function tx<T>(db: DatabaseSync, fn: () => T): T {
 export interface OpenOpts {
   path: string;
   applicationId: number;
-  /** `FULL` for election DBs, `NORMAL` for control (QV-28-REQ-003). */
+  /** `FULL` for election DBs and control recovery anchors (QV-28-REQ-003, B2-07). */
   synchronous: 'FULL' | 'NORMAL';
   migrations: Migration[];
   appVersion: string;

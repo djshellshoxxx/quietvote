@@ -70,7 +70,7 @@ class TestControlSignatures(unittest.TestCase):
         self.reject(record)
 
     def test_closed_legacy_body_rejects_future_or_gate_replacement_fields(self):
-        for field, value in [('control_seq', 1), ('after_seq', 2), ('quorum', 0), ('witnesses', []),
+        for field, value in [('after_seq', 2), ('quorum', 0), ('witnesses', []),
                              ('voting_close', '2099-01-01T00:00:00Z'), ('type_extra', True)]:
             record = self.signed()
             record['body'][field] = value

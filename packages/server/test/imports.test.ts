@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
-import { b64u, checkFork, signCheckpoint, unb64u } from '@quietvote/board';
+import { MerkleTree, b64, b64u, checkFork, signCheckpoint, unb64u } from '@quietvote/board';
 import { bytesToHex, ed25519Keypair, jcs, sha256, utf8 } from '@quietvote/crypto';
 import { verifyElectionText } from '@quietvote/protocol';
 import { readTar } from '../src/index.ts';
@@ -17,6 +17,7 @@ const H = bytesToHex;
 const admin = kp('imports', 'admin');
 let A: World;
 let tar: Uint8Array;
+let fixtureLogSecret: Uint8Array;
 const targets: World[] = [];
 
 async function target(server: Record<string, unknown> = {}, seed = `imp-t${targets.length}`): Promise<World> {
@@ -33,7 +34,14 @@ const dbFiles = (t: World): string[] => {
 };
 
 before(async () => {
-  A = await fullElection('imp-a');
+  A = await fullElection('imp-a', { stopAt: 'AUDIT' });
+  // Capture this test fixture's key while it is live, before the ordinary archive
+  // transition erases it; used only to construct the authentic legacy fixture below.
+  const runtime = (await A.server.pool.get(A.electionId))!;
+  const row = A.server.env.control.election(A.electionId)!;
+  const dek = unseal(A.server.env.kek, row.dek_wrapped!, `dek:${A.electionId}`);
+  fixtureLogSecret = unseal(dek, runtime.edb.row().log_sk_enc!, 'log_sk');
+  assert.equal((await A.post('audit_close', A.coord[0]!, A.control('audit-close'))).status, 201);
   tar = await exportQvb(A);
 }, { timeout: 120_000 });
 after(async () => {
@@ -112,6 +120,15 @@ test('happy path: verified, then exposed as a read-only IMPORTED mirror identica
   const ex = await B.get(`/api/v1/elections/${id}/export.json`);
   const rep = await verifyElectionText(ex.text);
   assert.equal(rep.verdict, 'INCOMPLETE');
+  const controls = ex.json.log.filter((row: any) => row.entry?.body?.type === 'control');
+  assert.deepEqual(controls.map((row: any) => row.entry.body.control_seq), [1], 'the signed audit-close counter survives export and import');
+  assert.equal((await B.get(`/api/v1/elections/${id}/state`)).json.control_seq, 1);
+  const replayed = structuredClone(ex.json);
+  replayed.log.push({ seq: replayed.log.at(-1).seq + 1, entry: controls[0].entry });
+  const replayReport = await verifyElectionText(JSON.stringify(replayed), { allowNoLog: true });
+  assert.equal(replayReport.verdict, 'FAIL', 'offline verification sees and rejects a rewrapped signed control');
+  assert.ok(replayReport.findings.some((finding) => finding.cls === 'F' && finding.code === 'E_LOG_ORDER'));
+  assert.equal(replayReport.results, undefined);
   const tarB = await exportQvb(B, id);
   const fa = readTar(tar);
   const fb = readTar(tarB);
@@ -137,6 +154,7 @@ test('happy path: verified, then exposed as a read-only IMPORTED mirror identica
   // survives a restart of the runtime
   await B.server.pool.closeAll();
   assert.equal((await B.get(`/api/v1/elections/${id}/state`)).json.phase, 'IMPORTED');
+  assert.equal((await B.get(`/api/v1/elections/${id}/state`)).json.control_seq, 1, 'imported runtime restores the counter on replay');
 
   // gossip against the mirror: peers' notes are judged against the imported tree
   const cur = (await A.get(`/api/v1/elections/${id}/log/checkpoint`)).text;
@@ -170,6 +188,52 @@ test('importing an id that already exists is refused after verification, and a s
   assert.equal(j.error.rule, 'ELECTION_EXISTS');
   assert.equal(j.error.status, 409);
   assert.equal(elections(t), 2); // the draft of setupOrgAndElection + the mirror
+});
+
+test('legacy archives may omit unnumbered controls, but numbered controls cannot be hidden from election.json', async () => {
+  const physical = entryLines(readTar(tar)), auditSeq = physical.length - 1;
+  const audit = JSON.parse(dec(unb64u(physical[auditSeq].body_b64u)!));
+  assert.equal(audit.body.action, 'audit-close');
+  assert.equal(audit.body.control_seq, 1);
+  const omitControls = (files: Map<string, Uint8Array>) => {
+    const content = JSON.parse(dec(files.get('election.json')!));
+    content.log = content.log.filter((row: any) => row.entry?.body?.type !== 'control');
+    files.set('election.json', enc(JSON.stringify(content)));
+  };
+  await rejected(rewrite(tar, omitControls), 'BUNDLE_BINDING', { seq: auditSeq });
+
+  // Rebuild a valid historical archive: legacy body + quorum signatures + new
+  // outer header and covering log checkpoint. No verifier or signature bypass.
+  const legacyBody = { ...audit.body }; delete legacyBody.control_seq;
+  const legacyRecord = A.multi(A.mh, legacyBody);
+  const packet = A.entry('audit_close', A.coord[0]!, legacyRecord);
+  const source = (await A.server.pool.get(A.electionId))!;
+  const legacyArchive = rewrite(tar, (files) => {
+    omitControls(files);
+    const entries = entryLines(files);
+    entries[auditSeq] = { seq: auditSeq, header_b64u: b64u(packet.headerBytes), body_b64u: b64u(packet.body) };
+    setEntryLines(files, entries);
+    const tree = new MerkleTree();
+    for (const row of entries) tree.appendLeaf(unb64u(row.header_b64u)!);
+    const meta = JSON.parse(dec(files.get('bundle.json')!));
+    meta.root_b64 = b64(tree.root());
+    files.set('bundle.json', enc(JSON.stringify(meta)));
+    files.set(`log/checkpoints/${entries.length}.txt`, enc(signCheckpoint(A.origin, entries.length, tree.root(), fixtureLogSecret, source.logPk)));
+  });
+  const mirror = await target({}, 'imp-legacy-controls');
+  const job = await importAndWait(mirror, legacyArchive);
+  assert.equal(job.state, 'done', JSON.stringify(job));
+  const state = (await mirror.get(`/api/v1/elections/${A.electionId}/state`)).json;
+  assert.equal(state.control_seq, 0);
+  assert.equal(state.next_control_seq, 1);
+  const exported = await mirror.get(`/api/v1/elections/${A.electionId}/export.json`);
+  const legacy = exported.json.log.filter((row: any) => row.entry?.body?.type === 'control');
+  assert.equal(legacy.length, 1);
+  assert.deepEqual(legacy[0].entry, legacyRecord, 'original legacy signatures remain intact');
+  const verified = await verifyElectionText(exported.text, { allowNoLog: true });
+  assert.equal(verified.verdict, 'PASS');
+  assert.ok(verified.findings.some((finding) => finding.cls === 'L' && finding.code === 'E_VERSION'));
+  assert.ok(!verified.findings.some((finding) => finding.code === 'E_LOG_ORDER'));
 });
 
 test('link access: the response carries a one-time read key; the mirror then needs it; admins may import into any org', async () => {

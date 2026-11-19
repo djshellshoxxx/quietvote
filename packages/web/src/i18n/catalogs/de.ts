@@ -4,6 +4,13 @@
 import type { MessageKey } from '../en.ts';
 
 export const DE = {
+  "qv.device.unconfirmed": "Gespeicherte Einstellungen konnten nicht bestätigt werden.",
+  "qv.election.rulesAck": "Ich habe diese Regeln und Datenschutzgrenzen gelesen",
+  "qv.election.rulesAckHint": "Optional. Diese Notiz bleibt auf diesem Gerät.",
+  "qv.device.settings": "Geräteeinstellungen",
+  "qv.device.sharedToggle": "Dies ist ein gemeinsam genutztes oder öffentliches Gerät",
+  "qv.device.rememberHelp": "Die Belegspeicherung betrifft nur neue Belege.",
+  "qv.device.retry": "Geräteeinstellungen erneut lesen",
   "qv.admin.help": "Prüfen Sie diese Abstimmung mit dem gespeicherten Manifest-Hash. Prüfen Sie jedes öffentliche Paket vor dem Senden. Treuhänder behalten ihre geheimen Schlüssel im Treuhänderwerkzeug. Diese Prüfungen bestätigen weder die Aktualität des Protokolls noch die Zustimmung der Zeugen.",
   "qv.admin.pin": "Gespeicherter Manifest-Hash (64 Hexadezimalzeichen)",
   "qv.admin.action": "Organisatoraktion",
@@ -299,6 +306,9 @@ export const DE = {
   'qv.verify.anchorHint': 'Optional, aber dringend empfohlen. Ohne sie würde auch eine Kopie einer anderen Wahl bestehen.',
   'qv.verify.run': 'Prüfungen starten',
   'qv.verify.running': 'Prüfungen laufen…',
+  'qv.verify.progressLabel': "Prüfung im aktuellen Schritt",
+  'qv.verify.progress': "{done} von {total} Elementen in diesem Schritt geprüft. Dies zeigt den Fortschritt, kein Ergebnis.",
+  'qv.verify.cancelled': "Prüfung abgebrochen. Es wurde kein Bericht erstellt.",
   'qv.verify.verdict.PASS': 'Alle Prüfungen bestanden',
   'qv.verify.verdict.FAIL': 'Eine Prüfung ist fehlgeschlagen',
   'qv.verify.verdict.INCOMPLETE': 'Unvollständig: Weitere Nachweise erforderlich',
@@ -443,6 +453,8 @@ export const DE = {
   'qv.err.E-VOT-OVERVOTE.body': 'Sie können bis zu {k} wählen. Sie haben {x} gewählt.',
   'qv.err.E-VOT-ONEBALLOT.title': 'Sie haben bereits abgestimmt',
   'qv.err.E-VOT-ONEBALLOT.body': 'Bei dieser Wahl ist pro Person ein Stimmzettel erlaubt. Ihr erster Stimmzettel zählt.',
+  'qv.err.E-VOT-LIMIT.title': 'Stimmzettellimit erreicht',
+  'qv.err.E-VOT-LIMIT.body': 'Diese Übermittlung wurde nicht angenommen. Prüfen Sie Ihren letzten Beleg und die Stimmzettellimits der Wahl.',
   'qv.err.E-VOT-REJECTED-PROOF.title': 'Ihr Stimmzettel konnte nicht angenommen werden',
   'qv.err.E-VOT-REJECTED-PROOF.body': 'Ihr Gerät hat einen Stimmzettel erzeugt, der die Prüfungen nicht bestanden hat. Es wurde nichts erfasst. Laden Sie diese Seite neu und versuchen Sie es erneut. Falls es wieder passiert, melden Sie es mit der Referenz.',
   'qv.err.E-VOT-DUP.title': 'Dieser genaue Stimmzettel ist bereits erfasst',

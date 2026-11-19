@@ -7,7 +7,7 @@ import { World, type Resp } from './world.ts';
 
 const sel = (i: number): Record<string, string[]> => ({ budget: [i % 2 ? 'no' : 'yes'], chair: [['ann', 'bob', 'cy'][i % 3]!] });
 
-export async function fullElection(seed: string, o: { server?: Record<string, unknown>; stopAt?: 'READY' | 'OPEN' | 'ARCHIVED' } = {}): Promise<World> {
+export async function fullElection(seed: string, o: { server?: Record<string, unknown>; stopAt?: 'READY' | 'OPEN' | 'AUDIT' | 'ARCHIVED' } = {}): Promise<World> {
   const w = new World({ seed, n: 3, t: 2, voters: 4, witnessQuorum: 0, server: o.server as never });
   await w.start();
   await w.setupOrgAndElection();
@@ -37,6 +37,7 @@ export async function fullElection(seed: string, o: { server?: Record<string, un
   const c0 = w.coord[0]!;
   const tr = await w.post('tally_result', c0, signRecord(c0.secretKey, c0.publicKey, w.params.ctx, draft.json.body));
   if (tr.status !== 201) throw new Error(`tally ${tr.status} ${tr.text}`);
+  if (o.stopAt === 'AUDIT') return w;
   const ac = await w.post('audit_close', c0, w.control('audit-close'));
   if (ac.status !== 201) throw new Error(`audit_close ${ac.status} ${ac.text}`);
   return w;

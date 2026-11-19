@@ -4,6 +4,13 @@
 import type { MessageKey } from '../en.ts';
 
 export const FR = {
+  "qv.device.unconfirmed": "Impossible de confirmer les paramètres enregistrés.",
+  "qv.election.rulesAck": "J’ai lu ces règles et ces limites de confidentialité",
+  "qv.election.rulesAckHint": "Facultatif. Cette note reste sur cet appareil.",
+  "qv.device.settings": "Paramètres de l’appareil",
+  "qv.device.sharedToggle": "Cet appareil est partagé ou public",
+  "qv.device.rememberHelp": "La conservation ne concerne que les nouveaux reçus.",
+  "qv.device.retry": "Relire les paramètres de l’appareil",
   "qv.admin.help": "Utilisez le hachage du manifeste enregistré pour vérifier ce scrutin. Examinez chaque paquet public avant de l’envoyer. Les dépositaires conservent leurs clés secrètes dans leur outil. Ces vérifications ne confirment ni la fraîcheur du registre ni l’approbation des témoins.",
   "qv.admin.pin": "Hachage du manifeste enregistré (64 caractères hexadécimaux)",
   "qv.admin.action": "Action de l’organisateur",
@@ -299,6 +306,9 @@ export const FR = {
   'qv.verify.anchorHint': 'Facultatif mais fortement recommandé. Sans lui, une copie d’un autre scrutin passerait aussi.',
   'qv.verify.run': 'Lancer les contrôles',
   'qv.verify.running': 'Contrôles en cours…',
+  'qv.verify.progressLabel': "Vérification de l’étape en cours",
+  'qv.verify.progress': "{done} éléments sur {total} vérifiés à cette étape. Il s’agit de la progression, pas d’un résultat.",
+  'qv.verify.cancelled': "Vérification annulée. Aucun rapport n’a été produit.",
   'qv.verify.verdict.PASS': 'Tous les contrôles ont réussi',
   'qv.verify.verdict.FAIL': 'Un contrôle a échoué',
   'qv.verify.verdict.INCOMPLETE': 'Incomplet : des preuves supplémentaires sont nécessaires',
@@ -443,6 +453,8 @@ export const FR = {
   'qv.err.E-VOT-OVERVOTE.body': 'Vous pouvez choisir jusqu’à {k}. Vous en avez choisi {x}.',
   'qv.err.E-VOT-ONEBALLOT.title': 'Vous avez déjà voté',
   'qv.err.E-VOT-ONEBALLOT.body': 'Ce scrutin autorise un seul bulletin par personne. Votre premier bulletin compte.',
+  'qv.err.E-VOT-LIMIT.title': 'Limite de bulletins atteinte',
+  'qv.err.E-VOT-LIMIT.body': 'Cet envoi a été refusé. Consultez votre dernier reçu et les limites de bulletins du scrutin.',
   'qv.err.E-VOT-REJECTED-PROOF.title': 'Votre bulletin n’a pas pu être accepté',
   'qv.err.E-VOT-REJECTED-PROOF.body': 'Votre appareil a produit un bulletin qui n’a pas passé les contrôles. Rien n’a été enregistré. Rechargez cette page et réessayez ; si cela se reproduit, signalez-le avec la référence.',
   'qv.err.E-VOT-DUP.title': 'Ce bulletin exact est déjà enregistré',

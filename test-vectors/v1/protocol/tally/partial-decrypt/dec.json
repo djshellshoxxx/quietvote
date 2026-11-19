@@ -27,13 +27,13 @@
         "cid": "budget",
         "oid": "yes",
         "j": 2,
-        "Yj_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
-        "A_hex": "f247c30bc6345a58dab5cd86ef8ff226e44e84d5d6b23f6fb7cc41a849efbe7b",
-        "B_hex": "1c1cbfbb0a6113c4a67cfef117a5b93ff836ff1fee08647af882e0cadecef210",
-        "M_hex": "18e0a4b5e5a4496b55922518161590c298e6534e786d855ef1117bdbfe8be072",
+        "Yj_hex": "9c43f6c94842e3381b06ff497ef94679dd96b77c3a16c595b10da31481ae5b02",
+        "A_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "B_hex": "a01a29b76c63d27bceefbf85530131765d2a25184aa8d222c4f15f12bb7c057d",
+        "M_hex": "e8a80d46edf4b5a7c1c4028df7544e1c6bfd2e76861b8b4449c01d335aaac47a",
         "proof": {
-          "c": "d73e8ced1933bf5d0336538498a47f4153360bb3ca22c482fa1f24743011ae09",
-          "s": "3befc0d2d73b8b155876138f53e34a607dbba33aa75526cf79d259f657bf5b03"
+          "c": "f79e05d4df052f4b177ccf807ec5ea892b4945c2d5cf6d585f73be686d6ce203",
+          "s": "31352c515e4575ad732f552ed386b38f46ead358d52f8a0100564fde4d5e1b0c"
         }
       },
       "expect": {
@@ -53,13 +53,13 @@
         "cid": "budget",
         "oid": "yes",
         "j": 2,
-        "Yj_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
-        "A_hex": "f247c30bc6345a58dab5cd86ef8ff226e44e84d5d6b23f6fb7cc41a849efbe7b",
-        "B_hex": "1c1cbfbb0a6113c4a67cfef117a5b93ff836ff1fee08647af882e0cadecef210",
-        "M_hex": "1406f333551e04fef7783f62ea56193bba1edff46976ff029ee4a792eedfe90f",
+        "Yj_hex": "9c43f6c94842e3381b06ff497ef94679dd96b77c3a16c595b10da31481ae5b02",
+        "A_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "B_hex": "a01a29b76c63d27bceefbf85530131765d2a25184aa8d222c4f15f12bb7c057d",
+        "M_hex": "b42779639ea286157d9ecc9f8eba893077a6266f8bb9b0f11bf1095cd3d8665a",
         "proof": {
-          "c": "d73e8ced1933bf5d0336538498a47f4153360bb3ca22c482fa1f24743011ae09",
-          "s": "3befc0d2d73b8b155876138f53e34a607dbba33aa75526cf79d259f657bf5b03"
+          "c": "f79e05d4df052f4b177ccf807ec5ea892b4945c2d5cf6d585f73be686d6ce203",
+          "s": "31352c515e4575ad732f552ed386b38f46ead358d52f8a0100564fde4d5e1b0c"
         }
       },
       "expect": {
@@ -78,13 +78,13 @@
         "cid": "budget",
         "oid": "yes",
         "j": 2,
-        "Yj_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
-        "A_hex": "f247c30bc6345a58dab5cd86ef8ff226e44e84d5d6b23f6fb7cc41a849efbe7b",
-        "B_hex": "32e26028336a7ae12234a9af0c13b8fd9b6105e4889374842fd79374c9d03e01",
-        "M_hex": "18e0a4b5e5a4496b55922518161590c298e6534e786d855ef1117bdbfe8be072",
+        "Yj_hex": "9c43f6c94842e3381b06ff497ef94679dd96b77c3a16c595b10da31481ae5b02",
+        "A_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "B_hex": "60105cd77fefc51e6f20c6e978c5cde8e02258b3284013d79b036f2686ca940c",
+        "M_hex": "e8a80d46edf4b5a7c1c4028df7544e1c6bfd2e76861b8b4449c01d335aaac47a",
         "proof": {
-          "c": "d73e8ced1933bf5d0336538498a47f4153360bb3ca22c482fa1f24743011ae09",
-          "s": "3befc0d2d73b8b155876138f53e34a607dbba33aa75526cf79d259f657bf5b03"
+          "c": "f79e05d4df052f4b177ccf807ec5ea892b4945c2d5cf6d585f73be686d6ce203",
+          "s": "31352c515e4575ad732f552ed386b38f46ead358d52f8a0100564fde4d5e1b0c"
         }
       },
       "expect": {
@@ -102,13 +102,13 @@
         "cid": "budget",
         "oid": "yes",
         "j": 3,
-        "Yj_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
-        "A_hex": "f247c30bc6345a58dab5cd86ef8ff226e44e84d5d6b23f6fb7cc41a849efbe7b",
-        "B_hex": "1c1cbfbb0a6113c4a67cfef117a5b93ff836ff1fee08647af882e0cadecef210",
-        "M_hex": "18e0a4b5e5a4496b55922518161590c298e6534e786d855ef1117bdbfe8be072",
+        "Yj_hex": "9c43f6c94842e3381b06ff497ef94679dd96b77c3a16c595b10da31481ae5b02",
+        "A_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "B_hex": "a01a29b76c63d27bceefbf85530131765d2a25184aa8d222c4f15f12bb7c057d",
+        "M_hex": "e8a80d46edf4b5a7c1c4028df7544e1c6bfd2e76861b8b4449c01d335aaac47a",
         "proof": {
-          "c": "d73e8ced1933bf5d0336538498a47f4153360bb3ca22c482fa1f24743011ae09",
-          "s": "3befc0d2d73b8b155876138f53e34a607dbba33aa75526cf79d259f657bf5b03"
+          "c": "f79e05d4df052f4b177ccf807ec5ea892b4945c2d5cf6d585f73be686d6ce203",
+          "s": "31352c515e4575ad732f552ed386b38f46ead358d52f8a0100564fde4d5e1b0c"
         }
       },
       "expect": {

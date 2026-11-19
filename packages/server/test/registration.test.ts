@@ -114,7 +114,7 @@ test('actual schema8 upgrade preserves legacy invitations and exposes a read-onl
     await w.server.stop();
     const db = new DatabaseSync(join(w.dir, rel));
     db.prepare('UPDATE voter_invite SET code_hash=?').run(legacy);
-    db.exec('DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DELETE FROM schema_migration WHERE version>=9; PRAGMA user_version=8'); db.close();
+    db.exec('DROP TABLE export_record; DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DELETE FROM schema_migration WHERE version>=9; PRAGMA user_version=8'); db.close();
     await w.start();
     const rt = (await w.server.pool.get(w.electionId))!;
     assert.equal(rt.edb.row().registration_scheme, 'legacy-raw-v1');

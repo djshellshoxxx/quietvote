@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { before, test } from 'node:test';
 import { checkEntry, decodeHeader } from '@quietvote/board';
 import { bytesToHex, jcs, streamRng } from '@quietvote/crypto';
-import { logOrigin, verifyMultiSig, verifySig, type ElectionBundle, type MarkerBody, type MultiSignedRecord, type SignedRecord, type TallyBody } from '@quietvote/protocol';
+import { logOrigin, signRecordRaw, verifyMultiSig, verifySig, type ElectionBundle, type MarkerBody, type MultiSignedRecord, type SignedRecord, type TallyBody } from '@quietvote/protocol';
 import { bundleOf, castBallot, clone, closeElection, publishTally, setup, type Sim } from '../../protocol/test/helpers/sim.ts';
 import { ADMIN_ACTIONS, AdminError, MAX_ADMIN_BYTES, adminSnapshot, prepareAdminAction, submitAdminPacket, trusteePacket, type AdminAction } from '../src/flow/admin.ts';
 import { prepareEntry } from '../src/flow/entries.ts';
@@ -25,6 +25,31 @@ const at = (action: AdminAction): ElectionBundle => {
   return e;
 };
 const snapshot = (e: ElectionBundle) => adminSnapshot(e, bytesToHex(sim.mh), sim.manifest.election_id);
+test('organizer snapshot derives the authenticated control counter without adding control UI actions', () => {
+  const e = clone(original);
+  const append = (seq?: number, action = 'security-notice', reason?: string) => {
+    const body = { proto: 'qv1-r255-sha2', type: 'control', action, ...(seq === undefined ? {} : { control_seq: seq }), ...(reason === undefined ? {} : { reason }) };
+    const entry = { body, sigs: sim.coord.map((k) => signRecordRaw(k.secretKey, k.publicKey, sim.mh, 'control', body)) };
+    e.log.push({ seq: e.log.at(-1)!.seq + 1, entry });
+  };
+  append(undefined, 'witness-waiver', 'historical reason');
+  assert.equal(snapshot(e).controlSeq, 0);
+  append(1); append(2, 'security-notice', 'OTHER');
+  assert.equal(snapshot(e).controlSeq, 2);
+  assert.ok(!(ADMIN_ACTIONS as readonly string[]).includes('security-notice'));
+  append();
+  assert.throws(() => snapshot(e), AdminError);
+});
+
+test('organizer snapshot refuses unauthenticated controls and sequence gaps', () => {
+  for (const seq of [1, 2]) {
+    const e = clone(original), body = { proto: 'qv1-r255-sha2', type: 'control', action: 'security-notice', control_seq: seq };
+    const entry = { body, sigs: sim.coord.map((k) => signRecordRaw(k.secretKey, k.publicKey, sim.mh, 'control', body)) };
+    if (seq === 1) entry.sigs[0]!.sig = '00'.repeat(64);
+    e.log.push({ seq: e.log.at(-1)!.seq + 1, entry });
+    assert.throws(() => snapshot(e), AdminError);
+  }
+});
 async function prepare(action: AdminAction, e = at(action), extra: Partial<Parameters<typeof prepareAdminAction>[0]> = {}) {
   const signer = await createSigner(sim.coord[0]!.secretKey.slice(), { preferWebCrypto: false });
   try { return await prepareAdminAction({ snapshot: snapshot(e), action, signer, rng: streamRng(action), now: Date.parse('2026-11-10T00:00:00Z') / 1000, ...extra }); }

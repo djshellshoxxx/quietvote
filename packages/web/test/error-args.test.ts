@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { ApiError, uxPresentation } from '../src/api/errors.ts';
+import { ApiError, isRetryable, uxPresentation } from '../src/api/errors.ts';
 import { EN, MESSAGE_KEYS, createTranslator, type MessageKey } from '../src/i18n/index.ts';
 import { argNames, parse } from '../src/i18n/icu.ts';
 
@@ -109,4 +109,18 @@ test('B3-06: no call site renders a uxCodeFor() result without the presentation 
   const app = readFileSync(new URL('../src/ui/app.ts', import.meta.url), 'utf8');
   assert.ok(!/errorBox\(\s*uxCodeFor\(/.test(app), 'errorBox(uxCodeFor(e)) loses {time}/{seconds}');
   assert.ok(!/errorBox\(\s*ux\s*,\s*\{\}/.test(app), 'errorBox(ux, {}) loses {time}/{seconds}');
+});
+
+test('ballot quota refusals do not claim one-ballot rules or that a prior ballot counts', () => {
+  for (const detail of ['max_per_voter reached', 'max_spoils_per_voter reached', 'untrusted remote detail']) {
+    const error = new ApiError({ status: 429, code: 'REVOTE_LIMIT', detail, retryable: true });
+    const presentation = uxPresentation(undefined, error);
+    assert.equal(presentation.ux, 'E-VOT-LIMIT');
+    const title = t.t(`qv.err.${presentation.ux}.title` as MessageKey, presentation.args);
+    const body = t.t(`qv.err.${presentation.ux}.body` as MessageKey, presentation.args);
+    assert.equal(title, 'Ballot limit reached');
+    assert.match(body, /not accepted/);
+    assert.doesNotMatch(body, /one ballot|first ballot|counts|untrusted remote detail/);
+    assert.equal(isRetryable(error), false, 'HTTP 429 must not retry a final ballot-limit refusal');
+  }
 });

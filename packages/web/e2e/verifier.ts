@@ -148,6 +148,28 @@ try {
     page.off('request', recordRequest); checks++;
   }
   await page.setViewportSize({ width: 1280, height: 800 });
+  // The SPA uses the same cooperative verifier. Cancel and navigation stop work;
+  // an obsolete completion must never replace a subsequent result or page.
+  await page.goto(`${origin}/verify`);
+  await page.getByLabel('Election bundle file (JSON)').setInputFiles(largeFile);
+  await page.getByRole('button', { name: 'Run checks' }).click();
+  await page.locator('progress[data-stage="ballots"]').waitFor({ state: 'visible' });
+  assert.equal(await page.getByRole('button', { name: 'Run checks' }).isDisabled(), true);
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByText('Verification cancelled. No report was produced.', { exact: true }).first().waitFor();
+  assert.equal(await page.getByRole('progressbar').isVisible(), false);
+  assert.equal(await page.getByRole('button', { name: 'Run checks' }).isEnabled(), true);
+  assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
+  await page.getByLabel('Election bundle file (JSON)').setInputFiles(goodFile);
+  await page.getByRole('button', { name: 'Run checks' }).click();
+  await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).waitFor({ timeout: 30000 });
+  await page.getByLabel('Election bundle file (JSON)').setInputFiles(largeFile);
+  await page.getByRole('button', { name: 'Run checks' }).click();
+  await page.locator('progress[data-stage="ballots"]').waitFor({ state: 'visible' });
+  await page.locator('.site-nav a[href="/help"]').click();
+  await page.getByRole('heading', { name: 'Help and accessibility', exact: true }).waitFor();
+  assert.equal(await page.getByRole('heading', { name: 'Supplied checks passed', exact: true }).count(), 0);
+  checks++;
   // Hold an old read until a replacement run has finished, then deliver success and rejection separately.
   for (const reject of [false, true]) {
     await page.goto(`${origin}/verifier.html`);

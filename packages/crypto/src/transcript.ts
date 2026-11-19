@@ -37,6 +37,11 @@ export const LABELS = {
   'proof-ssim': 'hs',
   'limit-w': 'hs_nz',
   'cp-dec-nonce': 'hs_nz',
+  // Hedged prover nonces for the DKG PoKs, the share-key PoK and the complaint DLEQ (registry revision
+  // 2026-11-04, QV-ADR-027 C3 / OQ-7 / D-19): secret, context, indices, statement point(s), rand32.
+  'pok-nonce': 'hs_nz',
+  'pok-share-nonce': 'hs_nz',
+  'cp-dh-nonce': 'hs_nz',
   reveal: 'H256',
 } as const;
 

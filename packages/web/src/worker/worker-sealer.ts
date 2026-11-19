@@ -26,9 +26,23 @@ export function workerSealer(workerUrl: string): Sealer | undefined {
   return {
     seal(req: SealRequest): Promise<SealResponse> {
       return new Promise((resolve) => {
-        const w = new Worker(url as string, { type: 'module' });
-        const fail = (): void => { w.terminate(); resolve({ ok: false, error: 'worker failed' }); };
-        w.onmessage = (e: MessageEvent<SealResponse>): void => { w.terminate(); resolve(e.data); };
+        let w: Worker;
+        try {
+          w = new Worker(url as string, { type: 'module' });
+        } catch {
+          resolve({ ok: false, error: 'worker failed' });
+          return;
+        }
+        let settled = false;
+        const settle = (response: SealResponse): void => {
+          if (settled) return;
+          settled = true;
+          w.onmessage = w.onerror = w.onmessageerror = null;
+          w.terminate();
+          resolve(response);
+        };
+        const fail = (): void => { settle({ ok: false, error: 'worker failed' }); };
+        w.onmessage = (e: MessageEvent<SealResponse>): void => { settle(e.data); };
         w.onerror = fail;
         w.onmessageerror = fail;
         try {

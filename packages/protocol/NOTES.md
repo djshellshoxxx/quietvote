@@ -69,7 +69,7 @@ safest reading was taken. Items marked **[X-n]** are spec errata (for the QV-16 
 * **[X-19] R-01 vs QV-16 on spoil.** QV-ADR-020 resolved it; implemented as: spoil always signed under `sig-spoil` with
   `reveal_digest`; reveal published only on opt-in (mode `publish`), default `private`, `trustees` only if the manifest enables it.
 * **[X-20] Hash-to-scalar of `u32(L)`** etc. use big-endian widths exactly as §5.1; PoK/DLEQ/keyconf nonces are plain CSPRNG
-  (OQ-7 unresolved), not hedged.
+  (OQ-7 unresolved), not hedged. *Superseded 2026-11-04:* hedged via the §5.4 registry revision (see "Nonce registry revision" below).
 
 ### Log layer (C3 step 11, QV-05 V4/V7, receipts): `src/logcheck.ts`, `verifyElection(bundle, { log })`
 
@@ -119,13 +119,18 @@ and B1-02 option A. Its approval supersedes the historical "owner decision
 needed" wording below for the existing closed legacy body, manifest-hash
 coordinator signatures and core class-L unknown-type finding. QV-18 §5.2 and
 QV-16 §5.20/5.21 now state the implemented scope; the Python log-evidence path
-implements all 48 unchanged log vectors. B2-05 `control_seq` is a separate
-versioned transition and is not silently added to this legacy schema. Full V13
+implements all 48 unchanged log vectors. B2-05 `control_seq` now has the explicit
+legacy-prefix transition in QV-18 §5.2.1 and `src/controls.ts`: old controls leave
+counter zero; the first sequenced control is one; later controls cannot omit or
+skip the signed counter. New sequenced reasons use the public catalog. The core
+and log layer authenticate before advancing and reject order violations with
+fatal `E_LOG_ORDER`. This is an implementation of the accepted decision, not a
+retroactive change to the legacy vectors. Full V13
 terminal/window/steward effects remain separate from this evidence report.
 
 * **[X-31] Record shape.** No spec defines the body of a waiver or extension in suite v1 (QV-18 §5.2 gives only `{code, text}` with codes
   `witness_waiver`, `extension`, `info`; QV-16 §5.14.3 says the extension record is "not defined in suite v1", OQ-9 "none in v1").
-  The verifier therefore uses the record `packages/server` already writes for control entries: `{body: {proto, type: "control",
+  The verifier's historical control shape is the record `packages/server` originally wrote: `{body: {proto, type: "control",
   action, reason?}, sigs}` (closed schema), coordinator multi-signed over `sig-record(manifest_hash, "control", body)` (X-3 convention,
   same scope as the server). Recognised actions and their entry type: `pause`, `resume`, `invalidate`, `security-notice`,
   `witness-waiver`, `extension` -> `notice`; `audit-close` -> `audit_close`; `cancel` -> `election_cancel`; `abort` -> `ceremony_abort`.
@@ -140,7 +145,7 @@ terminal/window/steward effects remain separate from this evidence report.
   "surface it prominently": done as a `WITNESS WAIVER` caveat; the gate finding stays F (with a "never relaxes" note). This is
   stricter than `board.verifyLog`, which downgrades a waived gate to a warning via `isWitnessWaiver`. Extensions, pause and resume
   never move `voting_close` (QV-16 §5.14.3 has no such input; QV-03 §9 halt credit and QV-03 §5.5 extensions are not applied);
-  they are reported as caveats. Because the closed schema admits only `action` and `reason`, a notice cannot even carry a quorum,
+  they are reported as caveats. The closed schemas add only the signed sequence member to `action` and `reason`; a notice cannot carry a quorum,
   witness list or time (`E_LOG_FORMAT`).
 * **[X-33] Authority and fail-closed rules** (all F, `chk.board.append_only`): the entry header author must be a manifest coordinator
   key (QV-18 REQ-052 "signed by the organizer"; QV-ADR-022 / P12-2: the operator may only hold or notify, so caller
@@ -282,6 +287,7 @@ terminal/window/steward effects remain separate from this evidence report.
   `trusteeDecryptTally` still independently recomputes before releasing shares. Wire records and proof transcripts are unchanged.
 * **CP-02 remains open:** decryption nonce hedging does not bind a changed aggregate for the same option; the existing test was
   renamed to state the narrower option-id separation it actually checks. Extending the registry requires a spec-owner decision.
+  *Superseded 2026-11-04:* closed by the owner-approved registry revision (QV-ADR-027; "Nonce registry revision" below).
 * **CP-01 (crypto-protocol audit)**: the TR-01 rule is enforced in `analyzeBallotLog` itself (any mode, either order), not only for tally-listed
   trustees-mode spoils. **CP-03**: closed schemas use `Object.hasOwn`. **CP-04**: `ed25519IsStrictPoint` (crypto) now also requires a
   torsion-free point (mixed-order roll/author keys and signature R values are rejected). See `docs/audit/crypto-protocol.md`.
@@ -373,3 +379,28 @@ Scheduling boundaries cover record/signature loops, every ballot envelope, 32-it
 stages. JSON parsing, roll validation/root, log-evidence verification, DKG adjudication, aggregate/decryption operations and
 individual proofs remain synchronous: this is not a wall-time bound or resumable verifier. No protocol or D-92–D-94 semantics
 changed. See `docs/reports/next-offline-20261109.md` for evidence and remaining qualification limits.
+
+## Nonce registry revision (2026-11-04, QV-ADR-027: CP-02, B1-12, C3 / OQ-7 / D-19 / N-41) — landed 2026-11-18 on `38192a5`
+Owner-approved register defaults (`docs/plan/DECISIONS-2026-11-04.md` §B); spec text in QV-16 §5.4 (registry table +
+"Registry revision 2026-11-04"), §5.7.2, §5.7.5, §5.7.8, §5.13.4, §5.16 and change history 0.1-r1. Prover-side only:
+* crypto `decProve`: `u = hs_nz("cp-dec-nonce"; sc(s_j), ctx, cid, oid, pt(A), pt(B), rand32)` (was without `pt(A)`, `pt(B)`).
+  `spoilDecProve`: same label, oid field `oid ‖ 0x00 ‖ ballot_code` (E-12 kept) and `pt(alpha)`, `pt(beta)`.
+* crypto `pokProve` / `shareKeyProve` / `dhProve`: plain `scalarRandomNonZero(rng)` replaced by new registry labels
+  `pok-nonce` (`sc(a)`, `manifest_hash`, `u8(i)`, `u16(k)`, `pt(A)`, `rand32`), `pok-share-nonce` (`sc(s_j)`, `ctx`, `u8(j)`,
+  `pt(Y_j)`, `rand32`), `cp-dh-nonce` (`sc(e_j)`, `manifest_hash`, `u8(i)`, `u8(j)`, `pt(E_j)`, `pt(R)`, `pt(S)`, `rand32`).
+  Function signatures unchanged. Each PoK/DLEQ now draws 32 RNG bytes instead of 64, so any fixed-seed test stream shifts.
+* Verifiers (TS `verify*`, `verifier-py`) unchanged: nonces are never transmitted. `verifier-py` registry lists the three labels
+  (tagged-hash vectors). Registry now 30 labels.
+* Vectors regenerated once (`node packages/protocol/test/vecgen/write.ts`, `node packages/verifier/scripts/build-corpus.ts`):
+  proof/record bytes, `ctx_prefix`, board checkpoints and receipts change; every vector id, `expect` (verdicts, failed checks,
+  codes, error codes) and tag is unchanged; added `tagged-pok-nonce`, `tagged-pok-share-nonce`, `tagged-cp-dh-nonce`.
+* Tests (each failed before the change): `crypto/test/conformance-nonce-hedge.test.ts` (constant-RNG: different aggregates /
+  (alpha,beta) / coefficients / dealers / ctx / packages give different recovered commitments and no `s1 - s2 = (c1 - c2)·x`
+  leak; nonce equals the documented field list; tampered proofs still rejected), `protocol/test/conformance-nonce-hedge.test.ts`
+  (dead-RNG dealing, keyconf, trustee re-decryption of a changed counted set).
+* Caveat: owner approval is not independent review. AI-assisted, unaudited; external cryptographic review still required.
+  The stale `proofs.test.ts` title ("... CP-02 does not bind changed aggregates") was renamed when this landed; its
+  assertion is unchanged. `crypto/test/cp08-fiat-shamir.test.ts` M15 (added later on #27) pinned the old `cp-dec-nonce`
+  field list; its spec model now includes `pt(A)`, `pt(B)` (spoil: `pt(alpha)`, `pt(beta)`), so it still kills M15 against
+  the revised registry. Ported 2026-11-18 onto `38192a5`: crypto 101/101 there; vectors regenerated again on that base
+  (outcome diff: 0 removed, 0 outcome changes, 3 `tagged-*` added).

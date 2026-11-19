@@ -5,6 +5,13 @@
 import type { MessageKey } from '../en.ts';
 
 export const AR = {
+  "qv.device.unconfirmed": "تعذّر تأكيد الإعدادات المحفوظة.",
+  "qv.election.rulesAck": "قرأت هذه القواعد وحدود الخصوصية",
+  "qv.election.rulesAckHint": "اختياري. تبقى هذه الملاحظة على هذا الجهاز.",
+  "qv.device.settings": "إعدادات الجهاز",
+  "qv.device.sharedToggle": "هذا جهاز مشترك أو عام",
+  "qv.device.rememberHelp": "حفظ الإيصالات يؤثر فقط على الإيصالات الجديدة.",
+  "qv.device.retry": "قراءة إعدادات الجهاز مجددًا",
   "qv.admin.help": "استخدم بصمة البيان المحفوظة للتحقق من هذا الاقتراع. راجع كل حزمة عامة قبل إرسالها. يحتفظ الأمناء بمفاتيحهم السرية في أداتهم. لا تثبت هذه الفحوص حداثة السجل أو موافقة الشهود.",
   "qv.admin.pin": "بصمة البيان المحفوظة (64 رمزًا سداسيًا عشريًا)",
   "qv.admin.action": "إجراء المنظّم",
@@ -300,6 +307,9 @@ export const AR = {
   'qv.verify.anchorHint': 'اختياري لكنه موصى به بشدة. بدونه سينجح أيضاً نسخة من اقتراع آخر.',
   'qv.verify.run': 'تشغيل الفحوصات',
   'qv.verify.running': 'جارٍ تشغيل الفحوصات…',
+  'qv.verify.progressLabel': "عمل التحقق في المرحلة الحالية",
+  'qv.verify.progress': "تم فحص {done} من أصل {total} عنصرًا في هذه المرحلة. هذا تقدّم في العمل وليس نتيجة.",
+  'qv.verify.cancelled': "أُلغي التحقق. لم يُنتَج أي تقرير.",
   'qv.verify.verdict.PASS': 'نجحت جميع الفحوصات',
   'qv.verify.verdict.FAIL': 'فشل أحد الفحوصات',
   'qv.verify.verdict.INCOMPLETE': 'غير مكتمل: هناك حاجة إلى المزيد من الأدلة',
@@ -444,6 +454,8 @@ export const AR = {
   'qv.err.E-VOT-OVERVOTE.body': 'يمكنك اختيار حتى {k}. لقد اخترت {x}.',
   'qv.err.E-VOT-ONEBALLOT.title': 'لقد صوّتّ بالفعل',
   'qv.err.E-VOT-ONEBALLOT.body': 'يسمح هذا الاقتراع بورقة اقتراع واحدة لكل شخص. تُحتسب ورقتك الأولى.',
+  'qv.err.E-VOT-LIMIT.title': 'تم بلوغ الحد الأقصى لأوراق الاقتراع',
+  'qv.err.E-VOT-LIMIT.body': 'لم يُقبل هذا الإرسال. راجع آخر إيصال وحدود أوراق الاقتراع في هذا التصويت.',
   'qv.err.E-VOT-REJECTED-PROOF.title': 'تعذّر قبول ورقة اقتراعك',
   'qv.err.E-VOT-REJECTED-PROOF.body': 'أنتج جهازك ورقة اقتراع لم تجتز الفحوصات. لم يُسجَّل شيء. أعد تحميل هذه الصفحة وحاول مرة أخرى؛ وإذا تكرر ذلك، فأبلغ عنه مع المرجع.',
   'qv.err.E-VOT-DUP.title': 'ورقة الاقتراع هذه مسجّلة بالفعل',

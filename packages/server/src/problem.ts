@@ -28,6 +28,8 @@ const TITLES: Record<string, string> = {
   URI_TOO_LONG: 'URI too long', HEADERS_TOO_LARGE: 'Request headers too large',
   EQUIVOCATION: 'Equivocation evidence', RANGE_NOT_SATISFIABLE: 'Range not satisfiable', LENGTH_REQUIRED: 'Content-Length required',
   IMPORT_REJECTED: 'Import rejected', COMPROMISED: 'Log key compromised', INTERNAL_JOB: 'Job failed',
+  EXPORT_CAPACITY: 'Recorded export storage full', EXPORT_TOO_LARGE: 'Recorded export too large',
+  EXPORT_EXPIRED: 'Export download expired', EXPORT_BINDING_MISMATCH: 'Export snapshot mismatch',
 };
 
 const RETRYABLE = new Set(['RATE_LIMITED', 'BUSY', 'LOG_UNAVAILABLE', 'MAINTENANCE', 'IDEMPOTENCY_IN_PROGRESS', 'WITNESS_QUORUM_REQUIRED', 'INTERNAL']);

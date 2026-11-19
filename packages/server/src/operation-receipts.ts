@@ -13,7 +13,7 @@ export interface OperationReceipt {
   expires_at: number;
   status: number;
   response: string | null;
-  audit_action: 'election.create' | 'quarantine.clear' | null;
+  audit_action: 'election.create' | 'quarantine.clear' | 'export.acknowledge' | 'export.notice' | null;
   audit_detail: string | null;
 }
 export type OperationJournal = (db: ElectionDb, reply: Reply, audit?: {

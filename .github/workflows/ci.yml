@@ -23,6 +23,7 @@ on:
       - 'docs/audit/**'
       - 'packages/*/COPY.md'
       - 'test-vectors/**'
+      - 'vendor/**'
       - '.github/**'
   push:
     branches:
@@ -35,6 +36,7 @@ on:
       - 'docs/audit/**'
       - 'packages/*/COPY.md'
       - 'test-vectors/**'
+      - 'vendor/**'
       - '.github/**'
   merge_group:
   schedule:
@@ -81,6 +83,8 @@ jobs:
       - name: Lint package-lock.json sources and integrity
         run: npm run lockfile:lint
       - run: npm ci --ignore-scripts
+      - name: Install and verify the pinned vendored crypto bytes
+        run: npm run vendor:install
       - name: Audit dependencies (blocking for high and critical advisories)
         run: npm audit --audit-level=high
       - run: npm run typecheck
@@ -118,6 +122,8 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Install and verify the pinned vendored crypto bytes
+        run: npm run vendor:install
       # Every workspace in the shard runs even if an earlier one fails, so one failure cannot hide another.
       - name: Workspace tests
         shell: bash
@@ -146,6 +152,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Install and verify the pinned vendored crypto bytes
+        run: npm run vendor:install
       - name: Python verifier unit and regression tests
         working-directory: verifier-py
         run: python3 -I -m unittest
@@ -182,6 +190,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Install and verify the pinned vendored crypto bytes
+        run: npm run vendor:install
       - name: Install the pinned Playwright Chromium revision
         run: npx playwright install --with-deps chromium
       - name: Run all required browser journeys

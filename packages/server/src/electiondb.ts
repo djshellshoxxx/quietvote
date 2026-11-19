@@ -7,6 +7,7 @@ import type { RegistrationScheme } from './registration.ts';
 import { parsePinnedRoll, samePinnedRoll, type PinnedRoll } from './pinned-roll.ts';
 import { ApiError } from './problem.ts';
 import type { OperationReceipt } from './operation-receipts.ts';
+import { MAX_PUBLIC_EXPORT_BYTES, MAX_PUBLIC_EXPORTS, type PublicExportRow } from './export-model.ts';
 
 const MIGRATIONS: Migration[] = [
   {
@@ -177,6 +178,40 @@ CREATE TABLE pinned_roll (
 ) STRICT;
 CREATE TRIGGER pinned_roll_noupdate BEFORE UPDATE ON pinned_roll BEGIN SELECT RAISE(ABORT,'pinned roll is immutable'); END;
 CREATE TRIGGER pinned_roll_nodelete BEFORE DELETE ON pinned_roll BEGIN SELECT RAISE(ABORT,'pinned roll is immutable'); END;
+` },
+  { version: 11, name: 'recorded_public_exports', sql: `
+CREATE TABLE export_record (
+  export_id TEXT PRIMARY KEY CHECK (length(export_id)=26 AND export_id NOT GLOB '*[^a-z2-7]*'),
+  job_id TEXT NOT NULL UNIQUE CHECK (length(job_id)=26 AND job_id NOT GLOB '*[^a-z2-7]*'),
+  kind TEXT NOT NULL CHECK (kind='public'),
+  tree_size INTEGER NOT NULL CHECK (tree_size>=1),
+  root_hash BLOB NOT NULL CHECK (length(root_hash)=32),
+  sha256 BLOB NOT NULL CHECK (length(sha256)=32),
+  byte_length INTEGER NOT NULL CHECK (byte_length BETWEEN 1 AND 134217728),
+  snapshot BLOB NOT NULL CHECK (length(snapshot)=byte_length),
+  created_at INTEGER NOT NULL CHECK (created_at>=0),
+  expires_at INTEGER NOT NULL CHECK (expires_at>=created_at),
+  acknowledged_at INTEGER CHECK (acknowledged_at>=created_at),
+  notice_at INTEGER CHECK (notice_at>=created_at)
+) STRICT;
+CREATE TRIGGER export_record_noupdate BEFORE UPDATE ON export_record
+  WHEN NEW.export_id IS NOT OLD.export_id OR NEW.job_id IS NOT OLD.job_id OR NEW.kind IS NOT OLD.kind
+    OR NEW.tree_size IS NOT OLD.tree_size OR NEW.root_hash IS NOT OLD.root_hash OR NEW.sha256 IS NOT OLD.sha256
+    OR NEW.byte_length IS NOT OLD.byte_length OR NEW.snapshot IS NOT OLD.snapshot
+    OR NEW.created_at IS NOT OLD.created_at OR NEW.expires_at IS NOT OLD.expires_at
+    OR (OLD.acknowledged_at IS NOT NULL AND NEW.acknowledged_at IS NOT OLD.acknowledged_at)
+    OR (OLD.notice_at IS NOT NULL AND NEW.notice_at IS NOT OLD.notice_at)
+  BEGIN SELECT RAISE(ABORT,'export snapshot and first acknowledgement/notice are immutable'); END;
+ALTER TABLE operation_receipt RENAME TO operation_receipt_v10;
+CREATE TABLE operation_receipt (
+  principal TEXT NOT NULL, idem_key TEXT NOT NULL, method TEXT NOT NULL, path TEXT NOT NULL,
+  req_sha256 BLOB NOT NULL CHECK (length(req_sha256)=32), expires_at INTEGER NOT NULL,
+  status INTEGER NOT NULL CHECK (status BETWEEN 200 AND 299), response TEXT,
+  audit_action TEXT CHECK (audit_action IN ('election.create','quarantine.clear','export.acknowledge','export.notice')), audit_detail TEXT,
+  PRIMARY KEY(principal,idem_key)
+) STRICT;
+INSERT INTO operation_receipt SELECT * FROM operation_receipt_v10;
+DROP TABLE operation_receipt_v10;
 ` },
 ];
 
@@ -499,6 +534,42 @@ export class ElectionDb {
   operationReceipts(now: number): OperationReceipt[] {
     run(this.db, 'DELETE FROM operation_receipt WHERE expires_at<=?', now);
     return all<OperationReceipt>(this.db, 'SELECT * FROM operation_receipt ORDER BY principal,idem_key');
+  }
+
+  // ---- recorded exports: immutable exact bytes, separate delivery acknowledgement and deletion notice
+  publicExports(): PublicExportRow[] {
+    return all<PublicExportRow>(this.db, `SELECT export_id,job_id,kind,tree_size,root_hash,sha256,byte_length,
+      created_at,expires_at,acknowledged_at,notice_at FROM export_record ORDER BY created_at,export_id`);
+  }
+  publicExport(id: string): PublicExportRow | undefined {
+    return this.publicExports().find((r) => r.export_id === id);
+  }
+  publicExportForJob(jobId: string): PublicExportRow | undefined {
+    return this.publicExports().find((r) => r.job_id === jobId);
+  }
+  publicExportBytes(id: string): Uint8Array | undefined {
+    const row = get<{ snapshot: Uint8Array }>(this.db, 'SELECT snapshot FROM export_record WHERE export_id=?', id);
+    return row ? u8(row.snapshot) : undefined;
+  }
+  /** Keep one current-tree delivery/notice receipt even after download expiry; it protects the deletion condition. */
+  prunePublicExports(now: number, keepExportId: string | undefined): void {
+    run(this.db, 'DELETE FROM export_record WHERE expires_at<=? AND export_id IS NOT ?', now, keepExportId ?? null);
+  }
+  /** Called with the snapshot and response journal inside the election transaction. */
+  addPublicExport(row: PublicExportRow, bytes: Uint8Array): void {
+    const used = get<{ n: number; bytes: number }>(this.db, 'SELECT COUNT(*) AS n, COALESCE(SUM(byte_length),0) AS bytes FROM export_record')!;
+    if (used.n >= MAX_PUBLIC_EXPORTS || used.bytes + bytes.length > MAX_PUBLIC_EXPORT_BYTES) {
+      throw new ApiError(429, 'EXPORT_CAPACITY', 'recorded export storage is full; retain an existing snapshot or retry after old downloads expire', { retryable: false });
+    }
+    run(this.db, `INSERT INTO export_record(export_id,job_id,kind,tree_size,root_hash,sha256,byte_length,snapshot,
+      created_at,expires_at,acknowledged_at,notice_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, row.export_id, row.job_id, row.kind,
+      row.tree_size, row.root_hash, row.sha256, row.byte_length, bytes, row.created_at, row.expires_at, row.acknowledged_at, row.notice_at);
+  }
+  acknowledgePublicExport(id: string, at: number): void {
+    run(this.db, 'UPDATE export_record SET acknowledged_at=? WHERE export_id=? AND acknowledged_at IS NULL', at, id);
+  }
+  noticePublicExport(id: string, at: number): void {
+    run(this.db, 'UPDATE export_record SET notice_at=? WHERE export_id=? AND notice_at IS NULL', at, id);
   }
 
   // ---- invites

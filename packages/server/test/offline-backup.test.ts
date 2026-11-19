@@ -270,7 +270,7 @@ test('a restore candidate cannot discard a deletion tombstone from its history f
   for (const f of m.files) if (f.name !== 'control.sqlite') rmSync(join(floor, f.name));
   m.files = m.files.filter((f: { name: string }) => f.name === 'control.sqlite'); writeFileSync(path, JSON.stringify(m));
   const candidate = clone(floor);
-  mutate(candidate, 'control.sqlite', 'DELETE FROM election_cleanup; DELETE FROM election_registry');
+  mutate(candidate, 'control.sqlite', 'DELETE FROM election_cleanup; DELETE FROM runtime_anchor; DELETE FROM election_registry');
   assert.deepEqual((await verifyBackup(candidate, key)).deleted_elections, [], 'candidate is structurally valid but has forgotten the deletion');
   const destination = join(root, 'forgotten-tombstone-refused');
   await assert.rejects(restoreBackup(candidate, key, destination, floor), code('BACKUP_ROLLBACK'));

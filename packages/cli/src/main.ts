@@ -43,12 +43,14 @@ usage:
   qv election prepare <archive.qvb> --manifest-hash <hex> --out <file> [--format election|ceremony] [--json]
                                    checks archive, pinned manifest and board before preparing trustee inputs;
                                    accepts regular files up to 64 MiB and 10000 entries; refuses existing outputs
-  qv election draft-record <archive.qvb> --manifest-hash <hex> --kind <phase> --out <body.json> [--json]
+  qv election draft-record <archive.qvb> --manifest-hash <hex> --kind <action> --out <body.json> [--reason <code>] [--json]
                                    phases: dkg-open, dkg-r1-open, dkg-r1-close, dkg-r2-close, dkg-r3-close,
-                                   dkg-final, roll-commit, election-open, election-close; unsigned, never submitted
+                                   dkg-final, roll-commit, election-open, election-close; controls: pause, resume,
+                                   invalidate, security-notice, audit-close, cancel, abort; unsigned, never submitted
   qv election sign-record --manifest <manifest.json> --manifest-hash <hex> --body <body.json> | --record <record.json>
                     --key <keyfile> --out <file> [--election <bundle>] [passphrase options] [--json]
                                    add one coordinator signature; quorum:false means additional signers are needed
+                                   controls require --election <archive.qvb> to check their signed control_seq
   qv election export-entry --origin <quietvote/v1/id> --type <board-type> --file <signed-record.json>
                     --key <outer-author-keyfile> --out <packet.json> [passphrase options] [--json]
   qv election inspect <bundle> [--json]

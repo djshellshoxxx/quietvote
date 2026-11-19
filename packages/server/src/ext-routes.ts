@@ -12,6 +12,7 @@ import { commitImport, verifyBundle } from './imports.ts';
 import { JobError, jobView, type JobRunner } from './jobs.ts';
 import type { ElectionPool } from './pool.ts';
 import type { OperationJournal } from './operation-receipts.ts';
+import { registerPublicExportRoutes } from './export-routes.ts';
 import { ApiError, conflict, notFound } from './problem.ts';
 import { ELECTION_ID_RE, ORG_ID_RE, fArr, fEnum, fObj, fStr, opt, req, toIso, unbase32 } from './util.ts';
 
@@ -22,6 +23,7 @@ export interface ExtDeps {
   add(r: Route): void;
   idem(c: Ctx, principal: string, fn: (save: (reply: Reply) => void, journal: OperationJournal) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply>;
   readable(c: Ctx): Promise<ElectionRuntime>;
+  orgElection(c: Ctx): Promise<ElectionRuntime>;
   intQ(c: Ctx, n: string, def: number, max: number): number;
 }
 
@@ -33,6 +35,7 @@ export function registerExtRoutes(d: ExtDeps): void {
   const { env, pool, jobs, add } = d;
   const cfg = env.cfg;
   const control = env.control;
+  registerPublicExportRoutes(d);
 
   // ------------------------------------------------------------------------------------------------ gossip
   add({
@@ -82,7 +85,8 @@ export function registerExtRoutes(d: ExtDeps): void {
       const j = control.job(c.params['job']!);
       // visible to its creator and to instance admins; everyone else gets the same 404 as for an unknown id
       if (!j || (j.created_by !== c.auth!.keyId && c.auth!.role !== 'instance_admin')) throw notFound('job');
-      return { status: 200, json: jobView(j) };
+      pool.recoverExportJob(j.job_id);
+      return { status: 200, json: jobView(control.job(j.job_id)!) };
     },
   });
 
@@ -209,6 +213,7 @@ export function registerExtRoutes(d: ExtDeps): void {
         if (!reg) throw notFound('election');
         if (b.confirm !== reg.title) throw new ApiError(422, 'VALIDATION_FAILED', 'confirm must equal the election title');
         if (!DELETABLE_STATES.includes(reg.state)) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
+        await pool.assertDeletable(id);
         const job = jobs.submit('admin', 4, { kind: 'delete', election_id: id, params: {}, created_by: a.keyId }, async () => {
           try {
             await pool.remove(id);

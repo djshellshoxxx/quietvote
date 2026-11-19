@@ -9,7 +9,7 @@ const receipt = { principal: 'principal', idem_key: 'request-key', method: 'POST
 const pending = { ...receipt, status: -1, response: null };
 function fixture(): BackupSecurityFloor {
   return { keys: new Map(), orgs: new Map(), hooks: new Map(), deletedHooks: new Set(), nonces: new Map(),
-    requests: new Map([[id, { ...pending }]]), eventCursors: new Map(), invites: new Map(), registrationSchemes: new Map(), pinnedRolls: new Map(),
+    requests: new Map([[id, { ...pending }]]), eventCursors: new Map(), runtimeAnchors: new Map(), invites: new Map(), registrationSchemes: new Map(), pinnedRolls: new Map(),
     operationReceipts: new Map([['election', new Map([[id, { ...receipt }]])]]) };
 }
 

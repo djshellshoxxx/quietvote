@@ -368,6 +368,7 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     if len(seqs) != len(log) or any(not integer(s) for s in seqs) or seqs != sorted(set(seqs)):
         st.add("chk.board.append_only", "E_LOG_ORDER", True, "sequence numbers not strictly increasing")
     envelopes, records = [], []
+    control_seq = 0
     rejected_tally = False  # a tally record that fails QV-JSON / closed schema / proto is rejected, never examined
     for e in log:
         en = e.get("entry") if isinstance(e, dict) else None
@@ -390,6 +391,21 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
             # a versioned tally which this verifier must not attempt to examine.
             st.add("chk.encoding.canonical", "E_VERSION", False, f"seq {e['seq']}: proto")
             rejected_tally |= is_tally
+            continue
+        if body_type == 'control' and ('control_seq' in en['body'] or control_seq > 0):
+            from .logcheck import CONTROL_TYPES, _control_action, advance_control_seq
+            try:
+                _control_action(en, mh, m['coordinator'])
+            except QVError as exc:
+                schema = exc.code == 'E_LOG_FORMAT' or en['body'].get('action') not in CONTROL_TYPES
+                st.add('chk.encoding.canonical' if schema else None, 'E_SCHEMA' if schema else 'E_SIG', False,
+                       f"seq {e['seq']}: {exc.detail}")
+                continue
+            try:
+                control_seq = advance_control_seq(control_seq, en['body'])
+            except QVError as exc:
+                st.add('chk.time.window', exc.code, True, f"seq {e['seq']}: {exc.detail}")
+                _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
             continue
         if isinstance(body_type, str) and body_type not in _RECORD_KEYS:
             # ADR-027 / B1-02 option A: an unrecognised non-ballot record is
@@ -484,8 +500,8 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
     st.complete("chk.keys.trustees")  # App. C steps 5-10 are done
 
     # ------------------------------------------------ C3 window markers
-    # Only authenticated markers can occupy a phase. Earlier junk and later
-    # duplicates remain visible without replacing the first valid signature set.
+    # Only authenticated markers can occupy a phase. Earlier junk and identical
+    # repeats remain log-only; differing authenticated bodies are fatal (ADR-027 / P10).
     window_markers: dict[str, tuple[int, dict]] = {}
     for seq, en in later_markers:
         name = en["body"].get("name")
@@ -494,6 +510,10 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
         if not _coordinator_ok(ctx, en["body"], en.get("sigs"), coord):
             st.add(None, "E_SIG", False, f"seq {seq}: window marker signature")
         elif name in window_markers:
+            if qvjson.jcs(en["body"]) != qvjson.jcs(window_markers[name][1]["body"]):
+                st.add("chk.time.window", "E_MARKERS", True,
+                       f"seq {seq}: conflicting marker {name}: body differs from the first authenticated marker")
+                _stop(st, *[c for c in ALL_AFTER_MANIFEST if not st.failed(c)])
             st.add(None, "E_MARKERS", False, f"seq {seq}: duplicate marker {name}")
         else:
             window_markers[name] = (seq, en)
@@ -718,7 +738,8 @@ def _verify(bundle: dict, st: State, out: dict) -> None:
             st.add("chk.tally.decrypt", "E_TALLY_INSUFFICIENT", True, f"|T_valid| = {len(T_valid)} < t = {t}")
             _stop(st, "chk.result.rules")
         if tb.get("decrypters") != T_valid:
-            st.notes.append(f"tally.decrypters {tb.get('decrypters')} != T_valid {T_valid}")
+            st.add("chk.tally.decrypt", "E_DEC_PROOF", True,
+                   f"tally.decrypters {tb.get('decrypters')} != T_valid {T_valid}")
         S = T_valid[:t]
         lam = {jj: lagrange_at_zero(S, jj) for jj in S}
         for tc, mc in zip(tcont, mcont):

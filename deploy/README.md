@@ -4,9 +4,12 @@
 scaffolding for the unaudited prototype; it does not resolve registration B3-01,
 verifier semantics D-92…D-96, external review, or real-election release gates.
 
-From a checkout with Node >=22.18 and installed workspace dependencies:
+From a checkout with Node >=22.18, prepare the exact dependencies before starting the service:
 
 ```sh
+npm ci --ignore-scripts
+npm run vendor:install
+npm run vendor:check
 node packages/server/bin/qv-server.ts --config /absolute/path/server.json --check-config
 node packages/server/bin/qv-server.ts --config /absolute/path/server.json
 ```
@@ -79,7 +82,7 @@ certificates.
 ## Container and systemd examples
 
 Build from the repository root with `docker build -f deploy/Dockerfile .`.
-The image serves the API; no web build is bundled. For Compose, copy the example
+The image explicitly installs the verified copies from `vendor/` after its production-only dependency restore. It serves the API; no web build is bundled. For Compose, copy the example
 to `deploy/compose.yml` and create `deploy/server.json` and `deploy/data` first.
 Set container `host` to `0.0.0.0` while retaining the host-side loopback port bind;
 set `dataDir` to `/var/lib/quietvote`. Make data writable by the image's `node`

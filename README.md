@@ -62,11 +62,15 @@ The [wiki](wiki/) provides voter, organizer, trustee, auditor and developer guid
 
 ## Current status
 
-The [November 17 consolidation review](docs/reports/consolidation-review-20261117.md)
-accounts for every branch and PR, records recovered fixes and verification, and
-identifies the remaining core and integration work. Its [publication receipt](docs/reports/consolidation-publication-20261117.md)
-records the completed integration, exact-commit CI and reduction from 49 open PRs
-to the canonical draft #43 and residual draft #27.
+The [comprehensive consolidation report](docs/audits/CONSOLIDATION_REPORT.md)
+records the current branch recovery and source composition. Its
+[branch inventory](docs/audits/BRANCH_INVENTORY.md),
+[unfinished-work ledger](docs/audits/UNFINISHED_WORK.md),
+[security review](docs/audits/SECURITY_REVIEW.md) and
+[verification receipt](docs/audits/FINAL_VERIFICATION.md) distinguish implemented
+behavior from remaining contracts and qualification. The
+[November 17 publication receipt](docs/reports/consolidation-publication-20261117.md)
+describes an earlier snapshot and its then-current PR count.
 
 **Stage:** Experimental prototype; core workflows and qualification remain incomplete<br>
 **Implementation:** Code exists in all eight packages (`crypto`, `protocol`, `board`, `server`, `trustee`, `verifier`, `cli`, `web`) and in `verifier-py/`. Modern web/API/CLI voter enrollment, the connected organizer ceremony/open/close/tally console, executable election workflows and offline recovery are implemented. The accepted ADR-027/028 decisions supersede the old registration and report-parity holds. The [continuation handoff](docs/handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md) records source-specific validation and its limits.<br>
@@ -78,11 +82,11 @@ Do not treat placeholder requirements or proposed capability boundaries as appro
 
 Public verification requires authenticated append and witness evidence by default; an explicit content-only mode reports its narrower scope. The independent Python verifier includes board/receipt checks, approved detailed-report parity and a bounded JSON Lines adapter. These implemented capabilities do not establish complete conformance or an independent security audit.
 
-Signed GroupRules currently provides an isolated pinned-history core and offline CLI. Governed manifest binding and ratification, proposal versions/review, group membership/rotation/recovery, and disputes/finality remain unfinished core work. Pinned-roll enrollment, newer control authority/effects and remaining verifier semantics also need completion. ADR-027 approves the outstanding full-statement decryption-nonce binding (CP-02) and DKG nonce-hedging work; their registry and implementation changes remain unfinished, rather than awaiting a repeated owner decision.
+Signed GroupRules provides an isolated pinned-history core and offline CLI. Governed manifest binding and ratification, proposal versions/review, group membership/rotation/recovery, and disputes/finality remain unfinished core work. Authenticated pinned-roll enrollment, prover nonce hedging including trustee-index separation, runtime rollback floors and recorded public exports are implemented in this candidate. Newer terminal control effects and remaining verifier semantics still need the contracts and evidence listed in the current ledger.
 
 Independent security/protocol review, witness/WAL activation and backup custody, supported-platform qualification, native translation review and assistive-technology qualification still need evidence. All five translated catalogs remain unreviewed and unoffered. Automated browser checks are not WCAG or screen-reader acceptance. Main has not been merged, and nothing has been released or deployed.
 
-Use the [current feature ledger](docs/reports/quietvote-teams-feature-ledger-20261116.md) and [remaining contracts](docs/handoffs/QUIETVOTE-REMAINING-CONTRACTS-20261116.md) for the inspected implementation gaps. The broader backlog is in [docs/plan/TODO.md](docs/plan/TODO.md), the roadmap and decisions are in [docs/plan/](docs/plan/), and simple summaries are in [wiki/](wiki/). Older receipts describe their named snapshots; later accepted decisions and implementation handoffs supersede their obsolete holds.
+Use the [current unfinished-work ledger](docs/audits/UNFINISHED_WORK.md) for source status and the [remaining-contracts review](docs/handoffs/QUIETVOTE-REMAINING-CONTRACTS-20261116.md) for its decision provenance. The broader backlog is in [docs/plan/TODO.md](docs/plan/TODO.md), the roadmap and decisions are in [docs/plan/](docs/plan/), and simple summaries are in [wiki/](wiki/). Older receipts describe their named snapshots; later accepted decisions and implementation handoffs supersede their obsolete holds.
 
 ## Guiding principles
 

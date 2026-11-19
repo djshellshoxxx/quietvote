@@ -24,3 +24,6 @@ suite checks message preservation, scalar wraparound, unchanged inputs, invalid
 randomness, identity/cancellation refusal and rejection of a reused CDS proof.
 Protocol/crypto review before merge remains outstanding; internal tests do not
 replace that review. No wire format, transcript, vector or dependency changed.
+## ADR-024 vendoring — 2026-11-19
+
+Both existing `@noble/curves` and `@noble/hashes` 2.4.0 tarballs and all 132 published files now live under `vendor/`. The root `VENDOR.lock` binds upstream SHA-512 SRI and archive/file SHA-256 hashes. Explicit `npm run vendor:install` verifies and copies those bytes into normal npm dependency directories; registry lock/audit metadata and public imports are unchanged. CI runs it after every dependency restore, and production web builds verify the installed copies. No upstream source or cryptographic behavior changes. See the [verification and provenance receipt](../../docs/reports/vendored-crypto-20261119.md).

@@ -28,6 +28,8 @@ export interface BoardLogOptions {
   allowUnverifiedSignatures?: boolean;
   /** Seconds of tolerated created_at skew (default 86400). */
   maxClockSkew?: number;
+  /** Server-owned startup/recovery gate. Mirrors omit it; false always refuses new signatures. */
+  canSign?: () => boolean;
 }
 
 export type LogState = 'ok' | 'quarantine';
@@ -101,6 +103,7 @@ export class BoardLog {
   /** Admission pipeline (§5.3). Idempotent for byte-identical resubmission. */
   append(headerBytes: Uint8Array, body: Uint8Array): Result<{ receipt: Receipt; duplicate: boolean }> {
     if (this.state !== 'ok') return err('QV_BOARD_QUARANTINE', 'log is quarantined');
+    if (this.o.canSign?.() === false) return err('QV_BOARD_READ_ONLY', 'signing recovery is pending');
     if (this.store.isReadOnly()) return err('QV_BOARD_READ_ONLY', 'log is read-only');
     const secretKey = this.o.secretKey;
     if (secretKey === undefined) return err('QV_BOARD_READ_ONLY', 'log has no signing key');
@@ -148,6 +151,8 @@ export class BoardLog {
   }
 
   getReceipt(seq: number): Result<Receipt> {
+    if (this.state !== 'ok') return err('QV_BOARD_QUARANTINE', 'log is quarantined');
+    if (this.o.canSign?.() === false) return err('QV_BOARD_READ_ONLY', 'signing recovery is pending');
     const secretKey = this.o.secretKey;
     if (secretKey === undefined) return err('QV_BOARD_READ_ONLY', 'log has no signing key');
     const e = this.store.getEntry(seq);
@@ -157,6 +162,7 @@ export class BoardLog {
   /** Signs a checkpoint for the current tree. Never signs a smaller size or a conflicting root. */
   checkpoint(): Result<string> {
     if (this.state !== 'ok') return err('QV_BOARD_QUARANTINE', 'log is quarantined');
+    if (this.o.canSign?.() === false) return err('QV_BOARD_READ_ONLY', 'signing recovery is pending');
     if (this.store.isReadOnly()) return err('QV_BOARD_READ_ONLY', 'log is read-only');
     const secretKey = this.o.secretKey;
     if (secretKey === undefined) return err('QV_BOARD_READ_ONLY', 'log has no signing key');

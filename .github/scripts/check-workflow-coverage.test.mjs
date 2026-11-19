@@ -39,6 +39,7 @@ for (const event of ['pull_request', 'push']) {
     const paths = pathsFor('ci.yml', event);
     for (const input of [
       'package-lock.json', 'package.json', 'tsconfig.json',
+      'VENDOR.lock', 'vendor/noble-curves/ed25519.js', 'vendor/noble-curves/README.md', 'scripts/vendor.mjs',
       'packages/crypto/src/hash.ts', 'packages/web/e2e/browser.ts',
       'packages/web/COPY.md', 'docs/audit/2026-10-28/poc/B3/example.md',
       'test-vectors/v1/README.md', '.github/scripts/check-workflow-coverage.test.mjs',
@@ -52,6 +53,7 @@ for (const event of ['pull_request', 'push']) {
     const paths = pathsFor('pseudo-locale-visual.yml', event);
     for (const input of [
       'package-lock.json', 'package.json', 'tsconfig.json',
+      'VENDOR.lock', 'vendor/noble-hashes/sha2.js', 'scripts/vendor.mjs',
       'packages/web/package.json', 'packages/web/src/ui/app.ts',
       'packages/web/static/styles.css', 'packages/web/e2e/pseudo-locale-visual-ci.mjs',
       'packages/board/src/receipt.ts', 'packages/crypto/src/hash.ts',
@@ -66,4 +68,15 @@ test('pseudo-locale checks remain available for merge queues and manual qualific
   const source = readFileSync(new URL('../workflows/pseudo-locale-visual.yml', import.meta.url), 'utf8');
   assert.match(source, /^  merge_group:$/m);
   assert.match(source, /^  workflow_dispatch:$/m);
+});
+
+test('every CI dependency restore explicitly installs verified vendor bytes before execution', () => {
+  for (const workflow of ['ci.yml', 'pseudo-locale-visual.yml']) {
+    const source = readFileSync(new URL('../workflows/' + workflow, import.meta.url), 'utf8');
+    const restores = source.split('      - run: npm ci --ignore-scripts\n').slice(1);
+    assert.ok(restores.length, `${workflow}: expected dependency restores`);
+    for (const remaining of restores) assert.match(remaining,
+      /^      - name: Install and verify the pinned vendored crypto bytes\n        run: npm run vendor:install\n/,
+      `${workflow}: every npm ci must be followed by vendor installation`);
+  }
 });

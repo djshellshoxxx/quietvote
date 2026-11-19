@@ -1,5 +1,11 @@
 # Completion status (v1 scope)
 
+> Current consolidation: [branch inventory](../audits/BRANCH_INVENTORY.md),
+> [unfinished work](../audits/UNFINISHED_WORK.md), [security review](../audits/SECURITY_REVIEW.md),
+> [integration report](../audits/CONSOLIDATION_REPORT.md) and
+> [exact-source verification](../audits/FINAL_VERIFICATION.md).
+> The dated receipts below remain historical; later implemented behavior and still-open contracts are distinguished there.
+
 > Current continuation: [2026-11-16 parallel teams and fresh reviews](../handoffs/QUIETVOTE-TEAMS-CONTINUATION-20261116.md).
 > [Feature ledger](../reports/quietvote-teams-feature-ledger-20261116.md) records missing core contracts and held decisions.
 > Earlier receipts below are historical. The project is not complete or release-qualified.

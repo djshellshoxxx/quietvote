@@ -79,3 +79,41 @@ test('successful Worker messages still resolve and terminate once', async () => 
   });
   assert.equal(stopped, 1);
 });
+
+test('sealing worker construction failure returns the normal failure result', async () => {
+  class RefusedWorker {
+    constructor() { throw new DOMException('worker startup refused', 'SecurityError'); }
+  }
+  await withFakeWorker(RefusedWorker as unknown as typeof Worker, async () => {
+    const sealer = workerSealer('/assets/seal-worker.js');
+    assert.ok(sealer);
+    assert.deepEqual(await sealer.seal({} as SealRequest), workerFailed);
+  });
+});
+
+test('late worker events cannot settle or terminate the same operation twice', async () => {
+  let stopped = 0;
+  class LateWorker {
+    onmessage: ((event: MessageEvent<SealResponse>) => void) | null = null;
+    onerror: ((event: ErrorEvent) => void) | null = null;
+    onmessageerror: ((event: MessageEvent<unknown>) => void) | null = null;
+    postMessage(): void {
+      const message = this.onmessage;
+      const error = this.onerror;
+      queueMicrotask(() => {
+        message?.({ data: workerFailed } as MessageEvent<SealResponse>);
+        error?.({ type: 'error' } as ErrorEvent);
+        assert.equal(this.onmessage, null);
+        assert.equal(this.onerror, null);
+        assert.equal(this.onmessageerror, null);
+      });
+    }
+    terminate(): void { stopped++; }
+  }
+  await withFakeWorker(LateWorker as unknown as typeof Worker, async () => {
+    const sealer = workerSealer('/assets/seal-worker.js');
+    assert.ok(sealer);
+    assert.deepEqual(await sealer.seal({} as SealRequest), workerFailed);
+  });
+  assert.equal(stopped, 1);
+});

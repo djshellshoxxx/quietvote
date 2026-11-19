@@ -11,9 +11,12 @@ Every commit must carry a `Signed-off-by:` line certifying the [Developer Certif
 Requires Node.js 22.18 or later.
 
 ```sh
-npm ci
-npm run check    # typecheck, then tests across workspaces
+npm ci --ignore-scripts
+npm run vendor:install
+npm run check    # vendor integrity, typecheck, then tests across workspaces
 ```
+
+`vendor:install` verifies the two exact Noble releases against their published tarballs, the registry lockfile and `VENDOR.lock`, then installs copies from `vendor/`. Run it after every `npm ci`; lifecycle scripts stay disabled. `npm run vendor:check` verifies the installed bytes and actual module resolution. See [vendor provenance and update instructions](vendor/README.md).
 
 Commit messages follow Conventional Commits (`feat(board): ...`, `fix(crypto): ...`) with a subject of 72 characters or fewer, and include a `Refs:` footer with the requirement IDs where they apply.
 

@@ -413,6 +413,7 @@ Each error shows: **what happened**, **what it means for your vote**, **what to 
 | `E-VOT-NOTOPEN` | Before open | Cannot vote yet | `Voting opens {time}` | Add to calendar (ICS, no remote calls) |
 | `E-VOT-OVERVOTE` | Selections exceed limit | Blocked in UI | `Too many choices` / `You can choose up to {k}. You've chosen {x}.` | Adjust |
 | `E-VOT-ONEBALLOT` | Revoting disallowed, already voted | Not counted | `You've already voted` / `This election allows one ballot per person. Your first ballot counts.` | View receipt |
+| `E-VOT-LIMIT` | Cast or test-ballot quota exhausted; API `REVOTE_LIMIT` | Submission refused; earlier result not inferred | `Ballot limit reached` / `This submission was not accepted. Check your latest receipt and the election's ballot limits.` | View receipt and rules |
 | `E-VOT-REJECTED-PROOF` | Board rejects ballot proofs | Not counted | `Your ballot couldn't be accepted` / `Your device produced a ballot that failed the checks. Nothing was recorded. Reload this page and try again; if it happens again, report it with the reference.` | Reload; Report |
 | `E-VOT-DUP` | Identical ballot already recorded | Already counted | `This exact ballot is already recorded` | Show receipt |
 | `E-VOT-SUPERSEDED-LOST` | Race: older ballot arrives after newer | Not counted (older) | `A newer ballot from you is already recorded` | Show receipt |

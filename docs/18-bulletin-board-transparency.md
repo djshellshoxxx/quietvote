@@ -207,12 +207,50 @@ sequenced `election-close` is a fatal time-window finding, including at quorum
 zero. Full terminal/ballot-validity/window-adjustment effects remain a separate
 V13 state-machine contract; authentication is not a claim to implement them.
 
-The separately approved B2-05 monotone signed `control_seq` design is a future
-versioned wire transition. This legacy closed schema does **not** silently accept
-that field, infer counters for old records, or reject unchanged legacy vectors
-for lacking it. A transition must coordinate its version signal, first-counter
-value and advancement rules, signing payload, server and both verifiers, and
-new positive/negative counter/replay vectors before claiming freshness support.
+#### 5.2.1 Sequenced control transition (QV-ADR-027 B2-05)
+
+The implementation of the accepted B2-05 decision uses the presence of the signed
+`control_seq` member as its wire-version discriminator. New server admissions and
+new client signatures require the closed body
+`{proto:"qv1-r255-sha2",type:"control",action,control_seq,reason?}`. The counter is
+an integer from 1 through 9007199254740991, included in the existing manifest-hash
+record signature. An optional reason must be a QV-07 section 15.2 catalog code;
+there is no free-text explanation member. Signature scope, coordinator quorum and
+header authorization remain as stated above.
+
+Each election starts with counter state zero. Historical unsequenced controls
+may form a prefix and leave that state at zero, regardless of their number. The
+first authenticated sequenced control must carry 1. Every subsequent authenticated
+control must carry exactly the previous accepted counter plus one; omitting the
+counter after that boundary, repeating an old value, skipping a value or exceeding
+the safe integer limit is rejected. All control actions share this order. Ballots,
+markers and other non-control entries do not consume numbers. A wholly legacy
+archive retains its existing interpretation, and old signed bytes are never
+rewritten or assigned inferred counters.
+
+Schema and authority checks precede advancement. Invalid or unauthorized records
+cannot reserve a counter. The server checks the next value under its existing
+append serialization and reconstructs it from authenticated stored controls on
+replay. A stale or future new submission receives `409 STATE_CONFLICT` with reason
+`CONTROL_SEQUENCE`; a missing counter fails new-admission schema validation.
+The existing exact-byte outer-packet retry still returns its prior receipt.
+Wrapping an old signed control in a fresh outer packet does not bypass the check.
+
+Both offline verifiers enforce this sequence. An authenticated order violation
+is fatal `E_LOG_ORDER`; the core marks `chk.time.window` failed and withholds
+dependent results, and the supplied board-evidence path fails append-only
+validation. Malformed and unauthenticated records retain their existing rejection
+classifications. Legacy-prefix controls retain the existing core class-L
+`E_VERSION` classification; the board-evidence path authenticates them. Numbered
+controls are recognized by the core. None of these rules adds terminal effects,
+changes voting times or relaxes witness gates.
+
+Clients derive the proposed next value from authenticated history. The CLI uses
+a manifest-pinned, structurally verified public archive to prepare a control and
+rechecks the value when adding each signature. Such an archive can still be stale:
+another accepted control makes the proposal stale, requiring a new body and new
+signatures. The counter establishes control order within the supplied history;
+it does not establish wall-clock freshness, a latest checkpoint or fork absence.
 
 ### 5.3 Admission checks (server) and validity rules (verifier)
 

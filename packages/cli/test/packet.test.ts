@@ -39,10 +39,13 @@ test('coordinator signing pins body, checks prior signatures and refuses unautho
     assert.equal((await qv([...pin, '--body', body])).code, 1);
     const malformed = writeJson(dir, 'malformed.json', { proto: PROTO_ID, type: 'marker', name: 'invented' });
     await fail(['--body', malformed], 4);
-    const control = writeJson(dir, 'control.json', { proto: PROTO_ID, type: 'control', action: 'pause', reason: 'operator review' });
+    const control = writeJson(dir, 'control.json', { proto: PROTO_ID, type: 'control', action: 'pause', control_seq: 1, reason: 'AVAILABILITY' });
     const controlOut = join(dir, 'control-signed.json');
-    assert.equal((await qv(['election', 'sign-record', '--manifest', mf, '--manifest-hash', mh, '--key', key, '--out', controlOut, '--body', control])).code, 0);
-    assert.equal(verifyMultiSig(manifestHash(manifest), JSON.parse(readFileSync(controlOut, 'utf8')), manifest.coordinator.keys, manifest.coordinator.m), true);
+    assert.equal((await qv(['election', 'sign-record', '--manifest', mf, '--manifest-hash', mh, '--key', key, '--out', controlOut, '--body', control])).code, 2, 'controls require an authenticated archive');
+    const privateReason = writeJson(dir, 'private-reason.json', { proto: PROTO_ID, type: 'control', action: 'pause', control_seq: 1, reason: 'PRIVATE_CANARY_operator@example.invalid' });
+    await fail(['--body', privateReason], 4);
+    const oldRecord = writeJson(dir, 'private-record.json', { body: { proto: PROTO_ID, type: 'control', action: 'pause', control_seq: 1, reason: 'legacy free text' }, sigs: [] });
+    await fail(['--record', oldRecord], 4);
     const unsupportedControl = writeJson(dir, 'waiver.json', { proto: PROTO_ID, type: 'control', action: 'witness-waiver' });
     await fail(['--body', unsupportedControl], 4);
     const packet = join(dir, 'packet.json');

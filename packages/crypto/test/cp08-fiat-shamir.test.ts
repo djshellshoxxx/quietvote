@@ -404,13 +404,13 @@ test('CP-08 M15: prover nonces are the spec hs_nz values (proof-w, limit-w, cp-d
   const dec = decFixture();
   assert.equal(
     scalarSub(dec.proof.s, scalarMul(dec.proof.c, dec.sj)),
-    specHsNz('cp-dec-nonce', scalarToBytes(dec.sj), ctx, str(dec.st.cid), str(dec.st.oid), rand32),
-    'cp-dec-nonce',
+    specHsNz('cp-dec-nonce', scalarToBytes(dec.sj), ctx, str(dec.st.cid), str(dec.st.oid), one(dec.st.j), pt(dec.st.A), pt(dec.st.B), rand32),
+    'cp-dec-nonce (binds trustee index and aggregate A, B)',
   );
   const sp = spoilFixture();
   assert.equal(
     scalarSub(sp.proof.s, scalarMul(sp.proof.c, sp.sj)),
-    specHsNz('cp-dec-nonce', scalarToBytes(sp.sj), ctx, str(sp.st.cid), cat(str(sp.st.oid), one(0), code), rand32),
-    'cp-dec-nonce (spoil: oid || 0x00 || ballot_code)',
+    specHsNz('cp-dec-nonce', scalarToBytes(sp.sj), ctx, str(sp.st.cid), cat(str(sp.st.oid), one(0), code), one(sp.st.j), pt(sp.st.alpha), pt(sp.st.beta), rand32),
+    'cp-dec-nonce (spoil: oid || 0x00 || ballot_code, then j, alpha, beta)',
   );
 });

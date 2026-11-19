@@ -9,9 +9,10 @@ import type { Env } from './env.ts';
 import { seal } from './kek.ts';
 import { originOf } from './util.ts';
 import { sha256 } from '@quietvote/crypto';
-import { ApiError, conflict } from './problem.ts';
+import { ApiError, conflict, notFound } from './problem.ts';
 import type { RegistryRow } from './controldb.ts';
 import { bridgeOperationReceipt } from './operation-receipts.ts';
+import { assertArchiveExportReady, recoverPublicExportJobs } from './public-exports.ts';
 
 export interface CreatedElection { id: string; origin: string; logPk: Uint8Array; readKey?: string }
 
@@ -19,6 +20,7 @@ export class ElectionPool {
   private readonly env: Env;
   private readonly open = new Map<string, ElectionRuntime>();
   private readonly opening = new Map<string, Promise<ElectionRuntime | undefined>>();
+  private readonly createdHere = new Set<string>();
   private closing: Promise<void> | undefined;
   private stopping = false;
   constructor(env: Env) {
@@ -50,8 +52,11 @@ export class ElectionPool {
 
   async get(id: string): Promise<ElectionRuntime | undefined> {
     this.ensureRunning();
+    // A tombstone takes effect before eviction drains queued users of the cached handle.
+    if (!this.env.control.election(id)) return undefined;
     const hit = this.open.get(id);
     if (hit && !hit.poisoned) {
+      if (hit.log.size > 0) this.createdHere.delete(id);
       this.open.delete(id);
       this.open.set(id, hit);
       hit.recoverEvents();
@@ -72,7 +77,8 @@ export class ElectionPool {
   private async load(id: string): Promise<ElectionRuntime | undefined> {
     const reg = this.env.control.election(id);
     if (!reg) return undefined;
-    const rt = await ElectionRuntime.open(this.env, reg);
+    const rt = await ElectionRuntime.open(this.env, reg, this.createdHere.has(id));
+    if (rt.log.size > 0) this.createdHere.delete(id);
     this.open.set(id, rt);
     // finish a tally aggregate interrupted by a crash (idempotent; a failure is retried on the next cosignature)
     await rt.recoverTally().catch(() => this.env.logger.event('tally_recover', { outcome: 'error' }));
@@ -137,6 +143,7 @@ export class ElectionPool {
       try { if (edb && !edb.db.prepare('SELECT 1 FROM election LIMIT 1').get()) control.markDeleted(id); } catch { /* retain uncertain work */ }
       throw e;
     } finally { edb?.close(); }
+    this.createdHere.add(id);
     return result;
   }
 
@@ -163,7 +170,11 @@ export class ElectionPool {
     let pending = false;
     this.stored(reg, (db) => {
       pending = db.hasAppendCompletions();
+      // Recover a committed append's independent anchor before startup forwards its durable events.
+      const anchor = this.env.control.runtimeAnchor(reg.election_id);
+      if (reg.imported !== 1 && (!anchor || anchor.tree_size !== db.store.size())) pending = true;
       for (const receipt of db.operationReceipts(this.env.nowMs())) bridgeOperationReceipt(this.env, db, receipt);
+      recoverPublicExportJobs(this.env, db);
     });
     if (pending) {
       try { await this.get(reg.election_id); }
@@ -185,6 +196,34 @@ export class ElectionPool {
     }
   }
 
+  /** Recover only a completed, election-owned snapshot; interrupted generation is never repeated implicitly. */
+  recoverExportJob(jobId: string): void {
+    const job = this.env.control.job(jobId);
+    if (!job || job.kind !== 'export' || job.election_id === null || job.state === 'done') return;
+    const reg = this.env.control.election(job.election_id);
+    if (reg) this.stored(reg, (db) => recoverPublicExportJobs(this.env, db, jobId));
+  }
+
+  private checkDeletion(rt: ElectionRuntime): void {
+    rt.assertHealthy();
+    const reg = this.env.control.election(rt.id);
+    if (!reg) throw notFound('election');
+    const deletable = (s: string): boolean => ['DRAFT', 'ARCHIVED', 'CANCELLED', 'ABORTED', 'IMPORTED'].includes(s);
+    for (const state of [reg.state, rt.logState]) {
+      if (!deletable(state)) throw conflict(`election in state ${state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
+    }
+    assertArchiveExportReady(rt);
+  }
+
+  /** Both HTTP deletion paths preflight the authoritative state before accepting destructive work. */
+  async assertDeletable(id: string): Promise<void> {
+    const rt = await this.get(id);
+    if (!rt) throw notFound('election');
+    rt.inUse++;
+    try { await rt.mutex.run(async () => this.checkDeletion(rt)); }
+    finally { rt.inUse--; }
+  }
+
   /** QV-28 §11.2: crypto-erase first, then close and unlink. */
   async remove(id: string): Promise<void> {
     this.ensureRunning();
@@ -197,12 +236,19 @@ export class ElectionPool {
       }
       return;
     }
-    const deletable = (s: string): boolean => ['DRAFT', 'ARCHIVED', 'CANCELLED', 'ABORTED', 'IMPORTED'].includes(s);
-    if (!deletable(reg.state)) throw conflict(`election in state ${reg.state} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
     // The registry may lag the log after a crash: the election's own replayed state is authoritative (opening it also heals the registry).
     const rt = await this.get(id);
-    if (rt && !deletable(rt.logState)) throw conflict(`election in state ${rt.logState} cannot be deleted; unmet condition: state must be DRAFT, ARCHIVED, CANCELLED, ABORTED or IMPORTED`);
-    this.env.control.markDeleted(id); // wraps DEK away first
+    if (!rt) throw notFound('election');
+    rt.inUse++;
+    try {
+      await rt.mutex.run(async () => {
+        this.checkDeletion(rt);
+        this.env.control.markDeleted(id); // wraps DEK away first, after the final state/export check
+        // Retire this handle before releasing the lock to already queued writers.
+        rt.poisoned = true;
+        this.createdHere.delete(id);
+      });
+    } finally { rt.inUse--; }
     await this.evict(id);
     this.cleanupDeleted(id, reg.db_path);
   }

@@ -10,7 +10,8 @@ import {
   type EntryHeader, type LogBundle, type WitnessPolicy, type Verdict,
 } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, hexToBytes, jcs, parseQvJson, sha256, utf8 } from '@quietvote/crypto';
-import { manifestHash, type ElectionBundle, type Manifest, type VerificationReport } from '@quietvote/protocol';
+import { CONTROL_ENTRY, advanceControlSeq, checkControlRecord, manifestHash, verifyMultiSig,
+  type ControlBody, type ElectionBundle, type Manifest, type MultiSignedRecord, type VerificationReport } from '@quietvote/protocol';
 import { ElectionDb } from './electiondb.ts';
 import { parsePinnedRoll } from './pinned-roll.ts';
 import { ElectionRuntime, SERVER_VERSION } from './election.ts';
@@ -315,15 +316,30 @@ export async function verifyBundle(env: Env, buf: Uint8Array, expectedManifestHa
     if (bySeq.has(it.seq)) throw new ImportError('BUNDLE_BINDING', 'duplicate protocol log entry', it.seq);
     bySeq.set(it.seq, it.entry);
   }
+  let controlSeq = 0;
   for (let i = 1; i < lb.entries.length; i++) {
     const e = lb.entries[i]!;
     const h = parsedHeaders[i]!;
     let expected = PROTOCOL_TYPES.has(h.type);
-    if (h.type === 'notice') {
+    if (['notice', 'audit_close', 'election_cancel', 'ceremony_abort'].includes(h.type)) {
       try {
-        expected = (parseQvJson(e.body!) as { body?: { type?: string } }).body?.type === 'marker';
-      } catch {
-        throw new ImportError('BUNDLE_BINDING', 'notice body is not strict JSON', i);
+        const record = parseQvJson(e.body!) as unknown as MultiSignedRecord<ControlBody>;
+        if (record?.body?.type === 'control') {
+          if (checkControlRecord(record) !== null || CONTROL_ENTRY[record.body.action] !== h.type ||
+              !verifyMultiSig(hexToBytes(mhHex, 32), record, manifest.coordinator.keys, manifest.coordinator.m)) {
+            throw new ImportError('BUNDLE_BINDING', 'control body is malformed, unauthorized or bound to the wrong entry type', i);
+          }
+          const next = advanceControlSeq(controlSeq, record.body);
+          if (!next.ok) throw new ImportError(next.error, next.detail ?? 'invalid control sequence', i);
+          controlSeq = next.value;
+          // Old archives omitted legacy controls from election.json. New signed counters
+          // must be present, while any supplied legacy copy must match the board exactly.
+          expected = record.body.control_seq !== undefined || bySeq.has(i);
+        } else if (h.type === 'notice') expected = (record?.body as { type?: string } | undefined)?.type === 'marker';
+        else throw new ImportError('BUNDLE_BINDING', 'terminal control entry has no control body', i);
+      } catch (error) {
+        if (error instanceof ImportError) throw error;
+        throw new ImportError('BUNDLE_BINDING', 'control or notice body is not strict JSON', i);
       }
     }
     const rec = bySeq.get(i);

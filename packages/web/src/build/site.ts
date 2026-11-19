@@ -1,6 +1,7 @@
 // Static site generation: hashed assets, SRI, strict CSP (meta + headers file), asset manifest, offline verifier page.
 // Deterministic: no timestamps; same inputs give byte-identical output (QV-19 §9).
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -124,6 +125,8 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
 }
 
 export async function buildSite(outDir: string, opts: { version?: string; connectOrigins?: string[]; /** tests only: which locales count as reviewed for preloads */ localeMeta?: readonly LocaleMeta[] } = {}): Promise<{ assets: Asset[]; buildId: string; verifierBytes: number }> {
+  // Every production build consumes verified vendor copies, including callers that bypass the npm CLI.
+  execFileSync(process.execPath, [join(PKG, '..', '..', 'scripts', 'vendor.mjs'), 'check'], { stdio: 'pipe' });
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(join(outDir, 'assets'), { recursive: true });
   const assets: Asset[] = [];

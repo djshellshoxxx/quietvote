@@ -178,7 +178,7 @@ indicators are not election-integrity or witness-independence verdicts.
 ## Coordinator signatures and voter packet files
 
 These commands reuse protocol record signatures and board entry framing. Obtain the manifest hash and election
-origin independently. Review the lifecycle body before signing; `draft-record` can derive ceremony/roll/open/close bodies from an authenticated public archive,
+origin independently. Review the lifecycle body before signing; `draft-record` can derive ceremony/roll/open/close and sequenced control bodies from an authenticated public archive,
 while each coordinator still reviews and signs explicitly. Body schemas and signature framing are
 checked locally; server admission and independent verification remain separate checks.
 
@@ -213,6 +213,33 @@ and DKG checks pass. A tally has one coordinator signature as required by existi
 records accumulate distinct authorized coordinator signatures through `--record`. Exit 0 means the signature file
 was written; `quorum: false` explicitly means more signers are needed. Prior signatures must all verify. Signers may
 use different passphrases because each invocation unlocks only one key.
+
+New control packets may omit `reason` or use one of the public codes in QV-07 section 15.2,
+such as `AVAILABILITY`, `BOARD_ROLLBACK`, or `OTHER`. Free text is rejected before signing,
+including when adding a signature with `--record`. `OTHER` is a code without an explanation field.
+Existing signed historical controls remain readable by the offline verifiers and server replay.
+
+New controls also require a signed `control_seq`. `draft-record` derives it from the authenticated
+archive, and `sign-record` requires `--election current.qvb` to check that it is the next value.
+An old prefix without counters starts the new sequence at one. After the first numbered control,
+every control must increment it by exactly one; ballot traffic does not change the counter.
+
+```sh
+qv election draft-record current.qvb --manifest-hash ANNOUNCED_HASH \
+  --kind pause --reason AVAILABILITY --out pause-body.json
+qv election sign-record --manifest manifest.json --manifest-hash ANNOUNCED_HASH \
+  --election current.qvb --body pause-body.json --key coordinator1.key \
+  --passphrase-file passphrase.txt --out pause-first.json
+qv election sign-record --manifest manifest.json --manifest-hash ANNOUNCED_HASH \
+  --election current.qvb --record pause-first.json --key coordinator2.key \
+  --passphrase-file passphrase.txt --out pause-quorum.json
+```
+
+Preparation and signing authenticate the archive's manifest, records and board structure. They do
+not prove that it is the newest archive; summaries report `freshness_verified: false`. If another
+control was accepted meanwhile, the server returns `409 STATE_CONFLICT` / `CONTROL_SEQUENCE`.
+Obtain the current archive, prepare a new body and collect new signatures. Rewrapping the old
+signed body does not refresh its counter. An exact packet retry keeps the existing receipt behavior.
 
 `export-entry` accepts an existing board entry type and a JSON record, canonicalizes the body and creates the
 `{header, body}` base64url packet accepted by `online election-submit`. It checks framing and per-type size limits;

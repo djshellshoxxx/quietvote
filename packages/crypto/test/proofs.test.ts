@@ -205,7 +205,7 @@ test('decryption proofs: complete; every field bound; wrong share rejected; type
   assert.ok(!decVerify(st, pk));
 });
 
-test('decryption nonce hedge separates different option ids with a failed RNG (CP-02 does not bind changed aggregates)', () => {
+test('decryption nonce hedge separates different option ids with a failed RNG (changed aggregates: see conformance-nonce-hedge.test.ts, CP-02)', () => {
   const sj = scalarRandomNonZero(rng);
   const Yj = baseMul(sj);
   const ct1 = elgamalEncrypt(K, 1, scalarRandomNonZero(rng));

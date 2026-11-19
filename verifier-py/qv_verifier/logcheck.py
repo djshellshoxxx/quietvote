@@ -69,9 +69,25 @@ CONTROL_TYPES = {
     'audit-close': 'audit_close', 'cancel': 'election_cancel', 'abort': 'ceremony_abort',
 }
 
+CONTROL_REASONS = frozenset({'KEY_COMPROMISE_TRUSTEE', 'KEY_COMPROMISE_STEWARD', 'PROOF_SYSTEM_FLAW', 'VERIFIER_FLAW',
+    'CLIENT_COMPROMISE', 'SUPPLY_CHAIN', 'BOARD_EQUIVOCATION', 'BOARD_ROLLBACK', 'ROLL_INTEGRITY', 'TALLY_MISMATCH',
+    'AVAILABILITY', 'OPERATOR_COMPROMISE', 'COERCION_EVIDENCE', 'OTHER'})
+
+
+def advance_control_seq(current: int, body: dict) -> int:
+    """After authentication, allow a legacy prefix, then require 1, 2, ... without downgrade."""
+    if 'control_seq' not in body:
+        if current == 0:
+            return 0
+        raise QVError('E_LOG_ORDER', 'unsequenced control after the sequenced-control boundary')
+    value = body['control_seq']
+    if type(value) is not int or not 1 <= value <= SAFE or current >= SAFE or value != current + 1:
+        raise QVError('E_LOG_ORDER', 'control_seq must be exactly one greater than the last authenticated sequenced control')
+    return value
+
 
 def _control_action(record: dict, manifest_hash: bytes, coordinator: dict) -> str:
-    """Authenticate the approved legacy N-12 schema; no control_seq migration.
+    """Authenticate legacy N-12 or sequenced B2-05 controls; reasons on the latter are catalog codes.
 
     The header must separately be signed by a coordinator key. Strict record
     signatures bind this election's manifest hash and count distinct keys only.
@@ -83,21 +99,23 @@ def _control_action(record: dict, manifest_hash: bytes, coordinator: dict) -> st
         # wire contract does; non-BMP scalars occupy two units.
         return isinstance(value, str) and len(value) <= maximum and sum(1 + (ord(c) > 0xffff) for c in value) <= maximum
     if (not _object(record, {'body', 'sigs'})
-            or not _object(b, {'proto', 'type', 'action'}, {'reason'})
+            or not _object(b, {'proto', 'type', 'action'}, {'reason', 'control_seq'})
             or b['proto'] != 'qv1-r255-sha2' or b['type'] != 'control'
             or not text_bound(b['action'], 32)
             or ('reason' in b and not text_bound(b['reason'], 256))
+            or ('control_seq' in b and (type(b['control_seq']) is not int or not 1 <= b['control_seq'] <= SAFE
+                or ('reason' in b and b['reason'] not in CONTROL_REASONS)))
             or not isinstance(record['sigs'], list) or not 1 <= len(record['sigs']) <= 8
             or any(not _object(sig, {'key', 'sig'}) or not hex_field(sig['key'], 32)
                    or not hex_field(sig['sig'], 64) for sig in record['sigs'])):
-        raise QVError('E_LOG_FORMAT', 'malformed legacy control record')
+        raise QVError('E_LOG_FORMAT', 'malformed control record')
     try:
         qvjson.check_value(record)
     except QVError as exc:
         raise QVError('E_LOG_FORMAT', f'control is outside QV-JSON: {exc.detail}') from exc
     action = b['action']
     if action not in CONTROL_TYPES:
-        raise QVError('E_LOG_BINDING', 'unrecognised legacy control action')
+        raise QVError('E_LOG_BINDING', 'unrecognised control action')
     if not _coordinator_ok(manifest_hash, b, record['sigs'], coordinator):
         raise QVError('E_LOG_BINDING', 'control lacks distinct coordinator quorum signatures on this manifest')
     return action
@@ -235,6 +253,7 @@ def _verify(bundle: dict, evidence: Any, st: Any) -> None:
     rollseq = [s for s, r in records.items() if _body(r).get('type') == 'roll-commit']
     tallies = [s for s, r in records.items() if _body(r).get('type') == 'tally']
     op, cl = markers.get('election-open'), markers.get('election-close')
+    control_seq = 0
     for seq, entry in enumerate(entries):
         try:
             if not _object(entry, {'seq', 'header_b64u', 'body_b64u'}) or entry['seq'] != seq or type(entry['seq']) is not int:
@@ -291,6 +310,7 @@ def _verify(bundle: dict, evidence: Any, st: Any) -> None:
             if h['type'] == 'tally_result' and (cl is None or seq <= cl):
                 raise QVError('E_LOG_BINDING', f'entry {seq}: tally before close')
             if action is not None:
+                control_seq = advance_control_seq(control_seq, _body(record))
                 label = action.replace('-', ' ').upper()
                 st.notes.append(f'{label} at seq {seq}: authenticated coordinator notice; never relaxes witness gates or changes the manifest schedule')
                 if action == 'extension' and cl is not None and seq > cl:

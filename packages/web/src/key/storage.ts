@@ -37,6 +37,7 @@ export interface DeviceSettings {
   rulesSeen: Record<string, boolean>;
 }
 export const DEFAULT_SETTINGS: Readonly<DeviceSettings> = Object.freeze({ rememberReceipts: true, sharedDevice: false, confirmed: {}, rulesSeen: {} });
+const settingsCopy = (s?: DeviceSettings): DeviceSettings => ({ ...DEFAULT_SETTINGS, ...s, confirmed: { ...s?.confirmed }, rulesSeen: { ...s?.rulesSeen } });
 
 export interface DeviceStorage {
   getPendingCast(origin: string, electionId: string): Promise<PendingCast | undefined>;
@@ -54,6 +55,8 @@ export interface DeviceStorage {
   putHead(h: PinnedHead): Promise<void>;
   getSettings(): Promise<DeviceSettings>;
   putSettings(s: DeviceSettings): Promise<void>;
+  /** Merge against the latest settings in one transaction; an abandoned view may cancel before the write. */
+  updateSettings(change: (s: DeviceSettings) => DeviceSettings, current?: () => boolean): Promise<DeviceSettings | undefined>;
   /** "Forget this device" / "Clear this device": wipes everything (QV-19 §15). */
   clearAll(): Promise<void>;
   /** Asks the browser for persistent storage; resolves false when denied or unsupported (UI warns, E-KEY-STORAGE). */
@@ -112,11 +115,16 @@ export class MemoryStorage implements DeviceStorage {
     return Promise.resolve();
   }
   getSettings(): Promise<DeviceSettings> {
-    return Promise.resolve({ ...this.settings });
+    return Promise.resolve(settingsCopy(this.settings));
   }
   putSettings(s: DeviceSettings): Promise<void> {
-    this.settings = { ...s };
+    this.settings = settingsCopy(s);
     return Promise.resolve();
+  }
+  updateSettings(change: (s: DeviceSettings) => DeviceSettings, current: () => boolean = () => true): Promise<DeviceSettings | undefined> {
+    if (!current()) return Promise.resolve(undefined);
+    this.settings = settingsCopy(change(settingsCopy(this.settings)));
+    return Promise.resolve(settingsCopy(this.settings));
   }
   clearAll(): Promise<void> {
     this.pendingCasts.clear();
@@ -145,16 +153,24 @@ function req<T>(r: IDBRequest<T>): Promise<T> {
 export class IdbStorage implements DeviceStorage {
   private dbp: Promise<IDBDatabase> | undefined;
   private db(): Promise<IDBDatabase> {
-    this.dbp ??= new Promise((resolve, reject) => {
+    if (this.dbp) return this.dbp;
+    let abandoned = false;
+    const opening = new Promise<IDBDatabase>((resolve, reject) => {
       const open = indexedDB.open(DB_NAME, 1);
+      const fail = (error: unknown): void => { abandoned = true; reject(error); };
       open.onupgradeneeded = (): void => {
+        if (abandoned) { open.transaction?.abort(); return; }
         for (const s of STORES) open.result.createObjectStore(s);
       };
-      open.onsuccess = (): void => resolve(open.result);
-      open.onerror = (): void => reject(open.error ?? new Error('indexeddb unavailable'));
-      open.onblocked = (): void => reject(new Error('indexeddb blocked'));
+      open.onsuccess = (): void => { if (abandoned) open.result.close(); else resolve(open.result); };
+      open.onerror = (): void => fail(open.error ?? new Error('indexeddb unavailable'));
+      open.onblocked = (): void => fail(new Error('indexeddb blocked'));
     });
-    return this.dbp;
+    const cached = opening.catch((error: unknown) => {
+      if (this.dbp === cached) this.dbp = undefined;
+      throw error;
+    });
+    return this.dbp = cached;
   }
   private async store(name: (typeof STORES)[number], mode: IDBTransactionMode): Promise<IDBObjectStore> {
     return (await this.db()).transaction(name, mode).objectStore(name);
@@ -228,10 +244,22 @@ export class IdbStorage implements DeviceStorage {
   }
   async getSettings(): Promise<DeviceSettings> {
     const s = (await req((await this.store('settings', 'readonly')).get('settings'))) as DeviceSettings | undefined;
-    return { ...DEFAULT_SETTINGS, confirmed: {}, rulesSeen: {}, ...s };
+    return settingsCopy(s);
   }
   async putSettings(s: DeviceSettings): Promise<void> {
-    await req((await this.store('settings', 'readwrite')).put(s, 'settings'));
+    await this.writeStore('settings', (store) => { store.put(s, 'settings'); });
+  }
+  async updateSettings(change: (s: DeviceSettings) => DeviceSettings, current: () => boolean = () => true): Promise<DeviceSettings | undefined> {
+    let saved: DeviceSettings | undefined;
+    await this.writeStore('settings', (store) => {
+      const read = store.get('settings');
+      read.onsuccess = (): void => {
+        if (!current()) return;
+        saved = settingsCopy(change(settingsCopy(read.result as DeviceSettings | undefined)));
+        store.put(saved, 'settings');
+      };
+    });
+    return saved;
   }
   async clearAll(): Promise<void> {
     const db = await this.db();
