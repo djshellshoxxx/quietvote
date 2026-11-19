@@ -24,6 +24,7 @@ import { ElectionPool } from './pool.ts';
 import type { OperationJournal } from './operation-receipts.ts';
 import { ApiError, conflict, forbidden, notFound } from './problem.ts';
 import { canonicalB64u, storedInviteHash } from './registration.ts';
+import { parsePinnedRoll } from './pinned-roll.ts';
 import { FailureCounter, RateLimiter } from './ratelimit.ts';
 import { SseHub } from './sse.ts';
 import { TargetRejected } from './ssrf.ts';
@@ -350,16 +351,20 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     },
   });
   add({
-    method: 'POST', path: '/api/v1/orgs/:org/elections', cls: 'M', auth: 'sig', body: 'json', maxBody: 4096,
+    method: 'POST', path: '/api/v1/orgs/:org/elections', cls: 'M', auth: 'sig', body: 'json', maxBody: MAX_ENTRY_REQ,
     handler: (c) => {
       const org = orgOf(c);
-      const b = c.parse(fObj({ title: req(fStr({ min: 1, max: 200 })), access: opt(fEnum('public', 'link')) }));
+      const b = c.parse(fObj({ title: req(fStr({ min: 1, max: 200 })), access: opt(fEnum('public', 'link')),
+        pinned_roll: opt((value) => parsePinnedRoll(value, cfg.maxVotersPerElection)) }));
       return idem(c, c.auth!.keyId, async (save, journal) => {
         const view = (r: Awaited<ReturnType<ElectionPool['create']>>): Reply => ({
           status: 201,
           json: { election_id: r.id, origin: r.origin, log_pk: b64u(r.logPk), log_pk_hex: bytesToHex(r.logPk), state: 'DRAFT', ...(r.readKey ? { read_key: r.readKey } : {}) },
         });
-        const r = await pool.create(org, b.title, b.access ?? 'public', (db, made) => journal(db, view(made), { action: 'election.create' }));
+        const r = await pool.create(org, b.title, b.access ?? 'public', (db, made) => {
+          if (b.pinned_roll !== undefined) db.attachPinnedRoll(b.pinned_roll);
+          journal(db, view(made), { action: 'election.create' });
+        });
         const reply = view(r);
         control.tx(() => { control.audit(c.auth!.keyId, 'election.create', r.id); save(reply); });
         return reply;
@@ -377,11 +382,13 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     handler: async (c) => {
       const rt = await readable(c);
       const row = rt.edb.row();
+      const pinned = rt.edb.pinnedRoll();
       return {
-        status: 200, etag: `"${rt.log.size}"`,
+        status: 200, etag: `"${rt.log.size}:${pinned?.root ?? '-'}"`,
         json: {
           election_id: rt.id, origin: rt.origin, title: rt.st.manifest?.title ?? row.title, state: rt.state, access: row.access, log_pk: b64u(rt.logPk),
           registration_scheme: row.registration_scheme, server_pk: b64u(rt.srvPk), tree_size: rt.log.size, created_at: toIso(row.created_at / 1000),
+          ...(pinned === undefined ? {} : { pinned_roll: { root: pinned.root, size: pinned.size } }),
           ...(rt.st.mh ? { manifest_hash: b64u(rt.st.mh) } : {}),
         },
       };
@@ -396,6 +403,18 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       if (typeof j !== 'object' || j === null || Array.isArray(j)) throw new ApiError(400, 'BAD_REQUEST', 'draft must be an object');
       rt.edb.setDraft(JSON.stringify(j));
       return { status: 200, json: { election_id: rt.id, origin: rt.origin, log_pk: b64u(rt.logPk), state: 'DRAFT', draft: j } };
+    },
+  });
+  add({
+    method: 'PUT', path: '/api/v1/elections/:id/pinned-roll', cls: 'M', auth: 'sig', body: 'json', maxBody: MAX_ENTRY_REQ,
+    handler: async (c) => {
+      const rt = await orgElection(c);
+      const b = c.parse(fObj({ pinned_roll: req((value) => parsePinnedRoll(value, cfg.maxVotersPerElection)) }));
+      return idem(c, c.auth!.keyId, async (_save, journal) => {
+        const reply = { status: 200, json: { election_id: rt.id, roll_root: b.pinned_roll.root, roll_size: b.pinned_roll.size, attached: true } };
+        await rt.attachPinnedRoll(b.pinned_roll, (db) => journal(db, reply));
+        return reply;
+      });
     },
   });
   add({
@@ -618,38 +637,44 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
         invite_code: req(fStr({ min: 22, max: 64, re: b64uRe })), pk: req(fStr({ min: 40, max: 50, re: b64uRe })),
         alg: req(fEnum('ed25519')), pop: req(fStr({ min: 80, max: 90, re: b64uRe })),
       }));
-      if (env.failures.blocked(`reg:${c.bucket}`, cfg.rate.inviteFail)) throw new ApiError(429, 'RATE_LIMITED', 'too many failed attempts', { retryAfter: 60 });
-      if (['READY', 'OPEN', 'PAUSED'].includes(rt.state) || rt.terminal || rt.st.rollSet !== undefined) throw new ApiError(403, 'REGISTRATION_CLOSED', 'registration closed at roll_commit');
-      const fail = (e: ApiError): never => {
-        env.failures.fail(`reg:${c.bucket}`);
-        throw e;
-      };
-      const scheme = rt.edb.row().registration_scheme;
-      if (scheme !== 'hashed-pop-v1' && scheme !== 'legacy-raw-v1') throw new ApiError(503, 'REGISTRATION_UNAVAILABLE', 'unknown registration scheme');
-      const pk = canonicalB64u(b.pk, 32);
-      const pop = canonicalB64u(b.pop, 64);
-      if (!pk || pk.length !== 32 || !pop || !ed25519IsStrictPoint(pk)) return fail(new ApiError(400, 'BAD_REQUEST', 'pk is not a strict Ed25519 key'));
-      const bearer = canonicalB64u(b.invite_code, scheme === 'hashed-pop-v1' ? 32 : 16);
-      if (!bearer) return fail(new ApiError(400, 'BAD_REQUEST', 'invite encoding does not match the election registration scheme'));
-      const message = scheme === 'hashed-pop-v1' ? registrationMessage(rt.id, bearer, pk) : new Uint8Array([...utf8(`QV-REG-v1\0${rt.id}\0`), ...pk]);
-      if (!ed25519Verify(pk, pop, message)) return fail(new ApiError(401, 'BAD_SIGNATURE', 'proof of possession invalid'));
-      const inv = rt.edb.inviteByHash(scheme === 'hashed-pop-v1' ? storedInviteHash(bearer) : sha256(utf8(`QV-INVITE-v1\0${b.invite_code}`)));
-      const kid = b64u(authorKeyId('ed25519', pk));
-      const existing = rt.edb.voter(kid); // Same lookup shape for unknown and consumed invitations.
-      if (!inv || inv.state === 'revoked') return fail(conflict('invite code is not valid', 'INVITE_USED'));
-      if (inv.state === 'expired') return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
-      if (inv.expires_at !== null && inv.expires_at <= nowMs()) return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
-      if (inv.state === 'registered') {
-        if (existing) return { status: 201, json: { voter_kid: kid, status: existing.status === 'committed' ? 'approved' : existing.status } };
-        return fail(conflict('invite code is not valid', 'INVITE_USED'));
-      }
-      if (existing) throw conflict('this key is already registered');
-      if (rt.edb.voterCount() >= cfg.maxVotersPerElection) throw new ApiError(429, 'RATE_LIMITED', 'roll is full', { retryable: false });
-      rt.edb.tx(() => {
-        if (!rt.edb.consumeInvite(inv.invite_id, Math.floor(nowMs() / 3_600_000) * 3_600_000)) throw conflict('invite code is not valid', 'INVITE_USED');
-        rt.edb.addVoter({ voter_kid: kid, pk, alg: 'ed25519', status: 'approved', registered_at: Math.floor(nowMs() / 3_600_000) * 3_600_000 });
+      // Attachment and roll commitment use this same lock. Recheck the phase and
+      // membership after waiting so a registration cannot race either transition.
+      return rt.mutex.run(async () => {
+        if (rt.poisoned) throw new ApiError(503, 'LOG_UNAVAILABLE', 'election recovery is required');
+        if (env.failures.blocked(`reg:${c.bucket}`, cfg.rate.inviteFail)) throw new ApiError(429, 'RATE_LIMITED', 'too many failed attempts', { retryAfter: 60 });
+        if (['READY', 'OPEN', 'PAUSED'].includes(rt.state) || rt.terminal || rt.st.rollSet !== undefined) throw new ApiError(403, 'REGISTRATION_CLOSED', 'registration closed at roll_commit');
+        const fail = (e: ApiError): never => {
+          env.failures.fail(`reg:${c.bucket}`);
+          throw e;
+        };
+        const scheme = rt.edb.row().registration_scheme;
+        if (scheme !== 'hashed-pop-v1' && scheme !== 'legacy-raw-v1') throw new ApiError(503, 'REGISTRATION_UNAVAILABLE', 'unknown registration scheme');
+        const pk = canonicalB64u(b.pk, 32);
+        const pop = canonicalB64u(b.pop, 64);
+        if (!pk || pk.length !== 32 || !pop || !ed25519IsStrictPoint(pk)) return fail(new ApiError(400, 'BAD_REQUEST', 'pk is not a strict Ed25519 key'));
+        const bearer = canonicalB64u(b.invite_code, scheme === 'hashed-pop-v1' ? 32 : 16);
+        if (!bearer) return fail(new ApiError(400, 'BAD_REQUEST', 'invite encoding does not match the election registration scheme'));
+        const message = scheme === 'hashed-pop-v1' ? registrationMessage(rt.id, bearer, pk) : new Uint8Array([...utf8(`QV-REG-v1\0${rt.id}\0`), ...pk]);
+        if (!ed25519Verify(pk, pop, message)) return fail(new ApiError(401, 'BAD_SIGNATURE', 'proof of possession invalid'));
+        const inv = rt.edb.inviteByHash(scheme === 'hashed-pop-v1' ? storedInviteHash(bearer) : sha256(utf8(`QV-INVITE-v1\0${b.invite_code}`)));
+        const kid = b64u(authorKeyId('ed25519', pk));
+        const existing = rt.edb.voter(kid); // Same lookup shape for unknown and consumed invitations.
+        if (!inv || inv.state === 'revoked') return fail(conflict('invite code is not valid', 'INVITE_USED'));
+        if (inv.state === 'expired') return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
+        if (inv.expires_at !== null && inv.expires_at <= nowMs()) return fail(new ApiError(422, 'INVITE_EXPIRED', 'invite code has expired'));
+        rt.requireRegistrationMember(pk);
+        if (inv.state === 'registered') {
+          if (existing) return { status: 201, json: { voter_kid: kid, status: existing.status === 'committed' ? 'approved' : existing.status } };
+          return fail(conflict('invite code is not valid', 'INVITE_USED'));
+        }
+        if (existing) throw conflict('this key is already registered');
+        if (rt.edb.voterCount() >= cfg.maxVotersPerElection) throw new ApiError(429, 'RATE_LIMITED', 'roll is full', { retryable: false });
+        rt.edb.tx(() => {
+          if (!rt.edb.consumeInvite(inv.invite_id, Math.floor(nowMs() / 3_600_000) * 3_600_000)) throw conflict('invite code is not valid', 'INVITE_USED');
+          rt.edb.addVoter({ voter_kid: kid, pk, alg: 'ed25519', status: 'approved', registered_at: Math.floor(nowMs() / 3_600_000) * 3_600_000 });
+        });
+        return { status: 201, json: { voter_kid: kid, status: 'approved' } };
       });
-      return { status: 201, json: { voter_kid: kid, status: 'approved' } };
     },
   });
   add({
@@ -658,12 +683,20 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       const rt = await readable(c);
       const limit = Math.max(1, intQ(c, 'limit', 100, 500));
       const cursor = c.query.get('cursor');
-      const after = cursor ? rt.edb.voter(cursor)?.pk : undefined;
-      if (cursor && after === undefined) throw new ApiError(400, 'BAD_REQUEST', 'unknown roll cursor');
-      const rows = rt.edb.voters(after, limit + 1);
-      const more = rows.length > limit;
-      const items = rows.slice(0, limit).map((v) => ({ voter_kid: v.voter_kid, pk: b64u(v.pk), alg: v.alg, status: v.status, roll_index: v.roll_index, weight: v.weight }));
-      return { status: 200, json: { items, next_cursor: more ? items.at(-1)!.voter_kid : null, roll_size: rt.edb.voterCount(), ...(rt.st.rollRootHex ? { roll_root: rt.st.rollRootHex } : {}) } };
+      const keys = rt.canonicalRollKeys();
+      const kidOf = (key: string): string => b64u(authorKeyId('ed25519', hexToBytes(key, 32)));
+      const after = cursor ? keys.findIndex((key) => kidOf(key) === cursor) : -1;
+      if (cursor && after === -1) throw new ApiError(400, 'BAD_REQUEST', 'unknown roll cursor');
+      const page = keys.slice(after + 1, after + limit + 1);
+      const more = after + 1 + page.length < keys.length;
+      const items = page.map((key, offset) => {
+        const pk = hexToBytes(key, 32), kid = kidOf(key), voter = rt.edb.voter(kid);
+        return { voter_kid: kid, pk: b64u(pk), alg: 'ed25519', status: voter?.status ?? 'unregistered',
+          registered: rt.imported ? null : voter !== undefined, registration_known: !rt.imported,
+          roll_index: rt.st.rollSet === undefined ? null : after + 1 + offset, weight: 1 };
+      });
+      const root = rt.edb.pinnedRoll()?.root ?? rt.st.rollRootHex;
+      return { status: 200, json: { items, next_cursor: more ? items.at(-1)!.voter_kid : null, roll_size: keys.length, ...(root ? { roll_root: root } : {}) } };
     },
   });
   add({
@@ -672,7 +705,8 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       const rt = await readable(c);
       const v = rt.edb.voter(c.params['kid']!);
       const bi = v ? rt.edb.ballotIndex(v.voter_kid) : undefined;
-      return { status: 200, json: { registered: !!v, status: v?.status ?? null, ballot_count: bi?.ballot_count ?? 0, first_seq: bi?.first_seq ?? null, latest_seq: bi?.latest_seq ?? null } };
+      return { status: 200, json: { registered: rt.imported && v ? null : !!v, registration_known: !rt.imported,
+        status: v?.status ?? null, ballot_count: bi?.ballot_count ?? 0, first_seq: bi?.first_seq ?? null, latest_seq: bi?.latest_seq ?? null } };
     },
   });
   add({
@@ -944,7 +978,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   const exportGen = new Map<string, number>();
   const exportCache = new Map<string, { etag: string; bytes: Uint8Array; at: number }>();
   const EXPORT_CACHE_MAX = 128 * 1024 * 1024;
-  const exportEtag = (rt: ElectionRuntime): string => `"${rt.log.size}:${toHex(rt.log.root()).slice(0, 16)}:${exportGen.get(rt.id) ?? 0}"`;
+  const exportEtag = (rt: ElectionRuntime): string => `"${rt.log.size}:${toHex(rt.log.root()).slice(0, 16)}:${exportGen.get(rt.id) ?? 0}:${rt.edb.pinnedRoll()?.root ?? '-'}"`;
   const cachedExport = (rt: ElectionRuntime, format: 'qvb' | 'json'): { bytes: Uint8Array; etag: string } => {
     const etag = exportEtag(rt);
     const key = `${rt.id}:${format}`;

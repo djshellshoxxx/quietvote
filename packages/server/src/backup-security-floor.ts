@@ -13,6 +13,7 @@ export interface BackupSecurityFloor {
   eventCursors: Map<string, Row>;
   invites: Map<string, Map<string, Row>>;
   registrationSchemes: Map<string, string>;
+  pinnedRolls: Map<string, Row>;
   operationReceipts: Map<string, Map<string, Row>>;
 }
 function rows(db: DatabaseSync, sql: string, keys: string[]): Map<string, Row> {
@@ -35,6 +36,7 @@ export function controlSecurityFloor(db: DatabaseSync): BackupSecurityFloor {
     eventCursors: rows(db, 'SELECT election_id,event_id FROM webhook_event_cursor', ['election_id']),
     invites: new Map(),
     registrationSchemes: new Map(),
+    pinnedRolls: new Map(),
     operationReceipts: new Map(),
   };
 }
@@ -44,6 +46,12 @@ export function inviteSecurityFloor(db: DatabaseSync): Map<string, Row> {
 }
 export function operationReceiptSecurityFloor(db: DatabaseSync): Map<string, Row> {
   return rows(db, 'SELECT principal,idem_key,method,path,req_sha256,expires_at,status,response,audit_action,audit_detail FROM operation_receipt', ['principal', 'idem_key']);
+}
+/** Private, immutable membership evidence, including the complete canonical list.
+ * Unlike request receipts, this binding never expires. It can be attached without
+ * advancing the public log, so a Merkle-tree floor alone cannot protect it. */
+export function pinnedRollSecurityFloor(db: DatabaseSync): Row | undefined {
+  return db.prepare('SELECT root,size,keys_json FROM pinned_roll WHERE id=1').get();
 }
 function pendingReceipt(request: Row | undefined, receipt: Row): boolean {
   return request !== undefined && (request['status'] === 0 || request['status'] === -1) &&
@@ -107,6 +115,10 @@ export function preservesSecurityFloor(candidate: BackupSecurityFloor, floor: Ba
     }
   }
   for (const [election, scheme] of floor.registrationSchemes) if (candidate.registrationSchemes.get(election) !== scheme) return false;
+  for (const [election, pinned] of floor.pinnedRolls) {
+    const next = candidate.pinnedRolls.get(election);
+    if (!next || !fields(next, pinned, ['root', 'size', 'keys_json'])) return false;
+  }
   for (const [election, invites] of floor.invites) {
     const nextInvites = candidate.invites.get(election);
     if (!nextInvites) return false;

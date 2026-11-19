@@ -12,6 +12,7 @@ import {
 import { bytesToHex, ed25519IsStrictPoint, hexToBytes, jcs, parseQvJson, sha256, utf8 } from '@quietvote/crypto';
 import { manifestHash, type ElectionBundle, type Manifest, type VerificationReport } from '@quietvote/protocol';
 import { ElectionDb } from './electiondb.ts';
+import { parsePinnedRoll } from './pinned-roll.ts';
 import { ElectionRuntime, SERVER_VERSION } from './election.ts';
 import type { Env } from './env.ts';
 import { originOf, unbase32 } from './util.ts';
@@ -390,6 +391,7 @@ export async function commitImport(env: Env, vb: VerifiedBundle, orgId: string, 
     db.tx(() => {
       db.setMeta('organizer_pk', bytesToHex(vb.organizerPk));
       db.setMeta('imported_from_generator', 'qvb');
+      if (vb.manifest.roll.root !== undefined) db.attachPinnedRoll(parsePinnedRoll(vb.roll.map(bytesToHex).sort()));
       db.importVoters([...vb.roll].sort((a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b))), (pk) => b64u(authorKeyId('ed25519', pk)), hour);
       for (const e of vb.entries) {
         db.store.appendEntry({

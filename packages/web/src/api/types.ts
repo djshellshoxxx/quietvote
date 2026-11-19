@@ -19,6 +19,8 @@ export interface ElectionSummary {
   state: string;
   title?: string;
   access?: 'public' | 'link';
+  /** Immutable authenticated membership, separate from voter registration. */
+  pinned_roll?: { root: string; size: number };
 }
 
 export interface ElectionState {
@@ -85,7 +87,7 @@ export interface RegistrationResult {
 }
 
 export interface RollPage {
-  items: { voter_kid: string; pk: string; alg: string; status: string; roll_index?: number | null }[];
+  items: { voter_kid: string; pk: string; alg: string; status: string; roll_index?: number | null; registered?: boolean | null; registration_known?: boolean }[];
   next_cursor: string | null;
   roll_root?: string;
   roll_size?: number;
@@ -96,11 +98,20 @@ export interface InviteResult {
   invites: { invite_id: string; code?: string; code_withheld?: boolean; label?: string }[];
 }
 export interface VoterStatus {
-  registered: boolean;
-  status: string;
+  /** Imported archives prove membership, not whether a member enrolled. */
+  registered: boolean | null;
+  registration_known?: boolean;
+  status: string | null;
   ballot_count: number;
   first_seq?: number;
   latest_seq?: number;
+}
+
+export interface PinnedRollResult {
+  election_id: string;
+  roll_root: string;
+  roll_size: number;
+  attached: true;
 }
 
 /** GET /elections/:id/spoil-shares (no `code`): which trustees have posted for which ballot code (QV-ADR-020). */

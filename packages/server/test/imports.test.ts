@@ -104,7 +104,8 @@ test('happy path: verified, then exposed as a read-only IMPORTED mirror identica
   // the voter index and the roll are rebuilt
   const kid = b64u((await import('@quietvote/board')).authorKeyId('ed25519', A.voters[1]!.publicKey));
   const vi = (await B.get(`/api/v1/elections/${id}/voters/${kid}`)).json;
-  assert.equal(vi.registered, true);
+  assert.equal(vi.registered, null, 'an imported public roll does not prove invitation enrollment');
+  assert.equal(vi.registration_known, false);
   assert.equal(vi.ballot_count, 2);
   assert.equal((await B.get(`/api/v1/elections/${id}/roll?limit=10`)).json.roll_size, 4);
   // the protocol verifier accepts the mirror's export; the bundle round-trips (same entries, same election record)

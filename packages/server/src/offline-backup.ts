@@ -17,7 +17,7 @@ import type { Env } from './env.ts';
 import { open as unseal } from './kek.ts';
 import { Logger } from './logger.ts';
 import { FailureCounter, RateLimiter } from './ratelimit.ts';
-import { controlSecurityFloor, inviteSecurityFloor, operationReceiptSecurityFloor, preservesSecurityFloor, type BackupSecurityFloor } from './backup-security-floor.ts';
+import { controlSecurityFloor, inviteSecurityFloor, operationReceiptSecurityFloor, pinnedRollSecurityFloor, preservesSecurityFloor, type BackupSecurityFloor } from './backup-security-floor.ts';
 
 export class BackupError extends Error {
   readonly code: string;
@@ -204,6 +204,10 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: Verifie
       try {
         security?.invites.set(reg.election_id, inviteSecurityFloor(rt.edb.db));
         security?.operationReceipts.set(reg.election_id, operationReceiptSecurityFloor(rt.edb.db));
+        if (security) {
+          const pinned = pinnedRollSecurityFloor(rt.edb.db);
+          if (pinned) security.pinnedRolls.set(reg.election_id, pinned);
+        }
         const row = rt.edb.row();
         security?.registrationSchemes.set(reg.election_id, row.registration_scheme);
         checkAuthors(rt);

@@ -6,9 +6,10 @@ import { authorKeyId, b64u, unb64u } from '@quietvote/board';
 import { logOrigin } from '@quietvote/protocol';
 import { ApiError, BAD_RESPONSE, NETWORK, TIMEOUT, isRetryable } from './errors.ts';
 import { qvSigHeader, type RequestSigning } from './signing.ts';
+import { boundedPinnedRollBody, checkedPinnedRoll } from './pinned-roll.ts';
 import type {
   AppendResult, ConsistencyProofView, ElectionState, ElectionSummary, EntryPage, EntryView, InclusionProofView,
-  Instance, InviteResult, RegistrationBody, RegistrationResult, RollPage, SpoilShareIndex, SpoilShareList, SpoilSharePosted, VoterStatus,
+  Instance, InviteResult, PinnedRollResult, RegistrationBody, RegistrationResult, RollPage, SpoilShareIndex, SpoilShareList, SpoilSharePosted, VoterStatus,
 } from './types.ts';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -230,8 +231,14 @@ export class ApiClient {
   async createOrganization(name: string, ownerPk: string, idempotencyKey: string, registrationToken?: string): Promise<{ org_id: string; name: string }> {
     return this.json(await this.req('POST', `${API}/orgs`, { body: { name, owner_key: { pk: ownerPk, alg: 'ed25519' }, ...(registrationToken ? { registration_token: registrationToken } : {}) }, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
   }
-  async createElection(orgId: string, title: string, idempotencyKey: string): Promise<ElectionSummary> {
-    return this.json(await this.req('POST', `${API}/orgs/${enc(orgId)}/elections`, { body: { title }, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
+  async createElection(orgId: string, title: string, idempotencyKey: string, pinnedRoll?: readonly string[]): Promise<ElectionSummary> {
+    const body = boundedPinnedRollBody({ title, ...(pinnedRoll === undefined ? {} : { pinned_roll: checkedPinnedRoll(pinnedRoll) }) });
+    return this.json(await this.req('POST', `${API}/orgs/${enc(orgId)}/elections`, { body, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
+  }
+  /** Attach the immutable list matching an existing signed pinned manifest; identical retries are safe. */
+  async putPinnedRoll(id: string, pinnedRoll: readonly string[], idempotencyKey: string): Promise<PinnedRollResult> {
+    const body = boundedPinnedRollBody({ pinned_roll: checkedPinnedRoll(pinnedRoll) });
+    return this.json(await this.req('PUT', `${API}/elections/${enc(id)}/pinned-roll`, { body, signed: true, headers: { 'Idempotency-Key': idempotencyKey } }));
   }
   async putDraft(id: string, draft: unknown): Promise<unknown> {
     return this.json(await this.req('PUT', `${API}/elections/${enc(id)}/draft`, { body: draft, signed: true }));

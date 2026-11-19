@@ -31,9 +31,16 @@ test('signed client adapter authenticates real HTTP management requests', { time
       audience: world.audience, now: () => world.nowSec, nonce: () => world.rng.bytes(16),
     };
     const client = new ApiClient({ baseUrl: world.base, signing });
-    const created = await client.createElection(world.orgId, 'Signed browser adapter acceptance', 'browser-server-signed-create');
+    const pinned = world.coord.map((key) => bytesToHex(key.publicKey)).sort();
+    const created = await client.createElection(world.orgId, 'Signed browser adapter acceptance', 'browser-server-signed-create', pinned);
     assert.ok(created.election_id);
     assert.equal((await world.get(`/api/v1/elections/${created.election_id}`)).json.title, 'Signed browser adapter acceptance');
+    const membership = await client.roll(created.election_id);
+    assert.equal(membership.items.length, pinned.length);
+    assert.ok(membership.items.every((member) => member.registered === false));
+    const attachment = await client.putPinnedRoll(created.election_id, pinned, 'browser-server-pinned-retry');
+    assert.equal(attachment.attached, true);
+    assert.equal(attachment.roll_size, pinned.length);
     await assert.rejects(new ApiClient({ baseUrl: world.base, signing: { ...signing, audience: 'qv:wrong@http://localhost' } })
       .createElection(world.orgId, 'Wrong audience', 'browser-server-bad-audience'), (e: unknown) => (e as { status?: number }).status === 401);
   } finally {

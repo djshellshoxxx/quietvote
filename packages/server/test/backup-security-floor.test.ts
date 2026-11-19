@@ -19,7 +19,7 @@ let w: World;
 let original: string;
 let serial = 0;
 before(async () => {
-  w = new World({ seed: 'private-backup-floor', n: 3, t: 2, voters: 2, witnessQuorum: 0 });
+  w = new World({ seed: 'private-backup-floor', n: 3, t: 2, voters: 2, witnessQuorum: 0, pinnedRoll: true });
   await w.start(); await w.setupOrgAndElection(); await w.publishManifest();
   const rt = (await w.server.pool.get(w.electionId))!;
   const dek = unseal(w.server.env.kek, w.server.env.control.election(w.electionId)!.dek_wrapped!, `dek:${w.electionId}`);
@@ -58,6 +58,30 @@ async function refuses(candidate: string, floor: string): Promise<void> {
 test('private restore cannot downgrade the recorded registration scheme', async () => {
   const downgraded = changed('election', (db) => db.exec("UPDATE election SET registration_scheme='legacy-raw-v1'"));
   await refuses(downgraded, original);
+});
+
+test('private restore preserves an attached pinned roll beyond request expiry without changing public history', async () => {
+  const members = w.voters.map((voter) => Buffer.from(voter.publicKey).toString('hex')).sort();
+  const expiredRequests = changed('control', (db) => db.exec('UPDATE idempotency SET expires_at=1; UPDATE replay_nonce SET expires_at=1'));
+  const bound = changed('election', (db) => db.exec('UPDATE operation_receipt SET expires_at=1'), expiredRequests);
+  const legacy = changed('election', (db) => {
+    const pinned = db.prepare('SELECT root,size,keys_json FROM pinned_roll WHERE id=1').get();
+    assert.ok(pinned, 'the signed creation supplied the complete membership');
+    assert.deepEqual(JSON.parse(pinned['keys_json'] as string), members);
+    // Recreate a genuine schema-9 copy: that version could publish a pinned
+    // manifest without possessing its full list. Opening it migrates only the
+    // disposable verification copy; the source snapshot remains unchanged.
+    db.exec('DROP TABLE pinned_roll; DELETE FROM schema_migration WHERE version=10; PRAGMA user_version=9');
+  }, bound);
+  const currentReport = await verifyBackup(bound, key);
+  const legacyReport = await verifyBackup(legacy, key);
+  assert.deepEqual(legacyReport.elections, currentReport.elections, 'public log floors alone cannot detect the missing list');
+  await refuses(legacy, bound);
+  await restoreBackup(bound, key, join(root, 'pinned-membership-added'), legacy);
+  const text = JSON.stringify(currentReport);
+  assert.equal(text.includes('keys_json'), false);
+  assert.equal(text.includes('pinnedRolls'), false);
+  for (const member of members) assert.equal(text.includes(member), false, 'private recovery evidence is not added to reports');
 });
 
 test('minimum snapshot refuses resurrecting revoked organizer credentials with unchanged public history', async () => {

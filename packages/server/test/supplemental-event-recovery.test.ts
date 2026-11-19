@@ -89,7 +89,7 @@ test('replay never regenerates completed, pruned or pre-upgrade supplemental eve
     assert.equal(rt.edb.hasAppendCompletions(), false);
     rt.edb.pruneEvents();
     // Simulate a pre-intent schema containing a historical durable log whose events were already pruned.
-    rt.edb.db.exec('ALTER TABLE election DROP COLUMN registration_scheme; DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM schema_migration WHERE version>=7; PRAGMA user_version=6');
+    rt.edb.db.exec('DROP TABLE pinned_roll; ALTER TABLE election DROP COLUMN registration_scheme; DROP TABLE operation_receipt; DROP TABLE append_completion; DELETE FROM schema_migration WHERE version>=7; PRAGMA user_version=6');
     await w.server.stop(); await w.start();
     const reopened = (await w.server.pool.get(w.electionId))!;
     assert.equal(reopened.log.size, 1);

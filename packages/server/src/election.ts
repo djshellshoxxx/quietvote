@@ -32,6 +32,7 @@ import {
 import { Mutex } from './util.ts';
 import { open as unseal } from './kek.ts';
 import { randomBytes } from 'node:crypto';
+import { samePinnedRoll, type PinnedRoll } from './pinned-roll.ts';
 
 export const SERVER_VERSION = '0.1.0';
 const ZERO32 = '00'.repeat(32);
@@ -276,6 +277,54 @@ export class ElectionRuntime {
   get manifest(): Manifest | undefined {
     return this.st.manifest;
   }
+
+  /** Complete membership source. An unpublished/missing pinned list is never an approved-voter subset. */
+  canonicalRollKeys(): readonly string[] {
+    const pinned = this.edb.pinnedRoll();
+    if (pinned !== undefined) {
+      if (this.manifest !== undefined) this.bindPinnedManifest(pinned, this.manifest);
+      return pinned.keys;
+    }
+    if (this.st.rollSet !== undefined) return [...this.st.rollSet].sort();
+    if (this.manifest?.roll.root !== undefined) throw new ApiError(503, 'PINNED_ROLL_UNAVAILABLE', 'the complete pinned roll must be attached by an organizer');
+    return this.edb.approvedKeysHex();
+  }
+
+  private bindPinnedManifest(pinned: PinnedRoll, manifest: Manifest): void {
+    if (manifest.roll.root !== pinned.root || manifest.roll.size !== pinned.size) {
+      throw new ApiError(422, 'PINNED_ROLL_MISMATCH', 'pinned_roll does not match the signed manifest roll.root and roll.size');
+    }
+  }
+
+  /** Called while holding the runtime mutex, after invitation/PoP checks and before any enrollment mutation. */
+  requireRegistrationMember(pk: Uint8Array): void {
+    const pinned = this.edb.pinnedRoll();
+    if (pinned === undefined) {
+      if (this.manifest?.roll.root !== undefined) throw new ApiError(503, 'PINNED_ROLL_UNAVAILABLE', 'the complete pinned roll must be attached before registration');
+      return;
+    }
+    if (this.manifest !== undefined) this.bindPinnedManifest(pinned, this.manifest);
+    if (!pinned.keys.includes(bytesToHex(pk))) throw new ApiError(403, 'VOTER_NOT_ON_PINNED_ROLL', 'the voter key is not a member of this election\'s pinned roll');
+  }
+
+  /** Repair a historical active pinned election without changing its signed bytes or registration facts. */
+  async attachPinnedRoll(pinned: PinnedRoll, committed?: (db: ElectionDb) => void): Promise<void> {
+    return this.mutex.run(async () => {
+      if (this.poisoned) throw new ApiError(503, 'LOG_UNAVAILABLE', 'election recovery is required');
+      if (this.imported) throw new ApiError(503, 'LOG_UNAVAILABLE', 'imported elections are read-only');
+      const old = this.edb.pinnedRoll();
+      if (old !== undefined && !samePinnedRoll(old, pinned)) throw new ApiError(409, 'PINNED_ROLL_IMMUTABLE', 'the pinned roll is already attached and cannot be replaced');
+      if (old === undefined) {
+        if (this.terminal) throw wrongPhase('a pinned roll can only be attached to an active election');
+        if (this.manifest === undefined && this.st.state !== 'DRAFT') throw wrongPhase('a pinned roll requires a draft or a published pinned manifest');
+      }
+      if (this.manifest !== undefined) this.bindPinnedManifest(pinned, this.manifest);
+      if (this.st.rollSet !== undefined && (this.st.rollSet.size !== pinned.size || pinned.keys.some((key) => !this.st.rollSet!.has(key)))) {
+        throw new ApiError(422, 'PINNED_ROLL_MISMATCH', 'pinned_roll differs from the already committed membership');
+      }
+      this.edb.tx(() => { this.edb.attachPinnedRoll(pinned); committed?.(this.edb); });
+    });
+  }
   get state(): ElectionStateName {
     if (this.imported) return 'IMPORTED';
     return effectiveState(this.st.state, this.st.tallyingSince, this.env.nowSec(), this.env.cfg.stalledMaxSec);
@@ -384,6 +433,8 @@ export class ElectionRuntime {
       if (!page.more) break;
       from = (page.rows.at(-1)?.seq ?? from) + 1;
     }
+    const pinned = this.edb.pinnedRoll();
+    if (pinned !== undefined && this.manifest !== undefined) this.bindPinnedManifest(pinned, this.manifest);
     this.syncQuarantineFlags();
     this.syncState();
     // Only explicit intents permit recovery. A second crash cannot strand stale projections without an intent.
@@ -517,9 +568,18 @@ export class ElectionRuntime {
         break;
       }
       case 'roll_commit': {
-        const keys = this.edb.approvedKeysHex();
+        // New pinned elections have a complete immutable list. Historical committed
+        // elections can recover only their actual committed membership, never a subset
+        // of registrations. This is replay, not re-admission under a new wire policy.
+        const pinned = this.edb.pinnedRoll();
+        const keys = pinned?.keys ?? this.edb.committedKeysHex();
+        const body = (rec as MultiSignedRecord<RollCommitBody>).body;
+        const root = rollRoot(keys);
+        if (!root.ok || bytesToHex(root.value) !== body.root || keys.length !== body.size) throw new Error('stored committed membership differs from roll_commit');
+        if (st.manifest?.roll.root !== undefined && (st.manifest.roll.root !== body.root || st.manifest.roll.size !== body.size)) throw new Error('stored roll_commit differs from pinned manifest');
+        if (pinned !== undefined && st.manifest !== undefined) this.bindPinnedManifest(pinned, st.manifest);
         st.rollSet = new Set(keys);
-        st.rollRootHex = (rec as MultiSignedRecord<RollCommitBody>).body.root;
+        st.rollRootHex = body.root;
         this.fire('roll_commit', seq, at);
         break;
       }
@@ -956,7 +1016,8 @@ export class ElectionRuntime {
     if (this.log.size !== 0) throw wrongPhase('manifest is only accepted at seq 0');
     this.schema(S.multiSigned(manifestSchema()), rec);
     const r = rec as MultiSignedRecord<Manifest>;
-    const v = validateManifest(r.body, this.edb.voterCount());
+    const pinned = this.edb.pinnedRoll();
+    const v = validateManifest(r.body, pinned?.size ?? r.body.roll.size ?? this.edb.voterCount());
     if (!v.ok) throw invalid(v.error, `manifest: ${v.detail ?? ''}`);
     const m = v.value.manifest;
     if (m.election_id !== this.id) throw invalid('E_MANIFEST', 'manifest election_id differs from this election');
@@ -965,6 +1026,8 @@ export class ElectionRuntime {
     if (m.bb.witness_quorum > (m.bb.witnesses?.length ?? this.env.cfg.witnesses.length)) throw invalid('E_MANIFEST', 'witness_quorum exceeds the number of election witnesses');
     const mhb = manifestHash(m);
     if (!verifyMultiSig(mhb, r, m.coordinator.keys, m.coordinator.m)) throw invalid('E_MANIFEST_SIG', 'fewer than m valid coordinator signatures');
+    if (pinned !== undefined) this.bindPinnedManifest(pinned, m);
+    else if (m.roll.root !== undefined) throw new ApiError(503, 'PINNED_ROLL_UNAVAILABLE', 'create the election with its complete pinned_roll before publishing a pinned manifest');
     void h;
     return { rec };
   }
@@ -1053,11 +1116,11 @@ export class ElectionRuntime {
     this.schema(S.multiSigned(S.rollCommit), rec);
     const r = rec as MultiSignedRecord<RollCommitBody>;
     this.multi(r, mh, h);
-    const keys = this.edb.approvedKeysHex();
+    const keys = [...this.canonicalRollKeys()];
     const rr = rollRoot(keys);
     if (!rr.ok) throw invalid('E_ROLL', rr.detail ?? 'roll invalid');
     const rootHex = bytesToHex(rr.value);
-    if (r.body.root !== rootHex || r.body.size !== keys.length) throw invalid('E_ROLL', 'roll_commit does not match the registered roll');
+    if (r.body.root !== rootHex || r.body.size !== keys.length) throw invalid('E_ROLL', 'roll_commit does not match the election membership');
     if (m.roll.root !== undefined && (m.roll.root !== rootHex || m.roll.size !== keys.length)) throw invalid('E_ROLL', 'roll differs from manifest roll.root/size');
     const floor = effectiveMinCounted(m, keys.length);
     if (keys.length < floor) throw invalid('E_ROLL', `roll of ${keys.length} is smaller than min_counted_ballots ${floor}; the tally could never be decrypted`);

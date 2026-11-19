@@ -22,7 +22,7 @@ const SUPPLIERS: Record<string, { by: 'ux' | 'site'; file?: string; args?: Recor
   'E-VOT-NOTOPEN': { by: 'ux' },
   'E-API-RATE': { by: 'ux' },
   'E-VOT-OVERVOTE': { by: 'site', file: 'ui/app.ts', args: { k: 'k: max', x: 'x: cur.size + 1' } },
-  'E-ORG-MANIFEST': { by: 'site', file: 'ui/app.ts', args: { detail: 'detail:' } },
+  'E-ORG-MANIFEST': { by: 'ux' },
   'E-VER-FAIL': { by: 'site', file: 'ui/app.ts', args: { id: 'id:' } },
   // Defined in the catalog but raised nowhere today (checked below), so there is no call site to feed.
   'E-ORG-LANG': { by: 'site' },
@@ -69,6 +69,19 @@ test('B3-06: an explicit ux code (controller state) is completed with the same a
     const p = uxPresentation(ux, undefined, TIMES);
     for (const part of ['title', 'body']) assert.doesNotThrow(() => t.t(`qv.err.${p.ux}.${part}` as MessageKey, p.args), `${ux}.${part}`);
   }
+});
+
+test('pinned membership failures supply setup-error placeholders and never display remote problem detail', () => {
+  for (const code of ['PINNED_ROLL_INVALID', 'PINNED_ROLL_MISMATCH', 'PINNED_ROLL_IMMUTABLE']) {
+    const presentation = uxPresentation(undefined, new ApiError({ status: 422, code, detail: 'untrusted remote text' }));
+    assert.equal(presentation.ux, 'E-ORG-MANIFEST');
+    assert.equal(presentation.args.detail, '');
+    for (const part of ['title', 'body']) assert.doesNotThrow(() => t.t(`qv.err.${presentation.ux}.${part}` as MessageKey, presentation.args));
+  }
+  const local = uxPresentation(undefined, new ApiError({ status: 0, code: 'PINNED_ROLL_INVALID', detail: 'invalid local membership' }));
+  assert.equal(local.args.detail, 'invalid local membership');
+  assert.equal(uxPresentation(undefined, new ApiError({ status: 403, code: 'VOTER_NOT_ON_PINNED_ROLL' })).ux, 'E-VOT-NOTONROLL');
+  assert.equal(uxPresentation(undefined, new ApiError({ status: 503, code: 'PINNED_ROLL_UNAVAILABLE' })).ux, 'E-API-UNAVAILABLE');
 });
 
 test('B3-06: every key with placeholders renders through the helper or names its argument at a real call site', () => {
