@@ -178,9 +178,9 @@ export function checkRoll(rollHex: readonly string[], expectedRootHex: string | 
  * (`bb.log_pk`, `logOrigin`), never the server's own claim. A server that answers with a different key or origin
  * (so it could mint receipts for ballots it drops) is rejected; the returned values are the manifest's.
  */
-export function bindServerLog(m: Manifest, server: { logPkB64u: string; origin: string }): { ok: true; logPk: Uint8Array; origin: string } | { ok: false; detail: string } {
+export function bindServerLog(m: Manifest, server: { logPkB64u: unknown; origin: string }): { ok: true; logPk: Uint8Array; origin: string } | { ok: false; detail: string } {
   const logPk = hexToBytes(m.bb.log_pk, 32);
-  const claimed = b64uDecode(server.logPkB64u);
+  const claimed = typeof server.logPkB64u === 'string' ? b64uDecode(server.logPkB64u) : undefined;
   if (claimed === undefined || claimed.length !== 32 || !claimed.every((b, i) => b === logPk[i])) return { ok: false, detail: 'the server names a log key that is not the one in the signed manifest' };
   const origin = logOrigin(m);
   if (server.origin !== origin) return { ok: false, detail: 'the server names a log origin that is not the one in the signed manifest' };

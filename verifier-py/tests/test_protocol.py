@@ -100,7 +100,10 @@ class TestRules(unittest.TestCase):
         two3c = dict(two3, rule=dict(two3["rule"], basis="counted"))
         self.assertEqual(self.ev(None, two3c, {"yes": 30, "no": 15}, 50, 100), {"kind": "rejected"})
         roll = dict(self.YN, rule=dict(self.YN["rule"], basis="roll"))
-        self.assertEqual(self.ev(None, roll, {"yes": 4, "no": 0}, 4, 7), {"kind": "passed"})
+        # ADR-027 adopted N-27 A: reserve roll thresholds, keeping roll quorum above.
+        with self.assertRaises(QVError) as caught:
+            self.ev(None, roll, {"yes": 4, "no": 0}, 4, 7)
+        self.assertEqual(caught.exception.code, "E_RULES")
 
     def test_appendix_a7(self):
         q = {"type": "fraction", "num": 1, "den": 3, "basis": "roll"}

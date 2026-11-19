@@ -132,6 +132,9 @@ def _contest(c: Any, idx: int) -> None:
     if method in ("yes-no", "single-choice"):
         if lim != 1:
             _bad(f"{w}: {method} requires selection_limit 1")
+        # QV-16 §5.6.1: L < |options| also applies when single-choice fixes L=1.
+        if method == "single-choice" and len(ids) < 2:
+            _bad(f"{w}: single-choice requires at least two options")
     elif method == "k-of-n":
         if lim is None or not 1 <= lim < len(ids):
             _bad(f"{w}: k-of-n requires 1 <= selection_limit < |options|")
@@ -142,6 +145,8 @@ def _contest(c: Any, idx: int) -> None:
         wn = _int(c["winners"], f"{w}.winners")
         if not 1 <= wn <= len(ids):
             _bad(f"{w}: winners out of range")
+        if method == "single-choice" and wn != 1:
+            _bad(f"{w}: single-choice requires one winner")
     if method == "yes-no" and "rule" not in c:
         _bad(f"{w}: yes-no requires a threshold rule")
     if "rule" in c:
@@ -149,7 +154,8 @@ def _contest(c: Any, idx: int) -> None:
         if _str(r["type"], "rule.type") != "threshold":
             _bad(f"{w}: unknown rule type")
         num, den = _int(r["num"], "rule.num"), _int(r["den"], "rule.den")
-        if _str(r["basis"], "rule.basis") not in ("yes+no", "counted", "roll"):
+        # ADR-027 / N-27 reserves roll thresholds; participation quorum is separate.
+        if _str(r["basis"], "rule.basis") not in ("yes+no", "counted"):
             _bad(f"{w}: unknown rule basis")
         _bool(r["strict"], "rule.strict")
         if den <= 0 or not 0 <= num <= den:

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Offline adapters over existing protocol signatures and board framing. Admission remains the server's responsibility.
-import { closeSync, constants as fsc, fstatSync, openSync, readSync, writeFileSync } from 'node:fs';
+import { closeSync, constants as fsc, fstatSync, openSync, readSync } from 'node:fs';
 import { MAX_BODY, b64u, buildEntry, isEntryType, isValidOrigin } from '@quietvote/board';
 import { bytesToHex, jcs, parseQvJson, wipe } from '@quietvote/crypto';
 import { S, check, controlAdmissionSchema, manifestHash, manifestSchema, signRecordRaw, tallySchema, verifySig, type Manifest, type Sig } from '@quietvote/protocol';
@@ -9,6 +9,7 @@ import { PASSPHRASE_FLAGS, electionContext, pinnedHash, printJson } from './comm
 import { loadVoterKey } from './cmd-keygen.ts';
 import { prepareElectionArchive } from './cmd-prepare.ts';
 import { EXIT, type Io } from './io.ts';
+import { writePrivateFileSync } from './private-files.ts';
 
 // Existing server control actions (QV-18); no witness-waiver or extension authority is introduced.
 const controlBody = controlAdmissionSchema;
@@ -39,7 +40,7 @@ function objectFile(path: string): Record<string, unknown> {
   return v as Record<string, unknown>;
 }
 function output(path: string, value: unknown): void {
-  try { writeFileSync(path, JSON.stringify(value) + '\n', { flag: 'wx', mode: 0o600 }); }
+  try { writePrivateFileSync(path, JSON.stringify(value) + '\n'); }
   catch { throw new InputError('cannot create output; existing files are never overwritten'); }
 }
 

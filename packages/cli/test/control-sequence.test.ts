@@ -1,3 +1,4 @@
+import { writePrivateJson } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -27,7 +28,7 @@ test('CLI drafts and signs the next control from authenticated history and refus
     assert.equal(JSON.parse(draft.out).freshness_verified, false);
     assert.deepEqual(JSON.parse(readFileSync(body, 'utf8')), { proto: 'qv1-r255-sha2', type: 'control', action: 'security-notice', control_seq: 1, reason: 'OTHER' });
     const manifest = writeJson(w.dir, 'manifest.json', w.manifest);
-    const key = (i: number) => writeJson(w.dir, `coordinator-${i}.json`, { format: 'qv-voter-key/v1', public_key: bytesToHex(w.coord[i]!.publicKey), seed: bytesToHex(w.coord[i]!.secretKey) });
+    const key = (i: number) => writePrivateJson(w.dir, `coordinator-${i}.json`, { format: 'qv-voter-key/v1', public_key: bytesToHex(w.coord[i]!.publicKey), seed: bytesToHex(w.coord[i]!.secretKey) });
     const keys = [key(0), key(1)], first = join(w.dir, 'first.json'), second = join(w.dir, 'second.json');
     const args = ['election', 'sign-record', '--manifest', manifest, '--manifest-hash', pin];
     let signed = await qv([...args, '--election', initial, '--key', keys[0]!, '--body', body, '--out', first]);

@@ -1,3 +1,4 @@
+import { writePrivateFixture } from './private-fixture.ts';
 // Regression tests for the CLI audit findings F1..F12 (one test per finding, all through the existing helpers).
 import assert from 'node:assert/strict';
 import { chmodSync, existsSync, lstatSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -143,13 +144,13 @@ test('F8 keygen: the passphrase minimum is measured on the NFKC form the key der
   const dir = tmp();
   const pw = join(dir, 'pw.txt');
   // 12 code points, but NFKC composes each 'A' + U+030A pair into one character: 6 characters, below the minimum
-  writeFileSync(pw, `${'Å'.repeat(6)}\n`);
+  writePrivateFixture(pw, `${'Å'.repeat(6)}\n`);
   const short = await qv(['keygen', '--out', join(dir, 'k.json'), '--passphrase-file', pw, ...FAST]);
   assert.equal(short.code, 2);
   assert.match(short.err, /at least 12 characters/);
   assert.ok(!existsSync(join(dir, 'k.json')));
   // 12 precomposed characters meet the minimum
-  writeFileSync(pw, `${'Å'.repeat(12)}\n`);
+  writePrivateFixture(pw, `${'Å'.repeat(12)}\n`);
   assert.equal((await qv(['keygen', '--out', join(dir, 'k2.json'), '--passphrase-file', pw, ...FAST])).code, 0);
 });
 

@@ -78,7 +78,7 @@ export async function importKeyFile(a: { storage: DeviceStorage; slot: string; t
   return { publicKey: u.publicKey, fingerprint: fingerprintWords(sha256(u.publicKey)) };
 }
 
-export async function restoreFromRecovery(a: { storage: DeviceStorage; slot: string; code: string; passphrase: string; deps?: KeystoreDeps; params?: KdfParams }): Promise<CreatedKey> {
+export async function restoreFromRecovery(a: { storage: DeviceStorage; slot: string; code: string; passphrase: string; deps?: KeystoreDeps; params?: KdfParams; onlyIfAbsent?: boolean; canInstall?: () => boolean }): Promise<CreatedKey> {
   if (!checkPassphrase(a.passphrase).ok) throw new PassphrasePolicyError();
   const seed = decodeRecoveryCode(a.code);
   try {

@@ -1,5 +1,5 @@
 // Offline public-archive preparation. Never extracts archive paths or handles private keys.
-import { closeSync, constants, fstatSync, openSync, readSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, fstatSync, openSync, readSync } from 'node:fs';
 import { bundleFromJson, bundleToJson, parseCheckpoint, readChecksummedArchive, toHex, unb64u } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, jcs, parseQvJson, sha256 } from '@quietvote/crypto';
 import { loadBundle } from '@quietvote/verifier';
@@ -7,6 +7,7 @@ import { S, check, manifestSchema, manifestHash, rollRoot, validateManifest, ver
 import { FailError, InputError, UsageError, needPositional, parseArgs } from './args.ts';
 import { pinnedHash, printJson } from './common.ts';
 import { EXIT, type Io } from './io.ts';
+import { writePrivateFileSync } from './private-files.ts';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const MAX_ENTRIES = 10_000;
@@ -119,7 +120,7 @@ export async function cmdElectionPrepare(argv: string[], io: Io): Promise<number
   const output = format === 'ceremony'
     ? { format: 'qv-ceremony-log/v1', manifest_hash: pin, entries: content.log }
     : { ...content, log_evidence: { board, extraAuthorKeys: [serverKey] } };
-  try { writeFileSync(p.get('out')!, JSON.stringify(output) + '\n', { flag: 'wx', mode: 0o600 }); }
+  try { writePrivateFileSync(p.get('out')!, JSON.stringify(output) + '\n'); }
   catch { throw new InputError('cannot create output; destination must not exist'); }
   const summary = { prepared: true, format, manifest_hash: pin, entries: content.log.length,
     board_structure_verified: true, protocol_verified: false, witness_quorum_verified: false };

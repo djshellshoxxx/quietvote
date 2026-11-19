@@ -1,6 +1,8 @@
+import { windowsFixture } from './windows-acl-fixture.ts';
+import { writePrivateFixture } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { b64u } from '@quietvote/board';
 import { streamRng } from '@quietvote/crypto';
@@ -44,7 +46,7 @@ test('review: a replaced reserved pathname cannot be reported as the invitation 
 test('review: reservation changed during protected-key prompt prevents the POST', async () => {
   await fixture(async ({ dir, out, args, posts }) => {
     const legacy = JSON.parse(readFileSync(new URL('./fixtures/qvkey1-legacy.json', import.meta.url), 'utf8')).fixtures[1];
-    const key = join(dir, 'protected-key.json'); writeFileSync(key, JSON.stringify(legacy.container));
+    const key = join(dir, 'protected-key.json'); writePrivateFixture(key, JSON.stringify(legacy.container));
     const argv = args.map(v => v === args[args.indexOf('--key') + 1] ? key : v);
     let stdout = '', stderr = '';
     const code = await run(argv, {
@@ -62,13 +64,16 @@ test('review: reservation changed during protected-key prompt prevents the POST'
   }, () => Response.json(response, { status: 201 }));
 });
 
-test('review: lost private permissions do not receive bearer codes', { skip: process.platform === 'win32' }, async () => {
+test('review: lost private permissions do not receive bearer codes', async () => {
   await fixture(async ({ out, args, posts }) => {
     const result = await qv(args);
     assert.equal(result.code, 1); assert.equal(posts(), 1); assert.equal(result.out, '');
     assert.equal(result.err.includes(response.invites[0]!.code), false);
     assert.equal(JSON.parse(readFileSync(out, 'utf8')).format, 'qv-invite-issuance/pending');
-  }, out => { chmodSync(out, 0o644); return Response.json(response, { status: 201 }); });
+  }, out => {
+    if (process.platform === 'win32') windowsFixture('broad', out); else chmodSync(out, 0o644);
+    return Response.json(response, { status: 201 });
+  });
 });
 
 test('review: malformed UTF-8 success is preserved byte-for-byte privately without a success verdict', async () => {
@@ -79,4 +84,18 @@ test('review: malformed UTF-8 success is preserved byte-for-byte privately witho
     assert.match(result.err, /invalid or redacted/); assert.equal(result.err.includes(response.invites[0]!.code), false);
     assert.deepEqual(readFileSync(out), malformed);
   }, () => new Response(malformed, { status: 201 }));
+});
+
+
+test('Windows missing native protection prevents invitation issuance before POST', { skip: process.platform !== 'win32' }, async () => {
+  await fixture(async ({ dir, out, args, posts }) => {
+    const prior = process.env.SystemRoot;
+    process.env.SystemRoot = join(dir, 'missing-system-root');
+    try {
+      const result = await qv(args);
+      assert.equal(result.code, 4); assert.equal(posts(), 0); assert.equal(result.out, '');
+      assert.match(result.err, /no invitations were requested/);
+      assert.equal(existsSync(out), false);
+    } finally { process.env.SystemRoot = prior; }
+  }, () => Response.json(response, { status: 201 }));
 });

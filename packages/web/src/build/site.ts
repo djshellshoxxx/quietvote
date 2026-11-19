@@ -150,16 +150,17 @@ export async function buildSite(outDir: string, opts: { version?: string; apiBas
   // chunks by content hash, so imports between files stay valid; the entry is renamed by its own hash below and imports its chunks
   // by relative path (all live in assets/; esbuild names shared chunks `chunk-<hash>.js`). Chunks are listed in asset-manifest.json like every other asset.
   // Module scripts decode as UTF-8, so keep catalog text literal instead of expanding it into ASCII escapes.
-  // Scope this output encoding to the app module graph; worker and standalone verifier settings stay in common.
-  const app = await esbuild({ ...common, charset: 'utf8', metafile: true, splitting: true, chunkNames: '[name]-[hash]', entryPoints: { app: 'src/main.ts' }, outdir: 'out', plugins: [precompileI18nPlugin()] });
-  const worker = await esbuild({ ...common, entryPoints: { 'seal-worker': 'src/worker/seal-worker.ts' }, outdir: 'out' });
+  // The existing sealing Worker is an ES module. Build both entries in one graph so identical crypto code is emitted once;
+  // each Worker still instantiates its own module state. The standalone offline verifier remains a separate closed build.
+  const app = await esbuild({ ...common, charset: 'utf8', metafile: true, splitting: true, chunkNames: '[name]-[hash]', entryPoints: { app: 'src/main.ts', 'seal-worker': 'src/worker/seal-worker.ts' }, outdir: 'out', plugins: [precompileI18nPlugin()] });
   const css = readFileSync(join(PKG, 'static', 'styles.css'));
   const entry = app.outputFiles!.find((f) => /[\\/]app\.js$/.test(f.path));
-  if (entry === undefined) throw new Error('entry bundle missing from build output');
-  const chunks = app.outputFiles!.filter((f) => f !== entry).sort((x, y) => (x.path < y.path ? -1 : 1));
+  const worker = app.outputFiles!.find((f) => /[\\/]seal-worker\.js$/.test(f.path));
+  if (entry === undefined || worker === undefined) throw new Error('entry bundle missing from build output');
+  const chunks = app.outputFiles!.filter((f) => f !== entry && f !== worker).sort((x, y) => (x.path < y.path ? -1 : 1));
   for (const c of chunks) emitNamed(c.path.split(/[\\/]/).pop()!, c.contents);
   const js = emit('app', 'js', entry.contents);
-  const wk = emit('seal-worker', 'js', worker.outputFiles![0]!.contents);
+  const wk = emit('seal-worker', 'js', worker.contents);
   const cs = emit('styles', 'css', css);
   const buildId = hashOf('sha256', assets.map((a) => a.sha256).sort().join('\n') + JSON.stringify(config), 'hex').slice(0, 12);
   const version = opts.version ?? (JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8')) as { version: string }).version;

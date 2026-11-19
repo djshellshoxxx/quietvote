@@ -50,8 +50,17 @@ when re-run, so a crash at any point is resumable (tests reopen the bundle for e
 ## Not done
 Network/outbox, localhost UI, `qv-ceremony` image, dealer mode, `trustee_accept` PoP entry, reminders, Shamir backup of passphrase.
 
-## Windows file permissions (known gap)
-POSIX mode bits do not exist on Windows. `fsutil.ts` therefore skips the 0600/"group-accessible" refusal there, and the tests guard the mode assertions with a platform check. On Windows a trustee bundle is protected only by its passphrase-based encryption, not by an ACL check. Trustees should keep bundles in a user-private directory. Track as a hardening task (NTFS ACL verification).
+## Windows private-file protection (2026-11-19)
+
+The client now includes native Windows ACL enforcement for encrypted bundles, passphrase files, backups and sealed-file comparison reads. The fixed `src/windows-private-files.ps1` helper runs through Windows PowerShell **5.1** and .NET Framework, using a fixed executable/script and data-only stdin. Missing PowerShell, blocked execution, an uninspectable filesystem/security descriptor or a refused native operation fails closed; there is no fallback to an unchecked Node read. Native private I/O accepts ordinary local drive paths; UNC shares, device paths and alternate data streams are refused.
+
+The same open `FileStream` supplies both its ACL and secret bytes. A private file must belong to the current user and have a protected, recognized, non-null DACL that grants access only to that user. Broad/inherited grants, wrong ownership, unsupported ACLs and unsafe file aliases are refused. Private creation supplies the owner-only DACL to `CreateNew` before writing, flushes file bytes, and publishes or cleans up the held file by handle. Existing trustee canonical bundle aliases still map to one bundle, release ledger and lock. DOS short names and relative caller paths are supported by the native path handling.
+
+POSIX files still use mode `0600`; secret reads also check the ownership, bounds and identity of the descriptor supplying bytes. Existing Windows files with broad permissions must be made private before use; the client does not silently repair their ACLs. Encryption and the existing backup/destruction rules remain in place.
+
+POSIX atomic writes, including public `0644` artifacts, pin the canonical parent and check trusted current-user/root ownership along its entire ancestry. Group/other-writable directories require sticky protection and trusted descendant owners. Writes stage in a same-filesystem `0700` directory; cleanup only removes its file and the empty stage, never recursively. Unsafe ancestry is refused as `UNSAFE_DIRECTORY` before writing. The protection assumes effective namespace rights are represented by POSIX owner/mode/sticky permissions and excludes same-effective-user/root compromise. ACL grants overriding those bits, including macOS native deletion rights, remain an unresolved custody implementation/qualification boundary; the checks do not inspect those ACLs. The existing held-file checks remain additional refusal checks, not an atomic conditional-unlink mechanism.
+
+**Qualification boundary:** Linux filesystem/caller checks do not qualify Windows APIs. The new native fixtures must pass the final published head's hosted Windows Node 22 and Node 24 jobs. See [the implementation and validation report](../../docs/reports/windows-private-files-20261119.md) for the current exact evidence; native hosted qualification is pending at this checkpoint.
 
 ## Log origin in the ceremony transcript (X-21)
 * `transcript.ts` sets `origin = logOrigin(manifest)` (`quietvote/v1/` + base32(election_id), from `@quietvote/protocol`). It was
@@ -194,7 +203,7 @@ Trustee code needed no change: it ignores `roll-commit` entries and relies on th
   regressions are preserved. No re-serving, high-water, dealer, key format or protocol policy changed.
 * This adds actionable recovery evidence for handled failures. A hard kill between backup publication and live registration can
   still leave an unregistered copy without running rollback; no transactional crash journal or physical erasure guarantee is added.
-  Local coverage is Linux/POSIX. Windows ACL enforcement remains absent; the hosted OS/Node matrix must qualify this candidate.
+  That rollback audit was validated on Linux/POSIX. Native Windows ACL enforcement was subsequently added as described above; final-head hosted Windows qualification remains required.
 
 ## CLI unknown options (L1)
 

@@ -8,6 +8,8 @@ import { ed25519Keypair, sha256, streamRng, type Rng } from '@quietvote/crypto';
 import { BoardLog, MemoryBoardStore, buildEntry, bundleToJson, exportBundle, type EntryType } from '@quietvote/board';
 import { run } from '../src/main.ts';
 import type { Io } from '../src/io.ts';
+import { writePrivateJson } from './private-fixture.ts';
+export { writePrivateJson, writePrivateFixture } from './private-fixture.ts';
 
 export const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 export const VEC = join(ROOT, 'test-vectors');
@@ -58,12 +60,12 @@ export function voterKeyFile(dir: string, i: number, name = `voter${i}.key`): st
   const seed = sha256(utf8(`vec-tiny/voter${i}`));
   const kp = ed25519Keypair(seed);
   const hex = (b: Uint8Array): string => Buffer.from(b).toString('hex');
-  return writeJson(dir, name, { format: 'qv-voter-key/v1', public_key: hex(kp.publicKey), seed: hex(seed) });
+  return writePrivateJson(dir, name, { format: 'qv-voter-key/v1', public_key: hex(kp.publicKey), seed: hex(seed) });
 }
 export function strangerKeyFile(dir: string): string {
   const seed = sha256(utf8('stranger'));
   const kp = ed25519Keypair(seed);
-  return writeJson(dir, 'stranger.key', { format: 'qv-voter-key/v1', public_key: Buffer.from(kp.publicKey).toString('hex'), seed: Buffer.from(seed).toString('hex') });
+  return writePrivateJson(dir, 'stranger.key', { format: 'qv-voter-key/v1', public_key: Buffer.from(kp.publicKey).toString('hex'), seed: Buffer.from(seed).toString('hex') });
 }
 
 // ---- a small board export bound to the tiny election's coordinator and log keys

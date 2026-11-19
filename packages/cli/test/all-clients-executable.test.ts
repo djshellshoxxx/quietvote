@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // One real-process election. Fixtures supply public manifest choices and organization
 // bootstrap; invitation issuance and voter enrollment use shipped CLI commands.
+import { writePrivateFixture } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
@@ -27,7 +28,7 @@ test('all shipped executables complete one real-clock election with exact totals
   w.owner = w.coord[0]!;
   const passphrase = 'T4!synthetic-C8$combined-R6#client';
   const passFile = join(w.dir, 'passphrase.txt');
-  writeFileSync(passFile, passphrase + '\n', { mode: 0o600 });
+  writePrivateFixture(passFile, passphrase + '\n');
   let serial = 0;
   const path = (suffix: string) => join(w.dir, `${serial++}-${suffix}`);
   const json = (name: string, value: unknown) => { const p = path(name); writeFileSync(p, JSON.stringify(value)); return p; };
@@ -95,7 +96,7 @@ test('all shipped executables complete one real-clock election with exact totals
     assert.equal((await fetch(`${w.base}/readyz`)).status, 200);
     w.audience = `qv:${(await online('instance'))['instance_id']}@http://localhost`;
     for (const key of [...w.coord.slice(0, 2), ...w.voters]) {
-      const seed = path('seed'); writeFileSync(seed, key.secretKey, { mode: 0o600 });
+      const seed = path('seed'); writePrivateFixture(seed, key.secretKey);
       const out = path('key.qvkey');
       const generated = await cli(['keygen', '--seed-file', seed, '--passphrase-file', passFile, '--out', out]);
       assert.equal(generated['protected'], true);
@@ -121,7 +122,7 @@ test('all shipped executables complete one real-clock election with exact totals
     assert.equal(issuance['count'], w.voters.length);
     const issued = JSON.parse(readFileSync(invitations, 'utf8')).invites as { invite_id: string; code: string }[];
     for (const [i, voter] of w.voters.entries()) {
-      const tokenFile = path('invite.txt'); writeFileSync(tokenFile, issued[i]!.code + '\n', { mode: 0o600 });
+      const tokenFile = path('invite.txt'); writePrivateFixture(tokenFile, issued[i]!.code + '\n');
       assert.equal(JSON.stringify(issuance).includes(issued[i]!.code), false, 'issuer stdout contains no bearer');
       const enrolled = await online('enroll', ['--invite-file', tokenFile, ...keyArgs(voter)]);
       assert.equal(enrolled['status'], 'approved');

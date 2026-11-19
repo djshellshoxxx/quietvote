@@ -1,28 +1,67 @@
-import { chmod, link, lstat, open, readFile, realpath, rename, stat, unlink, writeFile } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { link, lstat, open, readFile, realpath, rename, unlink, writeFile } from 'node:fs/promises';
+import { constants, type BigIntStats } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join, basename, resolve } from 'node:path';
 import { TrusteeError } from './errors.ts';
+import { MAX_PRIVATE_FILE_BYTES, readWindowsPrivateFile, writeWindowsPrivateFile } from './windows-private-files.ts';
+import { createPosixStage } from './posix-staging.ts';
 
-/** Write temp (0600, exclusive) + fsync + rename + fsync(dir): a crash leaves the old or the new file, never a torn one. */
+/** Hold an exclusive temporary file through fsync and validated publication, then best-effort fsync its directory. */
 export async function atomicWrite(path: string, data: Uint8Array, mode = 0o600, opts: { exclusive?: boolean } = {}): Promise<void> {
-  const tmp = join(dirname(path), `.${basename(path)}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`);
-  let created = false;
-  try {
-    const fh = await open(tmp, 'wx', mode);
-    created = true;
-    try {
-      await fh.writeFile(data);
-      await fh.sync();
-    } finally {
-      await fh.close();
+  if (process.platform === 'win32' && (mode & 0o077) === 0) {
+    await writeWindowsPrivateFile(path, data, opts.exclusive !== true);
+    return;
+  }
+  // Public Windows output retains its existing backend; private Windows output
+  // returned above. The controlled namespace policy here is POSIX-specific.
+  let stage: ReturnType<typeof createPosixStage> | undefined;
+  if (process.platform !== 'win32') {
+    try { stage = createPosixStage(path); }
+    catch (error) {
+      if ((error as { code?: string }).code === 'UNSAFE_DIRECTORY') {
+        throw new TrusteeError('REFUSED', 'UNSAFE_DIRECTORY', 'output directory permissions do not establish protected staging');
+      }
+      throw error;
     }
+  }
+  if (stage) path = stage.output;
+  const tmp = stage?.temporary ?? join(dirname(path), `.${basename(path)}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`);
+  const refused = () => new TrusteeError('REFUSED', 'OUTPUT_CHANGED', 'output identity or permissions changed during publication');
+  const same = (a: BigIntStats, b: BigIntStats): boolean => a.dev === b.dev && a.ino === b.ino;
+  const safe = (st: BigIntStats, links = 1n): boolean => st.isFile() && st.nlink === links &&
+    (process.geteuid === undefined || st.uid === BigInt(process.geteuid())) &&
+    // Public Windows files still use this branch; Node mode bits do not model their DACLs.
+    (process.platform === 'win32' || (st.mode & 0o777n) === BigInt(mode & 0o777));
+  let fh: Awaited<ReturnType<typeof open>> | undefined;
+  let made: BigIntStats | undefined;
+  try {
+    fh = await open(tmp, 'wx', mode);
+    made = await fh.stat({ bigint: true });
+    // Restore the requested public mode after umask without ever chmod-ing a pathname.
+    await fh.chmod(mode);
+    const prepared = await fh.stat({ bigint: true });
+    const named = await lstat(tmp, { bigint: true });
+    if (!safe(prepared) || !safe(named) || !same(made, prepared) || !same(prepared, named)) throw refused();
+    await fh.writeFile(data);
+    await fh.sync();
+    const written = await fh.stat({ bigint: true });
+    if (!safe(written) || !same(made, written) || !same(written, await lstat(tmp, { bigint: true }))) throw refused();
     if (opts.exclusive === true) {
       await link(tmp, path);
+      // Exclusive publication briefly has two names. Both must still name the
+      // held file before the staging entry can be removed.
+      const linked = await fh.stat({ bigint: true });
+      const target = await lstat(path, { bigint: true });
+      const staging = await lstat(tmp, { bigint: true });
+      if (!safe(linked, 2n) || !safe(target, 2n) || !safe(staging, 2n) || !same(made, linked) ||
+          !same(linked, target) || !same(linked, staging)) throw refused();
       await unlink(tmp);
-      created = false;
     } else await rename(tmp, path);
-    await chmod(path, mode);
+    const published = await lstat(path, { bigint: true });
+    const held = await fh.stat({ bigint: true });
+    if (!safe(held) || !safe(published) || !same(made, held) || !same(held, published)) throw refused();
+    made = undefined;
+    stage?.removeDirectory();
     try {
       const d = await open(dirname(path), 'r');
       try {
@@ -34,8 +73,14 @@ export async function atomicWrite(path: string, data: Uint8Array, mode = 0o600, 
       /* directory fsync is best-effort (not supported everywhere) */
     }
   } finally {
-    // A write, fsync or rename failure must not strand an unregistered sealed copy.
-    if (created) await unlink(tmp).catch(() => {});
+    try {
+      // POSIX cleanup stays inside the protected stage. Identity comparisons
+      // are additional refusal checks, not an atomic conditional unlink.
+      if (made) {
+        try { if (same(made, await lstat(tmp, { bigint: true }))) await unlink(tmp); }
+        catch { /* retain the original publication failure */ }
+      }
+    } finally { try { await fh?.close(); } finally { stage?.removeDirectory(); } }
   }
 }
 
@@ -48,16 +93,47 @@ export async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** QV-17 §6.5: refuse a secret file readable by group/other. */
-export async function readSecretFile(path: string): Promise<Uint8Array> {
-  let st;
-  try {
-    st = await stat(path);
-  } catch {
-    throw new TrusteeError('USAGE', 'NO_SUCH_FILE', path);
+/** QV-17 §6.5: inspect the permissions and identity of the same bounded stream that supplies secret bytes. */
+export async function readSecretFile(path: string, max = MAX_PRIVATE_FILE_BYTES): Promise<Uint8Array> {
+  const refused = () => new TrusteeError('REFUSED', 'BAD_PERMISSIONS', `${path} must be a bounded owner-private regular file without aliases`);
+  if (!Number.isSafeInteger(max) || max < 0 || max > MAX_PRIVATE_FILE_BYTES) throw refused();
+  if (process.platform === 'win32') {
+    try { return await readWindowsPrivateFile(path, max); }
+    catch (error) {
+      if ((error as { code?: string }).code === 'ENOENT') throw new TrusteeError('USAGE', 'NO_SUCH_FILE', path);
+      throw refused();
+    }
   }
-  if (process.platform !== 'win32' && (st.mode & 0o077) !== 0) throw new TrusteeError('REFUSED', 'BAD_PERMISSIONS', `${path} is accessible by group/other; chmod 600`);
-  return new Uint8Array(await readFile(path));
+  let fh: Awaited<ReturnType<typeof open>> | undefined;
+  let bytes: Buffer | undefined;
+  try {
+    const named = await lstat(path, { bigint: true });
+    if (!named.isFile() || named.nlink !== 1n) throw refused();
+    fh = await open(path, constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0));
+    const before = await fh.stat({ bigint: true });
+    const safe = (st: typeof before): boolean => st.isFile() && st.nlink === 1n && (st.mode & 0o077n) === 0n &&
+      (process.geteuid === undefined || st.uid === BigInt(process.geteuid()));
+    const same = (st: typeof before): boolean => st.dev === before.dev && st.ino === before.ino;
+    if (!safe(before) || !same(named) || before.size > BigInt(max)) throw refused();
+    bytes = Buffer.alloc(Number(before.size) + 1);
+    let size = 0;
+    while (size < bytes.length) {
+      const { bytesRead } = await fh.read(bytes, size, bytes.length - size, null);
+      if (bytesRead === 0) break;
+      size += bytesRead;
+    }
+    const after = await fh.stat({ bigint: true });
+    if (BigInt(size) !== before.size || !safe(after) || !same(after) || after.size !== before.size ||
+        after.mtimeNs !== before.mtimeNs || after.ctimeNs !== before.ctimeNs || !same(await lstat(path, { bigint: true }))) throw refused();
+    return bytes.subarray(0, size);
+  } catch (error) {
+    bytes?.fill(0);
+    if (error instanceof TrusteeError) throw error;
+    if (['ENOENT', 'ENOTDIR'].includes((error as { code?: string }).code ?? '')) throw new TrusteeError('USAGE', 'NO_SUCH_FILE', path);
+    throw refused();
+  } finally {
+    await fh?.close();
+  }
 }
 
 /**

@@ -1,5 +1,17 @@
 # @quietvote/cli: implementation notes
 
+## Private files on POSIX and Windows (2026-11-19)
+
+Keys, seed files, passphrase files, governance signing inputs, read-key files and invitation tokens are read as bounded owner-private snapshots. POSIX checks use the descriptor that supplies bytes. Windows uses the fixed `src/windows-private-files.ps1` helper through Windows PowerShell **5.1** and .NET Framework; the same native `FileStream` supplies its ACL and file bytes. Missing or unusable native protection, wrong ownership, a broad/inherited or unsupported DACL, and unsafe aliases refuse the operation. There is no unchecked Windows fallback or shell/path interpolation. Native private I/O accepts ordinary local drive paths; UNC shares, device paths and alternate data streams are refused. Existing broad Windows ACLs are not silently repaired.
+
+Private outputs use `0600` on POSIX and a protected owner-only DACL at Windows `CreateNew`, before any secret bytes are written. Outputs are flushed and atomically published; exclusive creation remains exclusive. `keygen --force` replaces an old regular file with a new private file and refuses links/nonregular targets. DOS short names and relative paths resolve in production, including requests to a reused native helper after the caller changes directory.
+
+POSIX atomic output pins the canonical parent, checks every ancestor from the root, and uses a same-filesystem `0700` staging directory. Directory owners must be the current effective user or root. Group/other-writable directories require the sticky bit and trusted owners for every descendant; a private child beneath writable nonsticky ancestry is refused as `UNSAFE_DIRECTORY`. Cleanup is nonrecursive and operates inside the protected stage. This protects against other-user rebinding **when effective namespace permissions follow the inspected POSIX owner/mode/sticky policy**. Same-user/root compromise is outside that boundary. ACL grants overriding those bits, including macOS native deletion rights, are not inspected and remain an unresolved native custody implementation/qualification boundary. Ordinary macOS path tests do not establish ACL-safe namespace custody. This limitation is not a claim that another pathname check makes `unlink` conditional.
+
+Invitation issuance holds one private output handle through credential unlock and POST. It checks binding before issuance, writes the response only to that handle, and refuses success if the pathname was replaced. A replaced path is never written through; a loss of privacy prevents writing bearer codes. The original pending/response file remains recovery evidence, and the CLI never automatically repeats issuance.
+
+**Qualification boundary:** this source includes native Windows enforcement and real ACL/create/read/rename fixtures, but Linux passes are not Windows qualification. The final published head still requires hosted Windows Node 22 and Node 24 results. See [the implementation and validation report](../../docs/reports/windows-private-files-20261119.md).
+
 ## Verifier import vs. dependency rule D1 (open finding, 2026-10-21)
 
 **Rule.** `docs/08-architecture-deployment.md` §5.1 D1: "Imports flow strictly downward ... `{server, web, cli, trustee, verifier}`.
@@ -48,8 +60,8 @@ Regression tests: `test/audit-regressions.test.ts` (one test per finding, 12 tes
 - **F1 `board verify` election bundle.** All hex flags are validated before choosing a bundle kind (bad hex: exit 2). `--manifest-hash`
   is passed to `verifyBundle` as `pinnedManifestHash`; a pin the manifest does not meet (V1 not pass) is exit 1. `--log-key` is not an
   option of `verifyBundle`, so it is compared with the manifest's `bb.log_pk` and a different value is exit 1.
-- **F2 `keygen --force`.** The old entry is `lstat`ed; a symlink is refused (exit 4). Otherwise it is unlinked and recreated with mode
-  0600, so the old permissions are not kept.
+- **F2 `keygen --force` (current behavior).** A symlink/nonregular target is refused (exit 4). A new private file is written and
+  flushed before atomic replacement, so the old permissions are not retained: `0600` on POSIX, a protected owner-only DACL on Windows.
 - **F3 `ballot audit`.** JSON that is not an object (`null`, numbers, arrays) is an input error (exit 4).
 - **F4 `vectors check`.** Unreadable or non-JSON corpus files throw `InputError` naming the path (exit 4). Shapes of the manifest, vector
   files, mutants and reports are checked; a missing `v1/elections`, `v1/mutations` or canary is exit 4. A missing `elections/*/bundle.json`

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { writePrivateJson } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { closeSync, ftruncateSync, openSync, readFileSync, rmSync, statSync } from 'node:fs';
@@ -15,7 +16,7 @@ test('coordinator signing pins body, checks prior signatures and refuses unautho
     const manifest = tinyBundle().manifest.body;
     const mh = bytesToHex(manifestHash(manifest));
     const mf = writeJson(dir, 'manifest.json', manifest);
-    const key = writeJson(dir, 'coord.key', { format: 'qv-voter-key/v1', public_key: bytesToHex(COORD.publicKey), seed: bytesToHex(COORD.secretKey) });
+    const key = writePrivateJson(dir, 'coord.key', { format: 'qv-voter-key/v1', public_key: bytesToHex(COORD.publicKey), seed: bytesToHex(COORD.secretKey) });
     const body = writeJson(dir, 'body.json', { proto: PROTO_ID, type: 'marker', name: 'dkg-open' });
     const out = join(dir, 'signed.json');
     const base = ['election', 'sign-record', '--manifest', mf, '--manifest-hash', mh, '--key', key, '--out', out];
@@ -72,7 +73,7 @@ test('coordinator context input rejects oversized files, directories and FIFOs w
     const manifest = tinyBundle().manifest.body;
     const mf = writeJson(dir, 'manifest.json', manifest);
     const body = writeJson(dir, 'close.json', { proto: PROTO_ID, type: 'marker', name: 'election-close' });
-    const key = writeJson(dir, 'coord.key', { format: 'qv-voter-key/v1', public_key: bytesToHex(COORD.publicKey), seed: bytesToHex(COORD.secretKey) });
+    const key = writePrivateJson(dir, 'coord.key', { format: 'qv-voter-key/v1', public_key: bytesToHex(COORD.publicKey), seed: bytesToHex(COORD.secretKey) });
     const args = ['election', 'sign-record', '--manifest', mf, '--manifest-hash', bytesToHex(manifestHash(manifest)), '--body', body, '--key', key, '--out', join(dir, 'out.json')];
     const reject = (file: string) => {
       const result = spawnSync(process.execPath, [BIN, ...args, '--election', file], { encoding: 'utf8', timeout: 5000 });

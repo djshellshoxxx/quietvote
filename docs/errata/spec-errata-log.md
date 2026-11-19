@@ -138,10 +138,22 @@ change. Default log/witness evidence policy and fatal-evidence precedence are
 unchanged. Authenticated board evidence may independently reject the supplied
 log; content-only success is not a witnessed-election claim.
 
-Remaining manifest differences need individual source reconciliation: for
-example QV-16/QV-20 explicitly include threshold `basis:roll`, while the TS schema
-rejects it. Arbitrary reference limits without a spec source are not automatically
-adopted under B1-08. Full trustee-mode spoil cryptography and D-95 remain distinct.
+The adopted QV-ADR-027 / N-27 decision reserves contest threshold `basis:roll`
+beyond suite v1. The earlier QV-16/QV-20 eligible-base prose predates that decision;
+retaining it during the later tie reconciliation did not adopt N-27 options B/C.
+Python now rejects that threshold in manifest validation and the public
+`rules.evaluate` operation, including when quorum is unmet. Existing `yes+no` and
+`counted` thresholds, valid blank ballots and the participation-quorum `roll`
+basis remain supported. N-27's “No change”/“freezes surface” recommendation retains
+`counted`, which already existed in the reference and the approved tie corpus.
+
+The source-backed B1-08 single-choice restrictions are also enforced: at least two
+options follow from QV-16 section 5.6.1's `L = 1` and `L < |options|`; section
+5.19.3 fixes one winner, including when `winners` is explicitly present. Paired
+cases are in `packages/protocol/test/fixtures/adopted-manifest-policy.json`.
+Other manifest differences still require individual source reconciliation.
+Arbitrary reference limits without a spec source are not automatically adopted
+under B1-08. Full trustee-mode spoil cryptography and D-95 remain distinct.
 
 ## Registry revision, 2026-11-04 (QV-ADR-027, category B) — landed 2026-11-18 on `38192a5`
 

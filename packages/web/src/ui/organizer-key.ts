@@ -17,6 +17,7 @@ export function organizerKeyPanel(d: {
   storage: DeviceStorage;
   deps: () => KeystoreDeps;
   hasKey: boolean;
+  backupRequired?: boolean;
   current: () => boolean;
   ready: (publicKey: string) => void;
   error: (e: unknown) => HTMLElement;
@@ -86,8 +87,13 @@ export function organizerKeyPanel(d: {
         clear(out); clear(backup);
         out.append(h('p', {}, t('qv.key.fingerprint', { words: fingerprint.join(' ') })), h('p', {}, t('qv.org.publicKey')), h('code', {}, bytesToHex(publicKey)));
         if (container && container.m <= d.deps().floor.m) out.append(h('p', {}, t('qv.key.floorWarn')));
-        if (container) backup.append(h('button', { type: 'button', class: 'btn', onclick: () => d.download(serializeContainer(container)) }, t('qv.key.download')));
-        d.ready(bytesToHex(publicKey));
+        if (container) backup.append(h('button', { type: 'button', class: 'btn', onclick: () => {
+          if (!d.current() || run !== generation) return;
+          d.download(serializeContainer(container));
+          if (d.backupRequired) d.ready(bytesToHex(publicKey));
+        } }, t('qv.key.download')));
+        if (d.backupRequired) backup.append(h('p', {}, t('qv.storage.backup')));
+        else d.ready(bytesToHex(publicKey));
       } catch (e) {
         if (d.current() && run === generation) {
           clear(out);

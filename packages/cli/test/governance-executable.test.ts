@@ -1,3 +1,5 @@
+import { windowsFixture } from './windows-acl-fixture.ts';
+import { writePrivateFixture, writePrivateJson } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, existsSync, ftruncateSync, closeSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -21,7 +23,7 @@ function put(dir: string, name: string, value: unknown): string {
   return path;
 }
 function keyFile(dir: string, name: string, pair = identity): string {
-  return put(dir, name, { format: 'qv-voter-key/v1', public_key: bytesToHex(pair.publicKey), seed: bytesToHex(pair.secretKey) });
+  return writePrivateJson(dir, name, { format: 'qv-voter-key/v1', public_key: bytesToHex(pair.publicKey), seed: bytesToHex(pair.secretKey) });
 }
 function run(args: string[], code: number, input?: string) {
   // An unrelated working directory verifies module-relative executable startup.
@@ -173,6 +175,10 @@ test('strict documents and bounded file inputs reject duplicate JSON, pipes, ove
       chmodSync(f.keys[0]!, 0o644);
       run(base, 4);
       chmodSync(f.keys[0]!, 0o600);
+    } else {
+      windowsFixture('broad', f.keys[0]!);
+      run(base, 4);
+      windowsFixture('private', f.keys[0]!);
     }
     run(base, 0);
     const original = readFileSync(out);
@@ -183,7 +189,7 @@ test('strict documents and bounded file inputs reject duplicate JSON, pipes, ove
       run(base.map(v => v === out ? link : v), 4);
       assert.deepEqual(readFileSync(out), original);
     }
-    const keyMalformed = put(dir, 'bad-key.json', { format: 'qv-voter-key/v1', seed: bytesToHex(identity.secretKey), public_key: identityHex, 'secret-sentinel': 'private-sentinel' });
+    const keyMalformed = writePrivateJson(dir, 'bad-key.json', { format: 'qv-voter-key/v1', seed: bytesToHex(identity.secretKey), public_key: identityHex, 'secret-sentinel': 'private-sentinel' });
     const badKey = run(base.map(v => v === f.keys[0] ? keyMalformed : v === out ? join(dir, 'other.json') : v), 4);
     assert.ok(!badKey.stdout.includes('private-sentinel') && !badKey.stderr.includes('private-sentinel'));
   } finally { rmSync(dir, { recursive: true, force: true }); }
@@ -194,8 +200,8 @@ test('actual protected QVKEY1 keys sign with private passphrase input and never 
   try {
     const f = setup(dir), protectedKey = join(dir, 'protected.json');
     const seed = join(dir, 'seed.bin'), password = join(dir, 'password.txt');
-    writeFileSync(seed, identity.secretKey, { mode: 0o600 });
-    writeFileSync(password, 'Governance private fixture password\n', { mode: 0o600 });
+    writePrivateFixture(seed, identity.secretKey);
+    writePrivateFixture(password, 'Governance private fixture password\n');
     const created = spawnSync(process.execPath, [BIN, 'keygen', '--seed-file', seed, '--passphrase-file', password,
       '--out', protectedKey, '--json'], { cwd: ROOT, encoding: 'utf8', timeout: 30_000 });
     assert.equal(created.status, 0, created.stderr);
@@ -203,7 +209,7 @@ test('actual protected QVKEY1 keys sign with private passphrase input and never 
       '--passphrase-file', password, '--out', join(dir, 'protected-signed.json')], 0);
     assert.equal(JSON.parse(result.stdout).identity_signed, true);
     assert.equal(JSON.parse(result.stdout).quorum, false);
-    const wrong = join(dir, 'wrong.txt'); writeFileSync(wrong, 'Wrong governance password\n', { mode: 0o600 });
+    const wrong = join(dir, 'wrong.txt'); writePrivateFixture(wrong, 'Wrong governance password\n');
     const rejected = run(['sign', '--body', f.body, ...f.pins, '--rules-hash', f.hash, '--key', protectedKey,
       '--passphrase-file', wrong, '--out', join(dir, 'wrong-signed.json')], 4);
     const output = result.stdout + result.stderr + rejected.stdout + rejected.stderr;

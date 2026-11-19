@@ -1,5 +1,5 @@
 // Offline signed-rule preparation. This profile never authorizes a suite-v1 election.
-import { closeSync, constants, fchmodSync, fsyncSync, fstatSync, lstatSync, openSync, readSync, unlinkSync, writeSync } from 'node:fs';
+import { closeSync, constants, fstatSync, openSync, readSync } from 'node:fs';
 import { bytesToHex, ed25519Keypair, ed25519Verify, hexToBytes, jcs, parseQvJson, wipe } from '@quietvote/crypto';
 import {
   GOVERNANCE_EXPORT, GOVERNANCE_MAX_BYTES, GOVERNANCE_PROFILE, governanceGroupId,
@@ -12,18 +12,19 @@ import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs,
 import { PASSPHRASE_FLAGS, printJson } from './common.ts';
 import { EXIT, type Io } from './io.ts';
 import { PLAIN_FORMAT, parseContainer, unwrapSeed } from './keyfile.ts';
+import { readPrivateFile, writePrivateFileSync } from './private-files.ts';
 
 const TRUST_FLAGS = { 'identity-key': 'value', 'genesis-hash': 'value' } as const;
 const HEX32 = /^[0-9a-f]{64}$/;
 const HEX64 = /^[0-9a-f]{128}$/;
 
 /** Read exactly one bounded regular-file snapshot; pipes, links and growth fail. */
-function fileBytes(path: string, max: number, secret = false): Uint8Array {
+function fileBytes(path: string, max: number): Uint8Array {
   let fd: number | undefined;
   try {
     fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0));
     const stat = fstatSync(fd);
-    if (!stat.isFile() || stat.size > max || (secret && process.platform !== 'win32' && (stat.mode & 0o077) !== 0)) throw new Error();
+    if (!stat.isFile() || stat.size > max) throw new Error();
     const bytes = Buffer.alloc(stat.size + 1);
     let size = 0;
     while (size < bytes.length) {
@@ -33,8 +34,13 @@ function fileBytes(path: string, max: number, secret = false): Uint8Array {
     }
     if (size !== stat.size) throw new Error();
     return bytes.subarray(0, size);
-  } catch { throw new InputError(secret ? 'signing input must be a bounded private regular file' : 'governance input must be a bounded regular file'); }
+  } catch { throw new InputError('governance input must be a bounded regular file'); }
   finally { if (fd !== undefined) closeSync(fd); }
+}
+
+async function signingBytes(path: string): Promise<Uint8Array> {
+  try { return await readPrivateFile(path, 64 * 1024); }
+  catch { throw new InputError('signing input must be a bounded private regular file'); }
 }
 
 function objectFile(path: string, max = GOVERNANCE_MAX_BYTES): Record<string, unknown> {
@@ -48,28 +54,8 @@ function objectFile(path: string, max = GOVERNANCE_MAX_BYTES): Record<string, un
 function output(path: string, value: unknown): void {
   const bytes = new Uint8Array([...jcs(value), 10]);
   if (bytes.length > GOVERNANCE_MAX_BYTES) throw new InputError('governance output exceeds 4 MiB');
-  let fd: number | undefined;
-  let made: ReturnType<typeof fstatSync> | undefined;
-  let complete = false;
-  try {
-    fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0), 0o600);
-    made = fstatSync(fd);
-    if (process.platform !== 'win32') fchmodSync(fd, 0o600);
-    let n = 0;
-    while (n < bytes.length) {
-      const written = writeSync(fd, bytes, n, bytes.length - n);
-      if (written === 0) throw new Error();
-      n += written;
-    }
-    fsyncSync(fd);
-    complete = true;
-  } catch { throw new InputError('cannot create governance output; existing files are never overwritten'); }
-  finally {
-    if (fd !== undefined) closeSync(fd);
-    if (!complete && made) {
-      try { const now = lstatSync(path); if (now.dev === made.dev && now.ino === made.ino) unlinkSync(path); } catch { /* retain original failure */ }
-    }
-  }
+  try { writePrivateFileSync(path, bytes); }
+  catch { throw new InputError('cannot create governance output; existing files are never overwritten'); }
 }
 
 function pin(p: Parsed, name: string): string {
@@ -143,7 +129,7 @@ function partial(input: Record<string, unknown>, body: GroupRulesBody, allowed: 
 }
 
 async function signingKey(p: Parsed, io: Io): Promise<{ seed: Uint8Array; publicKey: Uint8Array }> {
-  const bytes = fileBytes(needFlag(p, 'key'), 64 * 1024, true);
+  const bytes = await signingBytes(needFlag(p, 'key'));
   let value: Record<string, unknown>;
   try {
     const raw = parseQvJson(bytes);
@@ -157,7 +143,7 @@ async function signingKey(p: Parsed, io: Io): Promise<{ seed: Uint8Array; public
     if (p.has('passphrase-file') && p.has('passphrase-stdin')) throw new UsageError('use either --passphrase-file or --passphrase-stdin');
     let pass: string | undefined;
     if (p.has('passphrase-file') || p.has('passphrase-stdin')) {
-      const raw = p.has('passphrase-file') ? fileBytes(needFlag(p, 'passphrase-file'), 64 * 1024, true) : await io.stdin();
+      const raw = p.has('passphrase-file') ? await signingBytes(needFlag(p, 'passphrase-file')) : await io.stdin();
       try {
         if (raw.length > 64 * 1024) throw new Error();
         pass = new TextDecoder('utf-8', { fatal: true }).decode(raw).split(/\r?\n/)[0];

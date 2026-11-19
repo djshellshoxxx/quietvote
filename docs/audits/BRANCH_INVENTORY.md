@@ -11,6 +11,18 @@ This engineering inventory covers **72 remote branches**, all **70 discovered pu
 - No repository `AGENTS.md` exists in the fetched tree. The current user instruction authorizes implementation and consolidation; historical pause handoffs are retained as history.
 - No remote branches were deleted or rewritten by this inventory.
 
+The later consolidation contains **65 original tips**, including main and its
+identical alias: **63 tips not already contained in initial main** are now
+preserved in candidate ancestry. Seven original tips remain outside ancestry for
+the explicit reasons in [CONSOLIDATION_REPORT](CONSOLIDATION_REPORT.md), including
+one patch-equivalent replacement and selective reconstruction of #27. All 72
+original remote tips remain unchanged; the requested candidate adds a 73rd branch.
+This is an ancestry/preservation count, not a count of merged remote PRs or unique
+features. The 72 names point to 69 distinct captured head commits; three pairs
+are aliases. The three extra historical PR-head snapshots belong to the same 70
+PR records, not three additional branches or PRs. Worker branches created during
+this operation are separate provenance.
+
 ## Findings and integration order
 
 **59 of 72 tips are ancestors of the platform candidate; 60 are ancestors of the membership candidate.** The latter count includes `main` and its identical `claude/quirky-curie-n5pxf5` alias. The remaining 12 tips were individually compared. One is patch-equivalent to a signed replacement, one is canonical merge history with no additional non-merge patch, four contain independent crypto/verifier fixes, one contains mixed historical recovery work, and five are historical or obsolete documentation proposals.

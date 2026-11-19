@@ -1,6 +1,7 @@
+import { writePrivateFixture } from './helpers/private-file.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { sealWithPassphrase, streamRng, utf8 } from '@quietvote/crypto';
@@ -14,7 +15,7 @@ test('BT-14: trustee refuses a forged high-cost header before authentication', a
     file.write('QVBUNDL1');
     file[8] = 19;
     const path = join(dir, 'hostile.qvtb');
-    writeFileSync(path, file, { mode: 0o600 });
+    writePrivateFixture(path, file);
     await assert.rejects(readBundle(path, 'test', {}), (e: any) => e.code === 'BUNDLE_FORMAT' && /work factor/.test(e.message));
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -39,7 +40,7 @@ test('BT-14: explicit vault budget is honored without changing encrypted bytes',
     const file = await sealWithPassphrase(utf8(JSON.stringify(data)), 'test', streamRng(new Uint8Array(32).fill(3)), {
       logN: 10, allowWeak: true, aad: utf8('qv-trustee-bundle/v1'),
     });
-    writeFileSync(path, file, { mode: 0o600 });
+    writePrivateFixture(path, file);
     await assert.rejects(readBundle(path, 'test', { allowWeak: true, maxLogN: 9 }), { code: 'BUNDLE_FORMAT' });
     assert.deepEqual(await readBundle(path, 'test', { allowWeak: true, maxLogN: 10 }), data);
   } finally { rmSync(dir, { recursive: true, force: true }); }

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Unsigned coordinator proposals from an authenticated public snapshot. No signing, POST or policy changes.
-import { writeFileSync } from 'node:fs';
 import { bytesToHex } from '@quietvote/crypto';
 import {
   PROTO_ID, CONTROL_ACTIONS, CONTROL_REASONS, CONTROL_ENTRY, S, adjudicateDkg, check, manifestHash, rollRoot, verifyKeyconf, verifyMultiSig, verifySig,
@@ -11,6 +10,7 @@ import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs 
 import { pinnedHash, printJson } from './common.ts';
 import { prepareElectionArchive } from './cmd-prepare.ts';
 import { EXIT, type Io } from './io.ts';
+import { writePrivateFileSync } from './private-files.ts';
 
 const DKG = ['dkg-open', 'dkg-r1-open', 'dkg-r1-close', 'dkg-r2-close', 'dkg-r3-close', 'dkg-final'] as const;
 const KINDS = [...DKG, 'roll-commit', 'election-open', 'election-close', ...CONTROL_ACTIONS] as const;
@@ -40,7 +40,7 @@ export async function cmdElectionDraftRecord(argv: string[], io: Io): Promise<nu
   if (isControl) {
     if (controlSeq >= Number.MAX_SAFE_INTEGER) throw new FailError('control sequence is exhausted');
     const body = { proto: PROTO_ID, type: 'control', action: kind, control_seq: controlSeq + 1, ...(reason === undefined ? {} : { reason }) };
-    try { writeFileSync(out, JSON.stringify(body) + '\n', { flag: 'wx', mode: 0o600 }); }
+    try { writePrivateFileSync(out, JSON.stringify(body) + '\n'); }
     catch { throw new InputError('cannot create output; existing files are never overwritten'); }
     printJson(io, { file: out, kind, entry_type: CONTROL_ENTRY[kind], manifest_hash: pin, control_seq: body.control_seq,
       signed: false, admitted: false, board_structure_verified: true, witness_quorum_verified: false, freshness_verified: false });
@@ -148,7 +148,7 @@ export async function cmdElectionDraftRecord(argv: string[], io: Io): Promise<nu
       body = { proto: PROTO_ID, type: 'marker', name: 'election-close' };
     }
   }
-  try { writeFileSync(out, JSON.stringify(body) + '\n', { flag: 'wx', mode: 0o600 }); }
+  try { writePrivateFileSync(out, JSON.stringify(body) + '\n'); }
   catch { throw new InputError('cannot create output; existing files are never overwritten'); }
   printJson(io, {
     file: out, kind, entry_type: ENTRY[kind], manifest_hash: pin, signed: false, admitted: false,

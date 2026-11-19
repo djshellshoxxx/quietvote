@@ -4,6 +4,15 @@
 import type { MessageKey } from '../en.ts';
 
 export const DE = {
+  "qv.storage.sessionTitle": "Speicherung nur für diese Sitzung",
+  "qv.storage.choose": "Nur diese Seite verwenden",
+  "qv.storage.retry": "Browserspeicher erneut versuchen",
+  "qv.storage.loss": "Diese Option hält Daten im Speicher dieser Seite. Nach dem Neuladen, Schließen des Tabs oder Verlassen sind ihre Schlüssel, Belege und ausstehenden Stimmzettel möglicherweise nicht mehr verfügbar. Das Verlassen garantiert keine Löschung; verwenden Sie Diese Seitensitzung löschen, um die Daten aus der Anwendung zu entfernen. Andere gespeicherte Browserdaten sind möglicherweise unzugänglich und werden nicht gelöscht. Speichern Sie vor dem Verlassen Ihre Schlüsseldatei, den Stimmzettelcode und die Belegdatei.",
+  "qv.storage.backup": "Laden Sie Ihre Schlüsseldatei herunter, bevor Sie fortfahren. Bewahren Sie die Datei und ihre Passphrase auf, um Ihren Schlüssel nach dem Schließen dieser Seite zu entsperren.",
+  "qv.storage.clear": "Diese Seitensitzung löschen",
+  "qv.storage.cleared": "Diese Seitensitzung wurde gelöscht. Gespeicherte Browserdaten wurden nicht gelöscht.",
+  "qv.storage.blocked": "Ein Stimmzettel wurde bereits begonnen. Lassen Sie diese Seite offen und nutzen Sie ihre bestehende Wiederholung oder Belegprüfung. Der Speicher kann in dieser Seite nicht mehr gewechselt werden.",
+  "qv.storage.saveCode": "Stimmzettelcode speichern",
   "qv.device.unconfirmed": "Gespeicherte Einstellungen konnten nicht bestätigt werden.",
   "qv.election.rulesAck": "Ich habe diese Regeln und Datenschutzgrenzen gelesen",
   "qv.election.rulesAckHint": "Optional. Diese Notiz bleibt auf diesem Gerät.",

@@ -9,8 +9,10 @@ import { setup } from '../../protocol/test/helpers/sim.ts';
 import { FakeBoard } from './helpers/fake-board.ts';
 import { startApp } from '../src/ui/app.ts';
 import { MemoryStorage } from '../src/key/storage.ts';
+import { boardStorage } from '../src/key/board-storage.ts';
 import { defaultDeps, wrapSeed, FLOOR_PARAMS } from '../src/key/keystore.ts';
 import { keySlot } from '../src/flow/onboarding.ts';
+import { LiveElection } from '../src/flow/live.ts';
 
 type Listener = (event: { target: Element; currentTarget: Element; button: number; preventDefault(): void }) => unknown;
 class Element {
@@ -72,6 +74,7 @@ const sim = await setup({ seed: 'independent-split-router', n: 3, t: 2, voters: 
 const boardA = new FakeBoard(sim), boardB = new FakeBoard(sim), localBoard = new FakeBoard(sim);
 const a = 'https://board-a.test', b = 'https://board-b.test', page = location.origin;
 const id = boardA.apiId;
+let enrollmentReadKey: string | undefined, ceremonyReady = false, changedLogClaim: 'key' | 'origin' | undefined;
 const seen: { origin: string; path: string; read: string | null; method: string; body?: string }[] = [];
 Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async (input: string, init?: RequestInit) => {
   const url = new URL(String(input), page), headers = new Headers(init?.headers);
@@ -82,6 +85,13 @@ Object.defineProperty(globalThis, 'fetch', { configurable: true, value: async (i
   if (url.pathname.endsWith('/events')) return new Response(new ReadableStream({ start(controller) {
     init?.signal?.addEventListener('abort', () => controller.close(), { once: true });
   } }), { headers: { 'Content-Type': 'text/event-stream' } });
+  if (headers.get('qv-read-key') === enrollmentReadKey) {
+    if (!ceremonyReady && url.pathname.endsWith('/log/entries')) return Response.json({ entries: [], from: 0, next_from: null, tree_size: 0 });
+    if (changedLogClaim && url.pathname === `/api/v1/elections/${id}`) {
+      const summary = await (await board.fetch(url.pathname, init)).json();
+      return Response.json({ ...summary, ...(changedLogClaim === 'key' ? { log_pk: Buffer.alloc(32, 1).toString('base64url') } : { origin: 'quietvote/v1/different' }) });
+    }
+  }
   return board.fetch(url.pathname + url.search, init);
 } });
 const storage = new MemoryStorage();
@@ -185,4 +195,96 @@ test('actual unlock and cast preserve API ID and fragment while a second board d
   assert.equal(main().find((element) => element.tag === 'button' && element.textContent === 'Review my choices').length, 0);
   assert.ok(main().find((element) => element.tag === 'a' && element.textContent === 'Unlock key').length > 0);
   await navigate('/', '');
+});
+
+test('enrollment-to-ready hash navigation refreshes a cached draft even when live hints have not arrived', async (t) => {
+  enrollmentReadKey = 'enrollment_transition_no_hint'; ceremonyReady = false;
+  await boardStorage(storage, a, page).putKey(keySlot(id), wrapped.container);
+  t.mock.method(LiveElection.prototype, 'start', () => {});
+  t.after(async () => { enrollmentReadKey = undefined; await navigate('/', ''); });
+  const hash = fragment(a, enrollmentReadKey);
+  await navigate('key', '#inv=AAECAwQFBgcICQoLDA0ODw&' + hash.slice(1));
+  assert.equal(button('Unlock key').disabled, false, 'the enrollment view loaded the board-scoped key');
+  const before = electionReads(a).length;
+  ceremonyReady = true;
+  location.hash = hash; events.dispatch('hashchange'); await drain();
+  assert.equal(electionReads(a).length, before + 1, 'removing the invitation must refresh an unbound draft snapshot');
+  assert.equal(button('Unlock key').disabled, false, 'the same document reaches the verified election without a reload');
+});
+
+test('live enrollment completion binds the signed log before an actual cast uses its receipt key', async (t) => {
+  enrollmentReadKey = 'enrollment_transition_live_hint'; ceremonyReady = false;
+  await boardStorage(storage, a, page).putKey(keySlot(id), wrapped.container);
+  let live: LiveElection | undefined;
+  t.mock.method(LiveElection.prototype, 'start', function (this: LiveElection) { live = this; });
+  t.after(async () => { enrollmentReadKey = undefined; await navigate('/', ''); });
+  const hash = fragment(a, enrollmentReadKey);
+  await navigate('key', '#inv=AAECAwQFBgcICQoLDA0ODw&' + hash.slice(1));
+  assert.ok(live); ceremonyReady = true; await live.refresh();
+  location.hash = hash; events.dispatch('hashchange'); await drain();
+  get((element) => element.attrs.get('type') === 'password').value = passphrase;
+  button('Unlock key').click(); await until(() => main().textContent.includes('You are on the voter list.'));
+  await navigate('vote', hash);
+  button('Review my choices').click(); button('Seal my ballot').click();
+  await until(() => main().find((element) => element.id === 'cast-btn' && !element.disabled).length === 1);
+  button('Send my vote').click();
+  await until(() => main().find((element) => element.tag === 'a' && element.textContent === 'Check inclusion now').length === 1);
+  assert.ok(main().textContent.includes('Your vote was recorded. Here is your receipt.'), main().textContent);
+  const submitted = seen.filter((request) => request.method === 'POST' && request.path.endsWith('/log/entries')).at(-1)!;
+  assert.equal(submitted.origin, a); assert.equal(submitted.read, enrollmentReadKey);
+});
+
+for (const claim of ['key', 'origin'] as const) test(`live enrollment completion cannot bypass a mismatched server log ${claim}`, async (t) => {
+  enrollmentReadKey = `enrollment_transition_wrong_${claim}`; ceremonyReady = false; changedLogClaim = claim;
+  await boardStorage(storage, a, page).putKey(keySlot(id), wrapped.container);
+  let live: LiveElection | undefined;
+  t.mock.method(LiveElection.prototype, 'start', function (this: LiveElection) { live = this; });
+  t.after(async () => { enrollmentReadKey = undefined; changedLogClaim = undefined; await navigate('/', ''); });
+  const hash = fragment(a, enrollmentReadKey);
+  await navigate('key', '#inv=AAECAwQFBgcICQoLDA0ODw&' + hash.slice(1));
+  assert.ok(live); ceremonyReady = true; await live.refresh();
+  location.hash = hash; events.dispatch('hashchange'); await drain();
+  assert.equal(main().find((element) => element.tag === 'button' && element.textContent === 'Unlock key').length, 0);
+  assert.ok(main().textContent.includes(`the server names a log ${claim} that is not the one in the signed manifest`));
+});
+
+test('independent: live enrollment with an omitted log key remains refused after same-document navigation', async (t) => {
+  enrollmentReadKey = 'independent_missing_summary_log_key'; ceremonyReady = false;
+  await boardStorage(storage, a, page).putKey(keySlot(id), wrapped.container);
+  let live: LiveElection | undefined;
+  t.mock.method(LiveElection.prototype, 'start', function (this: LiveElection) { live = this; });
+  const originalFetch = globalThis.fetch;
+  const postsBefore = seen.filter((request) => request.method === 'POST').length;
+  let omittedSummaries = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input), page);
+    const read = new Headers(init?.headers).get('qv-read-key');
+    const response = await originalFetch(input, init);
+    if (read === enrollmentReadKey && url.pathname === `/api/v1/elections/${id}`) {
+      const summary = await response.json();
+      delete summary.log_pk;
+      omittedSummaries++;
+      return Response.json(summary);
+    }
+    return response;
+  };
+  try {
+    const hash = fragment(a, enrollmentReadKey), readsBefore = electionReads(a).length;
+    await navigate('key', '#inv=AAECAwQFBgcICQoLDA0ODw&' + hash.slice(1));
+    assert.ok(electionReads(a).length > readsBefore);
+    assert.ok(omittedSummaries >= 1, 'the cached draft summary omitted log_pk');
+    assert.equal(button('Unlock key').disabled, false, 'pre-manifest enrollment remains available');
+    assert.ok(live);
+    ceremonyReady = true;
+    await live.refresh();
+    location.hash = hash; events.dispatch('hashchange'); await drain();
+    assert.equal(main().find((element) => element.tag === 'button' && element.textContent === 'Unlock key').length, 0,
+      'a live callback exception must not leave an unbound context usable after enrollment');
+    assert.ok(main().textContent.includes('the server names a log key that is not the one in the signed manifest'));
+    assert.equal(seen.filter((request) => request.method === 'POST').length, postsBefore);
+  } finally {
+    enrollmentReadKey = undefined; ceremonyReady = false;
+    globalThis.fetch = originalFetch;
+    await navigate('/', '');
+  }
 });

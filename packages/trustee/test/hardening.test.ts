@@ -1,3 +1,5 @@
+import { windowsFixture } from '../../cli/test/windows-acl-fixture.ts';
+import { writePrivateFixture } from './helpers/private-file.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, existsSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -220,7 +222,7 @@ test('T6: --out can never be the bundle, a backup, the tombstone or an existing 
     assert.deepEqual(readFileSync(b), before, 'sealed bundle untouched');
     assert.equal(await run(['report-compromise', '--bundle', b, '--severity', 'suspected', '--out', join(c.dir, 'x', '..', 't1.qvtb')]), 60);
     const bk = join(c.dir, 'bk.qvtb');
-    writeFileSync(join(c.dir, 'bp.txt'), 'backup passphrase for hardening\n', { mode: 0o600 });
+    writePrivateFixture(join(c.dir, 'bp.txt'), 'backup passphrase for hardening\n');
     assert.equal(await run(['backup', '--bundle', b, '--to', bk, '--backup-passphrase-file', join(c.dir, 'bp.txt')]), 0);
     const bkBytes = readFileSync(bk);
     assert.equal(await run(['report-compromise', '--bundle', b, '--severity', 'suspected', '--out', bk]), 60);
@@ -238,20 +240,18 @@ test('T6: --out can never be the bundle, a backup, the tombstone or an existing 
   }
 });
 
-test('T8: passphrase files go through the 0600 check', async () => {
+test('T8: passphrase files go through the owner-private permission check', async () => {
   const c = new Ceremony({ n: 3, t: 2, seed: 'hard-t8' });
   await c.setup();
   try {
     const { run, err } = cli(c);
     const pf = join(c.dir, 'pass.txt');
-    writeFileSync(pf, `${PASS}\n`, { mode: 0o600 });
+    writePrivateFixture(pf, `${PASS}\n`);
     assert.equal(await run(['status', '--bundle', c.path(1), '--passphrase-file', pf]), 0);
-    if (process.platform !== 'win32') {
-      chmodSync(pf, 0o644);
-      assert.equal(await run(['status', '--bundle', c.path(1), '--passphrase-file', pf]), 60);
-      assert.match(err.pop()!, /BAD_PERMISSIONS/);
-      assert.equal(await run(['status', '--bundle', c.path(1)], { QV_TRUSTEE_PASSPHRASE_FILE: pf }), 60);
-    }
+    if (process.platform === 'win32') windowsFixture('broad', pf); else chmodSync(pf, 0o644);
+    assert.equal(await run(['status', '--bundle', c.path(1), '--passphrase-file', pf]), 60);
+    assert.match(err.pop()!, /BAD_PERMISSIONS/);
+    assert.equal(await run(['status', '--bundle', c.path(1)], { QV_TRUSTEE_PASSPHRASE_FILE: pf }), 60);
   } finally {
     c.cleanup();
   }

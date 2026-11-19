@@ -1,3 +1,4 @@
+import { writePrivateJson } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -7,7 +8,7 @@ import { b64u } from '@quietvote/board';
 import { bytesToHex } from '@quietvote/crypto';
 import { logOrigin } from '@quietvote/protocol';
 import { World } from '../../server/test/helpers/world.ts';
-import { BIN, qv, tmp, voterKeyFile, writeJson } from './helpers.ts';
+import { BIN, qv, tmp, voterKeyFile } from './helpers.ts';
 
 async function processQv(args: string[]) {
   return new Promise<{ code: number | null; out: string; err: string }>((resolve, reject) => {
@@ -23,7 +24,7 @@ test('actual invitation CLI stores private bearer responses and refuses unrecove
   await w.start();
   try {
     await w.setupOrgAndElection();
-    const key = writeJson(w.dir, 'owner.json', { format: 'qv-voter-key/v1', seed: bytesToHex(w.owner.secretKey), public_key: bytesToHex(w.owner.publicKey) });
+    const key = writePrivateJson(w.dir, 'owner.json', { format: 'qv-voter-key/v1', seed: bytesToHex(w.owner.secretKey), public_key: bytesToHex(w.owner.publicKey) });
     const out = join(w.dir, 'invitations.json');
     const args = ['online', 'invites-create', '--server', w.base, '--id', w.electionId, '--count', '2', '--out', out,
       '--audience', w.audience, '--key', key, '--idempotency-key', 'issue-fixture-001', '--json'];

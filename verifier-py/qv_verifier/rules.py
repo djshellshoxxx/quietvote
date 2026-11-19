@@ -21,11 +21,11 @@ def quorum_met(quorum: dict | None, V: int, roll_size: int) -> bool:
     raise QVError("E_RULES", "unknown quorum type")
 
 
-def _yes_no(contest: dict, counts: dict, V: int, roll_size: int) -> dict:
+def _yes_no(contest: dict, counts: dict, V: int) -> dict:
     rule = contest["rule"]
     y, n_ = counts.get("yes", 0), counts.get("no", 0)
     basis = rule["basis"]
-    base = {"yes+no": y + n_, "counted": V, "roll": roll_size}.get(basis)
+    base = {"yes+no": y + n_, "counted": V}.get(basis)
     if base is None:
         raise QVError("E_RULES", f"unknown basis {basis!r}")
     if base == 0:
@@ -80,11 +80,15 @@ def _multi(contest: dict, counts: dict) -> dict:
 
 
 def evaluate(quorum: dict | None, contest: dict, counts: dict, participation: int, roll_size: int) -> dict:
+    # The public rules adapter bypasses manifest validation. ADR-027 / N-27's
+    # reserved threshold must not acquire an outcome through unmet quorum either.
+    if contest["method"] == "yes-no" and contest["rule"]["basis"] not in ("yes+no", "counted"):
+        raise QVError("E_RULES", "threshold basis is not supported in suite v1")
     met = quorum_met(quorum, participation, roll_size)
     if not met:
         outcome = {"kind": "no-quorum"}
     elif contest["method"] == "yes-no":
-        outcome = _yes_no(contest, counts, participation, roll_size)
+        outcome = _yes_no(contest, counts, participation)
     else:
         outcome = _multi(contest, counts)
     return {"contest": contest["id"], "participation": participation, "quorum_met": met, "outcome": outcome}

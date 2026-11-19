@@ -1,3 +1,4 @@
+import { writePrivateFixture, writePrivateJson } from './private-fixture.ts';
 // AI-assisted audit (docs/audit/board-cli.md): regression, mutation and fuzz tests for BC-* findings in the CLI.
 import assert from 'node:assert/strict';
 import { chmodSync, existsSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -101,7 +102,7 @@ test('BC-05: key files that are JSON null / arrays / scalars are a usage error, 
   const dir = tmp();
   for (const [i, v] of ['null', '[]', '7', '"s"', 'true'].entries()) {
     const f = join(dir, `k${i}.json`);
-    writeFileSync(f, v);
+    writePrivateFixture(f, v);
     const r = await qv(['ballot', 'encrypt', '--election', TINY, '--key', f, '--out', join(dir, `o${i}`)]);
     assert.ok([2, 4].includes(r.code), `${v}: ${r.code} ${r.err}`);
     assert.ok(!/qv: internal error/.test(r.err), `${v}: ${r.err}`);
@@ -171,9 +172,9 @@ test('mutation: tampered QVKEY1 / plain key files are rejected, never accepted a
   const dir = tmp();
   const seed = '2b'.repeat(32);
   const pw = join(dir, 'pw');
-  writeFileSync(pw, PASS + '\n');
+  writePrivateFixture(pw, PASS + '\n');
   const sf = join(dir, 'seed');
-  writeFileSync(sf, seed);
+  writePrivateFixture(sf, seed);
   const k = join(dir, 'k.json');
   assert.equal((await qv(['keygen', '--out', k, '--seed-file', sf, '--passphrase-file', pw, ...FAST])).code, 0);
   const c = JSON.parse(readFileSync(k, 'utf8'));
@@ -189,7 +190,7 @@ test('mutation: tampered QVKEY1 / plain key files are rejected, never accepted a
     { ...c, kdf: 'pbkdf2' }, { ...c, aead: 'none' }, { ...c, extra: 1 }, { ...c, ct: c.ct.slice(2) }, { ...c, m: '19456' },
   ];
   for (const [i, m] of muts.entries()) {
-    const f = writeJson(dir, `mut${i}.json`, m);
+    const f = writePrivateJson(dir, `mut${i}.json`, m);
     const res = await qv([...base, '--key', f, '--out', join(dir, `o${i}`)]);
     assert.ok([2, 4].includes(res.code) || res.code === 1, `mutation ${i}: code ${res.code} ${res.err}`);
     assert.ok(!existsSync(join(dir, `o${i}`)), `mutation ${i} produced a ballot`);
@@ -199,7 +200,7 @@ test('mutation: tampered QVKEY1 / plain key files are rejected, never accepted a
   const kp0 = ed25519Keypair(Uint8Array.from(Buffer.from(seed, 'hex')));
   const plain = { format: 'qv-voter-key/v1', public_key: hexOf(kp0.publicKey), seed };
   for (const [i, m] of [{ ...plain, public_key: hexFlip(plain.public_key) }, { ...plain, seed: seed.toUpperCase() }, { ...plain, seed: seed.slice(2) }, { ...plain, format: 'x' }].entries()) {
-    const res = await qv(['ballot', 'encrypt', '--election', TINY, '--key', writeJson(dir, `p${i}.json`, m), '--out', join(dir, `po${i}`)]);
+    const res = await qv(['ballot', 'encrypt', '--election', TINY, '--key', writePrivateJson(dir, `p${i}.json`, m), '--out', join(dir, `po${i}`)]);
     assert.ok([2, 4].includes(res.code), `plain mutation ${i}: ${res.code}`);
   }
 });
@@ -208,9 +209,9 @@ test('secrets: no command echoes the seed, the passphrase or the reveal randomne
   const dir = tmp();
   const seed = '33'.repeat(32);
   const sf = join(dir, 'seed');
-  writeFileSync(sf, seed);
+  writePrivateFixture(sf, seed);
   const pw = join(dir, 'pw');
-  writeFileSync(pw, PASS + '\n');
+  writePrivateFixture(pw, PASS + '\n');
   const k = join(dir, 'k.json');
   const a = await qv(['keygen', '--out', k, '--seed-file', sf, '--passphrase-file', pw, '--json', ...FAST]);
   const b = await qv(['keygen', '--out', join(dir, 'k2.json'), '--seed-file', sf, '--no-passphrase', '--json']);

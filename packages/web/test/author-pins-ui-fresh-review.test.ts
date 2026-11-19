@@ -38,7 +38,7 @@ class Element {
   }
 }
 const root = new Element(), html = new Element('html'), body = new Element('body'), events = new Element();
-const place = { pathname: '/verify', search: '', hash: '', href: 'https://review.invalid/verify' };
+const place = new URL('https://review.invalid/verify');
 Object.defineProperty(globalThis, 'document', { configurable: true, value: {
   documentElement: html, body, hidden: false,
   createElement: (tag: string) => new Element(tag), createTextNode: (text: string) => { const node = new Element('#text'); node.textContent = text; return node; },

@@ -289,6 +289,15 @@ export class BallotController {
     this.discardSecrets();
   }
 
+  /** In-page navigation retains only an unresolved retry, without its choices or audit reveal. */
+  retainPendingRetry(): boolean {
+    this.lockSession();
+    this.lastAudit = undefined;
+    const keep = this.state.kind === 'casting' || (this.state.kind === 'failed' && this.state.retryCast);
+    if ('selections' in this.state) this.state = { ...this.state, selections: {} };
+    return keep;
+  }
+
   /** Zeroises randomness and drops cached bytes. Safe to call repeatedly (also on lock / page hide). */
   discardSecrets(): void {
     wipe(this.xi);

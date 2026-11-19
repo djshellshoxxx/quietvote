@@ -1,9 +1,10 @@
-import { closeSync, constants as fsc, fchmodSync, fstatSync, openSync, readFileSync, readSync, writeSync } from 'node:fs';
+import { closeSync, constants as fsc, fstatSync, openSync, readFileSync, readSync } from 'node:fs';
 import { bytesToHex, hexToBytes, pointFromBytes } from '@quietvote/crypto';
 import { loadBundle, type LoadedBundle } from '@quietvote/verifier';
 import { manifestHash, validateManifest, verifyElection, type ElectionParams, type Manifest, type VerificationReport } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, type Parsed } from './args.ts';
 import type { Io } from './io.ts';
+import { readPrivateFile as readPrivateSnapshot, writePrivateFileSync } from './private-files.ts';
 
 export function readFile(path: string): Uint8Array {
   try {
@@ -20,6 +21,11 @@ export function readJson(path: string): unknown {
     if (e instanceof InputError) throw e;
     throw new InputError(`${path} is not valid JSON`);
   }
+}
+
+export async function readPrivateFile(path: string, max = 64 * 1024): Promise<Uint8Array> {
+  try { return await readPrivateSnapshot(path, max); }
+  catch { throw new InputError('input must be a bounded owner-private regular file'); }
 }
 
 /** Public election context is a regular, bounded snapshot; never wait for FIFO/device input. */
@@ -95,23 +101,11 @@ export function pinnedHash(p: Parsed): string | undefined {
 }
 
 /**
- * Writes a secret file with mode 0600. Unlike writeFileSync's `mode`, which only applies when the file is created, the mode is
- * enforced on the open descriptor, so overwriting (--force) a pre-existing loose-permission file does not leak the secret.
- * Without `overwrite` the file must not exist (O_EXCL); with it, symlinks are refused (O_NOFOLLOW) so the secret cannot be redirected.
+ * Publishes a fully written owner-private file (0600 on POSIX, protected owner-only DACL on Windows).
+ * Without overwrite, publication is exclusive. Replacement never writes secret bytes through an old file or alias.
  */
 export function writeSecretFile(path: string, data: string, overwrite: boolean): void {
-  const flags = fsc.O_WRONLY | fsc.O_CREAT | (overwrite ? fsc.O_TRUNC | (fsc.O_NOFOLLOW ?? 0) : fsc.O_EXCL);
-  const fd = openSync(path, flags, 0o600);
-  try {
-    try {
-      fchmodSync(fd, 0o600);
-    } catch (e) {
-      if (process.platform !== 'win32') throw e;
-    }
-    writeSync(fd, data);
-  } finally {
-    closeSync(fd);
-  }
+  writePrivateFileSync(path, data, overwrite);
 }
 
 export function printJson(io: { out(s: string): void }, v: unknown): void {
@@ -127,7 +121,7 @@ export const PASSPHRASE_FLAGS = { 'passphrase-file': 'value', 'passphrase-stdin'
 export async function getPassphrase(p: Parsed, io: Io, label: string, confirm: boolean, stdinTaken: boolean): Promise<string | undefined> {
   if (p.has('passphrase-file') && p.has('passphrase-stdin')) throw new UsageError('use either --passphrase-file or --passphrase-stdin');
   const line = (b: Uint8Array): string => new TextDecoder().decode(b).split(/\r?\n/)[0] ?? '';
-  if (p.has('passphrase-file')) return line(readFile(p.get('passphrase-file')!));
+  if (p.has('passphrase-file')) return line(await readPrivateFile(p.get('passphrase-file')!));
   if (p.has('passphrase-stdin')) {
     if (stdinTaken) throw new UsageError('stdin cannot carry both the seed and the passphrase');
     return line(await io.stdin());

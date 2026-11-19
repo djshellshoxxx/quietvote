@@ -167,7 +167,7 @@ stateDiagram-v2
   FAILED --> ARCHIVED
 ```
 
-**Conformance note (QV-ADR-022, QV-ADR-021).** The state machine above is extended by the board-level states `PAUSED` (= `HALTED` here), `STALLED` (from `TALLYING`, fewer than t trustees), and `INVALIDATED` (= `ANNULLED` via signed `INVALIDATE` entry); QV-09/QV-18 name `SCHEDULED` as `READY`, `PUBLISHED` as `TALLIED`, and pre-open `FAILED` as `ABORTED`. Control entries `pause`/`resume`/`invalidate` are signed by stewards (never the operator). `blank_allowed` is presentation-only: in QV-16 suite v1 an all-zero (blank) ballot is always valid and counts as participation. Threshold `base` values map to QV-16 `basis`: `yes_no`→`yes+no`, `all_cast`→`counted`, `eligible`→`roll`; `quorum_bp` is expressed in the manifest as `quorum {type:fraction, num:quorum_bp, den:10000, basis:roll}`.
+**Conformance note (QV-ADR-022, QV-ADR-021).** The state machine above is extended by the board-level states `PAUSED` (= `HALTED` here), `STALLED` (from `TALLYING`, fewer than t trustees), and `INVALIDATED` (= `ANNULLED` via signed `INVALIDATE` entry); QV-09/QV-18 name `SCHEDULED` as `READY`, `PUBLISHED` as `TALLIED`, and pre-open `FAILED` as `ABORTED`. Control entries `pause`/`resume`/`invalidate` are signed by stewards (never the operator). `blank_allowed` is presentation-only: in QV-16 suite v1 an all-zero (blank) ballot is always valid and counts as participation. Threshold `base` values map to QV-16 `basis`: `yes_no`→`yes+no`, `all_cast`→`counted`; the broader `eligible`→`roll` threshold mapping is reserved beyond suite v1 by QV-ADR-027 / N-27. `quorum_bp` is expressed in the manifest as `quorum {type:fraction, num:quorum_bp, den:10000, basis:roll}`.
 
 ### 5.3 Transition table
 
@@ -227,7 +227,7 @@ All computation uses integers (BigInt in code). Let `N` = roll size in manifest;
 `quorum_met ⇔ V × 10000 ≥ quorum_bp × N`. If not met: outcome `NO_QUORUM` (all contests inconclusive; counts are still published). Edge: N = 0 invalid manifest.
 
 ### 7.2 Contest outcomes (yes/no method)
-Let `Y`, `Nn`, `A` = counts of YES, NO, ABSTAIN-or-blank ballots for the contest. Base `B` by `threshold.base`: `yes_no` → `Y+Nn`; `all_cast` → `Y+Nn+A`; `eligible` → `N`. Passes iff `Y × den  CMP  num × B` where CMP is `>` for `gt` and `≥` for `gte`. If `B = 0` the contest fails (`NO_VOTES`).
+Let `Y`, `Nn`, `A` = counts of YES, NO, ABSTAIN-or-blank ballots for the contest. Base `B` by `threshold.base`: `yes_no` → `Y+Nn`; `all_cast` → `Y+Nn+A`; `eligible` → `N`. Passes iff `Y × den  CMP  num × B` where CMP is `>` for `gt` and `≥` for `gte`. If `B = 0` the contest fails (`NO_VOTES`). The `eligible` threshold and examples using it describe the broader group-rule vocabulary; QV-ADR-027 / N-27 reserves that threshold for a later suite. Suite-v1 manifests retain `yes+no` and `counted` thresholds and roll-based participation quorum.
 
 ### 7.3 Multi-option methods and ties
 Single-choice, approval, k-of-n: options ranked by count; the top `w` (`winners` param) win. Ties at the cutoff are broken by the manifest `tie_break`:

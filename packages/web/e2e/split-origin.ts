@@ -99,7 +99,7 @@ test('split-origin configuration routes enrollment, live recovery, ballot, recei
     const rt = (await w.server.pool.get(w.electionId))!;
     rt.edb.db.prepare("UPDATE election SET access='link', read_key_hash=?").run(sha256(utf8(`QV-READKEY-v1\0${readKey}`)));
     await page.clock.setSystemTime(w.clock);
-    await page.goto(`${base}/key${fragment(selected)}`);
+    assert.equal(await page.goto(`${base}/key${fragment(selected)}`), null, 'removing the invitation stays in the same document');
     await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
     await page.getByRole('button', { name: 'Unlock key', exact: true }).click();
     await page.getByText('You are on the voter list.', { exact: true }).waitFor();

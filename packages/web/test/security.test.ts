@@ -47,6 +47,7 @@ test('WV-4: the log key and origin must come from the signature-verified manifes
   const evilKey = b64uEncode(new Uint8Array(32).fill(9));
   const swapped = bindServerLog(m, { logPkB64u: evilKey, origin: el.origin });
   assert.equal(swapped.ok, false);
+  for (const logPkB64u of [undefined, null]) assert.deepEqual(bindServerLog(m, { logPkB64u, origin: el.origin }), swapped);
   const zero = bindServerLog(m, { logPkB64u: 'not-base64!', origin: el.origin });
   assert.equal(zero.ok, false);
   const wrongOrigin = bindServerLog(m, { logPkB64u: el.log_pk, origin: 'quietvote/v1/other' });

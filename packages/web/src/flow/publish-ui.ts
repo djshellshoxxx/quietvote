@@ -44,8 +44,9 @@ export interface PublishRun {
   now?: (() => number) | undefined;
   /** B3-28: key-store dependencies for the unlock (carries the KDF cost confirm). Defaults to the real key store. */
   deps?: KeystoreDeps | undefined;
-  /** Test seams; the defaults are the real key store and the real ApiClient. */
+  /** Optional key loader; the UI supplies a generation-guarded loader for document storage changes. */
   unlock?: ((passphrase: string) => Promise<Signer>) | undefined;
+  /** Test seam; the default is the real ApiClient. */
   makeClient?: ((o: ClientOptions) => PublishClient & Pick<ApiClient, 'instance'>) | undefined;
 }
 

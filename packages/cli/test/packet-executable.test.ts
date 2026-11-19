@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Shipped coordinator/voter processes; World supplies only operator enrollment, held registration and trustee operations.
+import { writePrivateFixture } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -17,7 +18,7 @@ test('shipped coordinator and voter executables generate, relay and verify a thr
   w.clock = Date.now();
   const passphrase = 'G8!synthetic-packet-Q7$falcon';
   const passFile = join(w.dir, 'passphrase.txt');
-  writeFileSync(passFile, passphrase + '\n', { mode: 0o600 });
+  writePrivateFixture(passFile, passphrase + '\n');
   let serial = 0;
   const path = (suffix: string) => join(w.dir, `${serial++}-${suffix}`);
   const json = (name: string, value: unknown) => { const p = path(name); writeFileSync(p, JSON.stringify(value)); return p; };
@@ -31,7 +32,7 @@ test('shipped coordinator and voter executables generate, relay and verify a thr
   };
   const keys = new Map<string, string>();
   const provision = async (key: Ed25519Keypair) => {
-    const seed = path('seed'); writeFileSync(seed, key.secretKey, { mode: 0o600 });
+    const seed = path('seed'); writePrivateFixture(seed, key.secretKey);
     const out = path('key');
     const result = await cli(['keygen', '--seed-file', seed, '--passphrase-file', passFile, '--out', out]);
     assert.equal(result['public_key'], bytesToHex(key.publicKey));

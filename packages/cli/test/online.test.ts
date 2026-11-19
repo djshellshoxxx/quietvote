@@ -1,3 +1,4 @@
+import { writePrivateJson } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
@@ -11,7 +12,7 @@ import { signRecord } from '@quietvote/protocol';
 import { T_VOTING, World } from '../../server/test/helpers/world.ts';
 import { qv, tmp, writeJson } from './helpers.ts';
 
-const keyFile = (w: World): string => writeJson(w.dir, 'owner.key', {
+const keyFile = (w: World): string => writePrivateJson(w.dir, 'owner.key', {
   format: 'qv-voter-key/v1', public_key: bytesToHex(w.owner.publicKey), seed: bytesToHex(w.owner.secretKey),
 });
 

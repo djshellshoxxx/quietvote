@@ -17,7 +17,7 @@ import {
 } from './bundle.ts';
 import { computeR1, markerBody, markerSeq, mergeEntries, takeDkg, uniqueBy, type ImportReport } from './ceremonylog.ts';
 import { TrusteeError } from './errors.ts';
-import { exists, atomicWrite, lockPath, readFile, shred, withLock } from './fsutil.ts';
+import { exists, atomicWrite, lockPath, readSecretFile, shred, withLock } from './fsutil.ts';
 import { ledgerPath, readLedger, writeLedger } from './ledger.ts';
 import { lstat, realpath } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
@@ -282,7 +282,7 @@ export class Trustee {
     this.assertUsable();
     try {
       await withLock(this.path, async () => {
-        const cur = (await exists(this.path)) ? H(sha256(new Uint8Array(await readFile(this.path)))) : undefined;
+        const cur = (await exists(this.path)) ? H(sha256(await readSecretFile(this.path))) : undefined;
         if (cur !== this.sealedHash) throw new TrusteeError('STATE', 'BUNDLE_CHANGED', 'the bundle file changed on disk since it was opened (another qv-trustee process?); nothing was written. Re-run the command');
         if (opts.ledger === true) await this.syncLedger();
         this.sealedHash = H(sha256(await writeBundle(this.path, this.d, this.pass, this.deps)));
@@ -350,7 +350,7 @@ export class Trustee {
     // commit also saves the unreleased dealing for recovery: persistence alone is not release authorization.
     this.need(...selected.states);
     return withLock(this.path, async () => {
-      const current = H(sha256(new Uint8Array(await readFile(this.path))));
+      const current = H(sha256(await readSecretFile(this.path)));
       if (current !== this.sealedHash) throw new TrusteeError('STATE', 'BUNDLE_CHANGED', 'the bundle changed; reopen before exporting');
       // The server's existing dec-shares format carries the same proofs as the gated, ledger-backed tally release.
       // No ciphertext or counted set is accepted here, and no new decryption is performed.

@@ -8,12 +8,14 @@ import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs 
 import { PASSPHRASE_FLAGS, electionContext, hex, isHex, pinnedHash, printJson, readJson } from './common.ts';
 import { loadVoterKey } from './cmd-keygen.ts';
 import { EXIT, type Io } from './io.ts';
+import { writePrivateFileSync } from './private-files.ts';
 
 export const AUDIT_FORMAT = 'qv-ballot-audit/v1';
 
 function writeOut(path: string, data: string, secret: boolean, io: Io): void {
   try {
-    writeFileSync(path, data, { mode: secret ? 0o600 : 0o644, flag: 'wx' });
+    if (secret) writePrivateFileSync(path, data);
+    else writeFileSync(path, data, { mode: 0o644, flag: 'wx' });
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
     throw new InputError(code === 'EEXIST' ? `${path} exists; refusing to overwrite` : `cannot write ${path}: ${code ?? 'error'}`);

@@ -179,7 +179,7 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
     const pass = async (fileOpt: string, envKey: string, q: string): Promise<string> => {
       const f = o.get(fileOpt) ?? env[envKey];
       if (f === undefined) return io.promptSecret(q);
-      const raw = await readSecretFile(f); // refuses group/other-readable passphrase files (QV-17 §6.5)
+      const raw = await readSecretFile(f, 64 * 1024); // same-handle owner-private validation (QV-17 §6.5)
       try {
         return new TextDecoder().decode(raw).replace(/\r?\n$/, '');
       } finally {

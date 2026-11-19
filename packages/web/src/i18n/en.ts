@@ -11,6 +11,15 @@ const g = (message: string, description: string): CatalogEntry => ({ message, de
 const n = (message: string, description: string): CatalogEntry => ({ message, description, sensitivity: 'normal' });
 
 export const EN = {
+  "qv.storage.sessionTitle": n("Session-only storage", "Explicit page-session storage: sessionTitle."),
+  "qv.storage.choose": n("Use this page only", "Explicit page-session storage: choose."),
+  "qv.storage.retry": n("Retry browser storage", "Explicit page-session storage: retry."),
+  "qv.storage.loss": n("This option keeps data in this page's memory. Reloading, closing the tab or leaving can make its keys, receipts and pending ballots unavailable. Leaving does not guarantee erasure; use Clear this page session to clear its data from the app. Other saved browser data may be inaccessible and will not be cleared. Save your key file, ballot code and receipt file before leaving.", "Explicit page-session storage: loss and clearing."),
+  "qv.storage.backup": n("Download your key file before continuing. Keep the file and its passphrase so you can unlock your key after this page closes.", "Explicit page-session storage: backup."),
+  "qv.storage.clear": n("Clear this page session", "Explicit page-session storage: clear."),
+  "qv.storage.cleared": n("This page session was cleared. Saved browser data was not cleared.", "Explicit page-session storage: cleared."),
+  "qv.storage.blocked": n("A ballot has started. Keep this page open and use its existing retry or receipt check. Storage cannot be changed in this page.", "Explicit page-session storage: blocked."),
+  "qv.storage.saveCode": n("Save ballot code", "Explicit page-session storage: saveCode."),
   "qv.admin.help": n("Use the saved manifest hash to check this election. Review each public packet before sending. Trustees keep their secret keys in the trustee tool. Content checks do not establish board freshness or witness approval.", "Organizer console: help"),
   "qv.admin.pin": n("Saved manifest hash (64 hexadecimal characters)", "Organizer console: pin"),
   "qv.admin.action": n("Organizer action", "Organizer console: action"),

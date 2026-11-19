@@ -4,6 +4,15 @@
 import type { MessageKey } from '../en.ts';
 
 export const PT_BR = {
+  "qv.storage.sessionTitle": "Armazenamento apenas nesta sessão",
+  "qv.storage.choose": "Usar apenas esta página",
+  "qv.storage.retry": "Tentar o armazenamento do navegador novamente",
+  "qv.storage.loss": "Esta opção mantém os dados na memória desta página. Recarregar, fechar a aba ou sair pode tornar suas chaves, recibos e cédulas pendentes indisponíveis. Sair não garante que os dados sejam apagados; use Limpar a sessão desta página para removê-los do aplicativo. Outros dados salvos no navegador podem estar inacessíveis e não serão apagados. Salve seu arquivo de chave, o código da cédula e o arquivo de recibo antes de sair.",
+  "qv.storage.backup": "Baixe seu arquivo de chave antes de continuar. Guarde o arquivo e sua frase secreta para desbloquear a chave depois que esta página for fechada.",
+  "qv.storage.clear": "Limpar a sessão desta página",
+  "qv.storage.cleared": "A sessão desta página foi limpa. Os dados salvos no navegador não foram apagados.",
+  "qv.storage.blocked": "Uma cédula já foi iniciada. Mantenha esta página aberta e use sua opção de tentar novamente ou conferir o recibo. O armazenamento não pode ser alterado nesta página.",
+  "qv.storage.saveCode": "Salvar o código da cédula",
   "qv.device.unconfirmed": "Não foi possível confirmar as configurações salvas.",
   "qv.election.rulesAck": "Li estas regras e limites de privacidade",
   "qv.election.rulesAckHint": "Opcional. Esta anotação fica neste dispositivo.",

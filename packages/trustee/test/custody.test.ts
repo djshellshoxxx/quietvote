@@ -1,3 +1,4 @@
+import { writePrivateFixture } from './helpers/private-file.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, linkSync, mkdirSync, mkdtempSync, realpathSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -148,7 +149,7 @@ test('custody: a destroyed live path refuses an older sealed bundle copied back 
     const trustee = await Trustee.keygen(path, PASS, deps);
     const old = readFileSync(path);
     await trustee.destroy({}, '');
-    writeFileSync(path, old, { mode: 0o600 });
+    writePrivateFixture(path, old);
     await assert.rejects(Trustee.open(path, PASS, deps), { code: 'DESTROYED' });
     await assert.rejects(Trustee.restore(path, PASS, path, PASS, deps), { code: 'DESTROYED' });
   } finally { rmSync(dir, { recursive: true, force: true }); }

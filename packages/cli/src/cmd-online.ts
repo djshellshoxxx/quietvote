@@ -1,10 +1,11 @@
 // Thin HTTP adapters: the server remains authoritative for validation, authorization and lifecycle transitions.
-import { closeSync, constants, existsSync, fstatSync, fsyncSync, ftruncateSync, lstatSync, openSync, readSync, writeFileSync, writeSync } from 'node:fs';
+import { closeSync, constants, existsSync, fstatSync, openSync, readSync } from 'node:fs';
 import { authorKeyId, b64u, unb64u, signRequest } from '@quietvote/board';
 import { ed25519Sign, parseQvJson, sha256, wipe } from '@quietvote/crypto';
 import { logOrigin, registrationMessage, rollRoot } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs, type FlagSpec, type Parsed } from './args.ts';
-import { PASSPHRASE_FLAGS, isHex, printJson } from './common.ts';
+import { PASSPHRASE_FLAGS, isHex, printJson, readPrivateFile } from './common.ts';
+import { reservePrivateOutput, writePrivateFileSync, type PrivateOutput } from './private-files.ts';
 import { loadVoterKey } from './cmd-keygen.ts';
 import { EXIT, type Io } from './io.ts';
 
@@ -76,7 +77,7 @@ function pinnedRollBody<T>(body: T): T {
   return body;
 }
 
-async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void): Promise<Uint8Array> {
+async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void | Promise<void>): Promise<Uint8Array> {
   const base = serverUrl(p);
   const timeout = p.get('timeout-ms') ?? '20000';
   if (!/^\d+$/.test(timeout) || !Number.isSafeInteger(Number(timeout)) || Number(timeout) < 1 || Number(timeout) > 120000) throw new UsageError('--timeout-ms must be an integer from 1 to 120000');
@@ -84,7 +85,7 @@ async function request(p: Parsed, io: Io, method: string, path: string, body?: u
   const headers: Record<string, string> = { accept: 'application/json' };
   if (bytes.length) headers['content-type'] = 'application/json';
   if (p.has('read-key-file')) {
-    const key = new TextDecoder().decode(readLimited(needFlag(p, 'read-key-file'), 128)).trim();
+    const key = new TextDecoder().decode(await readPrivateFile(needFlag(p, 'read-key-file'), 128)).trim();
     if (!/^[A-Za-z0-9_-]{22}$/.test(key)) throw new InputError('read-key file must contain one base64url read key');
     headers['qv-read-key'] = key;
   }
@@ -104,7 +105,7 @@ async function request(p: Parsed, io: Io, method: string, path: string, body?: u
   }
   // A mutation's local reservation can change while credentials are unlocked.
   // Run the caller's check after every await above and before sending any bytes.
-  beforeSend?.();
+  await beforeSend?.();
   try {
     const response = await fetch(new URL(path, base), {
       method, headers, redirect: 'error', signal: AbortSignal.timeout(Number(timeout)),
@@ -178,7 +179,7 @@ export async function cmdOnlineEnroll(argv: string[], io: Io): Promise<number> {
   }
   const inviteFile = needFlag(p, 'invite-file');
   let code: string;
-  try { code = new TextDecoder('utf-8', { fatal: true }).decode(readLimited(inviteFile, 128, true)).trim(); }
+  try { code = new TextDecoder('utf-8', { fatal: true }).decode(await readPrivateFile(inviteFile, 128)).trim(); }
   catch (e) { if (e instanceof InputError) throw e; throw new InputError('invite file must be UTF-8 text'); }
   const token = unb64u(code);
   if (!token || token.length !== 16 || b64u(token) !== code) throw new InputError('invite file must contain one canonical 16-byte base64url token');
@@ -222,37 +223,15 @@ export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<nu
   if (!election || election['election_id'] !== id || election['origin'] !== logOrigin({ election_id: id }) || election['registration_scheme'] !== 'hashed-pop-v1') {
     throw new FailError('election does not support hashed-pop-v1 invitation issuance; inspect registration migration status');
   }
-  let fd: number;
-  try { fd = openSync(out, 'wx', 0o600); }
+  let output: PrivateOutput;
+  try { output = await reservePrivateOutput(out, 262144); }
   catch { throw new InputError('cannot reserve invitation output; no invitations were requested'); }
-  const privateOutput = (): boolean => {
-    try {
-      const held = fstatSync(fd, { bigint: true });
-      return held.isFile() && held.nlink === 1n && (process.platform === 'win32' || (held.mode & 0o077n) === 0n);
-    } catch { return false; }
-  };
-  const boundOutput = (): boolean => {
-    try {
-      const held = fstatSync(fd, { bigint: true }), named = lstatSync(out, { bigint: true });
-      return privateOutput() && named.isFile() && named.dev === held.dev && named.ino === held.ino;
-    } catch { return false; }
-  };
-  const save = (bytes: Uint8Array): void => {
-    if (!privateOutput()) throw new Error('private output lost');
-    let offset = 0;
-    while (offset < bytes.length) {
-      const wrote = writeSync(fd, bytes, offset, bytes.length - offset, offset);
-      if (wrote === 0) throw new Error('short write');
-      offset += wrote;
-    }
-    ftruncateSync(fd, bytes.length); fsyncSync(fd);
-  };
   try {
-    try { save(new TextEncoder().encode(JSON.stringify({ format: 'qv-invite-issuance/pending', election_id: id, idempotency_key: idem, count }) + '\n')); }
+    try { await output.save(new TextEncoder().encode(JSON.stringify({ format: 'qv-invite-issuance/pending', election_id: id, idempotency_key: idem, count }) + '\n')); }
     catch { throw new InputError('cannot initialize invitation output; no invitations were requested'); }
     let response: Uint8Array;
-    try { response = await request(p, io, 'POST', `${path}/invites`, { count }, true, 262144, () => {
-      if (!boundOutput()) throw new InputError('reserved invitation output changed; no invitations were requested');
+    try { response = await request(p, io, 'POST', `${path}/invites`, { count }, true, 262144, async () => {
+      if (!await output.bound()) throw new InputError('reserved invitation output changed; no invitations were requested');
     }); }
     catch (e) {
       // Server error bodies are untrusted and could echo a newly issued bearer
@@ -260,9 +239,9 @@ export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<nu
       if (e instanceof FailError) throw new FailError('invitation issuance was not confirmed; keep the reserved output and inspect server state before any retry');
       throw e;
     }
-    try { save(response); }
+    try { await output.save(response); }
     catch { wipe(response); throw new FailError('invitation issuance may have succeeded but its response could not be fully saved; inspect the reserved private file and server state; do not blindly retry'); }
-    if (!boundOutput()) {
+    if (!await output.bound()) {
       wipe(response);
       throw new FailError('invitation output binding lost after issuance; do not trust the requested pathname or blindly retry; inspect the original private file and server state');
     }
@@ -284,10 +263,10 @@ export async function cmdOnlineInvitesCreate(argv: string[], io: Io): Promise<nu
     } catch {
       throw new FailError('invitation issuance returned an invalid or redacted response; its bytes are saved only in the private output file; inspect server state before retrying');
     } finally { wipe(response); }
-    if (!boundOutput()) throw new FailError('invitation output binding lost after issuance; inspect server state and do not blindly retry');
+    if (!await output.bound()) throw new FailError('invitation output binding lost after issuance; inspect server state and do not blindly retry');
     printJson(io, { file: out, election_id: id, count, invite_ids: ids });
     return EXIT.ok;
-  } finally { closeSync(fd); }
+  } finally { await output.close(); }
 }
 export async function cmdOnlineElectionCreate(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { ...AUTH, org: 'value', title: 'value', access: 'value', 'idempotency-key': 'value', 'pinned-roll': 'value' });
@@ -334,7 +313,7 @@ export async function cmdOnlineElectionExport(argv: string[], io: Io): Promise<n
   const format = p.get('format') ?? 'qvb';
   if (format !== 'qvb' && format !== 'json') throw new UsageError('--format must be qvb or json');
   const bytes = await request(p, io, 'GET', `${path}/export.${format}`);
-  try { writeFileSync(out, bytes, { flag: 'wx', mode: 0o600 }); }
+  try { writePrivateFileSync(out, bytes); }
   catch { throw new InputError('cannot create export file; existing files are never overwritten'); }
   printJson(io, { file: out, bytes: bytes.length, format, verified: false });
   return EXIT.ok;
@@ -355,7 +334,7 @@ export async function cmdOnlineElectionTallyDraft(argv: string[], io: Io): Promi
     if (value?.body?.type !== 'tally') throw new Error('missing tally body');
     body = value.body;
   } catch { throw new FailError('server returned a malformed tally draft'); }
-  try { writeFileSync(out, JSON.stringify(body) + '\n', { flag: 'wx', mode: 0o600 }); }
+  try { writePrivateFileSync(out, JSON.stringify(body) + '\n'); }
   catch { throw new InputError('cannot create draft file; existing files are never overwritten'); }
   printJson(io, { file: out, verified: false });
   return EXIT.ok;

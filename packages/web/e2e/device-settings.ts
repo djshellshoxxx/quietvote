@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// @verifies QV-10-REQ-011, QV-13-REQ-003, QV-13-REQ-060, QV-13-REQ-063, QV-13-REQ-092
+// @verifies QV-26-REQ-011, QV-10-REQ-020, QV-19-REQ-008, QV-10-REQ-011, QV-13-REQ-003, QV-13-REQ-060, QV-13-REQ-063, QV-13-REQ-092
 // Real production bundle, IndexedDB transactions and four-method ballots. No production test hooks.
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -10,6 +10,7 @@ import { streamRng } from '@quietvote/crypto';
 import { buildSite, csp } from '../src/build/site.ts';
 import { defaultDeps, serializeContainer, wrapSeed, FLOOR_PARAMS } from '../src/key/keystore.ts';
 import type { DeviceSettings } from '../src/key/storage.ts';
+import { parseBallotCodeInput } from '../src/flow/receipt-code.ts';
 import { FakeBoard } from '../test/helpers/fake-board.ts';
 import { setup } from '../../protocol/test/helpers/sim.ts';
 import { launchBrowser } from './browser.ts';
@@ -278,6 +279,83 @@ try {
       assert.equal(await shared(page).isChecked(), false); assert.equal(await remember(page).isChecked(), true);
     });
   } finally { await context.close(); }
+  await step('explicit page-session storage survives SPA retry navigation, requires backup, and is lost on reload', async () => {
+    const context = await browser.newContext();
+    try {
+      await context.addInitScript(() => {
+        const state = window as unknown as { blockedOpens: number };
+        state.blockedOpens = 0;
+        IDBFactory.prototype.open = function (): IDBOpenDBRequest {
+          state.blockedOpens++;
+          throw new DOMException('Storage refused for the page-session journey', 'SecurityError');
+        };
+      });
+      const page = await context.newPage(); watch(page); await page.goto(`${base}/key`);
+      await page.getByRole('button', { name: 'Use this page only', exact: true }).waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Create key', exact: true }).count(), 0);
+      await page.getByRole('button', { name: 'Retry browser storage', exact: true }).click();
+      await page.getByRole('button', { name: 'Use this page only', exact: true }).click();
+      await page.getByRole('heading', { name: 'Session-only storage', exact: true }).waitFor();
+      await idle(page);
+      const inaccessible = await page.evaluate(() => (window as unknown as { blockedOpens: number }).blockedOpens);
+      const postsBefore = board.requests.filter((request) => request.method === 'POST').length;
+      await page.getByLabel('Use a key file I saved before').check();
+      await page.getByLabel('Key file', { exact: true }).setInputFiles(keyFile);
+      await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
+      await page.getByRole('button', { name: 'Create key', exact: true }).click();
+      await page.getByRole('button', { name: 'Download key file', exact: true }).waitFor({ timeout: 30000 });
+      await page.getByRole('link', { name: 'Vote', exact: true }).first().click();
+      assert.equal(await page.getByRole('button', { name: 'Review my choices', exact: true }).count(), 0);
+      await page.getByRole('link', { name: 'Download key file', exact: true }).click();
+      await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
+      await page.getByRole('button', { name: 'Unlock key', exact: true }).click();
+      await page.getByRole('button', { name: 'Download key file', exact: true }).waitFor({ timeout: 30000 });
+      assert.equal(board.requests.filter((request) => request.method === 'POST').length, postsBefore);
+      const backupEvent = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download key file', exact: true }).click();
+      await (await backupEvent).saveAs(join(dist, 'session-backup.qvkey'));
+      assert.deepEqual(JSON.parse(readFileSync(join(dist, 'session-backup.qvkey'), 'utf8')), key.container);
+      await page.getByText('You are on the voter list.', { exact: true }).waitFor();
+      await remember(page).uncheck(); await idle(page);
+      await page.getByRole('link', { name: 'Vote', exact: true }).first().click();
+      await page.getByRole('button', { name: 'Review my choices', exact: true }).click();
+      await page.getByRole('button', { name: 'Seal my ballot', exact: true }).click();
+      board.faults = ['drop-response'];
+      await page.getByRole('button', { name: 'Send my vote', exact: true }).click();
+      await page.getByText("We're not sure your ballot arrived", { exact: true }).waitFor();
+      assert.equal(board.requests.filter((request) => request.method === 'POST').length, postsBefore + 1);
+      const codeEvent = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Save ballot code', exact: true }).click();
+      await (await codeEvent).saveAs(join(dist, 'session-ballot-code.txt'));
+      const codeLines = readFileSync(join(dist, 'session-ballot-code.txt'), 'utf8').trim().split('\n');
+      assert.equal(codeLines[0], board.apiId); assert.equal(codeLines.length, 2);
+      const code = parseBallotCodeInput(codeLines[1]!); assert.equal(code?.kind, 'hex');
+      await page.getByRole('link', { name: 'Rules and privacy', exact: true }).click();
+      await page.getByRole('link', { name: 'Vote', exact: true }).first().click();
+      assert.equal(await page.getByRole('button', { name: 'Review my choices', exact: true }).count(), 0);
+      assert.equal(board.requests.filter((request) => request.method === 'POST').length, postsBefore + 1);
+      await page.getByRole('button', { name: 'Send my vote', exact: true }).click();
+      await page.getByText('Your vote was recorded. Here is your receipt.', { exact: true }).waitFor();
+      const submits = board.requests.filter((request) => request.method === 'POST').slice(postsBefore);
+      assert.equal(submits.length, 2); assert.equal(submits[0]!.body, submits[1]!.body, 'retry uses exactly the original signed bytes');
+      const receiptEvent = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Save receipt file', exact: true }).click();
+      await (await receiptEvent).saveAs(join(dist, 'session-receipt.json'));
+      const receipt = JSON.parse(readFileSync(join(dist, 'session-receipt.json'), 'utf8'));
+      assert.equal(receipt.format, 'qv-receipt/1'); assert.equal(receipt.ballot_code, code!.value);
+      assert.equal(await page.evaluate(() => (window as unknown as { blockedOpens: number }).blockedOpens), inaccessible, 'the session never touches refused IndexedDB');
+      await page.getByRole('link', { name: 'Your voting key', exact: true }).click();
+      await page.getByRole('button', { name: 'Unlock key', exact: true }).waitFor();
+      await page.reload();
+      await page.getByRole('button', { name: 'Use this page only', exact: true }).click();
+      await page.getByRole('button', { name: 'Create key', exact: true }).waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Unlock key', exact: true }).count(), 0, 'reload loses session keys and the mode choice');
+      await page.getByRole('button', { name: 'Clear this page session', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Clear this page session', exact: true }).getByRole('button', { name: 'Clear this page session', exact: true }).click();
+      await page.getByText('This page session was cleared. Saved browser data was not cleared.', { exact: true }).waitFor();
+      assert.equal(board.requests.filter((request) => request.method === 'POST').length, postsBefore + 2);
+    } finally { await context.close(); }
+  });
   assert.deepEqual(errors, [], 'no unhandled browser errors');
 } finally {
   await browser.close();

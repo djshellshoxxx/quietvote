@@ -64,7 +64,7 @@ test('build splits the app: translated catalogs and the results chart are separa
   assert.equal(mani.client_assets.length, assets.length);
 });
 
-test('index.html loads only the entry; the CSP still has no inline allowance and chunks fall under script-src self', async () => {
+test('index.html declares only the entry script; the CSP has no inline allowance and chunks fall under script-src self', async () => {
   const { dir } = await build();
   const html = text(dir, 'index.html');
   const scripts = [...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]!);
@@ -74,7 +74,7 @@ test('index.html loads only the entry; the CSP still has no inline allowance and
   assert.ok(!/unsafe-inline|unsafe-eval/.test(html));
 });
 
-test('size: the initial JavaScript (entry, gzip) stays well under the 200 kB budget; the 200 kB limit itself is unchanged', async () => {
+test('size: the entry and complete JavaScript graph stay within their unchanged gzip budgets', async () => {
   const { dir } = await build();
   const names = readdirSync(join(dir, 'assets'));
   const entry = names.find((n) => /^app\./.test(n))!;

@@ -52,7 +52,8 @@ const built = await build({
 });
 const client = built.outputFiles[0].text;
 const styles = readFileSync(new URL('../static/styles.css', import.meta.url), 'utf8');
-const origin = 'http://quietvote.test';
+// Route fulfillment supplies the bytes; the page still needs a permitted secure deployment origin.
+const origin = 'https://quietvote.test';
 const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuietVote visual fixture</title><link rel="stylesheet" href="/styles.css"><script type="module" src="/client.js"></script></head><body><div id="app"></div></body></html>';
 const unexpected = [];
 const pageErrors = [];
@@ -71,7 +72,10 @@ try {
   });
 
   await page.goto(`${origin}/?__seed=en-XA`);
-  await page.locator('main h1').waitFor();
+  await page.locator('main h1').waitFor().catch((error) => {
+    assert.deepEqual(pageErrors, [], 'client startup has no uncaught browser errors');
+    throw error;
+  });
   assert.equal(await page.locator('html').getAttribute('lang'), 'en-XA', 'stored pseudo language is used at startup');
   assert.equal(await page.locator('html').getAttribute('dir'), 'ltr');
   assert.equal(await page.locator('.language-picker select').count(), 1, 'multiple reviewed test fixtures expose the language picker');

@@ -30,10 +30,10 @@ class Element {
 Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: (tag: string) => new Element(tag), createTextNode: (text: string) => new Element('#text', text) } });
 const tr = createTranslator('en');
 const password = 'correct horse battery staple';
-function panel(storage = new MemoryStorage(), hasKey = false, beforeKdf: () => Promise<void> = async () => {}) {
+function panel(storage = new MemoryStorage(), hasKey = false, beforeKdf: () => Promise<void> = async () => {}, backupRequired = false) {
   const ready: string[] = []; const downloads: string[] = []; const state = { current: true, derivations: 0 };
   const deps: KeystoreDeps = { ...defaultDeps(), rng: streamRng('organizer-panel'), kdf: async (pw, salt) => { state.derivations++; await beforeKdf(); return sha256(new Uint8Array([...pw, ...salt])); } };
-  const view = organizerKeyPanel({ tr, storage, deps: () => deps, hasKey, current: () => state.current,
+  const view = organizerKeyPanel({ tr, storage, deps: () => deps, hasKey, backupRequired, current: () => state.current,
     ready: (pk) => ready.push(pk), error: () => new Element('p', 'error') as unknown as HTMLElement, download: (text) => downloads.push(text) });
   const root = view.element as unknown as Element;
   const input = root.find((x) => x.attrs.get('type') === 'password')[0]!;
@@ -264,4 +264,15 @@ test('fingerprint-only organizer unlock cannot rewrap a cleared weak container a
   release(); await operation;
   assert.equal(await storage.getKey(ORGANIZER_SLOT), undefined);
   assert.deepEqual(p.ready, []);
+});
+
+// @verifies QV-19-REQ-008, QV-26-REQ-011
+test('session organizer continuation waits for an explicit encrypted key download and rejects stale backup actions', async () => {
+  const p = panel(undefined, false, async () => {}, true);
+  p.input.value = password; await p.button('qv.key.create').click();
+  assert.deepEqual(p.ready, []); assert.deepEqual(p.downloads, []);
+  const backup = p.button('qv.key.download'); await backup.click();
+  assert.equal(p.ready.length, 1); assert.equal(p.downloads.length, 1);
+  p.view.lock(); await backup.click();
+  assert.equal(p.ready.length, 1); assert.equal(p.downloads.length, 1);
 });

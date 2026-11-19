@@ -1,7 +1,11 @@
 # QuietVote comprehensive consolidation
 
-Status: first candidate published; additional completed implementation is committed
-locally and undergoing independent review; final hosted qualification is pending.
+Status: this report records the completed local implementation composition and
+the exact scope of its engineering evidence. The current published head,
+local-to-remote tree comparison and hosted results are recorded in
+[PR #71](https://github.com/djshellshoxxx/quietvote/pull/71) and
+[its checks](https://github.com/djshellshoxxx/quietvote/pull/71/checks).
+Historical checkpoint results below must not be assigned to a different head.
 No main merge, deployment, release, force push
 or remote branch deletion has occurred in this operation.
 
@@ -17,7 +21,9 @@ ancestry, patch equivalence, conflicts and dependency graph.
 
 After source composition, **65 of the original 72 branch tips are ancestors** of
 the candidate. This includes main and its identical alias; it is a preservation
-count, not 65 separate feature implementations or remote merges. A further tip is
+count, not 65 separate feature implementations or remote merges. Of these,
+**63 original tips were not contained in initial main**; the other two are main
+and its identical alias. A further tip is
 patch-equivalent to its signed replacement. Useful #27 behavior is reconstructed
 selectively. The seven non-ancestor tips are retained and classified below.
 
@@ -48,34 +54,48 @@ The later local composition at `ba728be0140751bc77d464db32c5f9dc110dd007`
 compaction d86a89d, organizer timezone input c4b4555/92db0be, separate-origin
 operation b746513, actual publication/router/redirect regressions
 1c0edda/af23745, hosted failure repairs 65b47fb, and invitation/IPv6 compatibility
-341c8f1. This source is not yet covered by the first publication's hosted results.
+341c8f1. This source has its own independent follow-up receipts and is published
+as described below; the first publication's hosted results do not qualify it.
 
 ## Counting the completed implementation
 
-The count of **11 implemented feature slices** uses explicit user-facing or
+The count of **12 implemented feature slices** uses explicit user-facing or
 operational boundaries: catalog-only control reasons; signed control sequences;
 independent runtime anchors; recorded public exports and deletion handoff;
 cooperative SPA verification; verified vendor consumption; device/receipt
 preferences; optional local rules acknowledgment; and method-correct undervote
-notices; organizer timezone/DST input; and separate-origin browser/API operation.
+notices; organizer timezone/DST input; separate-origin browser/API operation; and
+explicit page-session storage after actual browser-storage refusal.
 These are additions completed during this operation, not a count of every
 feature inherited from the recovered platform.
 
-**13 new defect families** were corrected: trustee-index nonce binding;
+**18 new defect families** were corrected in the current local composition: trustee-index nonce binding;
 sealing-worker exception/settlement handling; misleading quota copy;
 rollback/acknowledged-archive deletion composition; queued-writer deletion
 lifetime; obsolete verifier announcements; settings request-success before commit;
 stale settings read/modify/write; permanently cached failed IndexedDB opening;
 organizer calendar/gap/historical-offset resolution; CORS resume/header exposure;
 current hexadecimal invitation paste routing; and eager startup recovery of
-untouched empty drafts.
+untouched empty drafts; already-adopted Python manifest/rules constraints; and
+late returned CAST receipts lost after internal navigation; Windows client
+private-file permission handling; inherited trustee atomic publication/custody;
+and live enrollment log binding with cached-draft navigation lifetime.
 Four historical fix families are also recovered from #57, #61, #63 and #64.
-This yields **17 substantive repaired or recovered defect families**. Test-fixture
+This yields **22 substantive repaired or recovered defect families** in the local
+composition. Native private-file implementation is integrated with a bounded
+independent source receipt; native Windows and overriding POSIX/macOS ACL
+qualification remain explicit limits. Test-fixture
 integration corrections are additional maintenance, not inflated product-bug
 counts. Compatibility corrections found while developing the new origin feature
 (IPv6 self origins and post-cast fragment retention) are included in that feature,
 not counted as additional historical bugs. Security findings associated with feature completion overlap this count;
 the feature and defect totals must not be added as a unique-work metric.
+
+These are implementation counts, not a claim that every final hosted or external
+qualification gate has passed. Session signing/clearing fixes and the corrected
+loss-versus-erasure disclosure are included within that feature rather than
+inflated into additional historical bug families. Shared-worker packaging is a
+build correction supporting the session feature, not another user feature.
 
 ## Conflict resolution and behavior preservation
 
@@ -110,6 +130,15 @@ regression and two stale integration fixtures. The repair preserves the original
 lazy-startup assertion and adds boundary cases for nonempty missing anchors and
 empty rollback behind a newer floor. It does not relax first-acquisition signing
 or deletion gates. See [the repair receipt](../reports/hosted-ci-repair-20261119.md).
+
+The later live-enrollment repair preserves the server summary's original log
+claims and checks them against the derived manifest before a view can use the
+context. Missing/mismatched metadata refuses the context. Drafts without a bound
+context refresh on navigation, and stale route completions cannot replace an
+active cached load or orphan its live stream. The two origin-fixture corrections
+retain all assertions and timeouts; the native split-origin journey explicitly
+retains same-document navigation. These related lifecycle corrections count as
+one substantive family. See [the source-bound report](../reports/hosted-browser-repair-20261119.md).
 
 ## Retained branches outside candidate ancestry
 
@@ -156,6 +185,18 @@ The fresh core reviewer reports its exact scope in
 [INDEPENDENT_REVIEW](INDEPENDENT_REVIEW.md). A separate fresh surface reviewer
 identified and revalidated the announcement and IndexedDB retry fixes; its final
 build/surface receipt is [INDEPENDENT_BUILD_REVIEW](INDEPENDENT_BUILD_REVIEW.md).
+The later composition is covered by [INDEPENDENT_RECOVERY_FOLLOWUP](INDEPENDENT_RECOVERY_FOLLOWUP.md)
+and [INDEPENDENT_UI_FOLLOWUP](INDEPENDENT_UI_FOLLOWUP.md), each bound to ba728be
+and its exact tree. [INDEPENDENT_MANIFEST_FOLLOWUP](INDEPENDENT_MANIFEST_FOLLOWUP.md)
+qualifies the adopted Python corrections. The subsequent session/shared-worker
+composition, privacy copy and late-receipt repair are covered by
+[INDEPENDENT_SESSION_BUILD_FOLLOWUP](INDEPENDENT_SESSION_BUILD_FOLLOWUP.md), bound
+to cde2db27 and tree 80a9f1fc. Its 116-case batch, strict scoped checks and two
+byte-identical builds do not qualify the separate native private-file branch or
+native browser execution. Native file handling is covered by the attributed
+author checks and bounded [independent source receipt](INDEPENDENT_TRUSTEE_PUBLICATION_SOURCE.md).
+The live-enrollment and navigation follow-up is covered by
+[INDEPENDENT_LIVE_TRANSITION_FOLLOWUP](INDEPENDENT_LIVE_TRANSITION_FOLLOWUP.md).
 Agent reports supply
 engineering evidence and do not impersonate formal repository reviewers.
 
@@ -191,3 +232,39 @@ The initial full matrix is run 44493061333, visual checks are run 44493050632, a
 claims/documentation checks are run 44493050749. Queued jobs are not passes. See
 [FINAL_VERIFICATION](FINAL_VERIFICATION.md) for the eventual qualification receipt
 and [CONTINUATION](CONTINUATION.md) for the preserved remaining steps.
+
+
+The second publication is `bcd411572cbf1e56218b3d601b18dbd6d1d52b4e`, a normal
+successor whose only parent is the first published commit. Its complete tree
+`9ca302d9a3d336f47dbed68a6aa02179897c063a` exactly matches local report-bearing
+candidate `8b5395ae389bed53964da6f71d3fde2ee384246a`. API and fetched-tree
+comparisons both confirm equality. Production is unchanged from independently
+reviewed ba728be; intervening changes are reports and status documentation.
+Second-head full CI is [44509755234](https://github.com/djshellshoxxx/quietvote/actions/runs/44509755234),
+claims/docs are [44509755400](https://github.com/djshellshoxxx/quietvote/actions/runs/44509755400),
+and visual checks are [44509755222](https://github.com/djshellshoxxx/quietvote/actions/runs/44509755222).
+These runs record the second head's result, including the failed ninth browser
+journey. The PR remained a draft while the subsequent engineering lanes ran.
+
+## Later implementation composition and publication binding
+
+Local source composition `3bf601dd47dd6913c65270aa7fb388aa65b933ee`, tree
+`ad31966891f042b3119b815539adefc8bb4066a7`, contains the adopted Python policy,
+explicit session workflow, shared-worker packaging, returned receipt handoff,
+native private-file handling and hosted browser/lifecycle corrections.
+
+The complete web source/test/e2e directories, crypto/protocol source, package
+manifests/lock and vendor lock compare exactly with the reviewed web source
+`d5435026d6b8c68ff8bf5d4edd76e645ef919724`. The complete CLI/trustee directories
+and changed server registration fixture compare exactly with private-file source
+`239dfaf9ddedf5c0f3288ed566e6a81be54d4e45`. These are composition checks, not a
+substitute for executing the full published tree. Subsequent audit additions do
+not change those implementation components.
+
+The PR description records the next publication's exact local target, remote
+commit, tree equality and current run URLs. Publication uses a normal successor
+of the then-current candidate with an expected-head lease; every original remote
+tip is rechecked. Current-head hosted results and formal reviews are separate
+gates. A historical checkpoint's pending status below does not override the
+current PR's live qualification record, and a passing older head does not qualify
+a later source change.

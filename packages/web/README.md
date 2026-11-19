@@ -79,7 +79,7 @@ root for the separate static host/real board journey. It covers actual CORS,
 enrollment, board and read-key changes within the running app, resumed SSE,
 casting and checking a receipt, and organizer creation/publication. This
 implementation does not change the proposed status of P08-2 or P19-3 and does
-not imply that a static host or board has been deployed or independently audited.
+not establish deployment of a static host or board, or its external review.
 
 ## Organizer setup and lifecycle
 
@@ -141,10 +141,59 @@ fully evidenced result. The [current continuation handoff](../../docs/handoffs/Q
 separates exact-source browser results from external security, native translation,
 manual accessibility and operational qualification.
 
+## When browser storage is unavailable
+
+IndexedDB remains the default. After an actual storage refusal, the application
+offers **Retry browser storage** and **Use this page only**. The latter is an
+explicit choice for this document; it is never selected automatically or saved
+as a preference. It creates a separate `MemoryStorage` with persistence set to
+false, invalidates prior key work and signers, and rebuilds the existing board
+namespaces. It does not copy or erase inaccessible browser data. Such data may
+include an earlier unresolved ballot; use its saved code to check recording
+before attempting another vote.
+
+The page labels this mode and explains that access to keys, receipts, preferences
+and pending markers is not guaranteed after reload, tab closure or navigation
+away. A browser can retain the document and its memory in the
+[back/forward cache](https://web.dev/articles/bfcache); leaving the page is not
+a secure-clearing action. Use **Clear this page session** to remove the session's
+data from the application. This is not a claim of physical memory erasure by
+the browser or operating system. Internal application navigation can retain an
+unresolved submission. Before voter
+continuation or organizer setup can proceed, the user must activate **Download
+key file**. The application can observe the download action, not whether the
+user has kept a usable copy; the file and its exact passphrase remain necessary.
+The ordinary encrypted key format and WebCrypto wrapping dependency are
+unchanged. This storage feature alone does not satisfy the separate requirement
+for operation without `crypto.subtle` or establish Tor Browser qualification.
+
+Once a ballot has started, this document refuses a storage-mode switch. The
+normal persistent pending-cast gate stays in place. In session mode, an explicit
+retry after uncertain delivery uses the original signed bytes even after
+internal navigation. The retained controller is bound to the board, API
+election ID, read-credential context, signed manifest and signing identity.
+Changing those contexts cannot silently reuse it. Leaving the ballot view drops
+its selections and randomness; only an unresolved retry is retained. The public
+pending marker remains until verified resolution or explicit session clearing.
+
+**Save ballot code** exports public tracking data. **Save receipt file** remains
+available when a signed receipt was returned, including with receipt storage
+turned off. A public inclusion lookup does not manufacture a missing signed
+receipt. Download these files before leaving. **Clear this page session** clears
+only the selected memory store and explicitly says saved browser data was not
+cleared. Reload starts with the default IndexedDB path again.
+
+The mandatory `device-settings` browser journey denies IndexedDB in the real
+built application, exercises the explicit choice and backup gate, resends
+identical bytes after a lost response and internal navigation, downloads the
+public files, and checks reload loss. Node application tests separately cover
+changed boards, read credentials and stored keys, refusal after ballot start,
+and preservation of inaccessible durable data.
+
 ## Uncertain cast recovery
 
-Before a CAST POST, the client commits a small public recovery marker to
-IndexedDB. It contains the signed-manifest hash, log origin, election ID, ballot
+In the default durable mode, before a CAST POST the client commits a small public
+recovery marker to IndexedDB. It contains the signed-manifest hash, log origin, election ID, ballot
 code and entry leaf hash. It contains no selections, randomness, voting key,
 read key, ciphertext or signed request bytes. The sealed-ballot screen discloses
 this retention before sending. The marker is kept even if remembering receipts

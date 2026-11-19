@@ -30,7 +30,7 @@ before(async () => {
 });
 after(() => f.c.cleanup());
 
-// Windows has no POSIX file modes; src/fsutil.ts skips the mode check there (bundle stays passphrase-sealed).
+// POSIX modes are checked here; real Windows DACLs are covered by private-files-windows.test.ts.
 const POSIX = process.platform !== 'win32';
 
 test('bundle at rest: mode 0600, no plaintext key material anywhere on disk, nothing secret in public output (QV-17-REQ-020/030)', async () => {

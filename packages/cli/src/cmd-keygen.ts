@@ -1,7 +1,7 @@
-import { lstatSync, unlinkSync, writeFileSync, type Stats } from 'node:fs';
 import { ed25519Keypair } from '@quietvote/crypto';
 import { InputError, UsageError, needFlag, needPositional, parseArgs, type Parsed } from './args.ts';
-import { PASSPHRASE_FLAGS, getPassphrase, hex, printJson, readFile } from './common.ts';
+import { PASSPHRASE_FLAGS, getPassphrase, hex, printJson, readPrivateFile } from './common.ts';
+import { writePrivateFileSync } from './private-files.ts';
 import { EXIT, type Io } from './io.ts';
 import { DEFAULT_PARAMS, PLAIN_FORMAT, keyIdOf, parseContainer, parseKeyJson, serialize, unwrapSeed, wrapSeed, type KdfParams } from './keyfile.ts';
 
@@ -21,23 +21,15 @@ function intFlag(p: Parsed, name: string, dflt: number): number {
 }
 
 /**
- * Writes a new key file with mode 0600. `--force` replaces the old file rather than writing into it: an existing file keeps its
- * old permissions and a symlink would send the seed to its target, so the old entry is removed first and never followed.
+ * Publishes a new owner-private key file. --force atomically replaces an old regular file;
+ * no secret bytes are written through an old entry or a symbolic link.
  */
 function writeKeyFile(out: string, data: string, force: boolean): void {
-  if (force) {
-    let st: Stats | undefined;
-    try {
-      st = lstatSync(out);
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
-    }
-    if (st !== undefined) {
-      if (st.isSymbolicLink()) throw new InputError(`${out} is a symbolic link; refusing to write a key through it`);
-      unlinkSync(out);
-    }
+  try { writePrivateFileSync(out, data, force); }
+  catch (error) {
+    if ((error as { code?: string }).code === 'TYPE') throw new InputError('refusing to replace a symbolic link or nonregular file');
+    throw error;
   }
-  writeFileSync(out, data, { mode: 0o600, flag: 'wx' });
 }
 
 export async function cmdKeygen(argv: string[], io: Io): Promise<number> {
@@ -51,7 +43,7 @@ export async function cmdKeygen(argv: string[], io: Io): Promise<number> {
   const plain = p.has('no-passphrase');
   if (plain && (p.has('passphrase-file') || p.has('passphrase-stdin'))) throw new UsageError('--no-passphrase conflicts with the passphrase options');
   const prm: KdfParams = { m: intFlag(p, 'kdf-memory-kib', DEFAULT_PARAMS.m), t: intFlag(p, 'kdf-iterations', DEFAULT_PARAMS.t), p: DEFAULT_PARAMS.p };
-  const seed = p.has('seed-file') ? parseSeed(readFile(p.get('seed-file')!)) : p.has('seed-stdin') ? parseSeed(await io.stdin()) : io.rng.bytes(32);
+  const seed = p.has('seed-file') ? parseSeed(await readPrivateFile(p.get('seed-file')!)) : p.has('seed-stdin') ? parseSeed(await io.stdin()) : io.rng.bytes(32);
   const kp = ed25519Keypair(seed);
   let file: string;
   if (plain) file = JSON.stringify({ format: PLAIN_FORMAT, public_key: hex(kp.publicKey), seed: hex(seed) }) + '\n';
@@ -71,7 +63,7 @@ export async function cmdKeygen(argv: string[], io: Io): Promise<number> {
     io.err(code === 'EEXIST' ? `${out} exists; use --force to overwrite\n` : `cannot write ${out}: ${code ?? 'error'}\n`);
     return EXIT.input;
   }
-  if (plain) io.err('warning: the key file is NOT passphrase-protected; it is written with mode 0600. Store it on an encrypted disk and never share it.\n');
+  if (plain) io.err('warning: the key file is NOT passphrase-protected; it is written with owner-only file permissions. Store it on an encrypted disk and never share it.\n');
   if (p.has('json')) printJson(io, { public_key: hex(kp.publicKey), key_id: keyIdOf(kp.publicKey), key_file: out, protected: !plain });
   else io.out(`voter public key: ${hex(kp.publicKey)}\nkey id: ${keyIdOf(kp.publicKey)}\nkey file: ${out}${plain ? ' (unprotected)' : ' (QVKEY1, argon2id)'}\n`);
   return EXIT.ok;
@@ -79,7 +71,7 @@ export async function cmdKeygen(argv: string[], io: Io): Promise<number> {
 
 /** Loads a protected (QVKEY1) or unprotected voter key; the passphrase is asked only for the protected form. */
 export async function loadVoterKey(path: string, p: Parsed, io: Io): Promise<{ seed: Uint8Array; publicKey: Uint8Array }> {
-  const j = parseKeyJson(new TextDecoder().decode(readFile(path))) as { format?: unknown; public_key?: unknown; seed?: unknown; kdf?: unknown };
+  const j = parseKeyJson(new TextDecoder().decode(await readPrivateFile(path))) as { format?: unknown; public_key?: unknown; seed?: unknown; kdf?: unknown };
   if (typeof j === 'object' && j !== null && j.kdf !== undefined) {
     const c = parseContainer(j);
     const pass = await getPassphrase(p, io, `passphrase for key ${c.keyId}: `, false, false);

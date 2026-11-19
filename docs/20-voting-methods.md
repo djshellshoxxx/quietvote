@@ -52,7 +52,7 @@ All proofs are non-interactive via Fiat–Shamir over a transcript that includes
 - **P05(ciphertext tuple, S⊂{0,1}^m) — pattern membership** (used for ranked ballots, §8): CDS OR over patterns s∈S of the *conjunction* over coordinates j of a CP proof "ct_j encrypts s_j". Standard AND/OR sigma composition [R2][R3].
 
 ### 4.3 Manifest fields consumed (QV-09 schema owner)
-**Names conformed to QV-16 §5.6.1 (QV-16 prevails):** `method` ∈ {`yes-no`,`single-choice`,`approval`,`k-of-n`} in suite v1 (`ranked` is Phase 2 and gated, QV-ADR-023; older names `yesno`/`single`/`kofn` are retired); `selection_limit` (`L`, max) replaces `selection_limits.max`, and `min_selections` is `0` in suite v1 (min > 0 is presentation-only/reserved); `rule {type:"threshold", num, den, basis ∈ {yes+no, counted, roll}, strict}` replaces `threshold {kind,num,den,base}` (`yn`→`yes+no`, `cast`→`counted`, `eligible`→`roll`); `tie_break.type` uses hyphens (`status-quo`, `declare-tie`, `lexicographic`; `beacon` is reserved and rejected in suite v1); `allow_blank` is presentation-only because an all-zero ballot is always valid. Original list: `method` ∈ {`yesno`,`single`,`approval`,`kofn`,`ranked`}; `options[]` (ids, labels, ≤ 255 chars each, unique); `selection_limits {min,max}`; `allow_blank` (bool); `threshold {kind, num, den, base}`; `quorum {kind, value}`; `tie_break {kind, params}`; `weights_mode` ∈ {`none`,`roll`,`delegated`}; `max_weight`; `disclosure` (§10); `tally_algorithm` ∈ {`schulze`,`ranked_pairs`} for ranked.
+**Names conformed to QV-16 §5.6.1 (QV-16 prevails):** `method` ∈ {`yes-no`,`single-choice`,`approval`,`k-of-n`} in suite v1 (`ranked` is Phase 2 and gated, QV-ADR-023; older names `yesno`/`single`/`kofn` are retired); `selection_limit` (`L`, max) replaces `selection_limits.max`, and `min_selections` is `0` in suite v1 (min > 0 is presentation-only/reserved); `rule {type:"threshold", num, den, basis ∈ {yes+no, counted}, strict}` replaces `threshold {kind,num,den,base}` (`yn`→`yes+no`, `cast`→`counted`; `eligible`→`roll` is reserved beyond suite v1 by QV-ADR-027 / N-27); `tie_break.type` uses hyphens (`status-quo`, `declare-tie`, `lexicographic`; `beacon` is reserved and rejected in suite v1); `allow_blank` is presentation-only because an all-zero ballot is always valid. Original list: `method` ∈ {`yesno`,`single`,`approval`,`kofn`,`ranked`}; `options[]` (ids, labels, ≤ 255 chars each, unique); `selection_limits {min,max}`; `allow_blank` (bool); `threshold {kind, num, den, base}`; `quorum {kind, value}`; `tie_break {kind, params}`; `weights_mode` ∈ {`none`,`roll`,`delegated`}; `max_weight`; `disclosure` (§10); `tally_algorithm` ∈ {`schulze`,`ranked_pairs`} for ranked.
 
 ### 4.4 Placeholder (slack) technique — undervotes without range proofs
 To support `min ≤ Σ selections ≤ max` using only P02 and BIT, the client appends `max − min` **slack selections** (bits). The ballot is valid iff every real and slack bit satisfies BIT and the homomorphic sum of *all* (real+slack) bits equals `max` (P02). Then real sum ∈ [min, max]. Slack ciphertexts are included in the ballot and aggregated like any other; they are not attributed to any option and their aggregate total only reveals the **total undervote count** `N·max − Σ_real` (derivable anyway from the public ballot count and the real totals). Slack positions are shuffled by a client-chosen permutation *inside* the vector only if the vector order is public-structure-irrelevant; QV-16 fixes slack at the end (the order leaks nothing since all are encrypted).
@@ -64,17 +64,20 @@ To support `min ≤ Σ selections ≤ max` using only P02 and BIT, the client ap
 - **Encoding.** Vector of 2 real ciphertexts (`yes`, `no`) plus the QV-16 placeholder, at most one real bit set (limit `L = 1`, blank allowed); QV-16 §5.9–5.10 prevail over the older "exactly one bit" text below.
 - **Validity statement.** `∀j: BIT(c_j)` ∧ `P02(⊕_j c_j, 1)`. Proof size m·128 + 64 B (m=2: 320 B).
 - **Tally.** Aggregate `C_j = ⊕_ballots c_j`; threshold decryption yields `T_j·G`; solve dlog (§11) for `T_yes, T_no` (and `T_abs = V − T_yes − T_no`).
-- **Decision rule** (all integer arithmetic, no floats): let `base = T_yes + T_no` (`base=yn`) or `T_yes+T_no+T_abs` (`base=cast`) or `|roll|` (`base=eligible`). Passes iff quorum satisfied ∧ `den·T_yes ≥ num·base` (≥) or `>` per manifest `threshold.strict`. Simple majority: num/den = 1/2 with strict `>`. Two-thirds: 2/3 with `≥`. Pseudocode:
+- **Decision rule** (all integer arithmetic, no floats): let `base = T_yes + T_no` (`base=yn`) or `T_yes+T_no+T_abs` (`base=cast`, QV-16 `counted`). Whole-roll contest thresholds (`base=eligible`, `rule.basis:roll`) are reserved beyond suite v1 under QV-ADR-027 / N-27. This restriction leaves roll-based participation quorum unchanged. Passes iff quorum satisfied ∧ `den·T_yes ≥ num·base` (≥) or `>` per contest `rule.strict`. Simple majority: num/den = 1/2 with strict `>`. Two-thirds: 2/3 with `≥`. Pseudocode:
 
 ```
-function decide(T, manifest, N_cast, N_roll):
-  q = manifest.quorum
-  if q.kind == "count"   and N_cast <  q.value:           return FAILED_QUORUM
-  if q.kind == "fraction" and N_cast*q.den < q.num*N_roll: return FAILED_QUORUM
-  base = select(manifest.threshold.base, T, N_roll)
-  lhs = manifest.threshold.den * T["yes"]
-  rhs = manifest.threshold.num * base
-  ok  = manifest.threshold.strict ? lhs > rhs : lhs >= rhs
+function decide(T, contest, quorum, N_cast, N_roll):
+  rule = contest.rule
+  if rule.basis == "yes+no":  base = T["yes"] + T["no"]
+  else if rule.basis == "counted": base = N_cast
+  else: refuse E_RULES                  // reserved/unsupported suite-v1 threshold
+  q = quorum
+  if q exists and q.type == "count" and N_cast < q.value: return FAILED_QUORUM
+  if q exists and q.type == "fraction" and N_cast*q.den < q.num*N_roll: return FAILED_QUORUM
+  lhs = rule.den * T["yes"]
+  rhs = rule.num * base
+  ok  = rule.strict ? lhs > rhs : lhs >= rhs
   if base == 0:                                           return FAILED_NO_BASE
   return ok ? PASSED : REJECTED     // exact tie on strict rule => REJECTED (status quo)
 ```
@@ -100,7 +103,7 @@ function decide(T, manifest, N_cast, N_roll):
 
 ## 6. Quorum and supermajority (all methods)
 - **Quorum kinds:** `count` (≥ q ballots counted), `fraction` of roll (`N_cast·den ≥ num·N_roll`). Quorum is evaluated on **counted ballots** (the last valid ballot per voter in Phase 1, per ADR-005; in Phase 2 on distinct spent tokens), not on yes votes.
-- **Threshold bases:** `yn` (yes+no), `cast` (including abstain/blank), `eligible` (whole roll). Default for supermajority is `eligible` only if the organizer explicitly selects it; default otherwise `yn`. UI must show the formula in plain language (QV-10).
+- **Threshold bases in suite v1:** `yes+no` (`yn`) and `counted` (`cast`, including valid blank ballots). QV-ADR-027 / N-27 reserves the broader `eligible`/`roll` contest threshold for a later suite; an organizer cannot enable it in a suite-v1 manifest. This reservation does not remove the fraction-of-roll participation quorum above or valid all-zero blank ballots. UI must show the supported formula in plain language (QV-10).
 - **Verifiability.** Both rules depend only on public counts: ballots-counted (public from log) and decrypted aggregates. No additional proofs are needed. Hidden-threshold ("reveal only pass/fail") is *not* provided (needs ZK comparison/MPC; research item, QV-OQ-3).
 - **Late/early closing.** Quorum is evaluated once at close; there is no mid-election quorum notification that leaks counts (the server may publish only the *ballot count*, which in Phase 1 is public anyway; in Phase 2 it is a protected-by-config option, see QV-26 §8).
 

@@ -1,9 +1,10 @@
-import { closeSync, constants, fstatSync, openSync, readSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, fstatSync, openSync, readSync } from 'node:fs';
 import { jcs, parseQvJson } from '@quietvote/crypto';
 import { GROUP_POLICY_TEMPLATES, groupPolicyTemplate, validateGroupPolicyDraft, type GroupPolicyTemplate } from '@quietvote/protocol';
 import { InputError, UsageError, needFlag, needPositional, parseArgs } from './args.ts';
 import { printJson } from './common.ts';
 import { EXIT, type Io } from './io.ts';
+import { writePrivateFileSync } from './private-files.ts';
 
 function readDraft(path: string): unknown {
   let fd: number | undefined;
@@ -53,7 +54,7 @@ export async function cmdPolicyDraftTemplate(argv: string[], io: Io): Promise<nu
   if (!(GROUP_POLICY_TEMPLATES as readonly string[]).includes(name!)) throw new UsageError('template must be foundation, association or collective');
   const path = needFlag(p, 'out');
   const draft = groupPolicyTemplate(name as GroupPolicyTemplate);
-  try { writeFileSync(path, new Uint8Array([...jcs(draft), 10]), { flag: 'wx', mode: 0o600 }); }
+  try { writePrivateFileSync(path, new Uint8Array([...jcs(draft), 10])); }
   catch { throw new InputError('cannot create policy draft; destination must not exist'); }
   // The literal collective template is deliberately emitted for inspection even
   // when its inherited duration conflict makes validation return exit 1.

@@ -4,6 +4,15 @@
 import type { MessageKey } from '../en.ts';
 
 export const ES = {
+  "qv.storage.sessionTitle": "Almacenamiento solo durante la sesión",
+  "qv.storage.choose": "Usar solo esta página",
+  "qv.storage.retry": "Reintentar el almacenamiento del navegador",
+  "qv.storage.loss": "Esta opción conserva los datos en la memoria de esta página. Al recargar, cerrar la pestaña o salir, sus claves, recibos y papeletas pendientes pueden dejar de estar disponibles. Salir no garantiza que se borren; use Borrar la sesión de esta página para eliminarlos de la aplicación. Otros datos guardados en el navegador pueden ser inaccesibles y no se borrarán. Guarde el archivo de clave, el código de la papeleta y el archivo de recibo antes de salir.",
+  "qv.storage.backup": "Descargue su archivo de clave antes de continuar. Conserve el archivo y su frase de contraseña para desbloquear su clave después de cerrar esta página.",
+  "qv.storage.clear": "Borrar la sesión de esta página",
+  "qv.storage.cleared": "Se borró la sesión de esta página. No se borraron los datos guardados en el navegador.",
+  "qv.storage.blocked": "Ya se ha iniciado una papeleta. Mantenga esta página abierta y use su reintento o comprobación de recibo existente. No se puede cambiar el almacenamiento en esta página.",
+  "qv.storage.saveCode": "Guardar el código de la papeleta",
   "qv.device.unconfirmed": "No se pudieron confirmar los ajustes guardados.",
   "qv.election.rulesAck": "He leído estas reglas y límites de privacidad",
   "qv.election.rulesAckHint": "Opcional. Esta nota se queda en este dispositivo.",

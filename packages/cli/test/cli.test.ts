@@ -1,3 +1,4 @@
+import { writePrivateFixture, writePrivateJson } from './private-fixture.ts';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -107,9 +108,9 @@ test('keygen: protected QVKEY1 by default (argon2id), unlock round trip, wrong p
   const dir = tmp();
   const seed = '07'.repeat(32);
   const seedFile = join(dir, 'seed.hex');
-  writeFileSync(seedFile, `${seed}\n`);
+  writePrivateFixture(seedFile, `${seed}\n`);
   const pwFile = join(dir, 'pw.txt');
-  writeFileSync(pwFile, `${PASS}\n`);
+  writePrivateFixture(pwFile, `${PASS}\n`);
   const want = hexOf(ed25519Keypair(Uint8Array.from(Buffer.from(seed, 'hex'))).publicKey);
   const k1 = join(dir, 'k1.json');
   const a = await qv(['keygen', '--out', k1, '--seed-file', seedFile, '--passphrase-file', pwFile, ...FAST]);
@@ -126,7 +127,7 @@ test('keygen: protected QVKEY1 by default (argon2id), unlock round trip, wrong p
 
   // usable: encrypt a ballot with the protected key (passphrase from file), wrong passphrase refused, none refused
   const wrong = join(dir, 'wrong.txt');
-  writeFileSync(wrong, 'not the passphrase at all\n');
+  writePrivateFixture(wrong, 'not the passphrase at all\n');
   const base = ['ballot', 'encrypt', '--election', TINY, '--key', k1, '--select', 'budget=yes'];
   assert.equal((await qv([...base, '--out', join(dir, 'e0.json'), '--passphrase-file', wrong])).code, 4);
   assert.equal((await qv([...base, '--out', join(dir, 'e1.json')])).code, 2, 'protected key needs a passphrase source');
@@ -172,7 +173,7 @@ test('keygen: interactive prompt (confirmed), stdin seed, random seed, unprotect
 
   // raw 32-byte seed file
   const raw = join(dir, 'raw.bin');
-  writeFileSync(raw, Buffer.from(seed, 'hex'));
+  writePrivateFixture(raw, Buffer.from(seed, 'hex'));
   assert.equal(JSON.parse((await qv(['keygen', '--out', join(dir, 'k3.json'), '--seed-file', raw, '--no-passphrase', '--json'])).out).public_key, want);
 });
 
@@ -180,11 +181,11 @@ test('keygen: nothing secret on argv; bad arguments', async () => {
   const dir = tmp();
   const seed = '07'.repeat(32);
   const seedFile = join(dir, 'seed.hex');
-  writeFileSync(seedFile, seed);
+  writePrivateFixture(seedFile, seed);
   assert.equal((await qv(['keygen', '--out', join(dir, 'a.json'), '--seed', seed, '--no-passphrase'])).code, 2, 'no --seed');
   assert.equal((await qv(['keygen', '--out', join(dir, 'a.json'), '--passphrase', PASS])).code, 2, 'no --passphrase');
   assert.equal((await qv(['keygen', '--seed-file', seedFile, '--no-passphrase'])).code, 2, '--out required');
-  writeFileSync(join(dir, 'short'), 'abcd');
+  writePrivateFixture(join(dir, 'short'), 'abcd');
   assert.equal((await qv(['keygen', '--out', join(dir, 'b.json'), '--seed-file', join(dir, 'short'), '--no-passphrase'])).code, 2);
   assert.equal((await qv(['keygen', '--out', join(dir, 'c.json'), '--seed-file', seedFile, '--seed-stdin', '--no-passphrase'])).code, 2);
   assert.equal((await qv(['keygen', '--out', join(dir, 'd.json'), '--seed-file', join(dir, 'nope'), '--no-passphrase'])).code, 4);
@@ -292,7 +293,7 @@ test('ballot encrypt: usage and failure exit codes', async () => {
   assert.ok(!existsSync(join(dir, '10')));
   assert.equal((await qv(['ballot', 'encrypt', '--election', join(dir, 'none'), '--key', key, '--out', join(dir, '11')])).code, 4);
   assert.equal((await qv(['ballot', 'encrypt', '--election', TINY, '--key', join(dir, 'nokey'), '--out', join(dir, '12')])).code, 4);
-  const notKey = writeJson(dir, 'notkey.json', { hello: 1 });
+  const notKey = writePrivateJson(dir, 'notkey.json', { hello: 1 });
   assert.equal((await qv(['ballot', 'encrypt', '--election', TINY, '--key', notKey, '--out', join(dir, '13')])).code, 2);
   // an election whose key material does not verify must not be used
   const t = tinyBundle();

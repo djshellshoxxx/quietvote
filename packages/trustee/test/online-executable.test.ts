@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Real qv-trustee processes with production RNG/KDF; the harness owns only coordinator/voter setup and the test clock.
+import { writePrivateFixture } from './helpers/private-file.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -24,7 +25,7 @@ test('shipped trustee executable completes 2-of-3 DKG and tally over HTTP withou
   w.owner = w.coord[0]!;
   const passphrase = 'H7!quartz-M2$falcon-P9#violet-X4'; // synthetic test secret, never an argv value
   const passFile = join(w.dir, 'passphrase.txt');
-  writeFileSync(passFile, passphrase + '\n', { mode: 0o600 });
+  writePrivateFixture(passFile, passphrase + '\n');
   const write = (name: string, value: unknown): string => {
     const path = join(w.dir, name);
     writeFileSync(path, JSON.stringify(value));

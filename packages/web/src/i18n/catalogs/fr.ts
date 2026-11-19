@@ -4,6 +4,15 @@
 import type { MessageKey } from '../en.ts';
 
 export const FR = {
+  "qv.storage.sessionTitle": "Stockage limité à la session",
+  "qv.storage.choose": "Utiliser uniquement cette page",
+  "qv.storage.retry": "Réessayer le stockage du navigateur",
+  "qv.storage.loss": "Cette option conserve les données dans la mémoire de cette page. Recharger la page, fermer son onglet ou la quitter peut rendre ses clés, reçus et bulletins en attente indisponibles. Quitter la page ne garantit pas leur effacement ; utilisez Effacer la session de cette page pour les retirer de l'application. Les autres données enregistrées dans le navigateur peuvent être inaccessibles et ne seront pas effacées. Enregistrez le fichier de clé, le code du bulletin et le fichier de reçu avant de partir.",
+  "qv.storage.backup": "Téléchargez votre fichier de clé avant de continuer. Conservez le fichier et sa phrase secrète pour déverrouiller votre clé après la fermeture de cette page.",
+  "qv.storage.clear": "Effacer la session de cette page",
+  "qv.storage.cleared": "La session de cette page a été effacée. Les données enregistrées dans le navigateur ne l’ont pas été.",
+  "qv.storage.blocked": "Un bulletin a déjà été commencé. Gardez cette page ouverte et utilisez sa fonction de nouvel envoi ou de vérification du reçu. Le stockage ne peut plus être changé dans cette page.",
+  "qv.storage.saveCode": "Enregistrer le code du bulletin",
   "qv.device.unconfirmed": "Impossible de confirmer les paramètres enregistrés.",
   "qv.election.rulesAck": "J’ai lu ces règles et ces limites de confidentialité",
   "qv.election.rulesAckHint": "Facultatif. Cette note reste sur cet appareil.",

@@ -1,12 +1,12 @@
+import { writePrivateFixture, writePrivateJson } from './private-fixture.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bytesToHex } from '@quietvote/crypto';
 import { World, kp } from '../../server/test/helpers/world.ts';
-import { qv, writeJson } from './helpers.ts';
+import { qv } from './helpers.ts';
 
 test('shipped CLI enrolls with invite from file and preserves unknown-scheme refusal', async () => {
   const w = new World({ seed: 'cli-enrollment', n: 3, t: 2, voters: 0 });
@@ -16,8 +16,8 @@ test('shipped CLI enrolls with invite from file and preserves unknown-scheme ref
     const invite = await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { count: 1 }, w.owner, w.idemKey());
     assert.equal(invite.status, 201);
     const code: string = invite.json.invites[0].code, key = kp('cli-enrollment', 'voter');
-    const keyfile = writeJson(w.dir, 'enroll-key.json', { format: 'qv-voter-key/v1', seed: bytesToHex(key.secretKey), public_key: bytesToHex(key.publicKey) });
-    const invitefile = join(w.dir, 'invite.txt'); writeFileSync(invitefile, code + '\n', { mode: 0o600 });
+    const keyfile = writePrivateJson(w.dir, 'enroll-key.json', { format: 'qv-voter-key/v1', seed: bytesToHex(key.secretKey), public_key: bytesToHex(key.publicKey) });
+    const invitefile = join(w.dir, 'invite.txt'); writePrivateFixture(invitefile, code + '\n');
     const args = ['online', 'enroll', '--server', w.base, '--id', w.electionId, '--key', keyfile, '--invite-file', invitefile, '--json'];
     const result = await new Promise<{ code: number | null; out: string; err: string }>((resolve, reject) => {
       const child = spawn(process.execPath, [fileURLToPath(new URL('../bin/qv.ts', import.meta.url)), ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
