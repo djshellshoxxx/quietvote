@@ -165,14 +165,17 @@ export class ElectionPool {
     } finally { db?.close(); }
   }
 
-  /** Startup bridges committed responses and replays only elections with explicit unfinished append intents. */
+  /** Startup bridges committed responses, then replays elections with pending append or anchor recovery. */
   async recoverStored(reg: RegistryRow): Promise<void> {
     let pending = false;
     this.stored(reg, (db) => {
       pending = db.hasAppendCompletions();
       // Recover a committed append's independent anchor before startup forwards its durable events.
       const anchor = this.env.control.runtimeAnchor(reg.election_id);
-      if (reg.imported !== 1 && (!anchor || anchor.tree_size !== db.store.size())) pending = true;
+      const size = db.store.size();
+      // An untouched empty draft has no append to recover. Its first runtime acquisition still checks
+      // the independent anchor and configured peers before allowing any signature or deletion.
+      if (reg.imported !== 1 && (anchor ? anchor.tree_size !== size : size > 0)) pending = true;
       for (const receipt of db.operationReceipts(this.env.nowMs())) bridgeOperationReceipt(this.env, db, receipt);
       recoverPublicExportJobs(this.env, db);
     });

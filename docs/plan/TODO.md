@@ -6,7 +6,7 @@ implemented. In particular, ElGamal rerandomization is present, election
 registration and pinned membership have current implementations, and completed
 recovery slices must be assessed using the new exact-source receipts.
 
-## Current integration delta — 2026-10-30
+## Historical integration delta — 2026-10-30
 
 This older backlog remains a requirement inventory, not proof of current source
 status. [CONSOLIDATION](CONSOLIDATION.md) accounts for every source branch/PR;

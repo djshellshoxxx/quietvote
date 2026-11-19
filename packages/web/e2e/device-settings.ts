@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// @verifies QV-10-REQ-011, QV-13-REQ-003, QV-13-REQ-060, QV-13-REQ-063
+// @verifies QV-10-REQ-011, QV-13-REQ-003, QV-13-REQ-060, QV-13-REQ-063, QV-13-REQ-092
 // Real production bundle, IndexedDB transactions and four-method ballots. No production test hooks.
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -65,6 +65,53 @@ const saved = async (page: Page): Promise<{ settings?: DeviceSettings; counts: R
 const step = async (name: string, run: () => Promise<void>): Promise<void> => { await run(); console.log(`ok - ${name}`); };
 
 try {
+  await step('organizer uses explicit DST choices and valid gap alternatives independently of the browser zone', async () => {
+    const context = await browser.newContext({ timezoneId: 'America/New_York', viewport: { width: 320, height: 800 } });
+    try {
+      const page = await context.newPage(); watch(page); await page.goto(`${origin}/new`);
+      const zone = page.getByLabel('Time zone of this election', { exact: true });
+      const opens = page.getByLabel('Voting opens', { exact: true });
+      assert.equal(await zone.inputValue(), 'America/New_York');
+      await zone.fill('Europe/Berlin');
+      await opens.fill('2027-03-28T02:30');
+      assert.equal(await opens.getAttribute('aria-invalid'), 'true');
+      await page.getByText(/That local time does not exist/).waitFor();
+      const alternative = page.getByRole('button', { name: '2027-03-28 01:30', exact: true });
+      await alternative.focus(); await page.keyboard.press('Enter');
+      assert.equal(await opens.inputValue(), '2027-03-28T01:30');
+      assert.ok(await opens.evaluate((element) => element === document.activeElement));
+      await page.getByText(/2027-03-28T00:30:00Z/).waitFor();
+      await opens.fill('2027-10-31T02:30');
+      const earlier = page.getByRole('radio', { name: 'UTC+02:00', exact: true });
+      const later = page.getByRole('radio', { name: 'UTC+01:00', exact: true });
+      assert.equal(await earlier.isChecked(), false); assert.equal(await later.isChecked(), false);
+      assert.equal(await opens.getAttribute('aria-invalid'), 'true');
+      await later.focus(); await page.keyboard.press('Space');
+      await page.getByText(/2027-10-31T01:30:00Z/).waitFor();
+      assert.equal(await later.isChecked(), true);
+      assert.ok(await later.evaluate((element) => element === document.activeElement), 'rerendering the selected offset must preserve keyboard focus');
+      await page.keyboard.press('ArrowLeft');
+      await page.getByText(/2027-10-31T00:30:00Z/).waitFor();
+      assert.equal(await earlier.isChecked(), true);
+      await opens.fill('2027-10-31T02:45');
+      assert.equal(await opens.getAttribute('aria-invalid'), 'true');
+      assert.equal(await earlier.isChecked(), false); assert.equal(await later.isChecked(), false);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'offset controls reflow at 320 CSS pixels');
+      await zone.fill('Pacific/Apia'); await opens.fill('2011-12-30T12:00');
+      await page.getByRole('button', { name: '2011-12-29 12:00', exact: true }).waitFor();
+      await page.getByRole('button', { name: '2011-12-31 12:00', exact: true }).click();
+      assert.equal(await opens.getAttribute('aria-invalid'), 'false');
+      await page.getByText(/2011-12-30T22:00:00Z/).waitFor();
+      await zone.fill('not/a-zone');
+      assert.equal(await opens.getAttribute('aria-invalid'), 'true');
+      await zone.fill('UTC'); await opens.fill('0099-01-01T00:00');
+      await page.getByText(/0099-01-01T00:00:00Z/).waitFor();
+      assert.equal(await opens.getAttribute('aria-invalid'), 'false');
+      await zone.fill('Europe/Paris'); await opens.fill('1900-01-01T12:00');
+      await page.getByText(/1900-01-01T11:50:39Z/).waitFor();
+    } finally { await context.close(); }
+  });
+
   await step('concurrent tabs merge distinct preferences and reload their committed values', async () => {
     const context = await browser.newContext();
     try {

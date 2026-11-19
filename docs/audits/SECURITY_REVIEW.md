@@ -34,10 +34,13 @@ invariant, not the absence of all vulnerabilities.
 | Delayed verifier announcements | A queued live-region message could announce an obsolete result or status after route/run invalidation. | The callback now checks the captured route and generation at emission. Thirteen red-before cases and two positive controls pass, preserving current announcements. |
 | Settings commit and lost-update handling | An IndexedDB request can succeed before transaction abort; separate stale reads can overwrite unrelated preference fields. | Settings resolve at transaction completion and read/merge/write atomically. Language, ID confirmation, receipt/device preferences and local acknowledgment preserve each other. |
 | Cached failed IndexedDB opening | A transient failure permanently rejected subsequent reads, so the explicit retry action could not recover. | Discard only the failed opening promise; retain concurrent/successful caching, abort abandoned upgrades and close late abandoned connections. Independent retry regression passes. |
+| Organizer date-resolution errors | Fixed one-hour gap alternatives can remain inside a skipped day; Date.UTC reinterprets years below 100, and rounding historical offsets loses seconds. These produced incorrect accepted-input previews. The existing creation/open ordering already prevents publishing those historical elections with today's creation time. | Resolve real alternatives, preserve exact calendar years/era and offset seconds, require explicit fold choices, and invalidate prepared publication after date edits. Author tests and the reviewer's unchanged distinguishing probes pass. [Timezone report](../reports/organizer-timezone-20261119.md). |
+| Separate-origin resume metadata | Cross-origin SSE resumption requires the existing Last-Event-ID request header to pass preflight; authenticated clients also need existing retry/rate/request metadata exposed. | Add the named header and bounded exposed response headers without changing the origin allowlist. Two CORS regressions fail before repair and pass after it. [Origin report](../reports/split-origin-implementation-20261119.md). |
+| Eager empty-draft startup | Treating every missing anchor as unfinished recovery opened untouched empty drafts, violating lazy response recovery. | Require recovery for a nonempty unanchored owned log or an anchor/size mismatch; preserve explicit append intent and first-acquisition health gates. Boundary regressions cover configured peers and rollback to empty. [Repair report](../reports/hosted-ci-repair-20261119.md). |
 | Dependency provenance and consumption | Pinned registry metadata alone did not implement the accepted vendored-copy boundary. | Both Noble 2.4.0 tarballs, 132 verbatim files and SHA-256/SRI bindings; explicit verified copy installation, resolution checks and build/CI gates. No dependency version or registry-lock change. |
 
 The separate independent engineering reviews found the queued-deletion, delayed-
-announcement and failed-opening issues above. Their repairs were returned to the
+announcement, failed-opening and historical-offset issues above. Their repairs were returned to the
 authors and independently revalidated. The review reports and hosted qualification
 receipt define the final covered source and remaining limits.
 
@@ -81,6 +84,15 @@ fuzzer campaign or review of every injection path is claimed.
 their existing contract. No plaintext secret persistence or silent memory fallback
 was introduced. Lifecycle cleanup is covered; worker URL integrity remains a
 separate gap. Draft translation review flags are unchanged.
+
+**Separate-origin browser operation.** A board fragment selects only an explicitly
+allowed build-bound origin. Selection is validated before client construction or
+key lookup. Client caches and persistent election state include the board origin;
+navigation, publication retry and invitations retain that binding. Authenticated
+fetch rejects redirects, omits ambient credentials and suppresses referrers. These
+controls do not make an operator's configured board trustworthy. Deployment must
+apply the generated static-server CSP and configure the API's allowed frontend
+origin; the ninth browser journey exercises that actual split.
 
 **Supply chain.** Exact versions, registry integrity metadata, SHA-pinned Actions
 and high/critical advisory gating must remain effective through vendoring. Final

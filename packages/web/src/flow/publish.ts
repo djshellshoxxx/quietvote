@@ -59,6 +59,8 @@ interface StoredEntry {
 
 export interface PublishState {
   readonly v: 2;
+  /** Browser continuation only: runPublish binds resumable requests to their API origin. Not a signed protocol field. */
+  boardOrigin?: string;
   done: PublishStep[];
   orgId: string;
   title: string;

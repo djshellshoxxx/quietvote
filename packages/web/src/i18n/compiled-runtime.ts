@@ -30,6 +30,21 @@ const expand = (c: readonly CompactNode[]): Node[] => c.map((n): Node => {
 
 export const compactFormatter = (c: readonly CompactNode[]): CompiledFormatter => compiledFormatter(expand(c));
 
+/** Keep each source beside its compiled AST so split catalogs compress without repeating distant text. */
+export type CompiledCatalogEntry = string | readonly [string, readonly CompactNode[]] | null;
+
+export function registerCompiledCatalog(keys: readonly string[], entries: readonly CompiledCatalogEntry[]): Record<string, string> {
+  if (keys.length !== entries.length) throw new Error('compiled catalog key count does not match');
+  const messages: [string, string][] = [];
+  entries.forEach((entry, index) => {
+    if (entry === null) return;
+    const source = typeof entry === 'string' ? entry : entry[0];
+    messages.push([keys[index]!, source]);
+    formatters.set(source, typeof entry === 'string' ? () => source : compactFormatter(entry[1]));
+  });
+  return Object.fromEntries(messages);
+}
+
 /** Register message source strings and their build-emitted formatter functions. */
 export function registerCompiledMessages(
   messages: Readonly<Record<string, string | { message: string }>>,

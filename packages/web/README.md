@@ -5,7 +5,81 @@ See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
 Run `QV_REQUIRE_BROWSER=1 npm run e2e:server -w @quietvote/web` from the repository root after `npm ci --ignore-scripts`, `npm run vendor:install` and `npx playwright install --with-deps chromium`. Every production `buildSite` call verifies the installed vendor copies before bundling.
 This bounded acceptance test serves a fresh production build from the actual HTTP server. It runs the existing trustee ceremony and voter enrollment fixture, imports that enrolled key into Chromium without registering again, casts one ballot, and checks its receipt against the server's signed checkpoint and inclusion proof. It also tests the web signed-request adapter against real management endpoints, accepting the correct audience and rejecting another audience, and exercises coordinator co-signing and lifecycle actions in the organizer console. No API responses are stubbed; the race check pauses an unchanged server response. The separate `e2e/registration.ts` journey exercises actual browser enrollment before the ceremony.
 
-The required browser CI runner runs all seven journeys: app, help, automated accessibility, verifier, spoil shares, real server and registration. `QV_CHROMIUM` can select an installed Chromium binary. Missing tooling fails when `QV_REQUIRE_BROWSER=1`; browser launch failures always fail. To run only the HTTP signed-adapter acceptance without launching Chromium: `node --test --test-name-pattern="signed client" packages/web/e2e/server.ts`.
+The required browser CI runner runs all nine journeys: app, help, automated accessibility, verifier, spoil shares, real server, registration, device settings and split-origin operation. `QV_CHROMIUM` can select an installed Chromium binary. Missing tooling fails when `QV_REQUIRE_BROWSER=1`; browser launch failures always fail. To run only the HTTP signed-adapter acceptance without launching Chromium: `node --test --test-name-pattern="signed client" packages/web/e2e/server.ts`.
+
+## Serving a separate frontend and board
+
+Build a client whose default API is a separate board:
+
+```sh
+npm run build -w @quietvote/web -- ./dist-client \
+  --api-base https://board.example \
+  --connect-origin https://alternate-board.example
+```
+
+`--api-base` sets the default board for election requests and organizer creation
+and publication. Repeat `--connect-origin` for each additional board that this
+deployment permits an invitation to select. The builder includes the default
+API in that list automatically, sorts and deduplicates it, and accepts at most
+16 external board origins. Omitting both flags preserves same-origin operation.
+Only canonical bare HTTPS origins are accepted: no path, trailing slash, query,
+fragment, credentials or wildcard. HTTP is supported only for `localhost`,
+`127.0.0.1` and `.onion` hosts; explicit default ports must be omitted.
+
+Serve the generated directory from the frontend origin, for example
+`https://client.example`, using a static host that applies `_headers` (or
+configure those headers equivalently). Both the generated header CSP and the
+HTML meta CSP must permit the configured boards. A host's additional CSP also
+applies and can further restrict those connections. The reference board
+server's built-in static route supplies its own same-origin header CSP; it is
+not the serving path for a bundle configured to contact a separate board.
+The standalone `verifier.html` retains its network-disabled policy.
+
+Configure the API server with the actual API audience and the frontend origin:
+
+```json
+{
+  "publicUrl": "https://board.example",
+  "allowedOrigins": ["https://client.example"]
+}
+```
+
+Keep this pair and the client build configuration consistent. `publicUrl` is
+the origin bound into management request signatures; it is the board's public
+origin, not the frontend's. `allowedOrigins` controls the server's existing
+CORS allowance for management and other non-public requests. Public GETs keep
+their credential-free wildcard CORS behavior. The client sends no cookies and
+uses the named read-key and signing headers. Proxies must forward `Origin`,
+`Authorization`, `Content-Type`, `Idempotency-Key`, `QV-Read-Key` and
+`Last-Event-ID`, preserve the CORS/rate/retry response headers, and allow SSE
+streaming. API redirects are refused; configure the directly served canonical
+API origin.
+
+An invitation may select an allowed board using its fragment, for example
+`https://client.example/e/ID#inv=TOKEN&read=KEY&board=https%3A%2F%2Falternate-board.example`.
+The board selector must pass the deployment allowlist before any election
+request or key unlock. Malformed, duplicate or unallowed board selectors fail
+closed. The token and read key stay out of request URLs and referrers; enrollment
+sends the existing hashed invitation proof and read access uses `QV-Read-Key`.
+Election navigation preserves the fragment, including links that have a read
+key or board selector without an invitation token. Generated split-origin
+invitations point at the frontend and carry the selected default board in the
+fragment.
+
+Cached API clients distinguish the board, election ID and in-memory read
+credential. Stored voter and organizer keys, receipts, pinned heads and pending
+cast recovery markers have separate board namespaces. Same-origin deployments
+retain their historical storage slots. Switching boards therefore requires an
+explicit key import or creation for the new board; it does not copy a stored
+key. Device preferences remain shared, and election acknowledgements remain
+bound to the signed manifest hash. Clear this device clears all board namespaces.
+
+Run `QV_REQUIRE_BROWSER=1 node packages/web/e2e/split-origin.ts` from the repository
+root for the separate static host/real board journey. It covers actual CORS,
+enrollment, board and read-key changes within the running app, resumed SSE,
+casting and checking a receipt, and organizer creation/publication. This
+implementation does not change the proposed status of P08-2 or P19-3 and does
+not imply that a static host or board has been deployed or independently audited.
 
 ## Organizer setup and lifecycle
 

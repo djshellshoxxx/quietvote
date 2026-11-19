@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { existsSync, renameSync, rmSync, rmdirSync, symlinkSync, unlinkSync } from 'node:fs';
+import { copyFileSync, existsSync, renameSync, rmSync, rmdirSync, symlinkSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
@@ -9,10 +9,108 @@ import { bytesToHex } from '@quietvote/crypto';
 import { DATA_LOCK_NAME } from '../src/data-lock.ts';
 import { ElectionDb } from '../src/electiondb.ts';
 import { keyIdOf } from '../src/auth.ts';
+import { ApiError } from '../src/problem.ts';
 import { World, kp } from './helpers/world.ts';
 
 type CrashInfo = { dir: string; orgId: string; electionId: string; clock: number; path: string; body: Record<string, unknown>; headers: Record<string, string> };
 const admin = kp('operation-crash', 'admin');
+
+for (const withPeers of [false, true]) {
+  test(`startup anchor recovery: untouched empty draft stays lazy ${withPeers ? 'with configured peers' : 'without peers'}`, async () => {
+    let peerCalls = 0;
+    const w = new World({ seed: `empty-draft-recovery-${withPeers}`, n: 3, t: 2, voters: 2, server: withPeers ? {
+      gossipPeers: ['https://peer.example'],
+      gossipResolver: async () => { peerCalls++; return [{ address: '93.184.216.34', family: 4 }]; },
+      gossipTransport: async () => { peerCalls++; throw new Error('empty draft has no signed checkpoint to send'); },
+    } : {} });
+    await w.start();
+    try {
+      await w.setupOrgAndElection();
+      assert.equal(w.server.pool.openCount(), 0);
+      assert.equal(w.server.env.control.runtimeAnchor(w.electionId), undefined);
+      await w.server.stop(); await w.start();
+      assert.equal(w.server.pool.openCount(), 0, 'response recovery must not open untouched empty drafts');
+      assert.equal(w.server.env.control.runtimeAnchor(w.electionId), undefined, 'lazy recovery does not create signing authority');
+      assert.equal(peerCalls, 0);
+
+      const rt = (await w.server.pool.get(w.electionId))!;
+      assert.equal(rt.log.size, 0);
+      if (withPeers) {
+        assert.throws(() => rt.assertHealthy(), (error: unknown) => error instanceof ApiError && error.status === 503 && error.code === 'LOG_UNAVAILABLE');
+        assert.equal(rt.log.checkpoint().ok, false, 'a reopened empty draft cannot sign a checkpoint to authorize itself');
+        const refused = await w.publishManifest();
+        assert.equal(refused.status, 503, refused.text);
+        assert.equal(refused.json.code, 'LOG_UNAVAILABLE');
+        await assert.rejects(w.server.pool.remove(w.electionId), (error: unknown) => error instanceof ApiError && error.code === 'LOG_UNAVAILABLE');
+        assert.ok(w.server.env.control.election(w.electionId)?.dek_wrapped);
+        assert.equal(rt.log.size, 0);
+        assert.equal(peerCalls, 0, 'no signed checkpoint exists for the configured gossip contract');
+      } else {
+        assert.doesNotThrow(() => rt.assertHealthy());
+        const published = await w.publishManifest();
+        assert.equal(published.status, 201, published.text);
+        assert.equal(w.server.env.control.runtimeAnchor(w.electionId)!.tree_size, 1);
+        assert.equal(rt.log.getReceipt(0).ok, true);
+      }
+    } finally { await w.stop(); }
+  });
+}
+
+test('startup anchor recovery: a nonempty log without an anchor still opens and restores its signing floor', async () => {
+  const w = new World({ seed: 'nonempty-missing-anchor-recovery', n: 3, t: 2, voters: 2 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    assert.equal((await w.publishManifest()).status, 201);
+    const rt = (await w.server.pool.get(w.electionId))!;
+    const first = rt.edb.store.getEntry(0)!;
+    const root = rt.log.root();
+    assert.equal(rt.edb.hasAppendCompletions(), false, 'this recovery is triggered by the missing anchor alone');
+    // Models an existing nonempty election after the additive control-schema upgrade.
+    w.server.env.control.db.prepare('DELETE FROM runtime_anchor WHERE election_id=?').run(w.electionId);
+    await w.server.stop(); await w.start();
+    assert.equal(w.server.pool.openCount(), 1, 'nonempty missing-anchor recovery must run during startup');
+    const anchor = w.server.env.control.runtimeAnchor(w.electionId);
+    assert.ok(anchor);
+    assert.equal(anchor.tree_size, 1);
+    assert.deepEqual(anchor.root, root);
+    const recovered = (await w.server.pool.get(w.electionId))!;
+    assert.doesNotThrow(() => recovered.assertHealthy());
+    assert.equal(recovered.log.getReceipt(0).ok, true);
+    const duplicate = await w.submit(first.headerBytes, first.body!);
+    assert.equal(duplicate.status, 200, duplicate.text);
+    assert.equal(recovered.log.size, 1);
+  } finally { await w.stop(); }
+});
+
+test('startup anchor recovery: an existing floor ahead of an empty log still opens and refuses signing or deletion', async () => {
+  const w = new World({ seed: 'empty-log-ahead-anchor-recovery', n: 3, t: 2, voters: 2 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    const rt = (await w.server.pool.get(w.electionId))!;
+    const reg = w.server.env.control.election(w.electionId)!;
+    const path = join(w.dir, reg.db_path), old = join(w.dir, 'empty-election.sqlite');
+    rt.edb.db.prepare('VACUUM INTO ?').run(old);
+    assert.equal((await w.publishManifest()).status, 201);
+    const floor = w.server.env.control.runtimeAnchor(w.electionId)!;
+    assert.equal(floor.tree_size, 1);
+    await w.server.stop(); copyFileSync(old, path); await w.start();
+    assert.equal(w.server.pool.openCount(), 1, 'an empty log must not bypass a retained newer anchor');
+    assert.deepEqual(w.server.env.control.runtimeAnchor(w.electionId), floor);
+    const restored = (await w.server.pool.get(w.electionId))!;
+    assert.equal(restored.log.size, 0);
+    assert.throws(() => restored.assertHealthy(), (error: unknown) => error instanceof ApiError && error.status === 503 && error.code === 'QUARANTINED');
+    assert.equal(restored.log.checkpoint().ok, false);
+    const refused = await w.publishManifest();
+    assert.equal(refused.status, 503, refused.text);
+    assert.equal(refused.json.code, 'QUARANTINED');
+    await assert.rejects(w.server.pool.remove(w.electionId), (error: unknown) => error instanceof ApiError && error.code === 'QUARANTINED');
+    assert.ok(existsSync(path));
+    assert.ok(w.server.env.control.election(w.electionId)?.dek_wrapped);
+  } finally { await w.stop(); }
+});
+
 async function crashed(mode: 'create' | 'invites' | 'clear'): Promise<{ w: World; info: CrashInfo }> {
   const info = await new Promise<CrashInfo>((resolve, reject) => {
     execFile(process.execPath, ['--max-old-space-size=256', fileURLToPath(new URL('./helpers/operation-crash.ts', import.meta.url)), mode],

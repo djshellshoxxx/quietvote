@@ -10,6 +10,9 @@ import { EN } from '../i18n/en.ts';
 import { LOCALE_META, type LocaleMeta } from '../i18n/locales-core.ts';
 import { hasReviews } from '../i18n/runtime.ts';
 import { precompileI18nPlugin } from './precompile.ts';
+import { boardOrigins as checkedOrigins } from '../api/origins.ts';
+import { siteConfig } from './config.ts';
+export { checkOrigin } from '../api/origins.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const PKG = join(here, '..', '..');
@@ -17,16 +20,10 @@ export const PKG = join(here, '..', '..');
 const hashOf = (algo: 'sha256' | 'sha384', data: string | Uint8Array, enc: 'hex' | 'base64'): string => createHash(algo).update(data).digest(enc);
 export const sri = (data: string | Uint8Array): string => `sha384-${hashOf('sha384', data, 'base64')}`;
 
-/** A connect origin is spliced into the CSP and an HTML attribute: only a bare https origin (http for loopback/.onion) is allowed. */
-const ORIGIN_RE = /^(?:https:\/\/[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?|http:\/\/(?:localhost|127\.0\.0\.1|[a-z0-9.-]+\.onion))(?::\d{1,5})?$/;
-export function checkOrigin(o: string): string {
-  if (!ORIGIN_RE.test(o)) throw new Error(`invalid connect origin ${JSON.stringify(o)}: expected a bare https origin`);
-  return o;
-}
 const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 export function csp(boardOrigins: readonly string[] = []): { header: string; meta: string } {
-  const connect = ["'self'", ...boardOrigins.map(checkOrigin)].join(' ');
+  const connect = ["'self'", ...checkedOrigins(boardOrigins)].join(' ');
   const common = [
     "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' data:", "font-src 'self'", `connect-src ${connect}`,
     "worker-src 'self'", "manifest-src 'self'", "base-uri 'none'", "form-action 'self'", "object-src 'none'",
@@ -72,8 +69,9 @@ export function lazyPreloadSources(meta: readonly LocaleMeta[] = LOCALE_META): s
   return ['src/ui/charts.ts', ...meta.filter((m) => m.tier !== 'source' && hasReviews(m)).map((m) => `src/i18n/catalogs/${m.tag}.ts`)];
 }
 
-export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: Asset[]; lazy?: Asset[]; version: string; buildId: string; connectOrigins: string[] }): string {
-  const { meta } = csp(a.connectOrigins);
+export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: Asset[]; lazy?: Asset[]; version: string; buildId: string; apiBase?: string; connectOrigins: string[] }): string {
+  const config = siteConfig(a);
+  const { meta } = csp(config.connectOrigins);
   return `<!doctype html>
 <html lang="en" dir="ltr">
 <head>
@@ -85,6 +83,8 @@ export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: As
 <meta name="qv-version" content="${esc(a.version)}">
 <meta name="qv-build" content="${esc(a.buildId)}">
 <meta name="qv-worker" content="/${a.worker.path}">
+<meta name="qv-api-base" content="${esc(config.apiBase)}">
+<meta name="qv-board-origins" content="${esc(config.connectOrigins.join(' '))}">
 <title>${esc(EN['qv.app.name'].message)}</title>
 <link rel="stylesheet" href="/${a.css.path}" integrity="${a.css.integrity}" crossorigin="anonymous">
 ${[...(a.modules ?? []), ...(a.lazy ?? [])].map((m) => `<link rel="modulepreload" href="/${m.path}" integrity="${m.integrity}" crossorigin="anonymous">`).join('\n')}
@@ -124,7 +124,8 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
   return { html, scriptHash: sh, styleHash: st, policy };
 }
 
-export async function buildSite(outDir: string, opts: { version?: string; connectOrigins?: string[]; /** tests only: which locales count as reviewed for preloads */ localeMeta?: readonly LocaleMeta[] } = {}): Promise<{ assets: Asset[]; buildId: string; verifierBytes: number }> {
+export async function buildSite(outDir: string, opts: { version?: string; apiBase?: string; connectOrigins?: string[]; /** tests only: which locales count as reviewed for preloads */ localeMeta?: readonly LocaleMeta[] } = {}): Promise<{ assets: Asset[]; buildId: string; verifierBytes: number }> {
+  const config = siteConfig(opts);
   // Every production build consumes verified vendor copies, including callers that bypass the npm CLI.
   execFileSync(process.execPath, [join(PKG, '..', '..', 'scripts', 'vendor.mjs'), 'check'], { stdio: 'pipe' });
   rmSync(outDir, { recursive: true, force: true });
@@ -160,9 +161,9 @@ export async function buildSite(outDir: string, opts: { version?: string; connec
   const js = emit('app', 'js', entry.contents);
   const wk = emit('seal-worker', 'js', worker.outputFiles![0]!.contents);
   const cs = emit('styles', 'css', css);
-  const buildId = hashOf('sha256', assets.map((a) => a.sha256).sort().join('\n'), 'hex').slice(0, 12);
+  const buildId = hashOf('sha256', assets.map((a) => a.sha256).sort().join('\n') + JSON.stringify(config), 'hex').slice(0, 12);
   const version = opts.version ?? (JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8')) as { version: string }).version;
-  const connectOrigins = opts.connectOrigins ?? [];
+  const { apiBase, connectOrigins } = config;
   const visiting = new Set<string>();
   const visit = (path: string, into: Set<string>): void => {
     if (visiting.has(path)) throw new Error('cyclic module graph cannot be preloaded dependency-first');
@@ -191,13 +192,14 @@ export async function buildSite(outDir: string, opts: { version?: string; connec
     return asset;
   });
   const lazy = orderedAssets(lazyNames);
-  writeFileSync(join(outDir, 'index.html'), htmlPage({ js, css: cs, worker: wk, modules: orderedAssets(staticNames), lazy, version, buildId, connectOrigins }));
+  writeFileSync(join(outDir, 'index.html'), htmlPage({ js, css: cs, worker: wk, modules: orderedAssets(staticNames), lazy, version, buildId, apiBase, connectOrigins }));
   const v = await verifierHtml();
   writeFileSync(join(outDir, 'verifier.html'), v.html);
   if (Buffer.byteLength(v.html) >= 400 * 1024) throw new Error('verifier.html exceeds 400 KB (QV-19-REQ-016)');
   writeFileSync(join(outDir, '_headers'), headersFile(connectOrigins, v));
   const manifest = {
     schema: 'qv-client-assets/1', version, build_id: buildId,
+    deployment: { api_base: apiBase, board_origins: connectOrigins },
     client_assets: assets.map((a) => ({ path: a.path, sha384: a.sha384, sha256: a.sha256, size: a.size })).sort((x, y) => (x.path < y.path ? -1 : 1)),
     verifier_page: { path: 'verifier.html', sha256: hashOf('sha256', v.html, 'hex') },
     index_html: { sha256: hashOf('sha256', readFileSync(join(outDir, 'index.html')), 'hex') },

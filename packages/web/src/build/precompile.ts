@@ -52,20 +52,22 @@ function compact(nodes: readonly Node[]): Compact[] {
 function registration(tableName: string, messages: MessageTable): string {
   const asts = compileCatalog(messages);
   const formatters = Object.entries(asts)
-    .filter(([key, ast]) => !(ast.length === 1 && ast[0]?.k === 'text' && ast[0].v === messages[key]))
-    .map(([key, ast]) => `${JSON.stringify(key)}: compactFormatter(${JSON.stringify(compact(ast))})`)
+    .flatMap(([key, ast], index) => {
+      if (ast.length === 1 && ast[0]?.k === 'text' && ast[0].v === messages[key]) return [];
+      return [`[MESSAGE_KEYS[${index}]]: compactFormatter(${JSON.stringify(compact(ast))})`];
+    })
     .join(',');
   // The source catalog has already been parsed here. Omitted entries are exact one-node text literals.
   return `registerCompiledMessages(${tableName}, {${formatters}}, true);`;
 }
 
-async function catalogRegistration(name: typeof catalogNames[number]): Promise<string> {
+async function validateCatalog(name: typeof catalogNames[number]): Promise<void> {
   const path = `${i18nDir}catalogs/${name}.ts`;
   const source = await readFile(path, 'utf8');
   const mod = await loadModule(path, source);
   const tableName = catalogExports[name];
   const messages = stringTable(mod[tableName], tableName);
-  return registration(tableName, messages);
+  compileCatalog(messages);
 }
 
 async function sourceModule(): Promise<string> {
@@ -121,7 +123,7 @@ export function precompileI18nPlugin(): Plugin {
       build.onStart(async () => {
         // Parsing every source table here makes malformed ICU a build error.
         compiledIndex = await sourceModule();
-        for (const name of catalogNames) await catalogRegistration(name);
+        for (const name of catalogNames) await validateCatalog(name);
       });
       build.onResolve({ filter: /(?:^|[\\/])i18n[\\/]index\.ts$/ }, () => ({ path: i18nIndexPath, namespace: 'quietvote-compiled-i18n' }));
       build.onLoad({ filter: /.*/, namespace: 'quietvote-compiled-i18n' }, async () => ({
@@ -155,19 +157,24 @@ export const MESSAGE_KEYS = Object.keys(EN) as MessageKey[];
         const mod = await loadModule(args.path, source);
         const tableName = catalogExports[name];
         const messages = stringTable(mod[tableName], tableName);
-        // Catalogs share the source key dictionary. Shipping the long key names five more times costs compressed bytes
-        // without changing translation behavior. Null slots preserve genuinely absent translations and their fallback rules.
+        // Catalogs share the source key dictionary. Keep source/AST pairs together so their repeated text stays within
+        // the compressor window. Exact text-only messages need no AST; null slots preserve absent translations.
         const enPath = `${i18nDir}en.ts`;
         const enSource = await readFile(enPath, 'utf8');
         const keys = Object.keys((await loadModule(enPath, enSource)).EN as Record<string, unknown>);
         const known = new Set(keys);
         if (Object.keys(messages).some((key) => !known.has(key))) throw new Error(`${name} catalog contains unknown source keys`);
-        const values = keys.map((key) => messages[key] ?? null);
+        const asts = compileCatalog(messages);
+        const values = keys.map((key) => {
+          const message = messages[key];
+          if (message === undefined) return null;
+          const ast = asts[key]!;
+          return ast.length === 1 && ast[0]?.k === 'text' && ast[0].v === message ? message : [message, compact(ast)];
+        });
         return {
           contents: `import { MESSAGE_KEYS } from '../en.ts';
-export const ${tableName}: Record<string, string> = Object.fromEntries((${JSON.stringify(values)} as (string | null)[]).flatMap((message, index) => message === null ? [] : [[MESSAGE_KEYS[index], message]]));
-import { compactFormatter, registerCompiledMessages } from '../compiled-runtime.ts';
-${registration(tableName, messages)}\n`,
+import { registerCompiledCatalog } from '../compiled-runtime.ts';
+export const ${tableName}: Record<string, string> = registerCompiledCatalog(MESSAGE_KEYS, ${JSON.stringify(values)});\n`,
           loader: 'ts',
           resolveDir: dirname(args.path),
         };

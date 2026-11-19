@@ -12,7 +12,7 @@ import { FR } from '../src/i18n/catalogs/fr.ts';
 import { DE } from '../src/i18n/catalogs/de.ts';
 import { PT_BR } from '../src/i18n/catalogs/pt-BR.ts';
 import { AR } from '../src/i18n/catalogs/ar.ts';
-import { compiledFormatter, formatCompiled, registerCompiledMessages } from '../src/i18n/compiled-runtime.ts';
+import { compiledFormatter, formatCompiled, registerCompiledCatalog, registerCompiledMessages } from '../src/i18n/compiled-runtime.ts';
 import { compileCatalog, precompileI18nPlugin } from '../src/build/precompile.ts';
 
 const catalogs: ReadonlyArray<readonly [string, Readonly<Record<string, string>>]> = [
@@ -67,6 +67,17 @@ test('compiled runtime preserves plural, select, and bidi formatting and accepts
 
 test('build-time catalog compilation rejects invalid ICU messages', () => {
   assert.throws(() => compileCatalog({ broken: '{name' }), /IcuSyntaxError/);
+});
+
+test('compact catalogs retain missing-key gaps, literal source text and compiled formatting', () => {
+  const source = "Literal '{brace}' and {name}";
+  const table = registerCompiledCatalog(['first', 'missing', 'last'], [
+    'A plain literal', null, [source, ['Literal {brace} and ', [0, 'name']]],
+  ]);
+  assert.deepEqual(table, { first: 'A plain literal', last: source });
+  assert.equal(formatCompiled(table.first!, {}, { locale: 'en' }), 'A plain literal');
+  assert.equal(formatCompiled(table.last!, { name: 'Ada' }, { locale: 'en' }), format(source, { name: 'Ada' }, { locale: 'en' }));
+  assert.throws(() => registerCompiledCatalog(['missing'], []), /key count/);
 });
 
 test('esbuild substitutes the source translator, keeps lazy locale chunks, and omits the runtime parser', async () => {

@@ -20,10 +20,12 @@ if (root === null) {
     startApp({
       root,
       storage,
+      apiBase: meta('qv-api-base'),
+      boardOrigins: meta('qv-board-origins').split(' ').filter(Boolean),
       ...(storedLanguage === undefined ? {} : { storedLanguage }),
       build: { version: meta('qv-version'), id: meta('qv-build') },
       locales,
       ...(sealer ? { sealer } : {}),
     });
-  });
+  }).catch(() => { root.textContent = createTranslator('en').t('qv.err.E-GEN-UNKNOWN.title'); });
 }

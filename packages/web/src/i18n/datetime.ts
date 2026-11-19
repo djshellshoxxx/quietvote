@@ -29,13 +29,25 @@ export function formatDeadline(instantIso: string, electionZone: string, viewerZ
   return out;
 }
 
-/** UTC offset of `zone` at `instantMs`, in minutes. */
+/** Date.UTC interprets years 0..99 as 1900..1999; setUTCFullYear preserves the actual calendar year. */
+function utc(year: number, month: number, day: number, hour: number, minute: number, second = 0): number {
+  const value = new Date(0);
+  value.setUTCFullYear(year, month, day);
+  value.setUTCHours(hour, minute, second, 0);
+  return value.getTime();
+}
+
+/** UTC offset of `zone` at `instantMs`, in minutes, retaining historical second precision. */
 export function zoneOffsetMinutes(instantMs: number, zone: string): number {
-  const f = new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const f = new Intl.DateTimeFormat('en-US', { timeZone: zone, calendar: 'gregory', era: 'short', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const p: Record<string, number> = {};
-  for (const x of f.formatToParts(new Date(instantMs))) if (x.type !== 'literal') p[x.type] = Number(x.value);
-  const asUtc = Date.UTC(p.year!, p.month! - 1, p.day!, p.hour!, p.minute!, p.second!);
-  return Math.round((asUtc - Math.floor(instantMs / 1000) * 1000) / 60000);
+  let bc = false;
+  for (const x of f.formatToParts(new Date(instantMs))) {
+    if (x.type === 'era') bc = x.value === 'BC';
+    else if (x.type !== 'literal') p[x.type] = Number(x.value);
+  }
+  const asUtc = utc(bc ? 1 - p.year! : p.year!, p.month! - 1, p.day!, p.hour!, p.minute!, p.second!);
+  return (asUtc - Math.floor(instantMs / 1000) * 1000) / 60000;
 }
 
 export interface LocalTime {
@@ -55,19 +67,25 @@ const iso = (ms: number): string => new Date(ms).toISOString().replace('.000Z', 
 
 /** Resolves organizer wall-clock input against an IANA zone, reporting DST gaps and folds (REQ-092). */
 export function zonedLocalToUtc(l: LocalTime, zone: string, chosenOffsetMinutes?: number): ZonedResult {
-  const wall = Date.UTC(l.y, l.mo - 1, l.d, l.h, l.mi, 0);
+  const wall = utc(l.y, l.mo - 1, l.d, l.h, l.mi);
   const offs = new Set<number>([zoneOffsetMinutes(wall - 86_400_000, zone), zoneOffsetMinutes(wall + 86_400_000, zone), zoneOffsetMinutes(wall, zone)]);
   const valid: { offsetMinutes: number; instant: number }[] = [];
   for (const o of offs) {
-    const inst = wall - o * 60_000;
+    const inst = wall - Math.round(o * 60_000);
     if (zoneOffsetMinutes(inst, zone) === o) valid.push({ offsetMinutes: o, instant: inst });
   }
   valid.sort((a, b) => a.instant - b.instant);
   if (valid.length === 0) {
-    const after = new Date(wall + 3_600_000);
-    const before = new Date(wall - 3_600_000);
-    const s = (x: Date): string => `${x.getUTCFullYear()}-${pad2(x.getUTCMonth() + 1)}-${pad2(x.getUTCDate())} ${pad2(x.getUTCHours())}:${pad2(x.getUTCMinutes())}`;
-    return { kind: 'gap', suggestions: [s(before), s(after)] };
+    const s = (x: Date): string => `${String(x.getUTCFullYear()).padStart(4, '0')}-${pad2(x.getUTCMonth() + 1)}-${pad2(x.getUTCDate())} ${pad2(x.getUTCHours())}:${pad2(x.getUTCMinutes())}`;
+    // Reproject actual instants on either side of the offset jump. A fixed +/- one hour is still nonexistent
+    // during a skipped day (e.g. Pacific/Apia), and is needlessly distant for a half-hour transition.
+    const suggestions = [...offs].map((offset) => {
+      const instant = wall - Math.round(offset * 60_000);
+      const local = instant + Math.round(zoneOffsetMinutes(instant, zone) * 60_000);
+      // Round an alternative away from the gap to an input-representable minute, never back into it.
+      return s(new Date((local > wall ? Math.ceil(local / 60_000) : Math.floor(local / 60_000)) * 60_000));
+    });
+    return { kind: 'gap', suggestions: [...new Set(suggestions)].sort() };
   }
   if (valid.length === 1) return { kind: 'ok', instant: iso(valid[0]!.instant), offsetMinutes: valid[0]!.offsetMinutes };
   if (chosenOffsetMinutes !== undefined) {
@@ -79,6 +97,6 @@ export function zonedLocalToUtc(l: LocalTime, zone: string, chosenOffsetMinutes?
 
 export function offsetText(minutes: number): string {
   const s = minutes < 0 ? '-' : '+';
-  const a = Math.abs(minutes);
-  return `UTC${s}${pad2(Math.floor(a / 60))}:${pad2(a % 60)}`;
+  const seconds = Math.round(Math.abs(minutes) * 60);
+  return `UTC${s}${pad2(Math.floor(seconds / 3600))}:${pad2(Math.floor(seconds / 60) % 60)}${seconds % 60 ? `:${pad2(seconds % 60)}` : ''}`;
 }

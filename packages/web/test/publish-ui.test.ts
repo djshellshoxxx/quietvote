@@ -101,6 +101,34 @@ test('publish UI: success publishes with the organizer key and returns the invit
   assert.equal(publishAudience(INSTANCE, PAGE), `qv:${INSTANCE}@${PAGE}`);
 });
 
+test('split-origin publication and organization enrollment sign for the API origin before sending', async () => {
+  const apiBase = 'https://board.example';
+  const srv = fakeServer();
+  assert.equal((await runPublish(baseRun(srv, { apiBase }))).kind, 'published');
+  assert.deepEqual(srv.seen.audiences, [`qv:${INSTANCE}@${apiBase}`]);
+  const audiences: string[] = [];
+  const id = await enrollOrganization({ name: 'Council', token: 'enrollment-token', idempotencyKey: 'enroll', passphrase: 'unused', storage: storageWith(true), apiBase, origin: PAGE,
+    unlock: async () => createSigner(seedOf(1), { preferWebCrypto: false }),
+    makeClient: (options) => {
+      assert.equal(options.baseUrl, apiBase);
+      if (options.signing) audiences.push(options.signing.audience);
+      return { instance: async () => ({ instance_id: INSTANCE, api_versions: ['v1'], server_version: 'test' }), createOrganization: async () => ({ org_id: 'org', name: 'Council' }) };
+    },
+  });
+  assert.equal(id, 'org'); assert.deepEqual(audiences, [`qv:${INSTANCE}@${apiBase}`]);
+  let unlocked = false;
+  const invalid = baseRun(srv, { apiBase: apiBase + '/path', unlock: async () => { unlocked = true; throw new Error('must not unlock'); } });
+  assert.equal((await runPublish(invalid)).kind, 'failed'); assert.equal(unlocked, false);
+  const interrupted = fakeServer({ failInvitesOnce: new ApiError({ status: 503, code: 'LOG_UNAVAILABLE' }) });
+  const prior = await runPublish(baseRun(interrupted, { apiBase }));
+  assert.equal(prior.kind, 'failed');
+  if (prior.kind !== 'failed') return;
+  assert.equal(prior.state?.boardOrigin, apiBase);
+  const moved = await runPublish(baseRun(interrupted, { apiBase: PAGE, prior: prior.state, unlock: invalid.unlock }));
+  assert.equal(moved.kind, 'failed'); assert.equal(unlocked, false, 'cross-board resume fails before unlock');
+  assert.equal(interrupted.seen.elections, 1);
+});
+
 test('publish UI: a failed step keeps a resumable state, and the retry continues without a second election', async () => {
   const srv = fakeServer({ failInvitesOnce: new ApiError({ status: 503, code: 'LOG_UNAVAILABLE', message: 'busy', requestId: 'req-7' }) });
   const first = await runPublish(baseRun(srv));

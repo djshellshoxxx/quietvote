@@ -58,7 +58,7 @@ export class ApiClient {
     const url = `${this.base}${target}`;
     const headers: Record<string, string> = { Accept: opts.accept ?? 'application/json', ...opts.headers };
     if (this.readKey !== undefined) headers['QV-Read-Key'] = this.readKey;
-    const init: RequestInit = { method, headers, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer' };
+    const init: RequestInit = { method, headers, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer', redirect: 'error' };
     let bodyBytes: Uint8Array = new Uint8Array(0);
     if (opts.body !== undefined) {
       const text = JSON.stringify(opts.body);

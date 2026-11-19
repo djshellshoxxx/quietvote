@@ -1,7 +1,8 @@
 # QuietVote comprehensive consolidation
 
-Status: production candidate assembled; independent findings repaired and
-revalidated; final hosted qualification is pending. No main merge, deployment, release, force push
+Status: first candidate published; additional completed implementation is committed
+locally and undergoing independent review; final hosted qualification is pending.
+No main merge, deployment, release, force push
 or remote branch deletion has occurred in this operation.
 
 ## Scope and source preservation
@@ -42,25 +43,38 @@ to their run. These are local engineering provenance identifiers;
 the publication receipt must identify the externally published commit and prove
 that its tree matches the tested source.
 
-## Counting the delivered work
+The later local composition at `ba728be0140751bc77d464db32c5f9dc110dd007`
+(tree `bf64cc5646a8eebc57fceae891a60d716399959b`) adds lossless catalog
+compaction d86a89d, organizer timezone input c4b4555/92db0be, separate-origin
+operation b746513, actual publication/router/redirect regressions
+1c0edda/af23745, hosted failure repairs 65b47fb, and invitation/IPv6 compatibility
+341c8f1. This source is not yet covered by the first publication's hosted results.
 
-The count of **nine completed feature slices** uses explicit user-facing or
+## Counting the completed implementation
+
+The count of **11 implemented feature slices** uses explicit user-facing or
 operational boundaries: catalog-only control reasons; signed control sequences;
 independent runtime anchors; recorded public exports and deletion handoff;
 cooperative SPA verification; verified vendor consumption; device/receipt
 preferences; optional local rules acknowledgment; and method-correct undervote
-notices. These are additions completed during this operation, not a count of every
+notices; organizer timezone/DST input; and separate-origin browser/API operation.
+These are additions completed during this operation, not a count of every
 feature inherited from the recovered platform.
 
-**Nine new defect families** were corrected: trustee-index nonce binding;
+**13 new defect families** were corrected: trustee-index nonce binding;
 sealing-worker exception/settlement handling; misleading quota copy;
 rollback/acknowledged-archive deletion composition; queued-writer deletion
 lifetime; obsolete verifier announcements; settings request-success before commit;
-stale settings read/modify/write; and permanently cached failed IndexedDB opening.
+stale settings read/modify/write; permanently cached failed IndexedDB opening;
+organizer calendar/gap/historical-offset resolution; CORS resume/header exposure;
+current hexadecimal invitation paste routing; and eager startup recovery of
+untouched empty drafts.
 Four historical fix families are also recovered from #57, #61, #63 and #64.
-This yields **13 substantive repaired or recovered defect families**. Test-fixture
+This yields **17 substantive repaired or recovered defect families**. Test-fixture
 integration corrections are additional maintenance, not inflated product-bug
-counts. Security findings associated with feature completion overlap this count;
+counts. Compatibility corrections found while developing the new origin feature
+(IPv6 self origins and post-cast fragment retention) are included in that feature,
+not counted as additional historical bugs. Security findings associated with feature completion overlap this count;
 the feature and defect totals must not be added as a unique-work metric.
 
 ## Conflict resolution and behavior preservation
@@ -83,6 +97,20 @@ retain their original meaning. The content-only shared verifier comparison exclu
 checks; it does not turn exclusions into agreements or imply Python lacks those
 separately implemented capabilities.
 
+The timezone and separate-origin integration is tested through the actual
+organizer publication handler: the existing signed UTC fields, API-origin HTTP
+signature audience, returned log origin and board-scoped organizer key all agree.
+Independent router tests exercise same-ID elections on separate boards, read-key
+changes, actual casting and scoped receipts, and reject cross-board signer reuse.
+The deployment retains its original CSP and bundle-size limits; lossless catalog
+representation creates room without deleting draft messages or changing review flags.
+
+Hosted server failures on the first publication exposed one production recovery
+regression and two stale integration fixtures. The repair preserves the original
+lazy-startup assertion and adds boundary cases for nonempty missing anchors and
+empty rollback behind a newer floor. It does not relax first-acquisition signing
+or deletion gates. See [the repair receipt](../reports/hosted-ci-repair-20261119.md).
+
 ## Retained branches outside candidate ancestry
 
 | Branch | Reason for retention/exclusion |
@@ -104,15 +132,18 @@ PR #51 is a closed, superseded source already preserved through later integratio
 Its former restoration/browser failures were investigated as history, not assumed
 current defects. PR #70's exact current head already passed its complete hosted
 matrix, including Windows; no test was skipped or weakened to manufacture a fix.
-PR #69 had two cancelled macOS cells. The completed first retry left one cancelled
-trustee/crypto cell; that remaining job was explicitly retried after the run ended.
-New combined-source checks are still required regardless of those baseline results.
+PR #69 had two cancelled macOS cells. Targeted retries completed successfully:
+[run 44294076403, attempt 3](https://github.com/djshellshoxxx/quietvote/actions/runs/44294076403)
+now has all 27 latest jobs successful on its exact unchanged head. No assertion or
+timeout was weakened. New combined-source checks remain required independently.
 
 The initial live recheck found zero inline review threads on all 11 open PRs;
 there were no outstanding inline conversations to silently mark resolved.
 
-The existing 11 open PRs will receive a current consolidation reference and source
-status after publication. They are not marked formally approved by this report.
+All 11 existing open PRs (#27, #43, #57, #60, #61, #63, #64, #65, #66, #69 and #70)
+received a source-preservation/status comment linking to [PR #71](https://github.com/djshellshoxxx/quietvote/pull/71).
+They remain available for provenance and formal review. None is marked formally
+approved or merged by this report.
 
 ## Final qualification and merge gate
 
@@ -135,5 +166,28 @@ agent review cannot supply that appointment or approval. Historical missing DCO
 trailers also remain a provenance decision. The absence of an enforced GitHub
 ruleset does not waive the written review requirement.
 
-The final publication/CI/review receipt will replace this in-progress section with
-exact commit/tree identifiers, PR URL and outstanding promotion blockers.
+## Publication receipt
+
+[PR #71](https://github.com/djshellshoxxx/quietvote/pull/71) targets main from
+`codex/quietvote-comprehensive-consolidation`. The first published commit is
+`ddf58d6168e2b8bc5069689400538be8e9b85180`, whose tree
+`8dbfbe91c7d3551fa70700ee8723ecb280ca2096` exactly matches local candidate
+`be098bee3498ca0de742008c3067f0727862b117`. This was checked through the remote Git
+object API and again after fetching the branch and comparing both trees.
+
+Publication used a new commit with the existing membership head and five explicit
+original source parents. It does not claim that new local engineering commit
+identifiers are identical to the publishing connection's commit identifier. Their
+source tree and review provenance are preserved by the equality receipt and the
+reports. Original remote commits retain their own authors and trailers.
+
+A post-publication inventory found 73 remote branches: all 72 original branches
+plus the requested candidate. The ancestry check on the actual published commit
+again found 65 original tips contained. No original branch was deleted or moved.
+
+Exact-head hosted qualification is tracked on
+[the PR checks page](https://github.com/djshellshoxxx/quietvote/pull/71/checks).
+The initial full matrix is run 44493061333, visual checks are run 44493050632, and
+claims/documentation checks are run 44493050749. Queued jobs are not passes. See
+[FINAL_VERIFICATION](FINAL_VERIFICATION.md) for the eventual qualification receipt
+and [CONTINUATION](CONTINUATION.md) for the preserved remaining steps.

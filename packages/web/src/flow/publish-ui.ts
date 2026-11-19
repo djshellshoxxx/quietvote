@@ -3,6 +3,7 @@
 // The publish state is returned to the caller and kept in memory only. Invite codes are secrets and are never written to storage.
 import { ApiClient, type ClientOptions } from '../api/client.ts';
 import { ApiError, uxCodeFor, type UxCode } from '../api/errors.ts';
+import { apiOrigin } from '../api/origins.ts';
 import type { Instance } from '../api/types.ts';
 import { KeyError, type KeystoreDeps } from '../key/keystore.ts';
 import type { Signer } from '../key/signer.ts';
@@ -37,7 +38,7 @@ export interface PublishRun {
   storage: DeviceStorage;
   /** API base, "" for same origin. */
   apiBase: string;
-  /** The page origin. The request audience is `qv:<instance_id>@<origin>` (server auth.ts audienceOf). */
+  /** The page origin; the signed audience uses apiBase when this deployment has a separate board. */
   origin: string;
   rng?: Rng | undefined;
   now?: (() => number) | undefined;
@@ -61,11 +62,12 @@ export async function enrollOrganization(r: {
   makeClient?: (o: ClientOptions) => Pick<ApiClient, 'instance' | 'createOrganization'>;
 }): Promise<string> {
   if (r.name.trim() === '' || r.name.trim().length > 120) throw new PublishError('E-ORG-MANIFEST', 'organization name must contain 1 to 120 characters');
+  const board = apiOrigin(r.apiBase, r.origin);
   const signer = await (r.unlock ? r.unlock(r.passphrase) : unlockKey({ storage: r.storage, slot: ORGANIZER_SLOT, passphrase: r.passphrase, rewrap: false, ...(r.deps ? { deps: r.deps } : {}) }).then((k) => k.signer));
   try {
     const make = r.makeClient ?? ((o: ClientOptions) => new ApiClient(o));
     const instance = await make({ baseUrl: r.apiBase }).instance();
-    const client = make({ baseUrl: r.apiBase, signing: { signer, audience: publishAudience(instance.instance_id, r.origin) } });
+    const client = make({ baseUrl: board, signing: { signer, audience: publishAudience(instance.instance_id, board) } });
     const result = await client.createOrganization(r.name.trim(), b64uEncode(signer.publicKey), r.idempotencyKey, r.token);
     return result.org_id;
   } finally { signer.lock(); }
@@ -89,6 +91,9 @@ const failed = (e: unknown, state: PublishState | undefined): PublishOutcome => 
 /** Runs the whole publish for one attempt. Pass the previous `state` in `prior` to resume after a failure. */
 export async function runPublish(r: PublishRun): Promise<PublishOutcome> {
   if (r.orgId.trim() === '') return { kind: 'noOrg' };
+  let board: string;
+  try { board = apiOrigin(r.apiBase, r.origin); } catch (e) { return failed(e, undefined); }
+  if (r.prior && r.prior.boardOrigin !== board) return failed(new PublishError('E-ORG-STATE', 'publication checkpoint belongs to another API origin'), undefined);
   let stored: unknown;
   try {
     stored = await r.storage.getKey(ORGANIZER_SLOT);
@@ -106,11 +111,12 @@ export async function runPublish(r: PublishRun): Promise<PublishOutcome> {
   const make = r.makeClient ?? ((o: ClientOptions) => new ApiClient(o));
   try {
     const inst: Instance = await make({ baseUrl: r.apiBase }).instance();
-    const client = make({ baseUrl: r.apiBase, signing: { signer, audience: publishAudience(inst.instance_id, r.origin) } });
+    const client = make({ baseUrl: board, signing: { signer, audience: publishAudience(inst.instance_id, board) } });
     const res = await publishElection({
       client, orgId: r.orgId.trim(), form: r.form, signer, rollHex: r.rollHex,
       ...(r.rng === undefined ? {} : { rng: r.rng }), ...(r.now === undefined ? {} : { now: r.now }),
     }, r.prior);
+    res.state.boardOrigin = board;
     if (!res.ok) return failed(res.error, res.state);
     if (res.state.electionId === undefined) return failed(new PublishError('E-ORG-STATE', 'the server returned no election id'), res.state);
     return { kind: 'published', electionId: res.state.electionId, invites: inviteList(res.state), state: res.state };

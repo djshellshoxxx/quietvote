@@ -2,9 +2,11 @@ import { gzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildSite, PKG } from './site.ts';
+import { buildArguments } from './config.ts';
 
-const out = process.argv[2] ?? join(PKG, 'dist');
-const r = await buildSite(out);
+const args = buildArguments(process.argv.slice(2));
+const out = args.out ?? join(PKG, 'dist');
+const r = await buildSite(out, args);
 const gz = (p: string): number => gzipSync(readFileSync(join(out, p))).length;
 const jsAssets = r.assets.filter((a) => a.path.endsWith('.js'));
 const js = jsAssets.reduce((n, a) => n + gz(a.path), 0);

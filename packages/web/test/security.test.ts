@@ -13,10 +13,10 @@ import { allowedWorkerUrl } from '../src/worker/worker-sealer.ts';
 import { b64uDecode, b64uEncode } from '../src/util/hex.ts';
 import { FakeBoard, sharedSim } from './helpers/fake-board.ts';
 
-test('WV-3: a malformed percent escape in the invite fragment cannot throw (crafted link must not break routing)', () => {
-  assert.doesNotThrow(() => parseFragment('#board=%E0%A4%A'));
-  assert.doesNotThrow(() => parseFragment('#board=%'));
-  assert.equal(parseFragment('#board=%E0%A4%A').board, undefined);
+test('WV-3: a malformed board escape is rejected instead of falling back to another server', () => {
+  // home-origin-ui.test.ts separately verifies the actual SPA catches this and sends no request or key lookup.
+  assert.throws(() => parseFragment('#board=%E0%A4%A'));
+  assert.throws(() => parseFragment('#board=%'));
   assert.equal(parseFragment('#board=https%3A%2F%2Fboard.example').board, 'https://board.example');
 });
 
@@ -27,7 +27,8 @@ test('invite fragment: only well-formed tokens, read keys and https board origin
   for (const u of ['javascript:alert(1)', 'data:text/html,x', 'http://evil.example', 'https://u:p@evil.example', 'ftp://x', 'not a url']) {
     assert.equal(safeBoardOrigin(u), undefined, u);
   }
-  assert.equal(safeBoardOrigin('https://board.example/path?q=1'), 'https://board.example');
+  assert.equal(safeBoardOrigin('https://board.example/path?q=1'), undefined);
+  assert.throws(() => parseFragment('#board=https%3A%2F%2Fboard.example%2Fpath%3Fq%3D1'));
   assert.equal(b64uDecode('a+b/'), undefined);
 });
 

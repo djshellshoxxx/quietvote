@@ -2,6 +2,8 @@
 // server; the token is hashed on the device before it is transmitted.
 import { sha256 } from '@quietvote/crypto';
 import { b64uDecode, b64uEncode } from '../util/hex.ts';
+import { checkOrigin } from '../api/origins.ts';
+export { safeBoardOrigin } from '../api/origins.ts';
 
 export interface InviteFragment {
   token?: Uint8Array;
@@ -14,7 +16,7 @@ export function parseFragment(hash: string): InviteFragment {
   const s = hash.startsWith('#') ? hash.slice(1) : hash;
   for (const part of s.split('&')) {
     const eq = part.indexOf('=');
-    if (eq < 0) continue;
+    if (eq < 0) { if (part === 'board') throw new Error('missing board origin'); continue; }
     const k = part.slice(0, eq);
     const v = part.slice(eq + 1);
     if (k === 'inv') {
@@ -23,31 +25,12 @@ export function parseFragment(hash: string): InviteFragment {
     } else if (k === 'read') {
       if (/^[A-Za-z0-9_-]{16,64}$/.test(v)) out.readKey = v;
     } else if (k === 'board') {
-      let raw: string | undefined;
-      try {
-        raw = decodeURIComponent(v);
-      } catch {
-        raw = undefined; // malformed %-escape in a crafted link: ignore the member, never throw out of routing
-      }
-      const u = raw === undefined ? undefined : safeBoardOrigin(raw);
-      if (u !== undefined) out.board = u;
+      if (out.board !== undefined) throw new Error('duplicate board origin');
+      // Never fall back to another board when a supplied destination is malformed.
+      out.board = checkOrigin(decodeURIComponent(v));
     }
   }
   return out;
-}
-
-/** Split-origin board URL (QV-19 §4): https only (http allowed for localhost / .onion), origin only. */
-export function safeBoardOrigin(u: string): string | undefined {
-  try {
-    const url = new URL(u);
-    const host = url.hostname;
-    const httpOk = url.protocol === 'http:' && (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.onion'));
-    if (url.protocol !== 'https:' && !httpOk) return undefined;
-    if (url.username !== '' || url.password !== '') return undefined;
-    return url.origin;
-  } catch {
-    return undefined;
-  }
 }
 
 /** SHA-256 of the raw 128-bit token, base64url (what goes on the wire). */
@@ -58,6 +41,6 @@ export function inviteHash(token: Uint8Array): string {
 export function makeInviteFragment(token: Uint8Array, extra: { readKey?: string; board?: string } = {}): string {
   let s = `#inv=${b64uEncode(token)}`;
   if (extra.readKey !== undefined) s += `&read=${extra.readKey}`;
-  if (extra.board !== undefined) s += `&board=${encodeURIComponent(extra.board)}`;
+  if (extra.board !== undefined) s += `&board=${encodeURIComponent(checkOrigin(extra.board))}`;
   return s;
 }

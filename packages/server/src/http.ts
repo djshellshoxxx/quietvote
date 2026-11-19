@@ -260,7 +260,7 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
           headers['Vary'] = 'Origin';
         }
         headers['Access-Control-Allow-Methods'] = [...allow, 'OPTIONS'].join(', ');
-        headers['Access-Control-Allow-Headers'] = 'authorization, content-type, idempotency-key, qv-read-key';
+        headers['Access-Control-Allow-Headers'] = 'authorization, content-type, idempotency-key, qv-read-key, last-event-id';
         headers['Access-Control-Max-Age'] = '600';
         status = 204;
         send(res, method, 204, headers, undefined);
@@ -296,10 +296,10 @@ export function createHttpApp(env: Env, routes: Route[], statics?: StaticHandler
       electionId = hit.params['id'];
       isPublicGet = route.method === 'GET' && route.auth === 'none';
       headers['Content-Security-Policy'] = API_CSP;
+      headers['Access-Control-Expose-Headers'] = 'ETag, Retry-After, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, X-Request-Id, QV-API-Version';
       const origin = req.headers.origin;
       if (isPublicGet) {
         headers['Access-Control-Allow-Origin'] = '*';
-        headers['Access-Control-Expose-Headers'] = 'ETag, Retry-After, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, X-Request-Id, QV-API-Version';
         headers['Cross-Origin-Resource-Policy'] = 'cross-origin';
       } else {
         if (typeof origin === 'string' && origins.has(origin)) {
