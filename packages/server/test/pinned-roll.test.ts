@@ -2,11 +2,13 @@
 // ADR-029: complete authenticated membership remains distinct from invitation enrollment.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createPrivateKey, createPublicKey } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { authorKeyId, b64u, unb64u } from '@quietvote/board';
-import { bytesToHex, ed25519Keypair, sha256, utf8 } from '@quietvote/crypto';
-import { manifestHash, signRecord, verifyElectionText } from '@quietvote/protocol';
+import { bytesToHex, hexToBytes, sha256, utf8 } from '@quietvote/crypto';
+import { manifestHash, mth, rollLeaf, signRecord, verifyElectionText } from '@quietvote/protocol';
 import { parsePinnedRoll } from '../src/pinned-roll.ts';
 import { exportQvb, importAndWait } from './helpers/full.ts';
 import { World, kp } from './helpers/world.ts';
@@ -389,18 +391,65 @@ test('historical committed pinned rolls reconstruct only exact committed members
   } finally { await w.stop(); }
 });
 
-test('pinned storage retains the existing large-import capacity while management requests retain the global body cap', { timeout: 120_000 }, async () => {
+test('pinned storage retains the existing large-import capacity', { timeout: 120_000 }, async () => {
   const w = await fixture('pinned-import-capacity', false);
   try {
     // 17,216 public keys exceed 1,153,434 JSON bytes. A .qvb import already has a
     // separate larger bounded upload route; its valid membership must fit storage.
-    const keys = Array.from({ length: 17_216 }, (_, i) => bytesToHex(ed25519Keypair(sha256(utf8(`pinned-capacity/${i}`))).publicKey)).sort();
+    // Native key derivation preserves the deterministic fixture without thousands
+    // of JavaScript scalar multiplications on slower CI runners.
+    const prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
+    const keys = Array.from({ length: 17_216 }, (_, i) => {
+      const key = createPrivateKey({
+        key: Buffer.concat([prefix, sha256(utf8(`pinned-capacity/${i}`))]), type: 'pkcs8', format: 'der',
+      });
+      return createPublicKey(key).export({ type: 'spki', format: 'der' }).subarray(-32).toString('hex');
+    }).sort();
     const encoded = JSON.stringify(keys);
-    assert.ok(encoded.length > 1_153_434);
-    const pinned = parsePinnedRoll(keys), rt = (await w.server.pool.get(w.electionId))!;
+    assert.equal(Buffer.byteLength(encoded), 1_153_473);
+    assert.ok(Buffer.byteLength(encoded) > w.server.env.cfg.maxRequestBytes);
+    // Construct the expected binding without a redundant third validation pass.
+    // Both attachment and the uncached read below still validate every strict key.
+    const pinned = { root: bytesToHex(mth(keys.map((key) => rollLeaf(hexToBytes(key))))), size: keys.length, keys };
+    const rt = (await w.server.pool.get(w.electionId))!;
     rt.edb.tx(() => rt.edb.attachPinnedRoll(pinned)); // The same validated storage method used by commitImport.
     assert.deepEqual(rt.edb.pinnedRoll(), pinned);
-    const oversized = await w.signed('POST', `/api/v1/orgs/${w.orgId}/elections`, { title: 'Oversized management request', pinned_roll: keys }, w.owner, w.idemKey());
-    assert.equal(oversized.status, 413); assert.equal(oversized.json.code, 'PAYLOAD_TOO_LARGE');
+  } finally { await w.stop(); }
+});
+
+test('pinned management requests retain the global body cap before reading the body or mutating storage', { timeout: 30_000 }, async (t) => {
+  const w = await fixture('pinned-management-body-cap', false);
+  try {
+    const maximum = 1_153_434, count = w.server.env.control.countElections(w.orgId);
+    assert.equal(w.server.env.cfg.maxRequestBytes, maximum);
+    for (const [method, target] of [
+      ['POST', `/api/v1/orgs/${w.orgId}/elections`], ['PUT', path(w, 'pinned-roll')],
+    ] as const) {
+      const request = httpRequest(new URL(target, w.base), {
+        method, agent: false, timeout: 10_000, signal: t.signal,
+        headers: { 'content-type': 'application/json', 'content-length': String(maximum + 1), connection: 'close' },
+      });
+      try {
+        const response = new Promise<{ status: number | undefined; text: string }>((resolve, reject) => {
+          request.once('error', reject);
+          request.once('timeout', () => request.destroy(new Error('oversized request was not rejected from its headers')));
+          request.once('response', (res) => {
+            let text = '';
+            res.setEncoding('utf8');
+            res.on('data', (chunk: string) => { text += chunk; });
+            res.once('error', reject);
+            res.once('end', () => resolve({ status: res.statusCode, text }));
+          });
+        });
+        // The server deliberately closes after rejecting Content-Length. Sending
+        // only headers avoids racing that close with an in-flight Windows upload.
+        request.flushHeaders();
+        const oversized = await response;
+        assert.equal(oversized.status, 413, oversized.text);
+        assert.equal(JSON.parse(oversized.text).code, 'PAYLOAD_TOO_LARGE');
+      } finally { request.destroy(); }
+    }
+    assert.equal(w.server.env.control.countElections(w.orgId), count);
+    assert.equal((await w.server.pool.get(w.electionId))!.edb.pinnedRoll(), undefined);
   } finally { await w.stop(); }
 });
