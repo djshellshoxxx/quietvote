@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // QV-18 REQ-026: pure, source-verified pin transition. NO filesystem custody is supplied here.
-import { err, ok, parseCheckpoint, verifyConsistency, verifyLogSignature, type Checkpoint, type Result } from '@quietvote/board';
+import { bytesEqual, emptyRoot, err, ok, parseCheckpoint, verifyConsistency, verifyLogSignature, type Checkpoint, type Result } from '@quietvote/board';
 import { bytesToHex, ed25519IsStrictPoint, jcs, parseQvJson } from '@quietvote/crypto';
 
 export const MAX_CHECKPOINT_PIN_BYTES = 64 * 1024;
@@ -45,8 +45,9 @@ function verifiedNote(note: unknown, anchors: CheckpointPinAnchors): Result<Chec
   }
   const parsed = parseCheckpoint(note);
   if (!parsed.ok || parsed.value.origin !== anchors.origin || parsed.value.size > 2 ** 40 ||
+      (parsed.value.size === 0 && !bytesEqual(parsed.value.root, emptyRoot())) ||
       !verifyLogSignature(parsed.value, anchors.logKey)) {
-    return err('QV_BOARD_BAD_CHECKPOINT', 'checkpoint origin, size or log signature did not verify');
+    return err('QV_BOARD_BAD_CHECKPOINT', 'checkpoint origin, size, root or log signature did not verify');
   }
   return parsed;
 }
@@ -96,11 +97,11 @@ export function proposeCheckpointPin(
     return err('QV_BOARD_ROLLBACK', 'older signed checkpoint cannot replace the retained pin');
   } else if (candidate.value.size === previous.size) {
     if (consistencyProof !== undefined && (!Array.isArray(consistencyProof) || consistencyProof.length !== 0)) return err('QV_BOARD_BAD_PROOF', 'equal-size consistency must not carry a proof');
-    if (!verifyConsistency(previous.size, candidate.value.size, previous.root, candidate.value.root, [])) {
+    if (!bytesEqual(previous.root, candidate.value.root)) {
       return err('QV_BOARD_FORK', 'equal-size signed checkpoints have different roots');
     }
     // Preserve the original signed note, including any previously held cosignatures.
-    return ok({ bytes: oldBytes!.slice(), action: 'UNCHANGED', previous_size: previous.size,
+    return ok({ bytes: new Uint8Array(oldBytes!), action: 'UNCHANGED', previous_size: previous.size,
       checkpoint_size: previous.size, consistency: 'VERIFIED' });
   } else {
     if (!validProof(consistencyProof) ||

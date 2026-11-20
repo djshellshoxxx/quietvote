@@ -8,6 +8,15 @@ Each table below is a source-bound receipt. A pending native/hosted gate at a
 historical checkpoint is not a claim about a later completed run, and an older
 pass is not assigned to later source. Formal promotion gates remain separate.
 
+The [R18–R19 checkpoint continuation](CONTINUATION_R18_R19_20261120.md) records
+six completed independent workers, exact incoming-source recovery, helper/shared
+verifier repairs, four ordinary R18 groups and six selected R19 groups. R19 includes
+20,301 consistency pairs within one group and four overlapping R18 groups; these
+are not additive unique-test totals. Full TypeScript and traceability validation
+passed on final code/test composition `e736ccf`. The earlier R17 matrix failed two
+Windows server jobs; scheduled R18 diagnostics and subsequent source each require
+their own hosted result. Durable retention remains incomplete.
+
 The [R13–R14 proof continuation](CONTINUATION_R13_R14_20261120.md) records the
 subsequent read-only later-proof command, source `febb956`, completed local
 compilation and scoped acceptance. Its publication needs its own hosted result.

@@ -82,12 +82,12 @@ test('roots, inclusion and consistency proofs match independent implementation, 
   }
 });
 
-test('consistency proofs for all (m,n) pairs up to 200 verify and equal naive', () => {
+test('consistency proofs for all 0 <= m <= n <= 200 verify and equal naive', () => {
   const { t, leaves } = treeOf(200);
-  for (let n = 1; n <= 200; n++) {
-    for (let m = 1; m <= n; m++) {
+  for (let n = 0; n <= 200; n++) {
+    for (let m = 0; m <= n; m++) {
       const p = t.consistencyProof(m, n);
-      if (n <= 40) assert.deepEqual(p.map(toHex), naiveSub(m, leaves.slice(0, n), true).map(toHex), `cons ${m}->${n}`);
+      if (n <= 40 || m === 0) assert.deepEqual(p.map(toHex), m === 0 ? [] : naiveSub(m, leaves.slice(0, n), true).map(toHex), `cons ${m}->${n}`);
       assert.ok(verifyConsistency(m, n, t.root(m), t.root(n), p), `verify ${m}->${n}`);
     }
   }

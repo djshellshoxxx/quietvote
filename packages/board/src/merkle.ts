@@ -177,7 +177,12 @@ export function verifyConsistency(
 ): boolean {
   if (!validSize(first) || !validSize(second) || first > second) return false;
   if (firstRoot.length !== HASH_LEN || secondRoot.length !== HASH_LEN || !allHashes(proof)) return false;
-  if (first === 0) return proof.length === 0 && bytesEqual(firstRoot, emptyRoot());
+  if (first === 0) {
+    // The empty prefix permits growth without a path. At 0 -> 0, both
+    // checkpoints still describe the same specified empty tree.
+    return proof.length === 0 && bytesEqual(firstRoot, emptyRoot()) &&
+      (second !== 0 || bytesEqual(firstRoot, secondRoot));
+  }
   if (first === second) return proof.length === 0 && bytesEqual(firstRoot, secondRoot);
   const path = isPow2(first) ? [firstRoot, ...proof] : [...proof];
   if (path.length === 0) return false;

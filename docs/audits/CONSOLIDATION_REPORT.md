@@ -1,5 +1,12 @@
 # QuietVote comprehensive consolidation
 
+The [R18–R19 checkpoint continuation](CONTINUATION_R18_R19_20261120.md) incorporates
+the exact scheduled R15–R18 source and completes two fresh sets of three workers.
+It repairs pin byte ownership, empty-tree pin semantics and the shared verifier's
+zero-to-zero equality rule. Independent ordinary conformance covers all 20,301
+pairs from size zero through 200; full compilation passes. Native Windows timeout
+diagnostics and durable checkpoint storage remain distinct unresolved boundaries.
+
 Historical independent continuation: [November 19 source and review checkpoint](CONSOLIDATION_CHECKPOINT_20261119.md).
 No additional modern unmerged source was found. The seven historical exceptions
 remain preserved; current-source native qualification and formal promotion
