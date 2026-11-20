@@ -19,6 +19,10 @@ test('build: hashed assets, SRI matches content, strict CSP, no inline scripts, 
   assert.equal(read(a, 'asset-manifest.json'), read(b, 'asset-manifest.json'));
   assert.equal(read(a, 'verifier.html'), read(b, 'verifier.html'));
   const html = read(a, 'index.html');
+  const appIcon = /<link rel="icon" type="image\/svg\+xml" href="([^"]+)"\s*\/?>/.exec(html)?.[1];
+  assert.ok(appIcon, 'SPA routes must declare a favicon rather than request /favicon.ico');
+  assert.equal(new URL(appIcon).protocol, 'data:', 'the app icon must be fully embedded');
+  assert.match(decodeURIComponent(appIcon.slice(appIcon.indexOf(',') + 1)), /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"[^>]*><\/svg>$/, 'the app icon is a self-contained SVG');
   assert.ok(!/<script(?![^>]*\ssrc=)[^>]*>/.test(html), 'no inline script');
   assert.ok(!/ on[a-z]+=/i.test(html) && !html.includes('style='), 'no inline handlers or styles');
   assert.ok(!/unsafe-inline|unsafe-eval|wasm-unsafe-eval/.test(html));

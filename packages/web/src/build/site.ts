@@ -21,6 +21,8 @@ const hashOf = (algo: 'sha256' | 'sha384', data: string | Uint8Array, enc: 'hex'
 export const sri = (data: string | Uint8Array): string => `sha384-${hashOf('sha384', data, 'base64')}`;
 
 const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+// Both HTML entry points declare a self-contained icon to avoid implicit /favicon.ico requests.
+const iconDataUrl = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>');
 
 export function csp(boardOrigins: readonly string[] = []): { header: string; meta: string } {
   const connect = ["'self'", ...checkedOrigins(boardOrigins)].join(' ');
@@ -86,6 +88,7 @@ export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: As
 <meta name="qv-api-base" content="${esc(config.apiBase)}">
 <meta name="qv-board-origins" content="${esc(config.connectOrigins.join(' '))}">
 <title>${esc(EN['qv.app.name'].message)}</title>
+<link rel="icon" type="image/svg+xml" href="${iconDataUrl}">
 <link rel="stylesheet" href="/${a.css.path}" integrity="${a.css.integrity}" crossorigin="anonymous">
 ${[...(a.modules ?? []), ...(a.lazy ?? [])].map((m) => `<link rel="modulepreload" href="/${m.path}" integrity="${m.integrity}" crossorigin="anonymous">`).join('\n')}
 <link rel="modulepreload" href="/${a.js.path}" integrity="${a.js.integrity}" crossorigin="anonymous">
@@ -112,9 +115,8 @@ export async function verifierHtml(): Promise<{ html: string; scriptHash: string
   const st = `sha256-${hashOf('sha256', css, 'base64')}`;
   const policy = `default-src 'none'; script-src '${sh}'; style-src '${st}'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'`;
   // An explicit inline icon prevents a browser's default /favicon.ico request under the offline image policy.
-  const icon = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>');
   const html = `<!doctype html>
-<html lang="en" dir="ltr"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuietVote verifier</title><link rel="icon" type="image/svg+xml" href="${icon}"><style>${css}</style></head>
+<html lang="en" dir="ltr"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuietVote verifier</title><link rel="icon" type="image/svg+xml" href="${iconDataUrl}"><style>${css}</style></head>
 <body><main><h1>Verify an election</h1><p>This page makes no network requests. You can disconnect before you load a bundle.</p>
 <p>A checker you didn’t download or compare yourself can lie. Compare this file’s SHA-256 with the signed release manifest.</p>
 <label for="file">Election bundle file (JSON)</label><input id="file" type="file" accept="application/json">
