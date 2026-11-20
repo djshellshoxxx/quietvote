@@ -131,7 +131,14 @@ jobs:
           rc=0
           for w in ${{ matrix.shard.ws }}; do
             echo "::group::@quietvote/$w"
-            npm test -w "@quietvote/$w" || { rc=1; echo "::error::@quietvote/$w tests failed"; }
+            # Limit only Windows Node 24 native-file suites to two concurrent test files.
+            # This reduces simultaneous PowerShell startup pressure without changing any
+            # native operation deadline, protected-file check, test, or failure outcome.
+            args=()
+            if [[ "${{ matrix.os }}" == "windows-2025" && "${{ matrix.node }}" == "24" && ( "$w" == "cli" || "$w" == "server" ) ]]; then
+              args=(-- --test-concurrency=2)
+            fi
+            npm test -w "@quietvote/$w" "${args[@]}" || { rc=1; echo "::error::@quietvote/$w tests failed"; }
             echo "::endgroup::"
           done
           exit $rc

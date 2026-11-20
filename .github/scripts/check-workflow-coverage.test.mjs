@@ -80,3 +80,15 @@ test('every CI dependency restore explicitly installs verified vendor bytes befo
       `${workflow}: every npm ci must be followed by vendor installation`);
   }
 });
+
+test('Windows Node 24 native-file suites cap test-file fan-out but retain all shard tests', () => {
+  const source = readFileSync(new URL('../workflows/ci.yml', import.meta.url), 'utf8');
+  for (const exact of [
+    'for w in ${{ matrix.shard.ws }}; do',
+    'if [[ "${{ matrix.os }}" == "windows-2025" && "${{ matrix.node }}" == "24" && ( "$w" == "cli" || "$w" == "server" ) ]]; then',
+    'args=(-- --test-concurrency=2)',
+    'npm test -w "@quietvote/$w" "${args[@]}" || { rc=1; echo "::error::@quietvote/$w tests failed"; }',
+    'exit $rc',
+  ]) assert.ok(source.includes(exact), `CI coverage boundary changed: ${exact}`);
+  assert.equal((source.match(/npm test -w/g) ?? []).length, 1, 'keep one shared test command');
+});
