@@ -208,10 +208,12 @@ test('split-origin configuration routes enrollment, live recovery, ballot, recei
     await page.getByLabel('Organization name', { exact: true }).fill('Split-origin council');
     await page.getByLabel('Passphrase', { exact: true }).last().fill(passphrase);
     await page.getByRole('button', { name: 'Create organization', exact: true }).click();
-    await page.getByText(/^Organization created\. Its ID is /).waitFor();
+    // Both the publish panel and the separate accessibility live region announce success.
+    // Scope success checks to the visible application content so each locator is unique.
+    await page.locator('main').getByText(/^Organization created\. Its ID is /).waitFor();
     await page.getByLabel('Passphrase', { exact: true }).last().fill(passphrase);
     await page.getByRole('button', { name: 'Publish election', exact: true }).click();
-    await page.getByText(/^Election published\. Its ID is /).waitFor();
+    await page.locator('main').getByText(/^Election published\. Its ID is /).waitFor();
     const invites = await page.locator('.qv-invite-link').allTextContents(); assert.equal(invites.length, w.voters.length);
     for (const text of invites) { const url = new URL(text); assert.equal(url.origin, frontend); assert.equal(parseFragment(url.hash).board, w.base); }
     assert.ok(responses.some((r) => r.url === w.base + '/api/v1/orgs' && r.method === 'POST' && r.status === 201), 'real server accepts the API audience');
