@@ -99,10 +99,32 @@ test('split-origin configuration routes enrollment, live recovery, ballot, recei
     const rt = (await w.server.pool.get(w.electionId))!;
     rt.edb.db.prepare("UPDATE election SET access='link', read_key_hash=?").run(sha256(utf8(`QV-READKEY-v1\0${readKey}`)));
     await page.clock.setSystemTime(w.clock);
+    // A same-document goto can resolve before hashchange has retired the enrollment form.
+    // Wait for that exact old input to detach, not merely for an Unlock button which exists in both views.
+    const enrollmentPass = await page.getByLabel('Passphrase', { exact: true }).elementHandle();
+    assert.ok(enrollmentPass, 'enrollment form is still mounted before changing the fragment');
     assert.equal(await page.goto(`${base}/key${fragment(selected)}`), null, 'removing the invitation stays in the same document');
+    await page.waitForFunction((oldInput) => !oldInput.isConnected, enrollmentPass);
     await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
     await page.getByRole('button', { name: 'Unlock key', exact: true }).click();
-    await page.getByText('You are on the voter list.', { exact: true }).waitFor();
+    try {
+      await page.getByText('You are on the voter list.', { exact: true }).waitFor();
+    } catch (e) {
+      // Failure-only finite diagnostics. Do not emit URL fragments, key material, invitation tokens or response bodies.
+      const view = await page.evaluate(() => {
+        const main = document.querySelector('main');
+        const content = main?.textContent ?? '';
+        return {
+          registeredMessage: content.includes('Your key is registered.'),
+          onRollMessage: content.includes('You are on the voter list.'),
+          errorCount: main?.querySelectorAll('.error').length ?? 0,
+          unlockButtons: Array.from(main?.querySelectorAll('button') ?? []).filter((b) => b.textContent?.trim() === 'Unlock key').length,
+        };
+      });
+      const rollStatuses = responses.filter((r) => new URL(r.url).pathname.endsWith('/roll')).map((r) => r.status);
+      console.error('split-origin membership wait diagnostics (no secrets):', JSON.stringify({ view, rollStatuses }));
+      throw e;
+    }
     await page.getByRole('link', { name: 'Vote', exact: true }).first().click();
     assert.equal(new URL(page.url()).hash, fragment(selected), 'tabs retain board and read key without an invitation token');
     await page.getByLabel('YES', { exact: true }).check(); await page.getByLabel('ANN', { exact: true }).check();
