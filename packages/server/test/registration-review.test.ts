@@ -12,7 +12,7 @@ import { b64u } from '@quietvote/board';
 import { bytesToHex, ed25519Sign } from '@quietvote/crypto';
 import { ApiClient } from '../../web/src/api/client.ts';
 import { BIN, qv } from '../../cli/test/helpers.ts';
-import { writePrivateFixture } from '../../cli/test/private-fixture.ts';
+import { writePrivateFixture, writePrivateFixtureAsync } from '../../cli/test/private-fixture.ts';
 import { World, kp } from './helpers/world.ts';
 
 const digest = (bytes: Uint8Array): Buffer => createHash('sha256').update(bytes).digest();
@@ -158,8 +158,8 @@ test('review: shipped CLI enrollment rejects forged success and sanitizes extra 
     const metadata = (await w.get(`/api/v1/elections/${w.electionId}`)).json;
     const accepted = await w.req('POST', path(w), body); assert.equal(accepted.status, 201);
     const keyFile = join(dir, 'voter.json'), inviteFile = join(dir, 'invite.txt');
-    writePrivateFixture(keyFile, JSON.stringify({ format: 'qv-voter-key/v1', seed: bytesToHex(key.secretKey), public_key: bytesToHex(key.publicKey) }));
-    writePrivateFixture(inviteFile, issued.code);
+    await writePrivateFixtureAsync(keyFile, JSON.stringify({ format: 'qv-voter-key/v1', seed: bytesToHex(key.secretKey), public_key: bytesToHex(key.publicKey) }));
+    await writePrivateFixtureAsync(inviteFile, issued.code);
     let reply: unknown = { ...accepted.json, voter_kid: 'wrong-voter' };
     const server = createServer((req, res) => { req.resume(); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(req.method === 'POST' ? reply : metadata)); });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
