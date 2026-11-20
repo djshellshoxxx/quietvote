@@ -264,8 +264,13 @@ export function httpsTransport(tls: { ca?: string | Buffer } = {}): WebhookTrans
           if (r.captureBody === true) chunks.push(ch);
         });
         res.on('end', () => done(false));
-        res.on('error', () => done(false));
-        res.on('close', () => done(false));
+        // An HTTP success status is not a completed delivery if the peer drops the response early.
+        // In particular, a premature close must not be recorded as a successful webhook attempt.
+        res.on('error', (error) => finish(() => reject(error)));
+        res.on('close', () => {
+          if (!res.complete) finish(() => reject(new Error('incomplete response body')));
+          else done(false);
+        });
       });
       req.end(r.body);
     });

@@ -127,7 +127,7 @@ let haveOpenssl = true;
 let srv: Server | undefined;
 let port = 0;
 const hits: { url: string; method: string; headers: Record<string, string | string[] | undefined>; body: string }[] = [];
-let mode: 'ok' | 'redirect' | 'hang' | 'big' | 'slowbody' = 'ok';
+let mode: 'ok' | 'redirect' | 'hang' | 'big' | 'slowbody' | 'partial-close' = 'ok';
 
 before(async () => {
   dir = mkdtempSync(join(tmpdir(), 'qv-tls-'));
@@ -161,6 +161,11 @@ before(async () => {
         res.writeHead(200);
         res.write('x');
         /* headers arrive, body never completes */
+      } else if (mode === 'partial-close') {
+        // Deliberately incomplete HTTP response, exercising benign network interruption.
+        res.writeHead(200, { 'Content-Length': '20' });
+        res.write('partial');
+        setTimeout(() => res.socket?.destroy(), 20);
       } else {
         res.writeHead(200, { 'content-type': 'text/plain' });
         res.end('ok');
@@ -240,6 +245,18 @@ test('transport: headers arrive but the body stalls: deadline still applies', as
   assert.ok(Date.now() - t0 < 2000);
   assert.ok(r instanceof Error || (r as { status: number }).status === 200);
   mode = 'ok';
+});
+
+test('transport: incomplete HTTP 200 is not a completed delivery, with or without body capture', async (t) => {
+  if (!haveOpenssl) return t.skip('openssl not available');
+  mode = 'partial-close';
+  try {
+    const send = httpsTransport({ ca: cert });
+    await assert.rejects(send(baseReq('pinned.example')));
+    await assert.rejects(send(baseReq('pinned.example', { captureBody: true })));
+  } finally {
+    mode = 'ok';
+  }
 });
 
 test('transport: oversized response is truncated after maxResponseBytes and the connection is dropped', async (t) => {
