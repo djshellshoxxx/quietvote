@@ -3,13 +3,14 @@ import { lstatSync, mkdirSync, realpathSync, rmdirSync, type BigIntStats } from 
 import { randomBytes } from 'node:crypto';
 import { basename, dirname, join, parse, sep } from 'node:path';
 
+const refused = () => Object.assign(new Error('output requires trusted directory ownership and protected POSIX namespace permissions'), { code: 'UNSAFE_DIRECTORY' });
+
 /**
  * This namespace boundary assumes effective POSIX owner/mode/sticky permissions.
  * Current-EUID/root tampering and ACL grants overriding those bits are outside it;
  * in particular these checks do not inspect macOS native ACLs.
  */
-export function createPosixStage(path: string): { output: string; temporary: string; removeDirectory(): void } {
-  const refused = () => Object.assign(new Error('output requires trusted directory ownership and protected POSIX namespace permissions'), { code: 'UNSAFE_DIRECTORY' });
+function inspectPosixPath(path: string): { output: string; parent: string; parentStat: BigIntStats; uid: bigint } {
   if (process.platform === 'win32' || process.geteuid === undefined) throw refused();
   const uid = BigInt(process.geteuid());
   const leaf = basename(path);
@@ -31,6 +32,14 @@ export function createPosixStage(path: string): { output: string; temporary: str
     // descendant entry owner are trusted; sticky alone is insufficient.
     parentStat = check(current);
   }
+  return { output: join(parent, leaf), parent, parentStat, uid };
+}
+
+/** Check the same namespace boundary before destructive cleanup, without creating a stage. */
+export function protectedPosixPath(path: string): string { return inspectPosixPath(path).output; }
+
+export function createPosixStage(path: string): { output: string; temporary: string; removeDirectory(): void } {
+  const { output, parent, parentStat, uid } = inspectPosixPath(path);
   const directory = join(parent, `.qv-stage-${randomBytes(16).toString('hex')}`);
   mkdirSync(directory, { mode: 0o700 });
   let made: BigIntStats | undefined;
@@ -47,6 +56,6 @@ export function createPosixStage(path: string): { output: string; temporary: str
   try {
     made = lstatSync(directory, { bigint: true });
     if (!made.isDirectory() || made.uid !== uid || made.dev !== parentStat.dev || (made.mode & 0o777n) !== 0o700n) throw refused();
-    return { output: join(parent, leaf), temporary: join(directory, 'payload'), removeDirectory };
+    return { output, temporary: join(directory, 'payload'), removeDirectory };
   } catch (error) { removeDirectory(); throw error; }
 }

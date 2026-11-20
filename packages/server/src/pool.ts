@@ -92,12 +92,18 @@ export class ElectionPool {
     const reg = this.env.control.election(id);
     if (!reg) return undefined;
     const rt = await ElectionRuntime.open(this.env, reg, this.createdHere.has(id));
-    if (rt.log.size > 0) this.createdHere.delete(id);
-    this.open.set(id, rt);
-    // finish a tally aggregate interrupted by a crash (idempotent; a failure is retried on the next cosignature)
-    await rt.recoverTally().catch(() => this.env.logger.event('tally_recover', { outcome: 'error' }));
-    rt.recoverEvents();
-    return rt;
+    try {
+      if (rt.log.size > 0) this.createdHere.delete(id);
+      // Finish recovery before the handle becomes available to later callers.
+      // Tally failure retains its established retry-on-cosignature behavior.
+      await rt.recoverTally().catch(() => this.env.logger.event('tally_recover', { outcome: 'error' }));
+      rt.recoverEvents();
+      this.open.set(id, rt);
+      return rt;
+    } catch (error) {
+      rt.close();
+      throw error;
+    }
   }
 
   async evict(id: string): Promise<void> {

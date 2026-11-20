@@ -6,7 +6,7 @@ import { bytesToHex, parseQvJson, sha256 } from '@quietvote/crypto';
 import { logOrigin } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, type Parsed } from './args.ts';
 import { isHex, printJson } from './common.ts';
-import { AUTH, args, electionPath, jsonRequest, request } from './cmd-online.ts';
+import { AUTH, args, electionPath, jsonRequest, request, withManagementKey, type ManagementKey } from './cmd-online.ts';
 import { EXIT, type Io } from './io.ts';
 import { writePrivateFileSync } from './private-files.ts';
 
@@ -31,11 +31,11 @@ function recordPath(p: Parsed): string {
   return `${base}/exports/${id}`;
 }
 
-async function record(p: Parsed, io: Io): Promise<ExportRecord> {
+async function record(p: Parsed, io: Io, key: ManagementKey): Promise<ExportRecord> {
   const path = recordPath(p);
   let value: unknown;
   // Management JSON contains nullable acknowledgement/notice fields; it is not a QV-JSON signed record.
-  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await request(p, io, 'GET', path, undefined, true, MAX_METADATA))); }
+  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await request(p, io, 'GET', path, undefined, key, MAX_METADATA))); }
   catch (e) { if (e instanceof FailError || e instanceof InputError || e instanceof UsageError) throw e; throw new FailError('server returned malformed export metadata'); }
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new FailError('server returned malformed export metadata');
   const v = value as Record<string, unknown>;
@@ -108,15 +108,17 @@ async function inspect(argv: string[], io: Io): Promise<number> {
 async function download(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { ...RECORD_AUTH, out: 'value' }), path = recordPath(p), out = needFlag(p, 'out');
   if (existsSync(out)) throw new InputError('export file exists; existing files are never overwritten');
-  const r = await record(p, io);
-  // Construct paths from validated IDs; server-supplied links never select a destination or credential audience.
-  const bytes = await request(p, io, 'GET', `${path}/download`, undefined, true, r.byte_length);
-  checkArtifact(bytes, r, needFlag(p, 'id'));
-  try { writePrivateFileSync(out, bytes); }
-  catch { throw new InputError('cannot create export file; existing files are never overwritten'); }
-  printJson(io, { file: out, bytes: bytes.length, export_id: r.export_id, sha256: r.sha256,
-    tree_size: r.tree_size, root_hash: r.root_hash, artifact_matches_record: true, verified: false, acknowledged: false });
-  return EXIT.ok;
+  return withManagementKey(p, io, async (key) => {
+    const r = await record(p, io, key);
+    // Construct paths from validated IDs; server-supplied links never select a destination or credential audience.
+    const bytes = await request(p, io, 'GET', `${path}/download`, undefined, key, r.byte_length);
+    checkArtifact(bytes, r, needFlag(p, 'id'));
+    try { writePrivateFileSync(out, bytes); }
+    catch { throw new InputError('cannot create export file; existing files are never overwritten'); }
+    printJson(io, { file: out, bytes: bytes.length, export_id: r.export_id, sha256: r.sha256,
+      tree_size: r.tree_size, root_hash: r.root_hash, artifact_matches_record: true, verified: false, acknowledged: false });
+    return EXIT.ok;
+  });
 }
 
 async function acknowledge(argv: string[], io: Io): Promise<number> {
@@ -124,23 +126,26 @@ async function acknowledge(argv: string[], io: Io): Promise<number> {
   const path = recordPath(p), file = needFlag(p, 'file');
   needFlag(p, 'idempotency-key');
   if (!p.has('retained')) throw new UsageError('--retained is required to explicitly confirm retention of the checked archive');
-  const local = retainedBytes(file), r = await record(p, io);
-  checkArtifact(local, r, needFlag(p, 'id'));
-  // Unlocking the signing key can take time. Recheck the retained bytes after that await and before the mutation.
-  const response = await request(p, io, 'POST', `${path}/acknowledge`,
-    { tree_size: r.tree_size, root_hash: r.root_hash, sha256: r.sha256 }, true, MAX_METADATA,
-    () => checkArtifact(retainedBytes(file), r, needFlag(p, 'id')));
-  let value: unknown;
-  try {
-    value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(response));
-    if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('object');
-    const acknowledged = value as Record<string, unknown>;
-    if (acknowledged['export_id'] !== r.export_id || acknowledged['tree_size'] !== r.tree_size ||
-        acknowledged['root_hash'] !== r.root_hash || acknowledged['sha256'] !== r.sha256 || acknowledged['byte_length'] !== r.byte_length ||
-        typeof acknowledged['acknowledged_at'] !== 'string' || !Number.isFinite(Date.parse(acknowledged['acknowledged_at']))) throw new Error('binding');
-  } catch { throw new FailError('server returned HTTP success but malformed JSON; acknowledgement may have been accepted; inspect server state'); }
-  printJson(io, value);
-  return EXIT.ok;
+  const local = retainedBytes(file);
+  return withManagementKey(p, io, async (key) => {
+    const r = await record(p, io, key);
+    checkArtifact(local, r, needFlag(p, 'id'));
+    // Unlocking the signing key and fetching metadata can take time. Recheck retained bytes before the mutation.
+    const response = await request(p, io, 'POST', `${path}/acknowledge`,
+      { tree_size: r.tree_size, root_hash: r.root_hash, sha256: r.sha256 }, key, MAX_METADATA,
+      () => checkArtifact(retainedBytes(file), r, needFlag(p, 'id')));
+    let value: unknown;
+    try {
+      value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(response));
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('object');
+      const acknowledged = value as Record<string, unknown>;
+      if (acknowledged['export_id'] !== r.export_id || acknowledged['tree_size'] !== r.tree_size ||
+          acknowledged['root_hash'] !== r.root_hash || acknowledged['sha256'] !== r.sha256 || acknowledged['byte_length'] !== r.byte_length ||
+          typeof acknowledged['acknowledged_at'] !== 'string' || !Number.isFinite(Date.parse(acknowledged['acknowledged_at']))) throw new Error('binding');
+    } catch { throw new FailError('server returned HTTP success but malformed JSON; acknowledgement may have been accepted; inspect server state'); }
+    printJson(io, value);
+    return EXIT.ok;
+  });
 }
 
 async function notice(argv: string[], io: Io): Promise<number> {

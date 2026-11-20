@@ -247,6 +247,92 @@ test('same-document enrollment navigation retires the old key form before pendin
   }
 });
 
+test('the popstate and hashchange pair for one same-document navigation preserves the new key form', async (t) => {
+  enrollmentReadKey = 'enrollment_paired_navigation'; ceremonyReady = false;
+  await boardStorage(storage, a, page).putKey(keySlot(id), wrapped.container);
+  t.mock.method(LiveElection.prototype, 'start', () => {});
+  try {
+    const hash = fragment(a, enrollmentReadKey);
+    await navigate('key', '#inv=AAECAwQFBgcICQoLDA0ODw&' + hash.slice(1));
+    ceremonyReady = true;
+    location.hash = hash; events.dispatch('popstate'); await drain();
+    const pass = get((element) => element.attrs.get('type') === 'password');
+    pass.value = passphrase;
+    events.dispatch('hashchange'); await drain();
+    assert.equal(get((element) => element.attrs.get('type') === 'password'), pass,
+      'one browser navigation must not render twice and erase the entered passphrase');
+    button('Unlock key').click();
+    await until(() => main().textContent.includes('You are on the voter list.'));
+  } finally { enrollmentReadKey = undefined; ceremonyReady = false; await navigate('/', ''); }
+});
+
+for (const view of ['key', 'admin', 'new'] as const) test(`navigation clears the retired ${view} passphrase input before discarding its cleanup callback`, async () => {
+  try {
+    if (view === 'new') { location.pathname = '/new'; location.hash = ''; events.dispatch('popstate'); await drain(); }
+    else await navigate(view, fragment(a, `navigation_cleanup_${view}`));
+    const password = get((element) => element.attrs.get('type') === 'password');
+    password.value = 'retired-field-passphrase-canary';
+    location.pathname = '/help'; events.dispatch('popstate');
+    assert.equal(password.value, '', 'detaching the old form must also clear its secret field');
+    await drain();
+    assert.equal(main().find((element) => element.attrs.get('type') === 'password').length, 0);
+  } finally { await navigate('/', ''); }
+});
+
+test('back/forward and queued hash events retain the newest board route without discarding its key input', async (t) => {
+  t.mock.method(LiveElection.prototype, 'start', () => {});
+  try {
+    await boardStorage(storage, b, page).getKey(keySlot(id));
+    const expectedKeySlot = reads.at(-1);
+    const first = new URL(`/e/${id}/rules${fragment(a, 'history_first_board')}`, page).href;
+    const second = new URL(`/e/${id}/key${fragment(b, 'history_second_board')}`, page).href;
+    location.href = first; events.dispatch('popstate'); events.dispatch('hashchange'); await drain();
+    assert.equal(main().find((element) => element.attrs.get('type') === 'password').length, 0);
+    location.href = second; events.dispatch('popstate'); events.dispatch('hashchange'); await drain();
+    assert.equal(electionReads(b).at(-1)?.read, 'history_second_board');
+    assert.equal(reads.at(-1), expectedKeySlot, 'forward route keeps the selected board key scope');
+    location.href = first; events.dispatch('popstate'); events.dispatch('hashchange'); await drain();
+    assert.equal(main().find((element) => element.attrs.get('type') === 'password').length, 0, 'back returns to rules');
+    location.href = second; events.dispatch('popstate'); await drain();
+    const password = get((element) => element.attrs.get('type') === 'password');
+    password.value = passphrase;
+    const count = seen.length;
+    // Already-queued hash notifications can arrive after a later popstate. The
+    // current address wins and the live form must not be rebuilt a second time.
+    events.dispatch('hashchange'); events.dispatch('hashchange'); await drain();
+    assert.equal(get((element) => element.attrs.get('type') === 'password'), password);
+    assert.equal(password.value, passphrase);
+    assert.equal(seen.length, count, 'duplicate notifications issue no extra API reads');
+  } finally { await navigate('/', ''); }
+});
+
+test('a changed hash can supersede a pending route and queued old notifications cannot replace its form', async (t) => {
+  t.mock.method(LiveElection.prototype, 'start', () => {});
+  const originalFetch = globalThis.fetch;
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input), page);
+    const response = await originalFetch(input, init);
+    if (url.origin === a && url.pathname === `/api/v1/elections/${id}`) await pending;
+    return response;
+  };
+  try {
+    location.pathname = `/e/${id}/key`;
+    location.hash = fragment(a, 'queued_first_board'); events.dispatch('popstate');
+    await until(() => electionReads(a).at(-1)?.read === 'queued_first_board');
+    location.hash = fragment(b, 'queued_latest_board'); events.dispatch('hashchange'); await drain();
+    assert.equal(electionReads(b).at(-1)?.read, 'queued_latest_board', 'changed URLs must still route during an earlier load');
+    const password = get((element) => element.attrs.get('type') === 'password');
+    password.value = passphrase;
+    release(); await drain();
+    events.dispatch('hashchange'); await drain();
+    assert.equal(get((element) => element.attrs.get('type') === 'password'), password,
+      'the late old response and queued notification cannot replace the latest form');
+    assert.equal(password.value, passphrase);
+  } finally { release(); globalThis.fetch = originalFetch; await navigate('/', ''); }
+});
+
 test('live enrollment completion binds the signed log before an actual cast uses its receipt key', async (t) => {
   enrollmentReadKey = 'enrollment_transition_live_hint'; ceremonyReady = false;
   await boardStorage(storage, a, page).putKey(keySlot(id), wrapped.container);

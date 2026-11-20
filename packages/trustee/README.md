@@ -63,3 +63,8 @@ Only remove a stale `.lock` after checking that no trustee process is using it.
 
 Deletion does not guarantee erasure on flash or SSD storage. This recovery path
 does not bypass the backup fingerprint, canonical-path or file-identity checks.
+On POSIX systems, automatic cleanup also requires trusted directory ownership
+and protected mode/sticky permissions throughout the path. If those permissions
+have become unsafe since backup creation, cleanup leaves the file unchanged and
+reports it for manual recovery. The documented native ACL limitation remains;
+ordinary POSIX mode checks do not establish protection against overriding ACLs.

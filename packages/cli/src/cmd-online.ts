@@ -77,7 +77,16 @@ function pinnedRollBody<T>(body: T): T {
   return body;
 }
 
-export async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void | Promise<void>): Promise<Uint8Array> {
+export type ManagementKey = Awaited<ReturnType<typeof loadVoterKey>>;
+
+/** One unlock per multi-request command, including stdin passphrases. Never retained between commands. */
+export async function withManagementKey(p: Parsed, io: Io, work: (key: ManagementKey) => Promise<number>): Promise<number> {
+  serverUrl(p);
+  const key = await loadVoterKey(needFlag(p, 'key'), p, io);
+  try { return await work(key); } finally { wipe(key.seed); }
+}
+
+export async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed: boolean | ManagementKey = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void | Promise<void>): Promise<Uint8Array> {
   const base = serverUrl(p);
   const timeout = p.get('timeout-ms') ?? '20000';
   if (!/^\d+$/.test(timeout) || !Number.isSafeInteger(Number(timeout)) || Number(timeout) < 1 || Number(timeout) > 120000) throw new UsageError('--timeout-ms must be an integer from 1 to 120000');
@@ -97,11 +106,11 @@ export async function request(p: Parsed, io: Io, method: string, path: string, b
   if (signed) {
     const audience = needFlag(p, 'audience');
     if (!/^qv:[^\s@]+@https?:\/\/[^\s]+$/.test(audience)) throw new UsageError('--audience must be the configured qv:INSTANCE_ID@PUBLIC_URL');
-    const key = await loadVoterKey(needFlag(p, 'key'), p, io);
+    const key = signed === true ? await loadVoterKey(needFlag(p, 'key'), p, io) : signed;
     try {
       // Reuse the same pure signed-request framing as the server.
       headers['authorization'] = signRequest(key.seed, key.publicKey, method, path, audience, bytes, Math.floor(Date.now() / 1000), io.rng.bytes(16));
-    } finally { wipe(key.seed); }
+    } finally { if (signed === true) wipe(key.seed); }
   }
   // A mutation's local reservation can change while credentials are unlocked.
   // Run the caller's check after every await above and before sending any bytes.

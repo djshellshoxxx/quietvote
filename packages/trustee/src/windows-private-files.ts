@@ -8,15 +8,19 @@ export const MAX_PRIVATE_FILE_BYTES = 64 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
 const SCRIPT = fileURLToPath(new URL('./windows-private-files.ps1', import.meta.url));
 const CODES = new Set(['ENOENT', 'EEXIST', 'PATH', 'TYPE', 'IDENTITY', 'OWNER', 'ACL', 'SIZE', 'CHANGED', 'CLEANUP', 'UNAVAILABLE']);
+const STARTUP_CODES = new Set(['ENOENT', 'EACCES', 'ENOEXEC', 'ENOTDIR']);
+type HelperDiagnostic = 'STARTUP' | 'TIMEOUT' | 'PROCESS' | 'RESPONSE';
 type Reply = { ok: true; data?: string; bound?: boolean };
 type Message = { op: string; path?: string; max?: number; data?: string; replace?: boolean };
 
 export class WindowsPrivateFileError extends Error {
   readonly code: string;
-  constructor(code = 'UNAVAILABLE') {
-    super('native Windows private-file protection refused the operation');
+  readonly diagnostic: HelperDiagnostic | undefined;
+  constructor(code = 'UNAVAILABLE', diagnostic?: HelperDiagnostic) {
+    super('native Windows private-file protection refused the operation' + (diagnostic ? ` (${diagnostic})` : ''));
     this.name = 'WindowsPrivateFileError';
     this.code = CODES.has(code) ? code : 'UNAVAILABLE';
+    this.diagnostic = diagnostic;
   }
 }
 
@@ -34,18 +38,26 @@ function input(message: Message): string { return JSON.stringify(message) + '\n'
 function outputLimit(max: number): number { return Math.ceil(max / 3) * 4 + 1024; }
 function reply(text: string): Reply {
   let value: unknown;
-  try { value = JSON.parse(text); } catch { throw new WindowsPrivateFileError(); }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new WindowsPrivateFileError();
+  try { value = JSON.parse(text); } catch { throw new WindowsPrivateFileError('UNAVAILABLE', 'RESPONSE'); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new WindowsPrivateFileError('UNAVAILABLE', 'RESPONSE');
   const r = value as Record<string, unknown>;
   if (r.ok === false) throw new WindowsPrivateFileError(typeof r.code === 'string' ? r.code : undefined);
   if (r.ok !== true || Object.keys(r).some(k => !['ok', 'data', 'bound'].includes(k)) ||
-      (r.data !== undefined && typeof r.data !== 'string') || (r.bound !== undefined && typeof r.bound !== 'boolean')) throw new WindowsPrivateFileError();
+      (r.data !== undefined && typeof r.data !== 'string') || (r.bound !== undefined && typeof r.bound !== 'boolean')) throw new WindowsPrivateFileError('UNAVAILABLE', 'RESPONSE');
   return r as Reply;
 }
-function failed(stdout: unknown): WindowsPrivateFileError {
-  try { reply(typeof stdout === 'string' ? stdout : ''); }
-  catch (error) { if (error instanceof WindowsPrivateFileError) return error; }
-  return new WindowsPrivateFileError();
+function failed(error: unknown): WindowsPrivateFileError {
+  const details = error && typeof error === 'object' ? error as Record<string, unknown> : {};
+  try { reply(typeof details.stdout === 'string' ? details.stdout : ''); }
+  catch (refusal) {
+    // An explicit native refusal takes precedence over process metadata.
+    if (refusal instanceof WindowsPrivateFileError && refusal.diagnostic === undefined) return refusal;
+  }
+  // Keep only a finite classification. Never retain the process error, which
+  // can contain executable paths, argv, stderr, or input-derived data.
+  const diagnostic = details.code === 'ETIMEDOUT' ? 'TIMEOUT'
+    : typeof details.code === 'string' && STARTUP_CODES.has(details.code) ? 'STARTUP' : 'PROCESS';
+  return new WindowsPrivateFileError('UNAVAILABLE', diagnostic);
 }
 function bytesFrom(r: Reply, max: number): Uint8Array {
   if (typeof r.data !== 'string' || r.data.length > outputLimit(max) || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(r.data)) throw new WindowsPrivateFileError();
@@ -59,7 +71,7 @@ function callSync(message: Message, maxOutput = 4096): Reply {
   try {
     result = execFileSync(file, args, { input: input(message), encoding: 'utf8', windowsHide: true, cwd,
       timeout: TIMEOUT_MS, maxBuffer: maxOutput, stdio: ['pipe', 'pipe', 'pipe'] });
-  } catch (error) { throw failed((error as { stdout?: unknown }).stdout); }
+  } catch (error) { throw failed(error); }
   return reply(result);
 }
 let service: Promise<HeldStream> | undefined;

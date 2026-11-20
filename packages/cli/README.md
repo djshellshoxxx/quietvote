@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
+Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -87,6 +87,39 @@ Create requires an explicit access choice and stable idempotency key. Reusing th
 creation; changing the body requires a new key. A successful link-access creation returns its read key once;
 protect the command output. Read commands accept `--read-key-file` for that key instead of placing it in arguments.
 
+### Organization registration
+
+Register an existing protected key as an organization owner before creating its
+first election. Obtain the signature audience and registration policy from the
+instance operator. The adopted QV-08 request signature proves possession of the
+same public key sent in `owner_key`; no browser session is needed.
+
+```sh
+qv online org-create --server https://vote.example \
+  --audience qv:INSTANCE_ID@https://vote.example --key organizer.key \
+  --passphrase-file passphrase.txt --name 'River Cooperative' \
+  --idempotency-key register-river-2026 --json
+qv online org-inspect --server https://vote.example --org ORG_ID \
+  --audience qv:INSTANCE_ID@https://vote.example --key organizer.key \
+  --passphrase-file passphrase.txt --json
+```
+
+Token-gated instances also require `--registration-token-file token.txt` on
+`org-create`. The token must be in a bounded owner-private UTF-8 file: one line
+of 1..200 characters, optionally ending in a single LF or CRLF. Spaces and other
+token spelling are preserved. Token values have no command-line flag. The command
+discards returned token fields and uses static creation errors. The server decides whether registration is open, token-gated or
+closed; the CLI cannot override that policy.
+
+Creation checks the returned organization ID, requested name and owner key,
+then prints only those public fields. It unlocks the key once, including when a
+passphrase is supplied on stdin. Keep the returned organization ID for
+`election-create --org`. An explicit replay with the same idempotency key and
+identical name/key/token returns the original result; changing that body under
+the same key is refused. Failed or malformed responses are not retried
+automatically and never echo server-supplied text that might contain the token.
+Inspect server state before retrying an uncertain result.
+
 ### Pinned membership
 
 For a pinned election, add `--pinned-roll members.json` to `online election-create`. The file must be a JSON array
@@ -127,7 +160,7 @@ failure during a mutation also exit 1 and explicitly report an unknown outcome; 
 Commands never retry a mutation automatically. Downloads use mode 0600, never overwrite an existing path,
 and are labelled `verified: false` until checked separately.
 
-Remaining workflow gaps: organization account enrollment, independent tally-draft checking, automatic receipt-proof checks, and
+Remaining workflow gaps: independent tally-draft checking, automatic receipt-proof checks, and
 backup/restore commands. This command group supplies transport adapters; it does not resolve those gaps.
 
 ### Recorded PUBLIC export management
@@ -135,6 +168,8 @@ backup/restore commands. This command group supplies transport adapters; it does
 These commands use the existing [signed management API](../../docs/09-api-data-contracts.md#101-recorded-public-exports-and-archived-deletion).
 Use the organization or administrator key and its configured signature audience.
 They support the existing passphrase-file/stdin options; secrets never belong in arguments.
+Download and acknowledgement each unlock the signing key once for both requests,
+so a passphrase supplied on stdin is read only once per command.
 
 1. Run `online export-create` with the election ID and an explicit idempotency key.
    The response identifies a job. `online job-inspect --job-id JOB_ID` reads that

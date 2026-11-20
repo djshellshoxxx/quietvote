@@ -5,8 +5,10 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { writeTar } from '@quietvote/board';
-import { bytesToHex, sha256 } from '@quietvote/crypto';
+import { bytesToHex, sha256, streamRng, utf8 } from '@quietvote/crypto';
 import { logOrigin } from '@quietvote/protocol';
+import { FLOOR_PARAMS, wrapSeed } from '../src/keyfile.ts';
+import { run } from '../src/main.ts';
 import { fullElection, waitJob } from '../../server/test/helpers/full.ts';
 import { BIN, qv, tmp, voterKeyFile, writePrivateJson } from './helpers.ts';
 
@@ -187,3 +189,42 @@ test('recorded management rejects malformed IDs, bindings and missing confirmati
     assert.equal(result.code, 2, result.err);
   }
 });
+
+for (const command of ['export-download', 'export-acknowledge'] as const) {
+  test(`protected ${command} reads its stdin passphrase once across both signed requests`, async (t) => {
+    const f = fixture(), file = join(f.dir, 'retained.qvb');
+    const passphrase = 'correct horse battery staple';
+    try {
+      const plain = JSON.parse(readFileSync(f.common[f.common.indexOf('--key') + 1]!, 'utf8')) as { seed: string };
+      const key = writePrivateJson(f.dir, 'protected.key', await wrapSeed(Buffer.from(plain.seed, 'hex'), passphrase,
+        streamRng(`protected-${command}`), FLOOR_PARAMS));
+      const common = f.common.map((value, index) => f.common[index - 1] === '--key' ? key : value);
+      const calls: { url: string; method: string }[] = [];
+      t.mock.method(globalThis, 'fetch', async (url: URL, init: RequestInit) => {
+        calls.push({ url: String(url), method: init.method! });
+        assert.match((init.headers as Record<string, string>)['authorization']!, /^QV-Sig /);
+        if (String(url) === f.path) return new Response(JSON.stringify(f.record));
+        if (command === 'export-download') {
+          assert.equal(String(url), `${f.path}/download`);
+          return new Response(Buffer.from(f.bytes));
+        }
+        assert.equal(String(url), `${f.path}/acknowledge`);
+        assert.equal(init.method, 'POST');
+        return new Response(JSON.stringify({ ...f.record, acknowledged_at: '2026-11-20T02:00:00Z' }));
+      });
+      const extra = command === 'export-download' ? ['--out', file] : ['--file', file, '--retained', '--idempotency-key', 'protected-acknowledgement'];
+      if (command === 'export-acknowledge') writeFileSync(file, f.bytes);
+      let reads = 0, output = '', error = '';
+      const code = await run(['online', command, ...common, ...extra, '--passphrase-stdin'], {
+        out: (text) => { output += text; }, err: (text) => { error += text; }, rng: streamRng(`request-${command}`),
+        stdin: async () => utf8(++reads === 1 ? passphrase : ''), prompt: async () => undefined,
+      });
+      assert.equal(code, 0, error);
+      assert.equal(reads, 1, 'one stdin stream cannot supply a second passphrase');
+      assert.equal(calls.length, 2);
+      assert.deepEqual(readFileSync(file), Buffer.from(f.bytes));
+      if (command === 'export-download') assert.equal(JSON.parse(output).acknowledged, false);
+      else assert.equal(JSON.parse(output).acknowledged_at, '2026-11-20T02:00:00Z');
+    } finally { rmSync(f.dir, { recursive: true, force: true }); }
+  });
+}

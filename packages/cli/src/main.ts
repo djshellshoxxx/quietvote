@@ -15,6 +15,7 @@ import { cmdGovernanceExport, cmdGovernancePrepare, cmdGovernanceSign, cmdGovern
 import { EXIT, type Io } from './io.ts';
 import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionPinnedRoll, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
 import { ONLINE_EXPORTS } from './cmd-online-exports.ts';
+import { ONLINE_ORGS } from './cmd-online-org.ts';
 
 export const VERSION = '0.1.0';
 
@@ -61,6 +62,10 @@ usage:
                                    exit 1 if fewer than t shares verify or the code is cast/re-wrapped/not a trustees-mode spoil
   qv online instance --server <origin> [--json]
   qv online admin-status --server <origin> --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
+  qv online org-create --server <origin> --audience <qv:id@publicUrl> --key <keyfile>
+                    --name <name> --idempotency-key <key> [--registration-token-file <private.txt>] [passphrase options] [--json]
+                                   register the supplied key as organization owner; registration tokens never come from argv
+  qv online org-inspect --server <origin> --org <id> --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
   qv online election-create --server <origin> --audience <qv:id@publicUrl> --key <keyfile>
                     --org <id> --title <title> --access public|link --idempotency-key <key>
                     [--pinned-roll <sorted-keys.json>] [passphrase options] [--json]
@@ -125,7 +130,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
   election: { 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
-  online: { ...ONLINE_EXPORTS, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
+  online: { ...ONLINE_ORGS, ...ONLINE_EXPORTS, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
   'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },
   governance: { prepare: cmdGovernancePrepare, sign: cmdGovernanceSign, export: cmdGovernanceExport, verify: cmdGovernanceVerify },

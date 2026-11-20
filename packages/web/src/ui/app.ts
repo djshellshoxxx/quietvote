@@ -421,7 +421,11 @@ export function startApp(env: AppEnv): void {
     void route();
   }
   window.addEventListener('popstate', () => { navigated = true; void route(); });
-  window.addEventListener('hashchange', () => { navigated = true; void route(); });
+  window.addEventListener('hashchange', () => {
+    // A same-document browser navigation can emit both popstate and hashchange for the same URL.
+    if (routeAddress === location.href) return;
+    navigated = true; void route();
+  });
 
   function bindContext(L: Loaded, ctx: ElectionContext): void {
     delete L.ctx; // A binding exception must not leave a live-derived context usable.
@@ -458,6 +462,7 @@ export function startApp(env: AppEnv): void {
   }
 
   let routeEpoch = 0;
+  let routeAddress = location.href;
   let resultsEpoch = 0;
   const currentRoute = (epoch: number): boolean => epoch === routeEpoch;
   async function route(): Promise<void> {
@@ -468,9 +473,12 @@ export function startApp(env: AppEnv): void {
       if (!value.ctl.retainPendingRetry()) retrySessions.delete(key);
     }
     const epoch = ++routeEpoch;
+    routeAddress = location.href;
     active = undefined;
     repaint = undefined;
     ballotLock = undefined;
+    // Clear the retiring form's secret fields without locking the voter signer used by the next view.
+    keyLock?.();
     keyLock = undefined;
     // Retire invalidated controls synchronously; users may interact before the next route's reads finish.
     clear(main);

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { atomicWrite, readSecretFile } from '../src/fsutil.ts';
+import { atomicWrite, readSecretFile, shred } from '../src/fsutil.ts';
 
 const secret = Buffer.from('TRUSTEE_PRIVATE_CANARY_92770');
 const temp = () => mkdtempSync(join(tmpdir(), 'qvt-private-'));
@@ -41,6 +41,37 @@ test('POSIX trustee publication refuses unsafe ancestry for private and public o
     assert.equal(readFileSync(join(owned, 'public'), 'utf8'), 'public bytes');
     assert.deepEqual(readdirSync(owned), ['public']);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('POSIX trustee cleanup refuses unsafe ancestry before overwriting or removing a file', { skip: process.platform === 'win32' }, async () => {
+  const dir = temp(), shared = join(dir, 'shared'), owned = join(shared, 'owned'), path = join(owned, 'backup');
+  mkdirSync(shared, { mode: 0o700 }); mkdirSync(owned, { mode: 0o700 });
+  try {
+    await atomicWrite(path, secret);
+    chmodSync(shared, 0o777);
+    let requested = false;
+    assert.equal(await shred(path, n => { requested = true; return new Uint8Array(n); }), false);
+    assert.equal(requested, false, 'refusal precedes overwrite randomness and destructive I/O');
+    assert.deepEqual(readFileSync(path), secret);
+    chmodSync(shared, 0o1777);
+    assert.equal(await shred(path, n => new Uint8Array(n)), true, 'trusted sticky ancestry retains ordinary cleanup');
+    assert.equal(existsSync(path), false);
+    assert.deepEqual(readdirSync(owned), [], 'permission inspection creates no staging artefact');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('trustee cleanup keeps its original absolute path if cwd changes during overwrite', async () => {
+  const originalCwd = process.cwd(), dir = realpathSync.native(temp()), other = join(dir, 'other');
+  const path = join(dir, 'backup'), unrelated = join(other, 'backup');
+  mkdirSync(other);
+  try {
+    await atomicWrite(path, secret);
+    writeFileSync(unrelated, 'unrelated file');
+    process.chdir(dir);
+    assert.equal(await shred('backup', n => { process.chdir(other); return new Uint8Array(n); }), true);
+    assert.equal(existsSync(path), false);
+    assert.equal(readFileSync(unrelated, 'utf8'), 'unrelated file');
+  } finally { process.chdir(originalCwd); rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('POSIX trustee reads refuse permissive modes and symlink aliases', { skip: process.platform === 'win32' }, async () => {

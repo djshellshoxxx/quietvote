@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { dirname, join, basename, resolve } from 'node:path';
 import { TrusteeError } from './errors.ts';
 import { MAX_PRIVATE_FILE_BYTES, readWindowsPrivateFile, writeWindowsPrivateFile } from './windows-private-files.ts';
-import { createPosixStage } from './posix-staging.ts';
+import { createPosixStage, protectedPosixPath } from './posix-staging.ts';
 
 /** Hold an exclusive temporary file through fsync and validated publication, then best-effort fsync its directory. */
 export async function atomicWrite(path: string, data: Uint8Array, mode = 0o600, opts: { exclusive?: boolean } = {}): Promise<void> {
@@ -142,12 +142,16 @@ export async function readSecretFile(path: string, max = MAX_PRIVATE_FILE_BYTES)
  * On SSD/flash this is NOT erasure (QV-17 §11.2): the key must be destroyed too.
  */
 export async function shred(path: string, randomBytes: (n: number) => Uint8Array, expectedSha256?: string): Promise<boolean> {
+  path = resolve(path); // Later cwd changes must not redirect a cleanup already in progress.
   let before;
   try {
     before = await lstat(path);
-    if (!before.isFile() || before.nlink !== 1 || await realpath(path) !== resolve(path)) return false;
+    if (!before.isFile() || before.nlink !== 1 || await realpath(path) !== path) return false;
+    // An identity check alone does not make a later pathname unlink conditional.
+    // Preserve the same trusted POSIX namespace prerequisite as publication.
+    if (process.platform !== 'win32' && protectedPosixPath(path) !== path) return false;
   } catch (e) {
-    if (['ENOENT', 'ENOTDIR'].includes((e as { code?: string }).code ?? '')) return false;
+    if (['ENOENT', 'ENOTDIR', 'UNSAFE_DIRECTORY'].includes((e as { code?: string }).code ?? '')) return false;
     throw e;
   }
   let fh;

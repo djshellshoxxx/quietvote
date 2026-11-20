@@ -56,6 +56,12 @@ test('verifier.html: single file < 400 KB, hash-pinned inline script/style, conn
   assert.match(policy, /connect-src 'none'/);
   assert.match(policy, /form-action 'none'/);
   assert.match(policy, /base-uri 'none'/);
+  assert.match(policy, /(?:^|; )img-src data:(?:;|$)/, 'the standalone verifier must not allow network images');
+  const icon = /<link rel="icon" type="image\/svg\+xml" href="([^"]+)"\s*\/?>/.exec(html)?.[1];
+  assert.ok(icon, 'the generated verifier must declare its icon instead of requesting a default favicon');
+  assert.equal(new URL(icon).protocol, 'data:', 'the declared icon must remain inside the single file');
+  const iconBody = decodeURIComponent(icon.slice(icon.indexOf(',') + 1));
+  assert.match(iconBody, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"[^>]*><\/svg>$/, 'the embedded icon is a self-contained SVG');
   const script = /<script>([\s\S]*)<\/script>/.exec(html)![1]!;
   const style = /<style>([\s\S]*?)<\/style>/.exec(html)![1]!;
   assert.ok(policy.includes(`'sha256-${createHash('sha256').update(script).digest('base64')}'`));
