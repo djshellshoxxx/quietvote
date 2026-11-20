@@ -1,5 +1,10 @@
 # QuietVote comprehensive consolidation
 
+Latest independent continuation: [November 19 source and review checkpoint](CONSOLIDATION_CHECKPOINT_20261119.md).
+No additional modern unmerged source was found. The seven historical exceptions
+remain preserved; current-source native qualification and formal promotion
+requirements remain explicit in that checkpoint.
+
 Status: this report records the completed local implementation composition and
 the exact scope of its engineering evidence. The current published head,
 local-to-remote tree comparison and hosted results are recorded in

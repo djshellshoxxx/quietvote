@@ -1,5 +1,10 @@
 # Consolidation continuation and promotion gates
 
+Latest independent continuation: [November 19 consolidation checkpoint](CONSOLIDATION_CHECKPOINT_20261119.md).
+It rechecks all 73 source branches, records fresh 41-case application and 22-case
+CLI/server reviews, and identifies the recent `8f865fb` DCO gap. Its hosted
+observations are time-bound; use the current PR checks for later results.
+
 The implementation composition and source-bound engineering receipts are preserved
 in the requested `codex/quietvote-comprehensive-consolidation` branch.
 [PR #71](https://github.com/djshellshoxxx/quietvote/pull/71) records the current
