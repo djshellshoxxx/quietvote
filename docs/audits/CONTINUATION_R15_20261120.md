@@ -23,3 +23,7 @@ Finish each independent review set before declaring completion or handing off an
 The pure proposal must be integrated only behind a provider with trusted namespace+directory ACL checks, stable exclusive cross-process lock, descriptor-bound bounded read, atomic private staging, mandatory durable file/directory barriers and crash recovery. Perform the read / proof / re-read / commit inside the effective lock; no update based on an older successful check. If native custody cannot be proven, refuse and leave prior state intact. Document Windows/macOS normal and ACL fixture evidence separately.
 
 Observe real CI outcomes and tested synthetic merge SHA/tree before qualification. Previous R13/R14 results remain source-specific. Main needs appointed formal security approval and owner decisions for historical DCO including 8f865fb and a5e5d19. No independent worker, native test, installed CLI storage feature or formal review is claimed by this handoff.
+
+## Post-publication static boundary correction
+
+A review of the pure result API found that the equal-size UNCHANGED proposal originally returned the caller's mutable Uint8Array object by reference. The proposal now returns a copy so later output mutations cannot corrupt an in-memory retained snapshot. An authored sixth test checks this input/output nonaliasing. No persistence integration or native test is implied. The draft explicitly limits witness-history retention: a larger signed head does not inherit earlier checkpoint cosignatures.

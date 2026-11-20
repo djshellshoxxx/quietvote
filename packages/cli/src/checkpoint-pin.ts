@@ -89,7 +89,7 @@ export function proposeCheckpointPin(
       return err('QV_BOARD_FORK', 'equal-size signed checkpoints have different roots');
     }
     // Preserve the original signed note, including any previously held cosignatures.
-    return ok({ bytes: oldBytes!, action: 'UNCHANGED', previous_size: previous.size,
+    return ok({ bytes: oldBytes!.slice(), action: 'UNCHANGED', previous_size: previous.size,
       checkpoint_size: previous.size, consistency: 'VERIFIED' });
   } else {
     if (!consistencyProof || consistencyProof.length > 63 ||

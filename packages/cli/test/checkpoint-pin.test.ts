@@ -94,3 +94,14 @@ test('missing optional signed checkpoint remains incomplete: no proposal is emit
   refused(proposeCheckpointPin(first.bytes, '', f.anchors), 'QV_BOARD_BAD_CHECKPOINT');
   assert.equal(accepted(readCheckpointPin(first.bytes, f.anchors)).checkpoint.size, 1);
 });
+
+test('unchanged proposal cannot alias and mutate the caller retained snapshot', () => {
+  const f = fixture();
+  const stored = accepted(proposeCheckpointPin(undefined, f.note1, f.anchors)).bytes;
+  const savedCopy = stored.slice();
+  const repeated = accepted(proposeCheckpointPin(stored, f.note1, f.anchors));
+  assert.equal(repeated.action, 'UNCHANGED');
+  repeated.bytes.fill(0);
+  assert.deepEqual(stored, savedCopy, 'a result mutation must not mutate the retained input buffer');
+  assert.equal(accepted(readCheckpointPin(stored, f.anchors)).checkpoint.size, 1);
+});
