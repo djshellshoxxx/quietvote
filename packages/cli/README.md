@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
+Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -160,8 +160,9 @@ failure during a mutation also exit 1 and explicitly report an unknown outcome; 
 Commands never retry a mutation automatically. Downloads use mode 0600, never overwrite an existing path,
 and are labelled `verified: false` until checked separately.
 
-Remaining workflow gaps: independent tally-draft checking, automatic receipt-proof checks, and
-backup/restore commands. This command group supplies transport adapters; it does not resolve those gaps.
+Remaining workflow gaps include independent tally-draft checking, automatic receipt-proof checks,
+and off-site backup/restore orchestration. `backup-create` requests the existing server-local snapshot;
+the separate server `qv-backup` tool verifies and restores full snapshots as described below.
 
 ### Recorded PUBLIC export management
 
@@ -250,6 +251,48 @@ witness quorum; the trustee performs those checks before releasing. The JSON sum
 as false. A manifest envelope authored by a separate organizer remains refused under the current trustee
 verification policy; the preparer does not change that policy. These generated trustee input files are
 not accepted as `qv verify` bundles, whose top-level schema excludes `log_evidence`.
+
+## Server-local backup jobs
+
+An instance administrator can request the existing [backup API](../../docs/09-api-data-contracts.md#10-export-import-jobs-admin)
+with an explicit scope and idempotency key:
+
+```sh
+qv online backup-create --server https://vote.example --scope all \
+  --audience qv:INSTANCE_ID@https://vote.example --key admin.key \
+  --passphrase-file passphrase.txt --idempotency-key backup-full-2026-11-20 --json
+
+qv online job-inspect --server https://vote.example --job-id JOB_ID \
+  --audience qv:INSTANCE_ID@https://vote.example --key admin.key \
+  --passphrase-file passphrase.txt --json
+```
+
+Use `--scope election --id ELECTION_ID` for one election. Full scope refuses `--id`.
+The command validates the returned job ID, backup kind and requested election binding,
+then prints selected job metadata. Exit 0 confirms a valid submission response; it does
+not mean the job finished. `job-inspect` reports the server's current state, including
+`done` or `failed`, and does not independently verify the snapshot.
+
+The server writes snapshots under its own `<data>/backups/<job_id>/` directory. The CLI
+does not download files or follow response links. Within the server's 24-hour
+idempotency window, an explicit repeat by the same administrator key with the same
+scope, election and idempotency key identifies the original request. After that window,
+the same idempotency key may create a new job. The command never retries automatically.
+Inspect server state after an unknown outcome and preserve the original key before
+deciding whether to submit again.
+
+Full snapshots include the control database and its election databases. Election scope
+contains one election database and cannot serve as a full-instance recovery input.
+The snapshot excludes the instance KEK; sealed database fields still require that
+original KEK. Copying, protecting and retaining the snapshot and KEK are separate
+operator procedures.
+
+The [offline backup and recovery guide](../../docs/OFFLINE-BACKUP-RESTORE.md) covers
+`qv-backup verify --backup DIR --kek-file FILE` and
+`qv-backup restore --backup DIR --kek-file FILE --minimum-backup DIR --destination NEW_DIR`.
+Restore requires a full snapshot, its original KEK, a verified minimum backup floor
+and a new destination. Requesting a job does not perform these checks or establish
+off-site retention, independent freshness, or a tested recovery procedure.
 
 ## Operator gossip health
 

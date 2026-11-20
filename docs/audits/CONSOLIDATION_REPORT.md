@@ -1,5 +1,16 @@
 # QuietVote comprehensive consolidation
 
+Historical independent continuation: [November 19 source and review checkpoint](CONSOLIDATION_CHECKPOINT_20261119.md).
+No additional modern unmerged source was found. The seven historical exceptions
+remain preserved; current-source native qualification and formal promotion
+requirements remain explicit in that checkpoint.
+
+The [November 20 backup job implementation](../reports/cli-backup-jobs-20261120.md)
+adds the accepted online administrator workflow and consolidates that separate
+documentation checkpoint. Fresh R6 code, bug and security reviews are linked
+there, including the completed 27-job hosted run for predecessor `a5e5d19`.
+Later feature source requires its own qualification.
+
 Status: this report records the completed local implementation composition and
 the exact scope of its engineering evidence. The current published head,
 local-to-remote tree comparison and hosted results are recorded in

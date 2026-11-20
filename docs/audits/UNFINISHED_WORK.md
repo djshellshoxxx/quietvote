@@ -1,13 +1,19 @@
 # Unfinished work and explicit blockers
 
-This consolidation ledger includes the November 19, 2026 continuation and fresh
+This consolidation ledger includes the November 20, 2026 continuation and fresh
 worker handoffs. Older audits remain historical evidence. An implemented library, passing
 fixture or proposed contract is not counted as a complete user workflow.
 
 ## Recovered and repaired in this candidate
 
+Published predecessor `a5e5d19` completed all 27 hosted CI jobs plus claims and
+visual checks; [R6 evidence](../reports/independent-bug-hunt-r6-20261120.md) binds
+the tested synthetic merge tree to that exact source. The new backup CLI below
+requires its own later-source qualification.
+
 | Area | Current implementation | Evidence and limit |
 | --- | --- | --- |
+| Online administrator backup jobs | `online backup-create` requests the existing signed full/election snapshot API with explicit scope and idempotency; existing `job-inspect` reads progress. | [Implementation and real-server receipt](../reports/cli-backup-jobs-20261120.md). The snapshot remains on the server; off-site retention, KEK custody and the separate full-snapshot verification/restore procedure remain operator work. |
 | Historical platform and pinned membership work | PRs #69 and #70 are preserved, including their source branches, authenticated pinned roll, legacy attachment, backup floors and Windows fixture corrections. | [Branch inventory](BRANCH_INVENTORY.md); their earlier hosted passes qualify their own heads, not this composition. |
 | Prover nonce hedging | PR #57 plus the trustee-index correction are composed. | [Nonce report](../reports/consolidation-nonce-index-20261118.md); independent security approval remains required. |
 | Verifier acceptance | PR #61 restricts status-quo ties to yes/no; #63 checks published decrypter sets; #64 rejects authenticated conflicting markers. | Preserved source commits and focused paired tests; not a claim of complete verifier parity. |

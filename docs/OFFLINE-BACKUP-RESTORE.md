@@ -20,6 +20,24 @@ collected recent full backup as the minimum known history for restore, as well a
 the latest witness/mirror checkpoints and receipt evidence. A backup cannot prove
 that no newer history exists.
 
+The shipped CLI provides this request and job inspection path:
+
+```sh
+qv online backup-create --server https://vote.example --scope all \
+  --audience qv:INSTANCE_ID@https://vote.example --key admin.key \
+  --passphrase-file passphrase.txt --idempotency-key backup-full-2026-11-20
+
+qv online job-inspect --server https://vote.example --job-id JOB_ID \
+  --audience qv:INSTANCE_ID@https://vote.example --key admin.key \
+  --passphrase-file passphrase.txt
+```
+
+Use the returned `job_id` for inspection. Submission success is not job completion;
+inspection reports server state. The command does not download the directory or
+perform the verification/restore procedure below. The [CLI guide](../packages/cli/README.md#server-local-backup-jobs)
+explains explicit scope, the same-administrator 24-hour idempotency window and
+reconciliation after an unknown outcome.
+
 Snapshots are private local SQLite files; sealed fields remain encrypted under
 the original KEK. Encrypt the complete snapshot with your separately managed
 backup-encryption system before off-host transport. This command does not provide
