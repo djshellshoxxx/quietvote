@@ -31,8 +31,12 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 function validAnchors(a: CheckpointPinAnchors): boolean {
-  return typeof a.origin === 'string' && /^quietvote\/v1\/[0-9a-f]{32}$/.test(a.origin) &&
+  return !!a && typeof a === 'object' && typeof a.origin === 'string' && /^quietvote\/v1\/[0-9a-f]{32}$/.test(a.origin) &&
     a.logKey instanceof Uint8Array && a.logKey.length === 32 && ed25519IsStrictPoint(a.logKey);
+}
+function validProof(proof: unknown): proof is readonly Uint8Array[] {
+  return Array.isArray(proof) && proof.length <= 63 &&
+    Array.from(proof).every((hash: unknown) => hash instanceof Uint8Array && hash.length === 32);
 }
 function verifiedNote(note: unknown, anchors: CheckpointPinAnchors): Result<Checkpoint> {
   if (typeof note !== 'string' || note.length > MAX_CHECKPOINT_PIN_BYTES ||
@@ -91,7 +95,7 @@ export function proposeCheckpointPin(
   } else if (candidate.value.size < previous.size) {
     return err('QV_BOARD_ROLLBACK', 'older signed checkpoint cannot replace the retained pin');
   } else if (candidate.value.size === previous.size) {
-    if (consistencyProof !== undefined && consistencyProof.length !== 0) return err('QV_BOARD_BAD_PROOF', 'equal-size consistency must not carry a proof');
+    if (consistencyProof !== undefined && (!Array.isArray(consistencyProof) || consistencyProof.length !== 0)) return err('QV_BOARD_BAD_PROOF', 'equal-size consistency must not carry a proof');
     if (!verifyConsistency(previous.size, candidate.value.size, previous.root, candidate.value.root, [])) {
       return err('QV_BOARD_FORK', 'equal-size signed checkpoints have different roots');
     }
@@ -99,8 +103,7 @@ export function proposeCheckpointPin(
     return ok({ bytes: oldBytes!.slice(), action: 'UNCHANGED', previous_size: previous.size,
       checkpoint_size: previous.size, consistency: 'VERIFIED' });
   } else {
-    if (!consistencyProof || consistencyProof.length > 63 ||
-        !consistencyProof.every((h) => h instanceof Uint8Array && h.length === 32) ||
+    if (!validProof(consistencyProof) ||
         !verifyConsistency(previous.size, candidate.value.size, previous.root, candidate.value.root, consistencyProof)) {
       return err('QV_BOARD_BAD_PROOF', 'growth requires a valid exact old/new consistency proof');
     }

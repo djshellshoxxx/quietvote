@@ -7,8 +7,7 @@ import { CHECKPOINT_PIN_FORMAT, MAX_CHECKPOINT_PIN_BYTES, proposeCheckpointPin, 
 
 const utf8 = (s: string): Uint8Array => new TextEncoder().encode(s);
 function accepted<T>(result: Result<T>): T {
-  assert.equal(result.ok, true, result.ok ? '' : result.error.message);
-  if (!result.ok) throw Error(result.error.message);
+  if (!result.ok) throw Error(`${result.error.code}: ${result.error.message}`);
   return result.value;
 }
 function refused(result: Result<unknown>, code: string): void {
@@ -115,4 +114,17 @@ test('pin snapshot bytes must be canonical even when alternate JSON would parse'
   refused(readCheckpointPin(noncanonical, f.anchors), 'QV_BOARD_MALFORMED');
   refused(proposeCheckpointPin(noncanonical, f.note2, f.anchors, f.proof12), 'QV_BOARD_MALFORMED');
   assert.equal(accepted(readCheckpointPin(original, f.anchors)).checkpoint.size, 1);
+});
+
+test('malformed runtime anchors and proof containers return named refusals without altering a held pin', () => {
+  const f = fixture();
+  const held = accepted(proposeCheckpointPin(undefined, f.note1, f.anchors)).bytes;
+  const original = held.slice();
+  refused(readCheckpointPin(held, null as unknown as typeof f.anchors), 'QV_BOARD_ORIGIN_MISMATCH');
+  refused(proposeCheckpointPin(undefined, f.note1, null as unknown as typeof f.anchors), 'QV_BOARD_ORIGIN_MISMATCH');
+  refused(proposeCheckpointPin(held, f.note1, f.anchors, null as unknown as readonly Uint8Array[]), 'QV_BOARD_BAD_PROOF');
+  refused(proposeCheckpointPin(held, f.note2, f.anchors, { length: 0 } as unknown as readonly Uint8Array[]), 'QV_BOARD_BAD_PROOF');
+  refused(proposeCheckpointPin(held, f.note2, f.anchors, Array(1) as readonly Uint8Array[]), 'QV_BOARD_BAD_PROOF');
+  assert.deepEqual(held, original);
+  assert.equal(accepted(readCheckpointPin(held, f.anchors)).checkpoint.size, 1);
 });
