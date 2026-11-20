@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { createServer } from 'node:http';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { b64u } from '@quietvote/board';
+import { b64u, hashLeaf } from '@quietvote/board';
 import { bytesToHex } from '@quietvote/crypto';
 import { signRecord } from '@quietvote/protocol';
 import { T_VOTING, World } from '../../server/test/helpers/world.ts';
@@ -81,8 +81,31 @@ test('online signed-entry relay opens/closes an election and exports without ove
     };
     w.clock = T_VOTING;
     const opening = w.marker('election-open', w.params.ctx, await w.openBinding());
-    const opened = await relay('election_open', opening);
+    // Check the real server's returned receipt for the exact signed opening packet.
+    const openEntry = w.entry('election_open', w.coord[0]!, opening);
+    const openPacket = writeJson(w.dir, 'open-receipt.json', { header: b64u(openEntry.headerBytes), body: b64u(openEntry.body) });
+    const verifiedArgs = ['online', 'election-submit', ...common, '--file', openPacket, '--log-key', w.logPkHex];
+    const opened = await qv(verifiedArgs);
     assert.equal(opened.code, 0, opened.err);
+    const openedReceipt = JSON.parse(opened.out);
+    assert.equal(openedReceipt.status, 'included');
+    assert.equal(openedReceipt.verification.promise, 'VERIFIED');
+    assert.equal(openedReceipt.verification.inclusion, 'VERIFIED');
+    assert.equal(openedReceipt.verification.scope, 'receipt-only');
+    assert.equal(openedReceipt.verification.leaf_hash, bytesToHex(hashLeaf(openEntry.headerBytes)));
+    assert.equal(openedReceipt.verification.log_key, w.logPkHex);
+    assert.equal(openedReceipt.verification.authority_verified, false);
+    assert.equal(openedReceipt.verification.witness_quorum_verified, false);
+    assert.equal(openedReceipt.verification.freshness_verified, false);
+    assert.equal(openedReceipt.verification.ballot_counting_verified, false);
+    // An explicit replay retains the same admitted sequence and packet identity.
+    const replayed = await qv(verifiedArgs);
+    assert.equal(replayed.code, 0, replayed.err);
+    const replayReceipt = JSON.parse(replayed.out);
+    assert.equal(replayReceipt.status, 'included');
+    assert.equal(replayReceipt.receipt.seq, openedReceipt.receipt.seq);
+    assert.equal(replayReceipt.receipt.leaf_hash, openedReceipt.receipt.leaf_hash);
+    assert.deepEqual(replayReceipt.verification, openedReceipt.verification);
     assert.equal((await w.get(`/api/v1/elections/${w.electionId}/state`)).json.phase, 'OPEN');
     for (let i = 0; i < 3; i++) {
       assert.equal((await w.cast(i, { budget: ['yes'], chair: ['ann'] })).status, 201);

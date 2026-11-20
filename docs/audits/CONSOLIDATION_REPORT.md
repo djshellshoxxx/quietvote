@@ -5,6 +5,14 @@ No additional modern unmerged source was found. The seven historical exceptions
 remain preserved; current-source native qualification and formal promotion
 requirements remain explicit in that checkpoint.
 
+The [November 20 checked submission receipt](../reports/cli-returned-receipts-20261120.md)
+adds independent verification of already-returned promise/inclusion evidence.
+The [R11–R12 handoff](CONTINUATION_R11_R12_20261120.md) records implementation,
+independent reviews and normal workflow checks, including reconciliation with
+concurrent PR #73. Its alternative source and original handoff are preserved;
+the reviewed implementation and additional election-open/replay acceptance are
+composed. Hosted qualification remains source-specific.
+
 The [November 20 unsigned tally checker](../reports/cli-tally-draft-20261120.md)
 adds offline comparison against an externally pinned pre-publication archive,
 with explicit closed-snapshot witness requirements and scoped output. R9's

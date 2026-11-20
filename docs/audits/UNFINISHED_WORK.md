@@ -9,10 +9,12 @@ fixture or proposed contract is not counted as a complete user workflow.
 Published predecessor `a5e5d19` completed all 27 hosted CI jobs plus claims and
 visual checks; [R6 evidence](../reports/independent-bug-hunt-r6-20261120.md) binds
 the tested synthetic merge tree to that exact source. The later backup and
-tally-draft commands require their own source-specific hosted qualification.
+tally-draft and checked-submission commands require their own source-specific
+hosted qualification.
 
 | Area | Current implementation | Evidence and limit |
 | --- | --- | --- |
+| Checked returned submission receipts | `online election-submit --log-key` binds already-returned promise/inclusion evidence to the exact packet, selected election and independent log key. No-pin mode is unchanged. | [R11–R12 implementation and review](CONTINUATION_R11_R12_20261120.md): actual-server, promise-only, possible-acceptance and local-input cases pass; the normal election-open/replay workflow also passes. Output excludes authority, witnesses, freshness and counting assurance. Later proof retrieval, retained checkpoints and consistency remain separate. |
 | Offline unsigned tally comparison | `election check-tally` recomputes a proposed body against an externally pinned pre-publication archive. Default `MATCH` requires the closed snapshot's declared witness coverage; zero-quorum content-only comparison is explicit. | [Implementation, corrected review finding and verification](../reports/cli-tally-draft-20261120.md): 459 protocol/verifier tests, three new CLI cases and two existing preparation cases passed. Both output modes retain snapshot/body identity and caveats. Publication, freshness, automatic signing integration and FINAL status remain outside the result. |
 | Online administrator backup jobs | `online backup-create` requests the existing signed full/election snapshot API with explicit scope and idempotency; existing `job-inspect` reads progress. | [Implementation and real-server receipt](../reports/cli-backup-jobs-20261120.md). The snapshot remains on the server; off-site retention, KEK custody and the separate full-snapshot verification/restore procedure remain operator work. |
 | Historical platform and pinned membership work | PRs #69 and #70 are preserved, including their source branches, authenticated pinned roll, legacy attachment, backup floors and Windows fixture corrections. | [Branch inventory](BRANCH_INVENTORY.md); their earlier hosted passes qualify their own heads, not this composition. |

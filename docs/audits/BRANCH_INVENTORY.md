@@ -25,6 +25,16 @@ this operation are separate provenance.
 
 ## Findings and integration order
 
+Later continuation sources are separate from the initial 72-branch inventory.
+PR #72's backup handoff was preserved in canonical checkpoint `547ea2d` with
+original parent `9d3292bf945a283e7ec3b549a603692a902dc0c9`. Concurrent receipt
+PR #73 at `1cab4ae130a4c1823b61e369557340ba4ec3842d` is preserved by local merge
+`f919d319bd7dd346274e2e0dbbccd973ffd57159`, including its byte-identical historical
+handoff. The [R11–R12 disposition](CONTINUATION_R11_R12_20261120.md) records the
+retained reviewed adapter and ported election-open acceptance. These sources
+do not alter historical branch counts. Live canonical publication and PR status
+are recorded in PR #71.
+
 **59 of 72 tips are ancestors of the platform candidate; 60 are ancestors of the membership candidate.** The latter count includes `main` and its identical `claude/quirky-curie-n5pxf5` alias. The remaining 12 tips were individually compared. One is patch-equivalent to a signed replacement, one is canonical merge history with no additional non-merge patch, four contain independent crypto/verifier fixes, one contains mixed historical recovery work, and five are historical or obsolete documentation proposals.
 
 1. Start from the recorded `main` and merge canonical `integration/quietvote-completion` history. Its latest merge commits assemble source parents that are already in the newer platform candidate; preserve ancestry rather than treating `git cherry` alone as tree equivalence.

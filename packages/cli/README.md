@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
+Commands: `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -152,8 +152,10 @@ bytes. `qv-trustee export-entry` now creates this format for persisted trustee c
 shares; the offline `election sign-record` and `election export-entry` commands prepare coordinator and voter packets below. The server checks
 signatures, protocol validity and allowed state transitions. It can relay manifest, ceremony, open, ballot,
 close and tally packets; it does not generate protocol signatures or choose trustee/coordinator quorums.
-A returned receipt means server acceptance, not independent receipt or result verification. Retain returned
-receipts and use the existing board/election verifiers with independent trust anchors.
+Without `--log-key`, a returned receipt means server acceptance without independent receipt or result
+verification. The optional [returned-receipt check](#check-returned-submission-evidence) below verifies
+the already-returned evidence against the exact packet and an independent key pin. Retain receipts
+and use the board/election verifiers with the appropriate independent trust anchors.
 
 All online commands print JSON. A non-2xx response exits 1 with its status and bounded error code. Server 5xx responses, malformed successful responses and network
 failure during a mutation also exit 1 and explicitly report an unknown outcome; inspect state before retrying.
@@ -161,9 +163,58 @@ Commands never retry a mutation automatically. Downloads use mode 0600, never ov
 and are labelled `verified: false` until checked separately.
 
 The offline [`election check-tally`](#check-an-unsigned-tally-proposal) command recomputes an unsigned
-proposal against a pinned pre-publication archive. Remaining workflow gaps include automatic
-receipt-proof checks and off-site backup/restore orchestration. `backup-create` requests the existing server-local snapshot;
+proposal against a pinned pre-publication archive. Remaining workflow gaps include later receipt-proof
+retrieval, consistency checks against retained checkpoints, and off-site backup/restore orchestration.
+`backup-create` requests the existing server-local snapshot;
 the separate server `qv-backup` tool verifies and restores full snapshots as described below.
+
+### Check returned submission evidence
+
+Add an independently obtained log public key to check the immediate response when relaying a packet:
+
+```sh
+qv online election-submit --server https://vote.example --id ELECTION_ID \
+  --file signed-entry.json --log-key ANNOUNCED_LOG_PUBLIC_KEY --json
+```
+
+The pin is the 64-character lowercase hexadecimal Ed25519 public key, for example `bb.log_pk`
+from a manifest already checked against its independent hash. A key learned only from the response
+being checked does not establish that trust. The command derives the expected log origin from the
+selected election ID, decodes the exact canonical header, checks its body length/digest and computes
+the expected Merkle leaf locally before POST. This binds the receipt to those packet bytes; inner
+protocol validity and entry-author authority remain separate verification and server admission checks.
+
+| Evidence returned with `--log-key` | CLI result |
+| --- | --- |
+| Valid log-signed promise and inclusion proof to its signed checkpoint | `verification.promise: "VERIFIED"`, `verification.inclusion: "VERIFIED"`; exit 0. |
+| Valid log-signed promise, without inclusion yet | Promise `VERIFIED`, inclusion `INCOMPLETE`; exit 3. |
+| Malformed, mismatched or failing returned evidence | Exit 1 with possible-acceptance guidance; no successful verification report. |
+
+The checked response contains selected `status`, `receipt` and client-generated `verification` fields.
+`receipt` uses the board library's normalized JSON representation: flat promise timestamps and standard
+base64 leaf/signature, rather than the REST envelope's nested promise and base64url fields. The contained
+receipt object can be supplied to `verify-receipt` after saving it separately; the whole submission
+report is not that command's receipt input. Unknown additive server members are ignored and never
+become client verification claims. Only the two defined `included` and `sequenced` states are interpreted;
+an unknown future status cannot acquire invented receipt assurance and also exits 1 without asserting rejection.
+
+`verification` identifies the independent key, expected origin and leaf hash, sets `scope: "receipt-only"`,
+and explicitly leaves authority, witness quorum, freshness and ballot counting unverified. Included
+evidence proves the bound entry's inclusion in that signed checkpoint. It does not establish that a
+ballot remains the latest counted ballot, that the checkpoint is the newest independent view, or that
+an election result passed. A signed promise deadline is not an authenticated current-time verdict.
+
+Checked mode accepts a regular packet file of at most 1,153,434 bytes, validates its transport encoding,
+header and body binding against existing body-type limits, and bounds the response to 64 KiB. It performs
+one POST with the existing timeout and redirect rules. It does not poll for a later proof, automatically
+retry, rewrite the packet or persist a checkpoint. File-read/input errors exit 4; option errors and
+malformed public keys exit 2 before submission. A valid public key for the wrong log is detected by
+checking the response after POST. If that check fails, acceptance remains possible: retain
+the exact packet and inspect state before deciding whether to repeat those same bytes.
+
+Omitting `--log-key` preserves the existing server-response-only mode and output shape. As with all
+online commands, both default output and `--json` are JSON. An HTTP success in the legacy mode does
+not acquire receipt assurance from this optional check.
 
 ### Recorded PUBLIC export management
 

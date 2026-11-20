@@ -8,6 +8,12 @@ Each table below is a source-bound receipt. A pending native/hosted gate at a
 historical checkpoint is not a claim about a later completed run, and an older
 pass is not assigned to later source. Formal promotion gates remain separate.
 
+The [R11–R12 receipt continuation](CONTINUATION_R11_R12_20261120.md) is the later
+source-bound record for checked submission receipts and PR #73 reconciliation.
+It records final production `918f270`, independent receipt acceptance, the
+adapted election-open/replay workflow and completed compiler checks. Earlier
+tables below retain their source scopes and do not qualify this new delta.
+
 The first reviewed production composition was
 `363f7ed38001090d0a7e00a549288b525aaf8bda`. Its report-only successor
 `be098bee3498ca0de742008c3067f0727862b117` has the same complete tree as published

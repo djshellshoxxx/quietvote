@@ -8,6 +8,7 @@ import { PASSPHRASE_FLAGS, isHex, printJson, readPrivateFile } from './common.ts
 import { reservePrivateOutput, writePrivateFileSync, type PrivateOutput } from './private-files.ts';
 import { loadVoterKey } from './cmd-keygen.ts';
 import { EXIT, type Io } from './io.ts';
+import { checkSubmissionReceipt, MAX_RETURNED_RECEIPT_BYTES, receiptLogKey, submissionBinding, type SubmissionReceiptReport } from './receipt-check.ts';
 
 const BASE = { server: 'value', json: 'bool', 'timeout-ms': 'value' } as const;
 export const AUTH = { key: 'value', audience: 'value', ...PASSPHRASE_FLAGS } as const;
@@ -55,8 +56,8 @@ function readLimited(path: string, limit: number, regular = false): Uint8Array {
     throw new InputError('cannot read input file');
   } finally { if (fd !== undefined) closeSync(fd); }
 }
-function inputJson(path: string, limit: number): unknown {
-  const bytes = readLimited(path, limit);
+function inputJson(path: string, limit: number, regular = false): unknown {
+  const bytes = readLimited(path, limit, regular);
   try { return parseQvJson(bytes); } catch { throw new InputError('input is not valid QV-JSON'); }
 }
 
@@ -304,15 +305,28 @@ export async function cmdOnlineElectionDraft(argv: string[], io: Io): Promise<nu
   return jsonRequest(p, io, 'PUT', `${path}/draft`, draft, true);
 }
 export async function cmdOnlineElectionSubmit(argv: string[], io: Io): Promise<number> {
-  const p = args(argv, { id: 'value', file: 'value' });
+  const p = args(argv, { id: 'value', file: 'value', 'log-key': 'value' });
   const path = electionPath(p);
+  const logKey = p.has('log-key') ? receiptLogKey(needFlag(p, 'log-key')) : undefined;
   // Wire packet already carries its protocol/board signatures; the server performs full admission checks.
-  const packet = inputJson(needFlag(p, 'file'), 1153434);
+  const packet = inputJson(needFlag(p, 'file'), 1153434, logKey !== undefined);
   if (packet === null || typeof packet !== 'object' || Array.isArray(packet)) throw new InputError('entry packet must be an object');
   const v = packet as Record<string, unknown>;
   if (Object.keys(v).length !== 2 || typeof v['header'] !== 'string' || typeof v['body'] !== 'string' ||
       !/^[A-Za-z0-9_-]{1,2800}$/.test(v['header']) || !/^[A-Za-z0-9_-]{0,1400000}$/.test(v['body'])) throw new InputError('entry packet must contain only base64url header and body');
-  return jsonRequest(p, io, 'POST', `${path}/log/entries`, packet);
+  if (logKey === undefined) return jsonRequest(p, io, 'POST', `${path}/log/entries`, packet);
+  const expected = submissionBinding({ header: v['header'], body: v['body'] }, needFlag(p, 'id'), logKey);
+  const response = await request(p, io, 'POST', `${path}/log/entries`, packet, false, MAX_RETURNED_RECEIPT_BYTES);
+  let checked: SubmissionReceiptReport;
+  // Transport JSON permits additive fields outside the protocol artifact's QV-JSON profile.
+  try {
+    const receipt = checkSubmissionReceipt(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(response)), expected);
+    if (!receipt.ok) throw new Error('receipt verification refused');
+    checked = receipt.value;
+  }
+  catch { throw new FailError('returned receipt did not verify; submission may have been accepted; retain the exact packet and inspect server state before retrying'); }
+  printJson(io, checked);
+  return checked.verification.inclusion === 'VERIFIED' ? EXIT.ok : EXIT.incomplete;
 }
 export async function cmdOnlineElectionExport(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { id: 'value', out: 'value', format: 'value', 'read-key-file': 'value' });

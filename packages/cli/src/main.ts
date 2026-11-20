@@ -92,7 +92,9 @@ usage:
   qv online election-draft --server <origin> --id <id> --file <draft.json>
                     --audience <qv:id@publicUrl> --key <keyfile> [passphrase options] [--json]
   qv online election-tally-draft --server <origin> --id <id> --decrypters <1,2> --out <body.json> [--read-key-file <file>] [--json]
-  qv online election-submit --server <origin> --id <id> --file <signed-entry.json> [--json]
+  qv online election-submit --server <origin> --id <id> --file <signed-entry.json> [--log-key <hex>] [--json]
+                                   with an independent log-key pin, verify the returned receipt against this packet;
+                                   a valid promise without inclusion exits 3; witness, freshness and counting remain unchecked
   qv online election-export --server <origin> --id <id> --out <file> [--format qvb|json]
                     [--read-key-file <file>] [--json]
   qv online export-create --server <origin> --id <id> --audience <audience> --key <keyfile> --idempotency-key <key>

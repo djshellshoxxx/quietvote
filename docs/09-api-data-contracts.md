@@ -396,13 +396,17 @@ Content-Type: application/json
 Location: /api/v1/elections/ab3k…/log/entries/233
 {"status":"included","receipt":{"origin":"quietvote/v1/ab3k…","seq":233,"leaf_hash":"…",
  "promise":{"sequenced_at":1793640251,"checkpoint_deadline":1793640281},"promise_sig":"…",
- "inclusion":{"tree_size":240,"path":["…","…"],"checkpoint_note":"quietvote/v1/ab3k…\n240\n…\n\n— quietvote/v1/ab3k… …\n"}}}
+ "inclusion":{"seq":233,"leaf_hash":"…","tree_size":240,"path":["…","…"],"checkpoint_note":"quietvote/v1/ab3k…\n240\n…\n\n— quietvote/v1/ab3k… …\n"}}}
 
 # 3. later: voter checks inclusion in the final checkpoint
 GET …/log/checkpoint                               (size 421, cosigned)
 GET …/log/proof/consistency?old=240&new=421        (pin update)
 GET …/log/proof/inclusion?seq=233&tree_size=421
 ```
+
+The embedded `inclusion.seq` and `inclusion.leaf_hash` repeat the enclosing
+receipt's values, as required by the `InclusionProof` schema in §11.1. The
+ellipsis is illustrative; both leaf fields carry the same base64url hash.
 
 ## 9. Event stream
 
