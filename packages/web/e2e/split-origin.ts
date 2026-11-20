@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { b64u, unb64u } from '@quietvote/board';
 import { bytesToHex, sha256, streamRng, utf8 } from '@quietvote/crypto';
-import { World } from '../../server/test/helpers/world.ts';
+import { kp, World } from '../../server/test/helpers/world.ts';
 import { buildSite } from '../src/build/site.ts';
 import { parseFragment } from '../src/flow/invite.ts';
 import { defaultDeps, FLOOR_PARAMS, serializeContainer, wrapSeed } from '../src/key/keystore.ts';
@@ -64,7 +64,12 @@ test('split-origin configuration routes enrollment, live recovery, ballot, recei
     const readKey = 'split_origin_read_key_123456';
     const passphrase = 'correct horse battery staple';
     const keyFile = join(w.dir, 'voter.qvkey'), ownerFile = join(w.dir, 'organizer.qvkey');
-    for (const [key, file] of [[w.voters[0]!, keyFile], [w.owner, ownerFile]] as const) {
+    // setupOrgAndElection already registered w.owner on this real board. The
+    // publish journey must register a different owner: the API correctly
+    // refuses re-registering an existing owner key, regardless of org name.
+    const publishingOwner = kp('browser-split-origin', 'publishing-owner');
+    assert.notEqual(bytesToHex(publishingOwner.publicKey), bytesToHex(w.owner.publicKey));
+    for (const [key, file] of [[w.voters[0]!, keyFile], [publishingOwner, ownerFile]] as const) {
       const wrapped = await wrapSeed(key.secretKey.slice(), passphrase, { ...defaultDeps(), rng: streamRng(file) }, FLOOR_PARAMS);
       writeFileSync(file, serializeContainer(wrapped.container));
     }
