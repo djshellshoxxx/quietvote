@@ -60,6 +60,25 @@ test('POSIX trustee cleanup refuses unsafe ancestry before overwriting or removi
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('POSIX trustee cleanup anchors a trusted ancestor alias but still refuses a symlinked leaf', { skip: process.platform === 'win32' }, async () => {
+  const dir = temp(), owned = join(dir, 'owned'), alias = join(dir, 'alias');
+  const actual = join(owned, 'backup'), viaAlias = join(alias, 'backup'), leafAlias = join(dir, 'leaf-alias');
+  mkdirSync(owned, { mode: 0o700 });
+  symlinkSync(owned, alias, 'dir');
+  try {
+    await atomicWrite(viaAlias, secret);
+    assert.deepEqual(readFileSync(actual), secret);
+    assert.equal(await shred(viaAlias, n => new Uint8Array(n)), true);
+    assert.equal(existsSync(actual), false);
+    await atomicWrite(actual, secret);
+    symlinkSync(actual, leafAlias);
+    let requested = false;
+    assert.equal(await shred(leafAlias, n => { requested = true; return new Uint8Array(n); }), false);
+    assert.equal(requested, false, 'a symlinked final component is refused before overwriting');
+    assert.deepEqual(readFileSync(actual), secret);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('trustee cleanup keeps its original absolute path if cwd changes during overwrite', async () => {
   const originalCwd = process.cwd(), dir = realpathSync.native(temp()), other = join(dir, 'other');
   const path = join(dir, 'backup'), unrelated = join(other, 'backup');

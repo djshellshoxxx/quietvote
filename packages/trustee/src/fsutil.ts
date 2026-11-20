@@ -145,11 +145,13 @@ export async function shred(path: string, randomBytes: (n: number) => Uint8Array
   path = resolve(path); // Later cwd changes must not redirect a cleanup already in progress.
   let before;
   try {
+    // macOS can expose a trusted directory through an alias (for example /var
+    // resolving to /private/var). Anchor its physical, inspected parent before
+    // checking the leaf identity. Publication uses this same protected namespace.
+    // lstat below still refuses a symlink at the final file component.
+    if (process.platform !== 'win32') path = protectedPosixPath(path);
     before = await lstat(path);
     if (!before.isFile() || before.nlink !== 1 || await realpath(path) !== path) return false;
-    // An identity check alone does not make a later pathname unlink conditional.
-    // Preserve the same trusted POSIX namespace prerequisite as publication.
-    if (process.platform !== 'win32' && protectedPosixPath(path) !== path) return false;
   } catch (e) {
     if (['ENOENT', 'ENOTDIR', 'UNSAFE_DIRECTORY'].includes((e as { code?: string }).code ?? '')) return false;
     throw e;
