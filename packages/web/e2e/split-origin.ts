@@ -99,6 +99,13 @@ test('split-origin configuration routes enrollment, live recovery, ballot, recei
     const rt = (await w.server.pool.get(w.electionId))!;
     rt.edb.db.prepare("UPDATE election SET access='link', read_key_hash=?").run(sha256(utf8(`QV-READKEY-v1\0${readKey}`)));
     await page.clock.setSystemTime(w.clock);
+    // The fixture clock jumps from enrollment to voting by seven days. Playwright
+    // setSystemTime does not fire the interval that normally enforces idle lock.
+    // Exercise the actual keyboard path now, BEFORE entering a fresh passphrase:
+    // otherwise the Unlock pointerdown expires the old signer and clears that
+    // newly entered password. Assert the production lock rather than skipping it.
+    await page.keyboard.press('Tab');
+    await page.getByText('Your key is locked.', { exact: true }).waitFor();
     // A same-document goto can resolve before hashchange has retired the enrollment form.
     // Wait for that exact old input to detach, not merely for an Unlock button which exists in both views.
     const enrollmentPass = await page.getByLabel('Passphrase', { exact: true }).elementHandle();
