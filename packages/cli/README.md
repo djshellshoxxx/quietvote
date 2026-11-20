@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
+Commands: `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|receipt-check|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -163,8 +163,9 @@ Commands never retry a mutation automatically. Downloads use mode 0600, never ov
 and are labelled `verified: false` until checked separately.
 
 The offline [`election check-tally`](#check-an-unsigned-tally-proposal) command recomputes an unsigned
-proposal against a pinned pre-publication archive. Remaining workflow gaps include later receipt-proof
-retrieval, consistency checks against retained checkpoints, and off-site backup/restore orchestration.
+proposal against a pinned pre-publication archive. The [later receipt check](#check-a-later-receipt-proof)
+below retrieves one requested proof and checks consistency against a supplied prior receipt checkpoint.
+Remaining workflow gaps include automatic receipt retention, latest-checkpoint tracking and off-site backup/restore orchestration.
 `backup-create` requests the existing server-local snapshot;
 the separate server `qv-backup` tool verifies and restores full snapshots as described below.
 
@@ -215,6 +216,55 @@ the exact packet and inspect state before deciding whether to repeat those same 
 Omitting `--log-key` preserves the existing server-response-only mode and output shape. As with all
 online commands, both default output and `--json` are JSON. An HTTP success in the legacy mode does
 not acquire receipt assurance from this optional check.
+
+### Check a later receipt proof
+
+Use a saved normalized receipt with independent election, log-key and exact leaf expectations:
+
+```sh
+qv online receipt-check --server https://vote.example --id ELECTION_ID \
+  --file receipt.json --log-key ANNOUNCED_LOG_PUBLIC_KEY \
+  --leaf-hash EXPECTED_HEADER_LEAF_HEX --tree-size REQUESTED_CHECKPOINT_SIZE --json
+```
+
+Save only the contained `receipt` object from checked submission output, not the entire report or the
+raw REST response. The independent key and expected leaf should be retained from the original verified
+manifest and exact submitted packet; the checked submission report records the leaf it computed locally.
+Do not obtain these anchors solely from the proof response being checked. `--tree-size` selects an explicit
+checkpoint size from 1 through 1,099,511,627,776; a server-advertised size is only a request selector until
+the returned signed evidence verifies. For a link election, supply the existing private `--read-key-file`.
+
+Before any network request, the command verifies the saved promise and all saved inclusion evidence
+under the supplied anchors. The requested size must cover its sequence and cannot precede a supplied
+included checkpoint. It then makes one GET for that exact sequence and size. If the saved receipt already
+has inclusion at a smaller checkpoint, a verified new inclusion also requires one consistency-proof GET
+with those exact old/new sizes. At equal size, the roots must agree and no second request is made.
+
+| Requested evidence | Result |
+| --- | --- |
+| Valid inclusion with no prior included checkpoint | Exit 0; inclusion `VERIFIED`, consistency `NOT_CHECKED` because no prior checkpoint was supplied. |
+| Valid inclusion and consistency with the supplied prior checkpoint | Exit 0; inclusion and consistency `VERIFIED`. |
+| Structurally valid proof without the API's optional signed checkpoint note | Exit 3; requested inclusion `INCOMPLETE`; the saved receipt is returned unchanged in normalized form. No consistency request is made. |
+| Malformed or failing supplied response evidence, HTTP error or failed HTTP read | Exit 1; no successful proof report. A failed HTTP read does not establish that the original submission was rejected or the entry is absent. |
+
+Both default and `--json` output contain `status`, `receipt` and client-owned `verification` with
+`scope: "receipt-proof"`. `requested_tree_size` identifies the new request, `previous_tree_size` the saved
+included checkpoint or null, and `receipt_tree_size` the checkpoint actually contained in the output receipt
+or null. When the requested note is missing, an older valid inclusion remains in `receipt`; `INCOMPLETE`
+describes the requested snapshot, not invalidation of that older evidence. Consistency is then `INCOMPLETE`
+when a prior checkpoint exists, otherwise `NOT_CHECKED`. The verified promise remains visible.
+
+On success, save the new contained receipt separately if desired; it works with the existing offline
+`verify-receipt` command. Neither input files nor retained checkpoints are automatically changed. Consistency
+is relative only to the supplied receipt, not necessarily the user's latest observation. This command does
+not complete durable latest-checkpoint tracking. Authority, witness quorum, freshness and ballot counting
+remain explicitly unverified; a selected signed snapshot is not proof of the newest state or FINAL status.
+
+The receipt must be a regular QV-JSON file of at most 64 KiB. Each response is bounded to 64 KiB; inclusion
+and consistency paths use the existing 64/63-hash limits. Requests use the existing timeout and redirect
+rules, with no polling or automatic retries. Invalid options/key spelling exit 2; unreadable, malformed or
+unverified saved evidence and incompatible snapshot bounds exit 4 before GET. Unknown additive REST
+members cannot replace client assurance. The command makes no submission or other server mutation.
 
 ### Recorded PUBLIC export management
 

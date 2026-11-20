@@ -13,7 +13,7 @@ import { cmdVectorsCheck } from './cmd-vectors.ts';
 import { cmdPolicyDraftTemplate, cmdPolicyDraftValidate } from './cmd-policy-draft.ts';
 import { cmdGovernanceExport, cmdGovernancePrepare, cmdGovernanceSign, cmdGovernanceVerify } from './cmd-governance.ts';
 import { EXIT, type Io } from './io.ts';
-import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionPinnedRoll, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
+import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionPinnedRoll, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineReceiptCheck, cmdOnlineElectionExport } from './cmd-online.ts';
 import { ONLINE_EXPORTS } from './cmd-online-exports.ts';
 import { ONLINE_ORGS } from './cmd-online-org.ts';
 import { cmdOnlineBackupCreate } from './cmd-online-backup.ts';
@@ -95,6 +95,10 @@ usage:
   qv online election-submit --server <origin> --id <id> --file <signed-entry.json> [--log-key <hex>] [--json]
                                    with an independent log-key pin, verify the returned receipt against this packet;
                                    a valid promise without inclusion exits 3; witness, freshness and counting remain unchecked
+  qv online receipt-check --server <origin> --id <id> --file <receipt.json> --log-key <hex> --leaf-hash <hex>
+                    --tree-size <integer> [--read-key-file <file>] [--json]
+                                   verify one requested inclusion snapshot and consistency with any supplied prior checkpoint;
+                                   absent signed checkpoint evidence exits 3; saved receipt is never overwritten
   qv online election-export --server <origin> --id <id> --out <file> [--format qvb|json]
                     [--read-key-file <file>] [--json]
   qv online export-create --server <origin> --id <id> --audience <audience> --key <keyfile> --idempotency-key <key>
@@ -140,7 +144,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
   election: { 'check-tally': cmdElectionCheckTally, 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
-  online: { ...ONLINE_ORGS, ...ONLINE_EXPORTS, 'backup-create': cmdOnlineBackupCreate, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
+  online: { ...ONLINE_ORGS, ...ONLINE_EXPORTS, 'backup-create': cmdOnlineBackupCreate, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'receipt-check': cmdOnlineReceiptCheck, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
   'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },
   governance: { prepare: cmdGovernancePrepare, sign: cmdGovernanceSign, export: cmdGovernanceExport, verify: cmdGovernanceVerify },

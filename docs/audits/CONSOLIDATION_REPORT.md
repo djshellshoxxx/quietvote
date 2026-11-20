@@ -5,6 +5,12 @@ No additional modern unmerged source was found. The seven historical exceptions
 remain preserved; current-source native qualification and formal promotion
 requirements remain explicit in that checkpoint.
 
+The [later receipt-proof command](../reports/cli-receipt-proof-20261120.md)
+verifies one requested snapshot and consistency against supplied saved evidence.
+The [R13–R14 handoff](CONTINUATION_R13_R14_20261120.md) separates implementation,
+independent execution and final review. Durable latest-checkpoint tracking and
+hosted qualification remain explicit boundaries.
+
 The [November 20 checked submission receipt](../reports/cli-returned-receipts-20261120.md)
 adds independent verification of already-returned promise/inclusion evidence.
 The [R11–R12 handoff](CONTINUATION_R11_R12_20261120.md) records implementation,

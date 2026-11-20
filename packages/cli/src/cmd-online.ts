@@ -1,7 +1,7 @@
 // Thin HTTP adapters: the server remains authoritative for validation, authorization and lifecycle transitions.
 import { closeSync, constants, existsSync, fstatSync, openSync, readSync } from 'node:fs';
 import { authorKeyId, b64u, unb64u, signRequest } from '@quietvote/board';
-import { ed25519Sign, parseQvJson, sha256, wipe } from '@quietvote/crypto';
+import { ed25519Sign, hexToBytes, parseQvJson, sha256, wipe } from '@quietvote/crypto';
 import { logOrigin, registrationMessage, rollRoot } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs, type FlagSpec, type Parsed } from './args.ts';
 import { PASSPHRASE_FLAGS, isHex, printJson, readPrivateFile } from './common.ts';
@@ -9,6 +9,7 @@ import { reservePrivateOutput, writePrivateFileSync, type PrivateOutput } from '
 import { loadVoterKey } from './cmd-keygen.ts';
 import { EXIT, type Io } from './io.ts';
 import { checkSubmissionReceipt, MAX_RETURNED_RECEIPT_BYTES, receiptLogKey, submissionBinding, type SubmissionReceiptReport } from './receipt-check.ts';
+import { checkReceiptConsistency, checkReceiptProof, receiptProofInput } from './receipt-proof.ts';
 
 const BASE = { server: 'value', json: 'bool', 'timeout-ms': 'value' } as const;
 export const AUTH = { key: 'value', audience: 'value', ...PASSPHRASE_FLAGS } as const;
@@ -327,6 +328,34 @@ export async function cmdOnlineElectionSubmit(argv: string[], io: Io): Promise<n
   catch { throw new FailError('returned receipt did not verify; submission may have been accepted; retain the exact packet and inspect server state before retrying'); }
   printJson(io, checked);
   return checked.verification.inclusion === 'VERIFIED' ? EXIT.ok : EXIT.incomplete;
+}
+export async function cmdOnlineReceiptCheck(argv: string[], io: Io): Promise<number> {
+  const p = args(argv, { id: 'value', file: 'value', 'log-key': 'value', 'leaf-hash': 'value', 'tree-size': 'value', 'read-key-file': 'value' });
+  const path = electionPath(p), logKey = receiptLogKey(needFlag(p, 'log-key'));
+  const leaf = needFlag(p, 'leaf-hash'), size = needFlag(p, 'tree-size');
+  if (!isHex(leaf, 32)) throw new UsageError('--leaf-hash must be 64 lower-case hex digits');
+  if (!/^[1-9][0-9]*$/.test(size) || !Number.isSafeInteger(Number(size)) || Number(size) > 2 ** 40) {
+    throw new UsageError('--tree-size must be an integer from 1 to 1099511627776');
+  }
+  const saved = receiptProofInput(inputJson(needFlag(p, 'file'), MAX_RETURNED_RECEIPT_BYTES, true),
+    { origin: logOrigin({ election_id: needFlag(p, 'id') }), leafHash: hexToBytes(leaf), logKey }, Number(size));
+  if (!saved.ok) throw new InputError('saved receipt or requested snapshot does not match the independent anchors and bounds');
+  const getProof = async (query: string): Promise<unknown> => {
+    const bytes = await request(p, io, 'GET', `${path}/log/proof/${query}`, undefined, false, MAX_RETURNED_RECEIPT_BYTES);
+    try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+    catch { throw new FailError('server returned malformed proof JSON; saved receipt is unchanged'); }
+  };
+  const checked = checkReceiptProof(await getProof(`inclusion?seq=${saved.value.receipt.seq}&tree_size=${size}`), saved.value);
+  if (!checked.ok) throw new FailError('requested receipt proof did not verify; saved receipt is unchanged');
+  let report = checked.value.report;
+  const { previous, checkpoint } = checked.value;
+  if (previous && checkpoint && checkpoint.size > previous.size) {
+    const consistency = checkReceiptConsistency(await getProof(`consistency?old=${previous.size}&new=${checkpoint.size}`), checked.value);
+    if (!consistency.ok) throw new FailError('consistency with the supplied receipt did not verify; saved receipt is unchanged');
+    report = consistency.value;
+  }
+  printJson(io, report);
+  return report.verification.inclusion === 'VERIFIED' ? EXIT.ok : EXIT.incomplete;
 }
 export async function cmdOnlineElectionExport(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { id: 'value', out: 'value', format: 'value', 'read-key-file': 'value' });

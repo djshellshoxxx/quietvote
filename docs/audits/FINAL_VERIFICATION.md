@@ -8,6 +8,10 @@ Each table below is a source-bound receipt. A pending native/hosted gate at a
 historical checkpoint is not a claim about a later completed run, and an older
 pass is not assigned to later source. Formal promotion gates remain separate.
 
+The [R13–R14 proof continuation](CONTINUATION_R13_R14_20261120.md) records the
+subsequent read-only later-proof command, source `febb956`, completed local
+compilation and scoped acceptance. Its publication needs its own hosted result.
+
 The [R11–R12 receipt continuation](CONTINUATION_R11_R12_20261120.md) is the later
 source-bound record for checked submission receipts and PR #73 reconciliation.
 It records final production `918f270`, independent receipt acceptance, the
