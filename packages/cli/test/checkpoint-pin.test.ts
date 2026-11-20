@@ -105,3 +105,14 @@ test('unchanged proposal cannot alias and mutate the caller retained snapshot', 
   assert.deepEqual(stored, savedCopy, 'a result mutation must not mutate the retained input buffer');
   assert.equal(accepted(readCheckpointPin(stored, f.anchors)).checkpoint.size, 1);
 });
+
+test('pin snapshot bytes must be canonical even when alternate JSON would parse', () => {
+  const f = fixture();
+  const original = accepted(proposeCheckpointPin(undefined, f.note1, f.anchors)).bytes;
+  const parsed = JSON.parse(new TextDecoder().decode(original));
+  // Same fields and authenticated note, different valid JSON byte spelling.
+  const noncanonical = utf8(JSON.stringify(parsed, null, 2));
+  refused(readCheckpointPin(noncanonical, f.anchors), 'QV_BOARD_MALFORMED');
+  refused(proposeCheckpointPin(noncanonical, f.note2, f.anchors, f.proof12), 'QV_BOARD_MALFORMED');
+  assert.equal(accepted(readCheckpointPin(original, f.anchors)).checkpoint.size, 1);
+});

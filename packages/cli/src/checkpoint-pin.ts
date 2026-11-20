@@ -35,7 +35,8 @@ function validAnchors(a: CheckpointPinAnchors): boolean {
     a.logKey instanceof Uint8Array && a.logKey.length === 32 && ed25519IsStrictPoint(a.logKey);
 }
 function verifiedNote(note: unknown, anchors: CheckpointPinAnchors): Result<Checkpoint> {
-  if (typeof note !== 'string' || new TextEncoder().encode(note).length > MAX_CHECKPOINT_PIN_BYTES) {
+  if (typeof note !== 'string' || note.length > MAX_CHECKPOINT_PIN_BYTES ||
+      new TextEncoder().encode(note).length > MAX_CHECKPOINT_PIN_BYTES) {
     return err('QV_BOARD_BAD_CHECKPOINT', 'missing or oversized signed checkpoint');
   }
   const parsed = parseCheckpoint(note);
@@ -59,6 +60,12 @@ export function readCheckpointPin(bytes: Uint8Array, anchors: CheckpointPinAncho
       value['format'] !== CHECKPOINT_PIN_FORMAT || value['origin'] !== anchors.origin ||
       value['log_key'] !== bytesToHex(anchors.logKey)) {
     return err('QV_BOARD_ORIGIN_MISMATCH', 'pin format, origin or independently pinned log key differs');
+  }
+  // The on-disk record has exactly one canonical byte representation. Parsed
+  // but noncanonical whitespace, field order and escape spelling are refused.
+  const canonical = jcs(value);
+  if (canonical.length !== bytes.length || canonical.some((b, i) => b !== bytes[i])) {
+    return err('QV_BOARD_MALFORMED', 'pin must use canonical QV-JSON bytes');
   }
   const cp = verifiedNote(value['checkpoint_note'], anchors);
   if (!cp.ok) return cp;
@@ -102,7 +109,11 @@ export function proposeCheckpointPin(
     format: CHECKPOINT_PIN_FORMAT, origin: anchors.origin,
     log_key: bytesToHex(anchors.logKey), checkpoint_note: candidateNote as string,
   };
-  const bytes = jcs(next);
+  // Signature-valid notes may still contain unrepresentable auxiliary text.
+  // Never allow serialization of remotely supplied text to throw past Result.
+  let bytes: Uint8Array;
+  try { bytes = jcs(next); }
+  catch { return err('QV_BOARD_BAD_CHECKPOINT', 'signed checkpoint is not representable as QV-JSON'); }
   if (bytes.length > MAX_CHECKPOINT_PIN_BYTES) return err('QV_BOARD_TOO_LARGE', 'pin exceeds bounded serialized size');
   return ok({ bytes, action: previous ? 'ADVANCED' : 'INITIAL', previous_size: previous?.size ?? null,
     checkpoint_size: candidate.value.size, consistency: previous ? 'VERIFIED' : 'NOT_CHECKED' });
