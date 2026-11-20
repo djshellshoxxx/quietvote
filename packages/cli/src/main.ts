@@ -17,6 +17,7 @@ import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, 
 import { ONLINE_EXPORTS } from './cmd-online-exports.ts';
 import { ONLINE_ORGS } from './cmd-online-org.ts';
 import { cmdOnlineBackupCreate } from './cmd-online-backup.ts';
+import { cmdElectionCheckTally } from './cmd-tally-check.ts';
 
 export const VERSION = '0.1.0';
 
@@ -57,6 +58,9 @@ usage:
   qv election export-entry --origin <quietvote/v1/id> --type <board-type> --file <signed-record.json>
                     --key <outer-author-keyfile> --out <packet.json> [passphrase options] [--json]
   qv election inspect <bundle> [--json]
+  qv election check-tally <archive.qvb> --manifest-hash <hex> --draft <body.json> [--content-only] [--json]
+                                   compare an unsigned tally with a pinned pre-publication snapshot;
+                                   MATCH is scoped to that snapshot; publication and freshness remain unchecked
   qv election spoil-collect --election <bundle> --code <hex> --packet <file> [--packet <file>]... [--manifest-hash <hex>]
                     [--post-body-out <dir>] [--json]
                                    combine trustee spoil-share packets for one trustees-mode spoil and decode its selections;
@@ -133,7 +137,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   keygen: cmdKeygen,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
-  election: { 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
+  election: { 'check-tally': cmdElectionCheckTally, 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
   online: { ...ONLINE_ORGS, ...ONLINE_EXPORTS, 'backup-create': cmdOnlineBackupCreate, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
   'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },

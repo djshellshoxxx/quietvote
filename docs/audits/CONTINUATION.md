@@ -5,13 +5,22 @@ It rechecks all 73 source branches, records fresh 41-case application and 22-cas
 CLI/server reviews, and identifies the recent `8f865fb` DCO gap. Its hosted
 observations are time-bound; use the current PR checks for later results.
 
-Latest completed increment: [November 20 rounds 6–8 handoff](CONTINUATION_R6_R8_20261120.md)
-and [online backup jobs](../reports/cli-backup-jobs-20261120.md).
+Latest implemented increment: [offline unsigned tally comparison](../reports/cli-tally-draft-20261120.md).
+R9 code, bug and security workers completed their scopes; the shared
+closed-snapshot witness finding is corrected. The implementation passed all
+459 protocol/verifier tests, three new CLI acceptance tests, two existing
+preparation tests and root TypeScript. The [completed R9–R10 handoff](CONTINUATION_R9_R10_20261120.md)
+includes fresh independent executable and composition reviews. A scoped draft
+match establishes neither publication nor currentness or FINAL status.
+
+The prior [November 20 rounds 6–8 handoff](CONTINUATION_R6_R8_20261120.md)
+records [online backup jobs](../reports/cli-backup-jobs-20261120.md).
 The predecessor `a5e5d19` completed all 27 CI jobs plus claims and visual checks.
 Three fresh sets of code, bug and security reviewers completed rounds 6–8;
-the full CLI run passed 143 tests with 11 platform skips. The separate #72 report
-commit is preserved in this composition; its historical observations remain
-unchanged. Current-source qualification is required after publication.
+the full CLI run passed 143 tests with 11 platform skips. Published backup
+checkpoint `547ea2d` preserves the separate #72 report commit as a parent;
+GitHub marked #72 merged. Its historical observations remain unchanged.
+Current-source hosted qualification is required after each later publication.
 
 The implementation composition and source-bound engineering receipts are preserved
 in the requested `codex/quietvote-comprehensive-consolidation` branch.

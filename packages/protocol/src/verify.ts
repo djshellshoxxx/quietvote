@@ -42,6 +42,15 @@ export interface VerificationReport {
   verifier: string;
 }
 
+/** A comparison of an unsigned proposal with one supplied pre-publication snapshot. */
+export interface TallyDraftReport extends Omit<VerificationReport, 'verdict'> {
+  scope: 'tally-draft';
+  verdict: 'MATCH' | 'FAIL' | 'INCOMPLETE';
+  bodyMatchesSnapshot: boolean;
+  published: false;
+  freshnessVerified: false;
+}
+
 export const VERIFIER_ID = 'quietvote-protocol-verify/0.1.0';
 const H = bytesToHex;
 const ALL_CHECKS: CheckId[] = [
@@ -103,8 +112,24 @@ function blank(): VerificationReport {
  * `opts.log` supplies the QV-18 log export (logcheck.ts, NOTES X-21..X-30); otherwise those checks are `not_run`.
  */
 export async function verifyElection(input: unknown, opts: VerifyElectionOptions = {}): Promise<VerificationReport> {
+  return guardedRun(input, opts);
+}
+
+/** Reuses the full verified prefix and tally checks without adding a record or signature to the log.
+ * A matching draft does not establish publication, currentness or election finality. */
+export async function verifyTallyDraft(input: unknown, body: unknown, opts: VerifyElectionOptions = {}): Promise<TallyDraftReport> {
+  const report = await guardedRun(input, opts, { body });
+  const bodyChecks = ['chk.tally.aggregate', 'chk.tally.decrypt', 'chk.result.rules', 'chk.benaloh.spoiled'] as const;
+  const bodyMatchesSnapshot = report.verdict !== 'FAIL' && bodyChecks.every((id) => report.checks[id] === 'pass');
+  const failed = report.verdict === 'FAIL' || bodyChecks.some((id) => report.checks[id] === 'fail');
+  return { ...report, verifier: 'quietvote-tally-draft/0.1.0', scope: 'tally-draft',
+    verdict: failed ? 'FAIL' : report.verdict === 'PASS' && bodyMatchesSnapshot ? 'MATCH' : 'INCOMPLETE',
+    bodyMatchesSnapshot, published: false, freshnessVerified: false };
+}
+
+async function guardedRun(input: unknown, opts: VerifyElectionOptions, draft?: { body: unknown }): Promise<VerificationReport> {
   try {
-    const report = await run(input, opts);
+    const report = await run(input, opts, draft);
     if (opts.cooperative) await checkpoint(opts.cooperative, { stage: 'complete', completed: 1, total: 1 });
     return report;
   } catch (e) {
@@ -116,7 +141,7 @@ export async function verifyElection(input: unknown, opts: VerifyElectionOptions
   }
 }
 
-async function run(input: unknown, opts: VerifyElectionOptions): Promise<VerificationReport> {
+async function run(input: unknown, opts: VerifyElectionOptions, draft?: { body: unknown }): Promise<VerificationReport> {
   const R = blank();
   // C3 log layer state, completed in done() so that it runs on every exit path once the structure was checked.
   let logLayer: { m: Manifest; ls: LogStructure; ev: LogEvidence } | undefined;
@@ -135,7 +160,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     if (logLayer === undefined) return;
     const { m, ls, ev } = logLayer;
     logLayer = undefined;
-    const w = verifyWitnessing(m, ls, ev, phaseSeqs);
+    const w = verifyWitnessing(m, ls, ev, phaseSeqs, { requireClosedSnapshot: draft !== undefined });
     R.findings.push(...w.findings);
     R.caveats.push(...w.caveats);
     R.checks['chk.board.witness'] = w.status;
@@ -565,9 +590,18 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
   R.countedBallots = an.counted.map((c) => ({ voter: c.voter, code: c.code }));
 
   // ---- C6/C7: tally
-  if (tallies.length === 0) return done();
-  const tr = tallies[0]!;
-  const tb = tr.rec.body;
+  if (draft === undefined && tallies.length === 0) return done();
+  if (draft !== undefined && tallies.length !== 0) {
+    F('E_STRUCTURE', 'draft checking requires a snapshot before a tally is published');
+    return done();
+  }
+  if (draft !== undefined && check(tallySchema(), draft.body) !== null) {
+    F('E_SCHEMA', 'unsigned tally draft does not match the tally body schema');
+    R.checks['chk.encoding.canonical'] = 'fail';
+    return done();
+  }
+  const tr = tallies[0];
+  const tb = draft === undefined ? tr!.rec.body : draft.body as TallyBody;
   // P3: an identical repeat is only logged; a second tally record with a different body is a conflicting result (fatal).
   for (const other of tallies.slice(1)) {
     if (H(jcs(other.rec.body)) === H(jcs(tb))) F('E_SCHEMA', 'duplicate tally record; only the first is examined', other.seq, 'L');
@@ -584,7 +618,7 @@ async function run(input: unknown, opts: VerifyElectionOptions): Promise<Verific
     return done();
   }
   R.checks['chk.result.rules'] = 'pass';
-  if (!verifySig(dkg.ctx, 'tally', tb, tr.rec.sig) || !m.coordinator.keys.includes(tr.rec.sig.key)) {
+  if (tr !== undefined && (!verifySig(dkg.ctx, 'tally', tb, tr.rec.sig) || !m.coordinator.keys.includes(tr.rec.sig.key))) {
     F('E_SIG', 'tally convenience signature invalid or not a coordinator key', tr.seq, 'I');
   }
   const floor = effectiveMinCounted(m, rollHex.length);

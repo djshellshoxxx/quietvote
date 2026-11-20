@@ -5,7 +5,13 @@ No additional modern unmerged source was found. The seven historical exceptions
 remain preserved; current-source native qualification and formal promotion
 requirements remain explicit in that checkpoint.
 
-The [November 20 backup job implementation](../reports/cli-backup-jobs-20261120.md)
+The [November 20 unsigned tally checker](../reports/cli-tally-draft-20261120.md)
+adds offline comparison against an externally pinned pre-publication archive,
+with explicit closed-snapshot witness requirements and scoped output. R9's
+three completed reviews and 459 protocol/verifier passes are source-qualified
+there; fresh composition and hosted qualification remain separate.
+
+The earlier [November 20 backup job implementation](../reports/cli-backup-jobs-20261120.md)
 adds the accepted online administrator workflow and consolidates that separate
 documentation checkpoint. Fresh R6 code, bug and security reviews are linked
 there, including the completed 27-job hosted run for predecessor `a5e5d19`.

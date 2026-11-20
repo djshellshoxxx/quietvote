@@ -500,7 +500,8 @@ function applyNotices(
   return { waived, extended };
 }
 
-export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence, seqs: PhaseSeqs | undefined): WitnessOutcome {
+export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence, seqs: PhaseSeqs | undefined,
+  requirements: { requireClosedSnapshot?: boolean } = {}): WitnessOutcome {
   const findings: Finding[] = [];
   const caveats: string[] = [];
   const res: WitnessOutcome = { status: 'not_run', findings, caveats, timesWitnessed: false, windowFailed: false };
@@ -543,6 +544,8 @@ export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence,
   const latest = ls.checkpoints.at(-1);
   if (latest === undefined || latest.size !== ls.tree.size || !witnessed(latest)) caveats.push('NOT WITNESSED: the latest tree head lacks witness quorum');
   if (seqs === undefined) return res; // phases unknown (earlier failure): gating not evaluated
+  // Unsigned draft comparison also needs a witnessed closed ballot set, without inventing a tally entry.
+  const requireClosed = seqs.tally !== undefined || requirements.requireClosedSnapshot === true;
   let failed = false;
   const inRange = (lo: number, hi: number): Checkpoint | undefined => ls.checkpoints.find((c) => c.size >= lo && c.size <= hi && witnessed(c));
   // QV-18 §9.4: election-open only after a quorum-witnessed head covering every setup commitment it binds, and not the open itself.
@@ -557,7 +560,12 @@ export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence,
       F('E_LOG_WITNESS', `no quorum-witnessed tree head of size in [${seqs.close}, ${seqs.tally}] between close and tally${gateNote}`, seqs.tally);
     }
     if (inRange(seqs.tally + 1, Number.MAX_SAFE_INTEGER) === undefined) caveats.push('NOT WITNESSED: tally record');
-  } else if (inRange(seqs.close, Number.MAX_SAFE_INTEGER) === undefined) caveats.push('NOT WITNESSED: final ballot set (no tally yet)');
+  } else if (inRange(seqs.close, Number.MAX_SAFE_INTEGER) === undefined) {
+    if (requireClosed) {
+      failed = true;
+      F('E_LOG_WITNESS', `no quorum-witnessed tree head covers the final ballot set for this closed snapshot${gateNote}`, seqs.close);
+    } else caveats.push('NOT WITNESSED: final ballot set (no tally yet)');
+  }
 
   // QV-16 §5.14.3 witnessed times: earliest quorum-witnessed head covering the marker; >= k of its cosignature
   // timestamps must satisfy the bound (X-25).
@@ -571,7 +579,7 @@ export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence,
   const o = covering(seqs.open);
   if (o === undefined || openMs === null) {
     timesOk = false;
-    if (seqs.tally !== undefined) {
+    if (requireClosed) {
       failed = true;
       res.windowFailed = true;
       F('E_TIME_WINDOW', 'no quorum-witnessed tree head covers election-open', seqs.open);
@@ -585,7 +593,7 @@ export function verifyWitnessing(m: Manifest, ls: LogStructure, ev: LogEvidence,
   const c = covering(seqs.close);
   if (c === undefined || closeMs === null) {
     timesOk = false;
-    if (seqs.tally !== undefined) {
+    if (requireClosed) {
       failed = true;
       res.windowFailed = true;
       F('E_TIME_WINDOW', 'no quorum-witnessed tree head covers election-close', seqs.close);

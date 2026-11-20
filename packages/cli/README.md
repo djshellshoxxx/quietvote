@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
+Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -160,8 +160,9 @@ failure during a mutation also exit 1 and explicitly report an unknown outcome; 
 Commands never retry a mutation automatically. Downloads use mode 0600, never overwrite an existing path,
 and are labelled `verified: false` until checked separately.
 
-Remaining workflow gaps include independent tally-draft checking, automatic receipt-proof checks,
-and off-site backup/restore orchestration. `backup-create` requests the existing server-local snapshot;
+The offline [`election check-tally`](#check-an-unsigned-tally-proposal) command recomputes an unsigned
+proposal against a pinned pre-publication archive. Remaining workflow gaps include automatic
+receipt-proof checks and off-site backup/restore orchestration. `backup-create` requests the existing server-local snapshot;
 the separate server `qv-backup` tool verifies and restores full snapshots as described below.
 
 ### Recorded PUBLIC export management
@@ -252,6 +253,56 @@ as false. A manifest envelope authored by a separate organizer remains refused u
 verification policy; the preparer does not change that policy. These generated trustee input files are
 not accepted as `qv verify` bundles, whose top-level schema excludes `log_evidence`.
 
+## Check an unsigned tally proposal
+
+After voting closes and the trustee shares are available, obtain the proposed tally body and a
+public archive from before the tally is published. Check that exact body before signing it:
+
+```sh
+qv online election-tally-draft --server https://vote.example --id ELECTION_ID \
+  --decrypters 1,2 --out tally-body.json
+qv online election-export --server https://vote.example --id ELECTION_ID --out before-tally.qvb
+qv election check-tally before-tally.qvb --manifest-hash ANNOUNCED_HASH \
+  --draft tally-body.json --json
+```
+
+Obtain `ANNOUNCED_HASH` through an independent channel. The check requires it and reads only the
+two public files. It recomputes the existing manifest/DKG, opening and closing, ballot selection,
+counted root, aggregate, decryption proofs and complete valid decrypter set, result rules and
+disclosed spoil checks. It uses the existing protocol verifier rather than trusting the server's
+proposed totals. The candidate stays outside the authenticated log; no signature or board entry
+is generated, and nothing is submitted.
+
+The default result is `MATCH` (exit 0) only when the body matches the supplied snapshot and the
+required append-only and witness checks pass. A disagreement or failed required evidence gives
+`FAIL` (exit 1); unfinished verification gives `INCOMPLETE` (exit 3). The snapshot must contain a
+valid close and no published tally. The checker requires the declared witness coverage of the
+closed ballot set and opening/closing times. A snapshot still awaiting those required
+cosignatures fails even if its draft totals are correct.
+
+When the signed manifest explicitly sets witness quorum to zero, the normal result remains
+`INCOMPLETE`. Adding `--content-only` permits a scoped `MATCH` after the supplied board and
+cryptographic content checks pass. It prints the content-only and unwitnessed caveats; it cannot
+waive failed evidence or a nonzero witness requirement. Read the findings, warnings and caveats
+with the verdict. Existing classifications of ignored ballot envelopes and informational or alarm
+findings are retained, so `MATCH` does not mean every optional check ran or every finding is absent.
+
+Both output formats identify the pinned manifest, SHA-256 of the candidate's canonical QV-JSON
+body, and the checked snapshot's origin, tree size and root. JSON also includes
+`scope: "tally-draft"`, `bodyMatchesSnapshot`, `published: false` and `freshnessVerified: false`.
+These fields describe the comparison's scope: the command establishes no publication, newest
+snapshot, challenge resolution or FINAL status. A successful comparison is not a full-election
+`PASS`. Keep the body and snapshot unchanged when reviewing and signing; the existing signing
+command does not automatically run this check or consume its report.
+
+The archive uses the same regular-file, 64 MiB, 10,000-entry and 10,032-member bounds as `prepare`;
+it must contain the complete unredacted board. The draft is a regular QV-JSON file of at most
+1 MiB. Files that change size while reading, and symbolic links where `O_NOFOLLOW` is supported,
+are refused. The existing archive authority policy still refuses a manifest envelope authored
+by a separate organizer; this command does not add organizer authority. Usage mistakes exit 2;
+file-read and parsing errors exit 4. A parsed candidate that fails its tally schema or verification
+yields `FAIL` (exit 1). Neither input is rewritten.
+
 ## Server-local backup jobs
 
 An instance administrator can request the existing [backup API](../../docs/09-api-data-contracts.md#10-export-import-jobs-admin)
@@ -326,9 +377,13 @@ qv online election-submit --server https://vote.example --id ELECTION_ID --file 
 qv election export-entry --origin quietvote/v1/INSTANCE_ELECTION_ORIGIN --type ballot \
   --file encrypted-ballot.json --key voter.key --passphrase-file passphrase.txt --out ballot-packet.json
 
-# Download the existing server proposal, then sign and wrap it. The proposal is not independently checked here.
+# Download and check the exact proposal against a pinned pre-publication snapshot before signing.
 qv online election-tally-draft --server https://vote.example --id ELECTION_ID \
   --decrypters 1,2 --out tally-body.json
+qv online election-export --server https://vote.example --id ELECTION_ID --out before-tally.qvb
+qv election check-tally before-tally.qvb --manifest-hash ANNOUNCED_HASH --draft tally-body.json --json
+# Review a scoped MATCH and its findings/caveats before invoking the separate signing command.
+qv online election-export --server https://vote.example --id ELECTION_ID --format json --out public-election.json
 qv election sign-record --manifest manifest.json --manifest-hash ANNOUNCED_HASH \
   --body tally-body.json --election public-election.json --key coordinator1.key \
   --passphrase-file passphrase.txt --out signed-tally.json
@@ -343,6 +398,10 @@ and DKG checks pass. A tally has one coordinator signature as required by existi
 records accumulate distinct authorized coordinator signatures through `--record`. Exit 0 means the signature file
 was written; `quorum: false` explicitly means more signers are needed. Prior signatures must all verify. Signers may
 use different passphrases because each invocation unlocks only one key.
+
+In the tally example, `public-election.json` supplies the signing command's separately pinned manifest/DKG
+context check. The earlier `check-tally` result remains scoped to `before-tally.qvb` and the checked candidate;
+the JSON download neither replaces that comparison nor proves either input is the newest independent state.
 
 New control packets may omit `reason` or use one of the public codes in QV-07 section 15.2,
 such as `AVAILABILITY`, `BOARD_ROLLBACK`, or `OTHER`. Free text is rejected before signing,
