@@ -1,6 +1,8 @@
 // Thin HTTP adapters: the server remains authoritative for validation, authorization and lifecycle transitions.
 import { closeSync, constants, existsSync, fstatSync, openSync, readSync } from 'node:fs';
 import { authorKeyId, b64u, unb64u, signRequest } from '@quietvote/board';
+import { hexToBytes } from '@quietvote/crypto';
+import { checkReturnedSubmissionReceipt, submittedPacketLeaf } from './submit-receipt.ts';
 import { ed25519Sign, parseQvJson, sha256, wipe } from '@quietvote/crypto';
 import { logOrigin, registrationMessage, rollRoot } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs, type FlagSpec, type Parsed } from './args.ts';
@@ -304,7 +306,7 @@ export async function cmdOnlineElectionDraft(argv: string[], io: Io): Promise<nu
   return jsonRequest(p, io, 'PUT', `${path}/draft`, draft, true);
 }
 export async function cmdOnlineElectionSubmit(argv: string[], io: Io): Promise<number> {
-  const p = args(argv, { id: 'value', file: 'value' });
+  const p = args(argv, { id: 'value', file: 'value', 'log-key': 'value' });
   const path = electionPath(p);
   // Wire packet already carries its protocol/board signatures; the server performs full admission checks.
   const packet = inputJson(needFlag(p, 'file'), 1153434);
@@ -312,7 +314,21 @@ export async function cmdOnlineElectionSubmit(argv: string[], io: Io): Promise<n
   const v = packet as Record<string, unknown>;
   if (Object.keys(v).length !== 2 || typeof v['header'] !== 'string' || typeof v['body'] !== 'string' ||
       !/^[A-Za-z0-9_-]{1,2800}$/.test(v['header']) || !/^[A-Za-z0-9_-]{0,1400000}$/.test(v['body'])) throw new InputError('entry packet must contain only base64url header and body');
-  return jsonRequest(p, io, 'POST', `${path}/log/entries`, packet);
+  // Preserve the legacy relay's accepted-response contract when no independent key is supplied.
+  if (!p.has('log-key')) return jsonRequest(p, io, 'POST', `${path}/log/entries`, packet);
+  const pin = needFlag(p, 'log-key');
+  if (!isHex(pin, 32)) throw new UsageError('--log-key must be 64 lower-case hex digits');
+  const origin = logOrigin({ election_id: needFlag(p, 'id') });
+  const leafHash = submittedPacketLeaf(v as { header: string; body: string }, origin);
+  // POST exactly once. A malformed proof after POST is never proof of rejection.
+  const bytes = await request(p, io, 'POST', `${path}/log/entries`, packet, false, 256 * 1024);
+  let response: unknown;
+  try { response = parseQvJson(bytes); }
+  catch { throw new FailError('server returned invalid receipt JSON; submission may have been accepted; retain the exact packet and inspect server state before any retry'); }
+  const check = checkReturnedSubmissionReceipt(response, { origin, leafHash, logPk: hexToBytes(pin) });
+  if (p.has('json')) printJson(io, { server_response: response, client_verification: check });
+  else io.out(`RECEIPT INCLUSION: ${check.inclusion}\nOrigin: ${check.origin}\nLeaf: ${check.leaf_hash}\nSequence: ${check.seq}\n${check.scope}\n`);
+  return check.inclusion === 'VERIFIED' ? EXIT.ok : EXIT.incomplete;
 }
 export async function cmdOnlineElectionExport(argv: string[], io: Io): Promise<number> {
   const p = args(argv, { id: 'value', out: 'value', format: 'value', 'read-key-file': 'value' });

@@ -76,9 +76,14 @@ qv online election-inspect --server https://vote.example --id ELECTION_ID --json
 qv online election-draft --server https://vote.example --id ELECTION_ID --file draft.json \
   --audience qv:INSTANCE_ID@https://vote.example --key organizer.key --passphrase-file passphrase.txt
 qv online election-submit --server https://vote.example --id ELECTION_ID --file signed-entry.json
+# Optional: independently pin the log key and verify the returned promise/inclusion proof.
+qv online election-submit --server https://vote.example --id ELECTION_ID --file signed-entry.json \
+  --log-key INDEPENDENT_LOG_PUBLIC_KEY_HEX --json
 qv online election-export --server https://vote.example --id ELECTION_ID --format json --out election.json
 qv verify election.json --manifest-hash ANNOUNCED_MANIFEST_HASH --json
 ```
+
+`online election-submit --log-key` checks only the receipt returned by that one POST, against the independently obtained 64-digit hexadecimal log public key. Before sending, it checks canonical header/body bytes, the selected election origin and the signed header's body length/digest, then derives the expected leaf from those exact header bytes. After sending, it converts the QV-09 wire receipt, verifies the log-signed promise and any signed checkpoint/inclusion proof, and reports client-owned assurance separately from the untrusted `server_response`. With `--json` the fields are `server_response` and `client_verification`; without it, a short text receipt result is printed. A valid promise without inclusion returns exit **3** (`INCOMPLETE`); invalid evidence returns exit **1**, even though the server may have accepted the submitted entry. Keep the exact packet and inspect server state before retrying. No automatic retry, polling, witness/freshness, finality or counted-ballot guarantee is added. Without `--log-key`, existing output and acceptance-only behavior are unchanged.
 
 Use the instance ID and configured public URL obtained from the operator for `--audience`. The transport origin
 may differ from that audience during local forwarding. Management requests reuse the server's signed-request

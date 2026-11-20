@@ -81,8 +81,21 @@ test('online signed-entry relay opens/closes an election and exports without ove
     };
     w.clock = T_VOTING;
     const opening = w.marker('election-open', w.params.ctx, await w.openBinding());
-    const opened = await relay('election_open', opening);
+    // The existing real server answers an admitted packet with a QV-09 REST receipt.
+    const openEntry = w.entry('election_open', w.coord[0]!, opening);
+    const openPacket = writeJson(w.dir, 'open-receipt.json', { header: b64u(openEntry.headerBytes), body: b64u(openEntry.body) });
+    const verifiedArgs = ['online', 'election-submit', ...common, '--file', openPacket, '--log-key', w.logPkHex];
+    const opened = await qv(verifiedArgs);
     assert.equal(opened.code, 0, opened.err);
+    const openedReceipt = JSON.parse(opened.out);
+    assert.equal(openedReceipt.server_response.status, 'included');
+    assert.equal(openedReceipt.client_verification.promise, 'VERIFIED');
+    assert.equal(openedReceipt.client_verification.inclusion, 'VERIFIED');
+    assert.equal(openedReceipt.client_verification.scope.includes('no witness quorum'), true);
+    // Real duplicate submission of the exact same byte packet binds the same leaf.
+    const replayReceipt = await qv(verifiedArgs);
+    assert.equal(replayReceipt.code, 0, replayReceipt.err);
+    assert.equal(JSON.parse(replayReceipt.out).client_verification.leaf_hash, openedReceipt.client_verification.leaf_hash);
     assert.equal((await w.get(`/api/v1/elections/${w.electionId}/state`)).json.phase, 'OPEN');
     for (let i = 0; i < 3; i++) {
       assert.equal((await w.cast(i, { budget: ['yes'], chair: ['ann'] })).status, 201);
