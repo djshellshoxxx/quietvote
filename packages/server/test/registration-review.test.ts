@@ -13,6 +13,7 @@ import { bytesToHex, ed25519Sign } from '@quietvote/crypto';
 import { ApiClient } from '../../web/src/api/client.ts';
 import { BIN, qv } from '../../cli/test/helpers.ts';
 import { writePrivateFixture, writePrivateFixtureAsync } from '../../cli/test/private-fixture.ts';
+import { WindowsPrivateFileError } from '../../cli/src/windows-private-files.ts';
 import { World, kp } from './helpers/world.ts';
 
 const digest = (bytes: Uint8Array): Buffer => createHash('sha256').update(bytes).digest();
@@ -149,6 +150,17 @@ test('review: browser adapter binds success to this voter and exposes only the p
   } finally { await w.stop(); }
 });
 
+/** Attribute benign Windows fixture failures without printing keys, paths or native diagnostics. */
+async function writeEnrollmentFixture(phase: 'voter-key' | 'invite', file: string, contents: string): Promise<void> {
+  try { await writePrivateFixtureAsync(file, contents); }
+  catch (error) {
+    if (error instanceof WindowsPrivateFileError) {
+      throw new Error(`native fixture ${phase} refused (${error.code}/${error.diagnostic ?? 'UNCLASSIFIED'})`, { cause: error });
+    }
+    throw error;
+  }
+}
+
 test('review: shipped CLI enrollment rejects forged success and sanitizes extra response data', async () => {
   const w = await fixture('registration-review-cli');
   const dir = mkdtempSync(join(tmpdir(), 'qv-registration-review-cli-'));
@@ -158,8 +170,8 @@ test('review: shipped CLI enrollment rejects forged success and sanitizes extra 
     const metadata = (await w.get(`/api/v1/elections/${w.electionId}`)).json;
     const accepted = await w.req('POST', path(w), body); assert.equal(accepted.status, 201);
     const keyFile = join(dir, 'voter.json'), inviteFile = join(dir, 'invite.txt');
-    await writePrivateFixtureAsync(keyFile, JSON.stringify({ format: 'qv-voter-key/v1', seed: bytesToHex(key.secretKey), public_key: bytesToHex(key.publicKey) }));
-    await writePrivateFixtureAsync(inviteFile, issued.code);
+    await writeEnrollmentFixture('voter-key', keyFile, JSON.stringify({ format: 'qv-voter-key/v1', seed: bytesToHex(key.secretKey), public_key: bytesToHex(key.publicKey) }));
+    await writeEnrollmentFixture('invite', inviteFile, issued.code);
     let reply: unknown = { ...accepted.json, voter_kid: 'wrong-voter' };
     const server = createServer((req, res) => { req.resume(); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(req.method === 'POST' ? reply : metadata)); });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));

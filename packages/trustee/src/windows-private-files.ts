@@ -178,9 +178,9 @@ class HeldStream {
     this.child.stdin.on('error', () => this.abort());
   }
 
-  private abort(): void {
+  private abort(diagnostic?: HelperDiagnostic): void {
     if (this.failure) return;
-    this.failure = new WindowsPrivateFileError();
+    this.failure = new WindowsPrivateFileError('UNAVAILABLE', diagnostic);
     if (this.waiting) {
       clearTimeout(this.waiting.timer);
       this.waiting.reject(this.failure);
@@ -204,7 +204,7 @@ class HeldStream {
     const result = this.serial.then(() => new Promise<Reply>((resolve, reject) => {
       if (this.failure) { reject(this.failure); return; }
       this.reference(true);
-      const timer = setTimeout(() => this.abort(), TIMEOUT_MS);
+      const timer = setTimeout(() => this.abort('TIMEOUT'), TIMEOUT_MS);
       this.waiting = { resolve, reject, timer, max };
       this.child.stdin.write(input(message));
     }));
