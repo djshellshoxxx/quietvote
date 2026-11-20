@@ -145,10 +145,9 @@ test('Windows actual keygen creates private output and unavailable native protec
     assert.equal(good.error, undefined); assert.equal(good.status, 0, good.stderr);
     privateAcl(path);
     assert.equal((good.stdout + good.stderr).includes('31'.repeat(32)), false);
-    const missingRuntime = Object.fromEntries(Object.entries(process.env).filter(([name]) => name.toLowerCase() !== 'systemroot'));
-    missingRuntime['SystemRoot'] = join(dir, 'unavailable-system');
-    const bad = spawnSync(process.execPath, [BIN, 'keygen', '--out', failed, '--no-passphrase', '--seed-stdin', '--json'], {
-      env: missingRuntime, input: '31'.repeat(32), encoding: 'utf8', timeout: 30_000,
+    const unavailable = fileURLToPath(new URL('./fixtures/windows-private-unavailable.mjs', import.meta.url));
+    const bad = spawnSync(process.execPath, [unavailable, join(dir, 'unavailable-system'), 'keygen', '--out', failed, '--no-passphrase', '--seed-stdin', '--json'], {
+      input: '31'.repeat(32), encoding: 'utf8', timeout: 30_000,
     });
     assert.equal(bad.error, undefined); assert.equal(bad.status, 4); assert.equal(existsSync(failed), false);
     assert.equal((bad.stdout + bad.stderr).includes('31'.repeat(32)), false);
@@ -173,6 +172,22 @@ test('Windows reusable native service anchors relative paths to the caller cwd o
       assert.equal(await held.bound(), true, 'held reservation stays bound to its initial caller location');
       assert.deepEqual(await held.read(), secret);
     } finally { await held.close(); }
+  } finally { process.chdir(originalCwd); rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('Windows idle native service does not retain the caller working directory', windows, async () => {
+  const originalCwd = process.cwd(), dir = temp();
+  // A fresh module owns a fresh persistent service, started inside this directory.
+  const source = new URL('../src/windows-private-files.ts', import.meta.url);
+  source.search = 'native-cwd-lifetime';
+  const bridge = await import(source.href) as typeof import('../src/windows-private-files.ts');
+  try {
+    process.chdir(dir);
+    await bridge.writeWindowsPrivateFile('private-file', secret);
+    assert.deepEqual(await bridge.readWindowsPrivateFile('private-file'), secret);
+    process.chdir(originalCwd);
+    rmSync(dir, { recursive: true });
+    assert.equal(existsSync(dir), false, 'an idle native helper must not hold a directory handle here');
   } finally { process.chdir(originalCwd); rmSync(dir, { recursive: true, force: true }); }
 });
 

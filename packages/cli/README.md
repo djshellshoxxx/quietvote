@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`.
+Commands: `verify`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -129,6 +129,58 @@ and are labelled `verified: false` until checked separately.
 
 Remaining workflow gaps: organization account enrollment, independent tally-draft checking, automatic receipt-proof checks, and
 backup/restore commands. This command group supplies transport adapters; it does not resolve those gaps.
+
+### Recorded PUBLIC export management
+
+These commands use the existing [signed management API](../../docs/09-api-data-contracts.md#101-recorded-public-exports-and-archived-deletion).
+Use the organization or administrator key and its configured signature audience.
+They support the existing passphrase-file/stdin options; secrets never belong in arguments.
+
+1. Run `online export-create` with the election ID and an explicit idempotency key.
+   The response identifies a job. `online job-inspect --job-id JOB_ID` reads that
+   job; once it is `done`, `result.export_id` identifies the immutable snapshot.
+   The CLI does not poll indefinitely or automatically retry a mutation.
+2. `online export-list` lists the election's recorded exports.
+   `online export-inspect --export-id EXPORT_ID` returns the exact byte digest,
+   tree root/size, expiry, acknowledgement and notice timestamps.
+3. `online export-download --export-id EXPORT_ID --out retained.qvb` downloads
+   those exact bytes to a new private file. It checks byte length, SHA-256, strict
+   checksummed archive framing, election origin and tree binding. Existing paths
+   are refused. Server-provided URLs do not choose the request destination.
+   The CLI accepts archives up to 64 MiB and 10,032 archive members; larger server
+   snapshots require another bounded client. Downloading does not acknowledge retention.
+4. Independently verify the election using the existing verifier and trusted
+   manifest/log/witness anchors, then retain the archive. A matching server digest
+   does not establish election correctness, freshness or an off-site backup.
+5. `online export-acknowledge --export-id EXPORT_ID --file retained.qvb --retained`
+   checks the local file against the recorded snapshot, checks it again after
+   unlocking the signing key, and sends the explicit acknowledgement. Supply an
+   idempotency key. `--retained` is the operator's retention statement; the CLI
+   cannot prove that a backup will remain available.
+
+For example, using the same server, audience and key for each management command:
+
+```sh
+qv online export-create --server https://vote.example --id ELECTION_ID \
+  --audience qv:INSTANCE_ID@https://vote.example --key organizer.qvkey \
+  --passphrase-file pass.txt --idempotency-key archive-create-0001
+qv online job-inspect --server https://vote.example --job-id JOB_ID \
+  --audience qv:INSTANCE_ID@https://vote.example --key organizer.qvkey --passphrase-file pass.txt
+qv online export-download --server https://vote.example --id ELECTION_ID --export-id EXPORT_ID \
+  --audience qv:INSTANCE_ID@https://vote.example --key organizer.qvkey --passphrase-file pass.txt --out retained.qvb
+qv online export-acknowledge --server https://vote.example --id ELECTION_ID --export-id EXPORT_ID \
+  --audience qv:INSTANCE_ID@https://vote.example --key organizer.qvkey --passphrase-file pass.txt \
+  --file retained.qvb --retained --idempotency-key archive-acknowledge-0001
+```
+
+The separate `online export-deletion-notice` command takes `--export-id`,
+`--tree-size`, `--root-hash`, `--sha256` and an idempotency key, in addition to
+the election and authentication options. Copy the exact binding from the record
+you intend to notify. The server accepts it only for the final ARCHIVED tree and
+starts the existing 30-day grace period. It neither acknowledges retention nor
+deletes the election. This is an explicit operator action; export age and
+downloads never start the grace period. All deletion authority remains with the
+server's existing lifecycle, snapshot and runtime-health checks.
 
 The online integration test exports an actual successful three-voter election and runs both the TypeScript CLI
 and Python's `vectors` CLI on it, comparing all shared report fields under explicit content-only scope.

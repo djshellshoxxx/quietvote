@@ -99,6 +99,7 @@ export function startApp(env: AppEnv): void {
   const main = h('main', { id: 'main', tabindex: -1 });
   const nav = h('nav', { 'aria-label': t('qv.shell.nav'), class: 'site-nav' });
   const storageNotice = h('aside', { id: 'storage-notice', class: 'hint' });
+  let clearConfirmation: HTMLElement | undefined;
   const sealer = env.sealer ?? inlineSealer;
   const signers = new Map<string, Signer>();
   const hasUnlockedKeys = (): boolean => signers.size > 0 || storage.hasSigners;
@@ -182,7 +183,8 @@ export function startApp(env: AppEnv): void {
     }
     retrySessions.clear(); unseenCastReports.clear(); backedUp.clear(); stopLive(); loaded.clear();
     organizerStorage = boardStorage(storage.current, policy.defaultBoard, location.origin);
-    say.say(storage.isSession ? t('qv.storage.cleared') : t('qv.device.cleared'));
+    // A live-connection announcement must not erase the result of an explicit clearing action.
+    clearConfirmation = h('p', { class: 'hint', tabindex: -1 }, storage.isSession ? t('qv.storage.cleared') : t('qv.device.cleared'));
     void route();
     return true;
   };
@@ -399,12 +401,14 @@ export function startApp(env: AppEnv): void {
     const election = current.name === 'election' ? active?.ctx?.manifest.title : undefined;
     document.title = election === undefined ? t('qv.shell.titleNoElection', { step: title }) : t('qv.shell.title', { step: title, election });
     clear(main);
-    add(main, kids);
+    const confirmation = clearConfirmation;
+    clearConfirmation = undefined;
+    add(main, [confirmation, ...kids]);
     main.append(devicePreferences(() => currentRoute(epoch) && view === renderEpoch));
     const hd = main.querySelector('.step-heading') as HTMLElement | null;
     // Until the user navigates or interacts, renders (including async loads) keep the browser's start position so the
     // first Tab reaches the skip link (QV-13 C-SHELL); afterwards focus moves to the new heading.
-    if (navigated || interacted) (hd ?? main).focus();
+    if (confirmation || navigated || interacted) (confirmation ?? hd ?? main).focus();
     window.scrollTo(0, 0);
   }
 
@@ -465,8 +469,12 @@ export function startApp(env: AppEnv): void {
     }
     const epoch = ++routeEpoch;
     active = undefined;
+    repaint = undefined;
     ballotLock = undefined;
     keyLock = undefined;
+    // Retire invalidated controls synchronously; users may interact before the next route's reads finish.
+    clear(main);
+    main.append(h('p', {}, t('qv.shell.loading')));
     const r: Route = parseRoute(location.pathname);
     if (r.name !== 'election') stopLive();
     nav.replaceChildren(link('/', t('qv.nav.home'), '', r), link('/new', t('qv.nav.create'), '', r), link('/verify', t('qv.nav.verify'), '', r), link('/help', t('qv.shell.helpLink'), '', r));

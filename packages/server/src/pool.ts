@@ -20,6 +20,7 @@ export class ElectionPool {
   private readonly env: Env;
   private readonly open = new Map<string, ElectionRuntime>();
   private readonly opening = new Map<string, Promise<ElectionRuntime | undefined>>();
+  private readonly evicting = new Map<string, Promise<void>>();
   private readonly createdHere = new Set<string>();
   private closing: Promise<void> | undefined;
   private stopping = false;
@@ -51,27 +52,40 @@ export class ElectionPool {
   }
 
   async get(id: string): Promise<ElectionRuntime | undefined> {
-    this.ensureRunning();
-    // A tombstone takes effect before eviction drains queued users of the cached handle.
-    if (!this.env.control.election(id)) return undefined;
-    const hit = this.open.get(id);
-    if (hit && !hit.poisoned) {
-      if (hit.log.size > 0) this.createdHere.delete(id);
-      this.open.delete(id);
-      this.open.set(id, hit);
-      hit.recoverEvents();
-      return hit;
+    for (;;) {
+      this.ensureRunning();
+      // A tombstone takes effect before eviction drains queued users of the cached handle.
+      if (!this.env.control.election(id)) return undefined;
+      const retiring = this.evicting.get(id);
+      if (retiring) { await retiring; continue; }
+      let p = this.opening.get(id);
+      if (!p) {
+        const hit = this.open.get(id);
+        if (hit && !hit.poisoned) {
+          if (hit.log.size > 0) this.createdHere.delete(id);
+          this.open.delete(id);
+          this.open.set(id, hit);
+          hit.recoverEvents();
+          return hit;
+        }
+        if (hit?.poisoned) { await this.evict(id); continue; }
+        // Opening and draining handles still consume capacity. Reserve before awaiting
+        // startup work; post-load trimming can otherwise close the handle being returned.
+        const occupied = new Set([...this.open.keys(), ...this.opening.keys(), ...this.evicting.keys()]).size;
+        if (occupied >= this.env.cfg.maxOpenElections) {
+          const victim = [...this.open].find(([key, r]) => !this.opening.has(key) && !this.evicting.has(key) && r.inUse === 0 && r.mutex.pending === 0);
+          if (!victim) throw new ApiError(503, 'BUSY', 'all election runtime slots are in use; retry later', { retryAfter: 2 });
+          await this.evict(victim[0]);
+          continue; // Another acquisition may have reserved the freed slot while eviction drained.
+        }
+        p = this.load(id).finally(() => this.opening.delete(id));
+        this.opening.set(id, p);
+      }
+      const rt = await p;
+      this.ensureRunning();
+      if (this.evicting.has(id)) continue;
+      return rt;
     }
-    if (hit?.poisoned) await this.evict(id);
-    this.ensureRunning();
-    let p = this.opening.get(id);
-    if (!p) {
-      p = this.load(id).finally(() => this.opening.delete(id));
-      this.opening.set(id, p);
-    }
-    const rt = await p;
-    this.ensureRunning();
-    return rt;
   }
 
   private async load(id: string): Promise<ElectionRuntime | undefined> {
@@ -83,26 +97,27 @@ export class ElectionPool {
     // finish a tally aggregate interrupted by a crash (idempotent; a failure is retried on the next cosignature)
     await rt.recoverTally().catch(() => this.env.logger.event('tally_recover', { outcome: 'error' }));
     rt.recoverEvents();
-    await this.trim();
     return rt;
   }
 
-  private async trim(): Promise<void> {
-    while (this.open.size > this.env.cfg.maxOpenElections) {
-      const victim = [...this.open].find(([, r]) => r.inUse === 0 && r.mutex.pending === 0);
-      if (!victim) return;
-      await this.evict(victim[0]);
-    }
-  }
-
   async evict(id: string): Promise<void> {
-    const rt = this.open.get(id);
-    this.open.delete(id);
-    // let in-flight writers drain before closing the handle
-    if (rt) {
-      await rt.mutex.run(async () => undefined).catch(() => undefined);
-      rt.close();
-    }
+    const retiring = this.evicting.get(id);
+    if (retiring) return retiring;
+    const opening = this.opening.get(id);
+    if (!opening && !this.open.has(id)) return;
+    const work = (async () => {
+      await opening?.catch(() => undefined);
+      const rt = this.open.get(id);
+      this.open.delete(id);
+      // Retain the reservation until the old writer is closed. Reopening earlier
+      // would give the same election two runtimes with independent sequencing locks.
+      if (rt) {
+        await rt.mutex.run(async () => undefined).catch(() => undefined);
+        rt.close();
+      }
+    })().finally(() => this.evicting.delete(id));
+    this.evicting.set(id, work);
+    return work;
   }
 
   async create(orgId: string, title: string, access: 'public' | 'link', committed?: (db: ElectionDb, result: CreatedElection) => void): Promise<CreatedElection> {
@@ -261,6 +276,7 @@ export class ElectionPool {
     this.closing ??= (async () => {
       await Promise.allSettled([...this.opening.values()]);
       for (const id of [...this.open.keys()]) await this.evict(id);
+      await Promise.allSettled([...this.evicting.values()]);
     })().finally(() => { this.closing = undefined; });
     return this.closing;
   }

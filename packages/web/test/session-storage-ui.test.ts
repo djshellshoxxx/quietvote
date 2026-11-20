@@ -50,10 +50,11 @@ class Element {
   dispatch(key: string): void { for (const listener of this.listeners.get(key) ?? []) void listener({ target: this, currentTarget: this, button: 0, preventDefault() {} }); }
   click(): void { if (this.disabled) return; if (this.tag === 'a' && this.attrs.has('download')) downloads.push({ name: this.attrs.get('download')!, blob: blobs.get(this.attrs.get('href')!)! }); this.dispatch('click'); }
   toggle(checked: boolean): void { assert.equal(this.disabled, false); this.checked = checked; this.dispatch('change'); }
-  focus(): void {}
+  focus(): void { focused = this; }
   find(predicate: (element: Element) => boolean): Element[] { return [...(predicate(this) ? [this] : []), ...this.children.flatMap((child) => child.find(predicate))]; }
   querySelector(selector: string): Element | null { return this.find((element) => element.attrs.get('class')?.split(' ').includes(selector.slice(1)) === true)[0] ?? null; }
 }
+let focused: Element | undefined;
 const root = new Element('root'), events = new Element('window'), documentEvents = new Element('document');
 const intervals: (() => void)[] = [];
 const location = new URL('https://quietvote.test/');
@@ -114,6 +115,7 @@ let started = false;
 async function boot(blocked = true, view = 'key') {
   if (started) await navigate('/', '');
   events.listeners.clear(); documentEvents.listeners.clear(); tasks.clear(); intervals.length = 0; downloads.length = 0;
+  focused = undefined;
   board = new FakeBoard(sim); otherBoard = new FakeBoard(sim); requests.length = 0;
   const durable = new MemoryStorage(), status = { blocked, clears: 0 };
   const refused = new Proxy(durable, { get(target, name) {
@@ -135,6 +137,54 @@ const passphrase = 'correct horse battery staple';
 const wrapped = await wrapSeed(sim.voters[0]!.secretKey.slice(), passphrase, { ...defaultDeps(), rng: streamRng('session-key') }, FLOOR_PARAMS);
 const otherKey = await wrapSeed(sim.voters[1]!.secretKey.slice(), passphrase, { ...defaultDeps(), rng: streamRng('other-session-key') }, FLOOR_PARAMS);
 const postCount = (): number => requests.filter((request) => request.method === 'POST').length;
+
+for (const sessionOnly of [false, true]) test(`confirmed ${sessionOnly ? 'page-session' : 'device'} clearing remains visible after a live-stream failure`, async () => {
+  const { session, durable, status } = await boot(sessionOnly);
+  if (sessionOnly) { button('Use this page only').click(); await drain(); }
+  await session.current.putKey(keySlot(id), wrapped.container);
+  if (sessionOnly) await durable.putKey('inaccessible-sentinel', otherKey.container);
+  await navigate('key');
+  assert.ok(hasButton('Unlock key'));
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => new URL(String(input), page).pathname.endsWith('/events')
+    ? new Response('{}', { status: 404 }) : originalFetch(input, init);
+  try {
+    button(sessionOnly ? 'Clear this page session' : 'Clear this device').click();
+    const dialog = get((element) => element.tag === 'dialog');
+    dialog.find((element) => element.tag === 'button' && element.textContent !== 'Cancel')[0]!.click();
+    await drain();
+    assert.deepEqual(await session.current.listKeySlots(), []);
+    const message = sessionOnly
+      ? 'This page session was cleared. Saved browser data was not cleared.'
+      : 'This device has been cleared. If you saved your receipt file, you can still check your ballot later.';
+    assert.ok(main().textContent.includes(message),
+      'successful clearing needs a visible confirmation independent of the shared live announcer');
+    assert.equal(focused?.textContent, message, 'focus presents the confirmation without adding another live region');
+    if (sessionOnly) {
+      assert.equal(await durable.getKey('inaccessible-sentinel'), otherKey.container);
+      assert.equal(status.clears, 0);
+    }
+  } finally { globalThis.fetch = originalFetch; await navigate('/', ''); }
+});
+
+test('cancelled or failed clearing never shows a success confirmation or removes the saved key', async () => {
+  const { durable, status } = await boot(false);
+  await durable.putKey(keySlot(id), wrapped.container); await navigate('key');
+  button('Clear this device').click();
+  get((element) => element.tag === 'dialog').find((element) => element.tag === 'button' && element.textContent === 'Cancel')[0]!.click();
+  await drain();
+  assert.equal(status.clears, 0);
+  assert.equal(main().textContent.includes('This device has been cleared.'), false);
+  status.blocked = true;
+  button('Clear this device').click();
+  get((element) => element.tag === 'dialog').find((element) => element.tag === 'button' && element.textContent !== 'Cancel')[0]!.click();
+  await drain();
+  assert.equal(status.clears, 1);
+  assert.equal(main().textContent.includes('This device has been cleared.'), false);
+  assert.equal(await durable.getKey(keySlot(id)), wrapped.container);
+  status.blocked = false; await navigate('key');
+  assert.ok(hasButton('Unlock key'));
+});
 
 for (const clearBeforeResponse of [false, true]) test(`late receipt handoff ${clearBeforeResponse ? 'cannot reinstall a result after explicit clearing' : 'refreshes a returned pending view once and preserves the download opt-out'}`, async () => {
   const { session, durable } = await boot(false);

@@ -10,11 +10,11 @@ import { loadVoterKey } from './cmd-keygen.ts';
 import { EXIT, type Io } from './io.ts';
 
 const BASE = { server: 'value', json: 'bool', 'timeout-ms': 'value' } as const;
-const AUTH = { key: 'value', audience: 'value', ...PASSPHRASE_FLAGS } as const;
+export const AUTH = { key: 'value', audience: 'value', ...PASSPHRASE_FLAGS } as const;
 const MAX_RESPONSE = 64 * 1024 * 1024;
 const MAX_PINNED_ROLL_REQUEST = 1_153_434;
 
-function args(argv: string[], spec: FlagSpec): Parsed {
+export function args(argv: string[], spec: FlagSpec): Parsed {
   const p = parseArgs(argv, { ...BASE, ...spec });
   needPositional(p, 0, 'online command (options only)');
   return p;
@@ -28,7 +28,7 @@ function serverUrl(p: Parsed): URL {
   }
   return u;
 }
-function electionPath(p: Parsed): string {
+export function electionPath(p: Parsed): string {
   const id = needFlag(p, 'id');
   if (!isHex(id, 16)) throw new UsageError('--id must be 32 lower-case hex digits');
   return `/api/v1/elections/${id}`;
@@ -77,7 +77,7 @@ function pinnedRollBody<T>(body: T): T {
   return body;
 }
 
-async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void | Promise<void>): Promise<Uint8Array> {
+export async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void | Promise<void>): Promise<Uint8Array> {
   const base = serverUrl(p);
   const timeout = p.get('timeout-ms') ?? '20000';
   if (!/^\d+$/.test(timeout) || !Number.isSafeInteger(Number(timeout)) || Number(timeout) < 1 || Number(timeout) > 120000) throw new UsageError('--timeout-ms must be an integer from 1 to 120000');
@@ -143,7 +143,7 @@ async function request(p: Parsed, io: Io, method: string, path: string, body?: u
     throw new FailError(method === 'GET' ? 'server request failed or timed out' : 'submission outcome unknown after a network failure; inspect server state before retrying');
   }
 }
-async function jsonRequest(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false): Promise<number> {
+export async function jsonRequest(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false): Promise<number> {
   const bytes = await request(p, io, method, path, body, signed);
   let value: unknown;
   try {

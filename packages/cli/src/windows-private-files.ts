@@ -20,11 +20,11 @@ export class WindowsPrivateFileError extends Error {
   }
 }
 
-function command(): { file: string; args: string[] } {
+function command(): { file: string; args: string[]; cwd: string } {
   const root = process.env.SystemRoot;
   if (process.platform !== 'win32' || !root || !/^[A-Za-z]:[\\\\/]/.test(root) || root.includes('\0')) throw new WindowsPrivateFileError();
   // No PATH search, profile, shell, interpolated command text, or user data in argv.
-  return { file: win32.join(root, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+  return { file: win32.join(root, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'), cwd: root,
     args: ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', SCRIPT] };
 }
 function limit(max: number): void {
@@ -54,10 +54,10 @@ function bytesFrom(r: Reply, max: number): Uint8Array {
   return bytes;
 }
 function callSync(message: Message, maxOutput = 4096): Reply {
-  const { file, args } = command();
+  const { file, args, cwd } = command();
   let result: string;
   try {
-    result = execFileSync(file, args, { input: input(message), encoding: 'utf8', windowsHide: true,
+    result = execFileSync(file, args, { input: input(message), encoding: 'utf8', windowsHide: true, cwd,
       timeout: TIMEOUT_MS, maxBuffer: maxOutput, stdio: ['pipe', 'pipe', 'pipe'] });
   } catch (error) { throw failed((error as { stdout?: unknown }).stdout); }
   return reply(result);
@@ -65,7 +65,16 @@ function callSync(message: Message, maxOutput = 4096): Reply {
 let service: Promise<HeldStream> | undefined;
 let activeRequests = 0;
 let retirement: NodeJS.Timeout | undefined;
-async function call(message: Message, maxOutput = 4096): Promise<Reply> {
+let operations: Promise<unknown> = Promise.resolve();
+function call(message: Message, maxOutput = 4096): Promise<Reply> {
+  // A refusal terminates the native service. Acquire it only when this operation
+  // reaches the queue head, so another caller cannot inherit that failed stream.
+  // No issued operation, especially a possibly published write, is retried.
+  const result = operations.then(() => dispatch(message, maxOutput));
+  operations = result.catch(() => undefined);
+  return result;
+}
+async function dispatch(message: Message, maxOutput: number): Promise<Reply> {
   clearTimeout(retirement);
   const shared = service ??= (async () => {
     const stream = new HeldStream();
@@ -85,7 +94,7 @@ async function call(message: Message, maxOutput = 4096): Promise<Reply> {
       const idle = stream;
       idle.reference(false); // An idle helper must not keep a completed CLI or test process alive.
       retirement = setTimeout(() => {
-        if (activeRequests === 0 && service === shared) { service = undefined; void idle.close(); }
+        if (activeRequests === 0 && service === shared) { service = undefined; void idle.close().catch(() => undefined); }
       }, 30_000);
       retirement.unref();
     }
@@ -115,6 +124,7 @@ export async function writeWindowsPrivateFile(path: string, data: Uint8Array, re
 /** One child owns one native FileStream until close. No path re-open supplies or receives secret bytes. */
 class HeldStream {
   private readonly child: ChildProcessWithoutNullStreams;
+  private readonly closed: Promise<void>;
   private waiting: { resolve(value: Reply): void; reject(error: Error): void; timer: NodeJS.Timeout; max: number } | undefined;
   private buffered: string[] = [];
   private bufferedBytes = 0;
@@ -122,8 +132,11 @@ class HeldStream {
   private serial: Promise<unknown> = Promise.resolve();
 
   constructor() {
-    const { file, args } = command();
-    this.child = spawn(file, args, { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    const { file, args, cwd } = command();
+    // Every request already carries an absolute caller-anchored path. Do not
+    // keep a user directory busy merely because it was cwd when a helper began.
+    this.child = spawn(file, args, { windowsHide: true, cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+    this.closed = new Promise(resolve => this.child.once('close', () => resolve()));
     this.child.stdout.setEncoding('utf8');
     this.child.stdout.on('data', (chunk: string) => {
       const waiting = this.waiting;
@@ -188,7 +201,17 @@ class HeldStream {
   }
   async close(): Promise<void> {
     try { if (!this.failure) await this.send({ op: 'close' }); }
-    finally { this.child.stdin.end(); this.abort(); }
+    finally {
+      this.child.stdin.end(); this.abort();
+      // An acknowledgement precedes process exit. Return only once native
+      // handles/cwd and stdio have closed, with bounded refusal if termination fails.
+      let timer: NodeJS.Timeout | undefined;
+      try {
+        await Promise.race([this.closed, new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new WindowsPrivateFileError('CLEANUP')), TIMEOUT_MS);
+        })]);
+      } finally { clearTimeout(timer); }
+    }
   }
 }
 

@@ -14,6 +14,7 @@ import { cmdPolicyDraftTemplate, cmdPolicyDraftValidate } from './cmd-policy-dra
 import { cmdGovernanceExport, cmdGovernancePrepare, cmdGovernanceSign, cmdGovernanceVerify } from './cmd-governance.ts';
 import { EXIT, type Io } from './io.ts';
 import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, cmdOnlineElectionTallyDraft, cmdOnlineAdminStatus, cmdOnlineInstance, cmdOnlineElectionCreate, cmdOnlineElectionPinnedRoll, cmdOnlineElectionInspect, cmdOnlineElectionDraft, cmdOnlineElectionSubmit, cmdOnlineElectionExport } from './cmd-online.ts';
+import { ONLINE_EXPORTS } from './cmd-online-exports.ts';
 
 export const VERSION = '0.1.0';
 
@@ -81,6 +82,19 @@ usage:
   qv online election-submit --server <origin> --id <id> --file <signed-entry.json> [--json]
   qv online election-export --server <origin> --id <id> --out <file> [--format qvb|json]
                     [--read-key-file <file>] [--json]
+  qv online export-create --server <origin> --id <id> --audience <audience> --key <keyfile> --idempotency-key <key>
+  qv online job-inspect --server <origin> --job-id <id> --audience <audience> --key <keyfile>
+  qv online export-list --server <origin> --id <id> --audience <audience> --key <keyfile>
+  qv online export-inspect --server <origin> --id <id> --export-id <id> --audience <audience> --key <keyfile>
+  qv online export-download --server <origin> --id <id> --export-id <id> --out <archive.qvb>
+                    --audience <audience> --key <keyfile>
+  qv online export-acknowledge --server <origin> --id <id> --export-id <id> --file <retained.qvb> --retained
+                    --audience <audience> --key <keyfile> --idempotency-key <key>
+  qv online export-deletion-notice --server <origin> --id <id> --export-id <id>
+                    --tree-size <n> --root-hash <hex> --sha256 <hex> --audience <audience> --key <keyfile> --idempotency-key <key>
+                                   recorded exports use signed management requests; passphrase options and --json accepted;
+                                   downloads check exact bytes and tree binding, never acknowledge automatically;
+                                   acknowledgement confirms retention; notice starts the server's 30-day deletion grace
                                    all online commands accept --timeout-ms (1..120000, default 20000);
                                    server responses and downloaded bundles are not independently verified
   qv vectors check [dir] [--strict] [--json]
@@ -111,7 +125,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
   election: { 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
-  online: { 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
+  online: { ...ONLINE_EXPORTS, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
   'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },
   governance: { prepare: cmdGovernancePrepare, sign: cmdGovernanceSign, export: cmdGovernanceExport, verify: cmdGovernanceVerify },

@@ -212,6 +212,41 @@ test('enrollment-to-ready hash navigation refreshes a cached draft even when liv
   assert.equal(button('Unlock key').disabled, false, 'the same document reaches the verified election without a reload');
 });
 
+test('same-document enrollment navigation retires the old key form before pending reads complete', async (t) => {
+  enrollmentReadKey = 'enrollment_transition_pending_route'; ceremonyReady = false;
+  await boardStorage(storage, a, page).putKey(keySlot(id), wrapped.container);
+  t.mock.method(LiveElection.prototype, 'start', () => {});
+  const hash = fragment(a, enrollmentReadKey);
+  await navigate('key', '#inv=AAECAwQFBgcICQoLDA0ODw&' + hash.slice(1));
+  const priorButton = button('Unlock key');
+  const originalFetch = globalThis.fetch;
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  globalThis.fetch = async (input, init) => {
+    const response = await originalFetch(input, init);
+    if (new URL(String(input), page).pathname === `/api/v1/elections/${id}`) await pending;
+    return response;
+  };
+  try {
+    ceremonyReady = true;
+    location.hash = hash;
+    // Native fragment navigation can emit both events before its asynchronous route has settled.
+    events.dispatch('popstate'); events.dispatch('hashchange');
+    assert.equal(main().find((element) => element === priorButton).length, 0,
+      'an invalidated enrollment form must not consume the next passphrase or Unlock action');
+    assert.ok(main().textContent.includes('Loading…'));
+    release(); await drain();
+    get((element) => element.attrs.get('type') === 'password').value = passphrase;
+    button('Unlock key').click();
+    await until(() => main().textContent.includes('You are on the voter list.'));
+    assert.equal(seen.filter((request) => request.read === enrollmentReadKey && request.method === 'POST').length, 0,
+      'leaving enrollment must not resubmit the invitation');
+  } finally {
+    release(); globalThis.fetch = originalFetch;
+    enrollmentReadKey = undefined; await navigate('/', '');
+  }
+});
+
 test('live enrollment completion binds the signed log before an actual cast uses its receipt key', async (t) => {
   enrollmentReadKey = 'enrollment_transition_live_hint'; ceremonyReady = false;
   await boardStorage(storage, a, page).putKey(keySlot(id), wrapped.container);
