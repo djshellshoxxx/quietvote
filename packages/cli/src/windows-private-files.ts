@@ -10,17 +10,22 @@ const SCRIPT = fileURLToPath(new URL('./windows-private-files.ps1', import.meta.
 const CODES = new Set(['ENOENT', 'EEXIST', 'PATH', 'TYPE', 'IDENTITY', 'OWNER', 'ACL', 'SIZE', 'CHANGED', 'CLEANUP', 'UNAVAILABLE']);
 const STARTUP_CODES = new Set(['ENOENT', 'EACCES', 'ENOEXEC', 'ENOTDIR']);
 type HelperDiagnostic = 'STARTUP' | 'TIMEOUT' | 'PROCESS' | 'RESPONSE';
+const OPERATIONS = ['service', 'read', 'write', 'reserve', 'bound', 'save', 'close'] as const;
+type HelperOperation = typeof OPERATIONS[number];
 type Reply = { ok: true; data?: string; bound?: boolean };
-type Message = { op: string; path?: string; max?: number; data?: string; replace?: boolean };
+type Message = { op: HelperOperation; path?: string; max?: number; data?: string; replace?: boolean };
 
 export class WindowsPrivateFileError extends Error {
   readonly code: string;
   readonly diagnostic: HelperDiagnostic | undefined;
-  constructor(code = 'UNAVAILABLE', diagnostic?: HelperDiagnostic) {
+  /** Pending reply only; does not establish whether a native write occurred. */
+  readonly operation: HelperOperation | undefined;
+  constructor(code = 'UNAVAILABLE', diagnostic?: HelperDiagnostic, operation?: HelperOperation) {
     super('native Windows private-file protection refused the operation' + (diagnostic ? ` (${diagnostic})` : ''));
     this.name = 'WindowsPrivateFileError';
     this.code = CODES.has(code) ? code : 'UNAVAILABLE';
     this.diagnostic = diagnostic;
+    this.operation = operation !== undefined && OPERATIONS.includes(operation) ? operation : undefined;
   }
 }
 
@@ -178,9 +183,9 @@ class HeldStream {
     this.child.stdin.on('error', () => this.abort());
   }
 
-  private abort(diagnostic?: HelperDiagnostic): void {
+  private abort(diagnostic?: HelperDiagnostic, operation?: HelperOperation): void {
     if (this.failure) return;
-    this.failure = new WindowsPrivateFileError('UNAVAILABLE', diagnostic);
+    this.failure = new WindowsPrivateFileError('UNAVAILABLE', diagnostic, operation);
     if (this.waiting) {
       clearTimeout(this.waiting.timer);
       this.waiting.reject(this.failure);
@@ -204,7 +209,9 @@ class HeldStream {
     const result = this.serial.then(() => new Promise<Reply>((resolve, reject) => {
       if (this.failure) { reject(this.failure); return; }
       this.reference(true);
-      const timer = setTimeout(() => this.abort('TIMEOUT'), TIMEOUT_MS);
+      // Capture only the fixed operation, never the request's path/private data.
+      const operation = message.op;
+      const timer = setTimeout(() => this.abort('TIMEOUT', operation), TIMEOUT_MS);
       this.waiting = { resolve, reject, timer, max };
       this.child.stdin.write(input(message));
     }));

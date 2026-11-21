@@ -155,7 +155,7 @@ async function writeEnrollmentFixture(phase: 'voter-key' | 'invite', file: strin
   try { await writePrivateFixtureAsync(file, contents); }
   catch (error) {
     if (error instanceof WindowsPrivateFileError) {
-      throw new Error(`native fixture ${phase} refused (${error.code}/${error.diagnostic ?? 'UNCLASSIFIED'})`, { cause: error });
+      throw new Error(`native fixture ${phase} refused (${error.code}/${error.diagnostic ?? 'UNCLASSIFIED'}/${error.operation ?? 'UNCLASSIFIED'})`, { cause: error });
     }
     throw error;
   }

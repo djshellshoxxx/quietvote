@@ -1,5 +1,12 @@
 # QuietVote comprehensive consolidation
 
+The [R20–R21 native diagnostic continuation](CONTINUATION_R20_R21_20261120.md)
+completes two further fresh worker sets after a new exact-source Windows failure.
+It records bounded pending-operation attribution, four passing mock wrappers
+containing 17 simulated cases, and successful independent full-root compilation
+on the final code/test composition. The actual native delay remains unresolved;
+the new label needs its own hosted Windows qualification.
+
 The [R18–R19 checkpoint continuation](CONTINUATION_R18_R19_20261120.md) incorporates
 the exact scheduled R15–R18 source and completes two fresh sets of three workers.
 It repairs pin byte ownership, empty-tree pin semantics and the shared verifier's

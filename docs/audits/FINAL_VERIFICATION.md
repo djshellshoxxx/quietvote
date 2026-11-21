@@ -8,6 +8,15 @@ Each table below is a source-bound receipt. A pending native/hosted gate at a
 historical checkpoint is not a claim about a later completed run, and an older
 pass is not assigned to later source. Formal promotion gates remain separate.
 
+The [R20–R21 native diagnostic continuation](CONTINUATION_R20_R21_20261120.md)
+records six further completed workers, four passing outer wrappers containing
+17 simulated cases, and a successful fresh full-root TypeScript check on
+`0484cc9`, tree `ed271d29ce2369cbadaf9ee1b01634553662cb88`. Root's earlier compiler
+terminations remain unexplained interrupted attempts. Scheduled R18 Windows
+Node 22 passed while Node 24 reached the voter-key fixture deadline; those runs
+predate the new pending-operation field and do not qualify it. New native and
+aggregate hosted results remain source-specific.
+
 The [R18–R19 checkpoint continuation](CONTINUATION_R18_R19_20261120.md) records
 six completed independent workers, exact incoming-source recovery, helper/shared
 verifier repairs, four ordinary R18 groups and six selected R19 groups. R19 includes
