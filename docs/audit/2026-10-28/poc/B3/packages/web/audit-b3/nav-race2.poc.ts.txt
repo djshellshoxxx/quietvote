@@ -1,0 +1,17 @@
+// B3 audit PoC: while an election page is still loading (slow network), clicking a header link renders that page, then the late election render replaces it.
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { exe, pw, startStack } from './harness.ts';
+const sim = await sharedSim();
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+await p.route('**/log/entries**', async (r) => { await new Promise((res) => setTimeout(res, 2500)); await r.continue(); });
+await p.goto(`${stack.origin}/e/${board.apiId}`);
+await p.getByRole('link', { name: 'Help and accessibility' }).first().click();
+await p.waitForTimeout(300);
+console.log('0.3 s after clicking Help: url =', new URL(p.url()).pathname, '| h1 =', await p.locator('main h1').first().innerText());
+await p.waitForTimeout(4500);
+console.log('after the election finished loading: url =', new URL(p.url()).pathname, '| h1 =', await p.locator('main h1').first().innerText());
+await browser.close();
+stack.close();

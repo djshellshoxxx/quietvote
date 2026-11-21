@@ -1,0 +1,303 @@
+[
+  {
+    "scenario": "E0-baseline",
+    "ts": "PASS",
+    "py": "PASS",
+    "ts_failed": [],
+    "py_failed": [],
+    "py_codes": []
+  },
+  {
+    "scenario": "E1-spoil-over-limit",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.tally.aggregate",
+      "chk.benaloh.spoiled"
+    ],
+    "py_codes": [
+      "E_AGG_MISMATCH/F",
+      "E_COUNTED_ROOT/F",
+      "E_SPOILED_CODE_CAST/nf"
+    ]
+  },
+  {
+    "scenario": "E10-CP03-constructor-field",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.ballots.valid",
+      "chk.tally.aggregate",
+      "chk.encoding.canonical"
+    ],
+    "py_codes": [
+      "E_AGG_MISMATCH/F",
+      "E_COUNTED_ROOT/F",
+      "E_SCHEMA/nf"
+    ]
+  },
+  {
+    "scenario": "E11-control-entries",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [
+      "chk.encoding.canonical"
+    ],
+    "py_failed": [
+      "chk.encoding.canonical"
+    ],
+    "py_codes": [
+      "E_SCHEMA/F"
+    ]
+  },
+  {
+    "scenario": "E12-dkg-final-no-qmask",
+    "ts": "PASS",
+    "py": "PASS",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.keys.trustees"
+    ],
+    "py_codes": [
+      "E_DKG_FINAL/nf"
+    ]
+  },
+  {
+    "scenario": "E13-C3-close-with-binding",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [
+      "chk.encoding.canonical"
+    ],
+    "py_failed": [
+      "chk.encoding.canonical"
+    ],
+    "py_codes": [
+      "E_SCHEMA/F"
+    ]
+  },
+  {
+    "scenario": "E14-tally-share-uppercase-hex",
+    "ts": "FAIL",
+    "py": "PASS",
+    "ts_failed": [
+      "chk.encoding.canonical"
+    ],
+    "py_failed": [],
+    "py_codes": []
+  },
+  {
+    "scenario": "E15-excluded-latest-cast",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [
+      "chk.benaloh.spoiled"
+    ],
+    "py_failed": [
+      "chk.tally.aggregate",
+      "chk.benaloh.spoiled"
+    ],
+    "py_codes": [
+      "E_AGG_MISMATCH/F",
+      "E_COUNTED_ROOT/F",
+      "E_SPOILED_CODE_CAST/nf"
+    ]
+  },
+  {
+    "scenario": "E17-tally-posted-twice",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.tally.aggregate"
+    ],
+    "py_codes": [
+      "E_SCHEMA/F"
+    ]
+  },
+  {
+    "scenario": "E18-roll-uppercase-hex",
+    "ts": "FAIL",
+    "py": "PASS",
+    "ts_failed": [],
+    "py_failed": [],
+    "py_codes": []
+  },
+  {
+    "scenario": "E19-manifest-envelope-extra-members",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.manifest.hash"
+    ],
+    "py_codes": [
+      "E_SCHEMA/F"
+    ]
+  },
+  {
+    "scenario": "E1c-spoil-within-limit",
+    "ts": "PASS",
+    "py": "PASS",
+    "ts_failed": [
+      "chk.benaloh.spoiled"
+    ],
+    "py_failed": [
+      "chk.benaloh.spoiled"
+    ],
+    "py_codes": [
+      "E_SPOILED_CODE_CAST/nf"
+    ]
+  },
+  {
+    "scenario": "E2-count-quorum",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.manifest.sig",
+      "chk.encoding.canonical"
+    ],
+    "py_codes": [
+      "E_SCHEMA/F"
+    ]
+  },
+  {
+    "scenario": "E20-dkg-open-marker-dropped",
+    "ts": "FAIL",
+    "py": "PASS",
+    "ts_failed": [
+      "chk.keys.trustees"
+    ],
+    "py_failed": [],
+    "py_codes": []
+  },
+  {
+    "scenario": "E3-tie-basis-counted",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.result.rules"
+    ],
+    "py_codes": [
+      "E_RESULT/F"
+    ]
+  },
+  {
+    "scenario": "E3b-2of3-status-quo-yes",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.result.rules"
+    ],
+    "py_codes": [
+      "E_RESULT/F"
+    ]
+  },
+  {
+    "scenario": "E4-kofn-winner-order",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.result.rules"
+    ],
+    "py_codes": [
+      "E_RESULT/F"
+    ]
+  },
+  {
+    "scenario": "E5-approval-no-winners",
+    "ts": "PASS",
+    "py": "EXCEPTION",
+    "ts_failed": [],
+    "py_failed": [],
+    "py_codes": [
+      "QVError('E_RULES: number of winners undefined')"
+    ]
+  },
+  {
+    "scenario": "E7-bad-close-then-good",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.time.window"
+    ],
+    "py_codes": [
+      "E_SIG/F"
+    ]
+  },
+  {
+    "scenario": "E8-P4-bad-reveal-then-cast",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [
+      "chk.benaloh.spoiled"
+    ],
+    "py_failed": [
+      "chk.tally.aggregate",
+      "chk.benaloh.spoiled"
+    ],
+    "py_codes": [
+      "E_AGG_MISMATCH/F",
+      "E_COUNTED_ROOT/F",
+      "E_SPOILED_CODE_CAST/nf",
+      "E_SPOIL_MISMATCH/nf"
+    ]
+  },
+  {
+    "scenario": "K-CP01-rewrap-reveal",
+    "ts": "PASS",
+    "py": "PASS",
+    "ts_failed": [],
+    "py_failed": [],
+    "py_codes": []
+  },
+  {
+    "scenario": "K-P11-decrypters-wrong",
+    "ts": "PASS",
+    "py": "PASS",
+    "ts_failed": [],
+    "py_failed": [],
+    "py_codes": []
+  },
+  {
+    "scenario": "K-P3-second-tally-differs",
+    "ts": "PASS",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.tally.aggregate"
+    ],
+    "py_codes": [
+      "E_SCHEMA/F"
+    ]
+  },
+  {
+    "scenario": "K-P7-below-floor",
+    "ts": "FAIL",
+    "py": "FAIL",
+    "ts_failed": [],
+    "py_failed": [
+      "chk.tally.decrypt"
+    ],
+    "py_codes": [
+      "E_BELOW_FLOOR/F"
+    ]
+  },
+  {
+    "scenario": "K-P9-keyconf-shadow",
+    "ts": "FAIL",
+    "py": "PASS",
+    "ts_failed": [
+      "chk.keys.trustees"
+    ],
+    "py_failed": [],
+    "py_codes": []
+  }
+]

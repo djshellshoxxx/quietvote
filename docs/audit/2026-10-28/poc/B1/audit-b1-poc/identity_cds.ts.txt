@@ -1,0 +1,15 @@
+// B1: a CDS proof for the identity ciphertext (A,B) = (O,O) with r = 0 is a VALID transcript; only the explicit guard rejects it.
+import { IDENTITY, baseMul, cdsProve, cdsVerify, sha256, utf8, hs } from '../packages/crypto/src/index.ts';
+const st = { ctx: sha256(utf8('ctx')), binder: sha256(utf8('b')), cid: 'c', oid: 'o', K: baseMul(7n), ct: { A: IDENTITY, B: IDENTITY } };
+const xi = new Uint8Array(64).fill(3);
+// cdsProve needs r != 0 only through elgamalEncrypt; call it directly with r = 0 and m = 0
+const p = cdsProve(st, 0, 0n, xi);
+console.log('cdsVerify with guard:', cdsVerify(st, p));
+// re-implement the verification equation without the guard to show the transcript itself is valid
+import { pointSub, pointMul, G, pointToBytes, scalarAdd } from '../packages/crypto/src/index.ts';
+const commit = (B1: any, X1: any, c: bigint, s: bigint) => pointSub(pointMul(B1, s), pointMul(X1, c));
+const a0 = commit(G, st.ct.A, p.c0, p.s0), b0 = commit(st.K, st.ct.B, p.c0, p.s0);
+const a1 = commit(G, st.ct.A, p.c1, p.s1), b1 = commit(st.K, pointSub(st.ct.B, G), p.c1, p.s1);
+const pt = pointToBytes;
+const c = hs('cds01', st.ctx, st.binder, utf8(st.cid), utf8(st.oid), pt(st.K), pt(st.ct.A), pt(st.ct.B), pt(a0), pt(b0), pt(a1), pt(b1));
+console.log('same transcript without the identity guard verifies:', scalarAdd(p.c0, p.c1) === c);

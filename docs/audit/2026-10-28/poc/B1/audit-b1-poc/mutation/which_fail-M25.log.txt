@@ -1,0 +1,9 @@
+not ok 79 - any t-subset of Q decrypts to identical counts; t-1 trustees cannot proceed; canonical subset
+  error: |-
+  name: 'AssertionError'
+  expected:
+  actual:
+rc 1 ['# fail 1']
+restored
+
+[exited with code 0]

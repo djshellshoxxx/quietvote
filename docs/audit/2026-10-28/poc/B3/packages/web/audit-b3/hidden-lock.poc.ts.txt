@@ -1,0 +1,30 @@
+// B3 audit PoC (Playwright): QV-19 s5.3 "auto-lock ... on visibilitychange to hidden for > 2 min". Timers are suspended while the page is
+// hidden on mobile browsers; on return the handler (ui/app.ts:84-87) clears the hidden marker BEFORE asking whether to lock.
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { PASS, exe, pw, startStack } from './harness.ts';
+const sim = await sharedSim();
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const base = `${stack.origin}/e/${board.apiId}`;
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+await p.clock.install();
+await p.goto(`${base}/key`);
+await p.getByLabel('Use a key file I saved before').check();
+await p.getByLabel('Key file', { exact: true }).setInputFiles(stack.keyFile);
+await p.getByLabel('Passphrase', { exact: true }).fill(PASS);
+await p.getByRole('button', { name: 'Create key' }).click();
+await p.clock.runFor(100);
+await p.getByText('Your key is registered.').waitFor({ timeout: 30000 });
+const setHidden = (h: boolean): Promise<void> => p.evaluate((hidden) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden }); document.dispatchEvent(new Event('visibilitychange')); }, h);
+await setHidden(true);                       // tab goes to the background (JS timers do not run there)
+await p.clock.setSystemTime(Date.now() + 5 * 60_000); // 5 minutes later (> the 2 minute rule, < the 10 minute idle rule); no timer fires
+await setHidden(false);                      // tab returns
+await p.getByRole('link', { name: 'Vote' }).first().click();
+await p.clock.runFor(100);
+await p.waitForTimeout(300);
+const locked = await p.getByText('Your key is locked.').count();
+const form = await p.getByLabel('YES', { exact: true }).count();
+console.log(`after 5 minutes hidden: lock notice shown = ${locked > 0}; ballot form offered = ${form > 0}  (spec: locked after > 2 minutes hidden)`);
+await browser.close();
+stack.close();

@@ -1,0 +1,1458 @@
+// Application shell, router and views. Framework-free; all logic lives in ../flow and ../key (unit-tested in node).
+import { bytesToHex, hexToBytes, systemRng } from '@quietvote/crypto';
+import { NO_SUPERSEDES, ballotCode, castDigest, verifyElectionText, type VerificationProgress } from '@quietvote/protocol';
+import { ed25519Verify } from '@quietvote/crypto';
+import { ApiClient } from '../api/client.ts';
+import { boardPolicy, electionCacheKey } from '../api/origins.ts';
+import { ApiError, uxPresentation, type PhaseTimes } from '../api/errors.ts';
+import { recoverCast } from '../flow/cast-recovery.ts';
+import { BallotController, lastOwnBallotCode, type CastReport } from '../flow/ballot-controller.ts';
+import { maximumSelections } from '../flow/ballot-review.ts';
+import { canAudit, canCast, canNewSeal } from '../flow/ballot-machine.ts';
+import { bindServerLog, checkRoll, deriveElectionContext, type ElectionContext } from '../flow/election.ts';
+import { entryRecord } from '../flow/entries.ts';
+import { parseFragment } from '../flow/invite.ts';
+import { ORGANIZER_SLOT, KeySlotOccupiedError, createKey, importKeyFile, keySlot, recoveryCodeFor, registrationBody, restoreFromRecovery, unlockKey } from '../flow/onboarding.ts';
+import { buildManifest, parseRoll, TEMPLATES, type Template } from '../flow/organizer.ts';
+import { enrollOrganization } from '../flow/publish-ui.ts';
+import { organizerKeyPanel } from './organizer-key.ts';
+import { organizerTimes } from './organizer-times.ts';
+import { runPublish, type PublishOutcome } from '../flow/publish-ui.ts';
+import type { PublishForm, PublishState } from '../flow/publish.ts';
+import { BoardIntegrityError, MAX_RECEIPT_FILE_BYTES, parseReceiptFile } from '../flow/receipt.ts';
+import { checkBallotCodeEntry, lookupBallotCode } from '../flow/receipt-code.ts';
+import { ReceiptCheckGate } from '../flow/receipt-check-gate.ts';
+import { LiveElection } from '../flow/live.ts';
+import { BallotIndex } from '../flow/supersede.ts';
+import type { ConnStatus } from '../net/sse.ts';
+import { inlineSealer, type Sealer } from '../flow/seal.ts';
+import { createTranslator, offeredLocales, negotiateLocale, SOURCE_ONLY, type LocaleDef, type MessageKey, type Translator, type Args } from '../i18n/index.ts';
+import { writeLanguagePreference } from '../i18n/preference.ts';
+import { formatDeadline } from '../i18n/datetime.ts';
+import { KeyError, defaultDeps, keyIdOf, serializeContainer, type KdfParams, type KeystoreDeps } from '../key/keystore.ts';
+import { checkPassphrase, generatePassphrase } from '../key/passphrase.ts';
+import type { Signer } from '../key/signer.ts';
+import type { DeviceSettings, DeviceStorage } from '../key/storage.ts';
+import { boardStorage } from '../key/board-storage.ts';
+import { StorageSession } from '../key/storage-session.ts';
+import { canShowResults, parseAuthorKeyInput, verificationSummary, verifyLoadedElection, verifyPublicBundleText } from '../flow/verification.ts';
+import { LockTimer } from '../key/lock.ts';
+import { ballotCodeDisplay, electionIdOf, sameElectionId, spokenForm } from '../util/crockford.ts';
+import { b64uDecode, b64uEncode } from '../util/hex.ts';
+import { Announcer, add, clear, h, nextId, type Child } from './dom.ts';
+import { inviteRows } from './invites.ts';
+import { buildHeader } from './shell.ts';
+import { electionPath, parseRoute, type Route } from './route.ts';
+import { isCurrentPage, shouldHandleNavigation } from './navigation.ts';
+import { spoilSharesPanel } from './spoil-shares.ts';
+import { pinnedPreloads } from '../util/pinned-preload.ts';
+import { adminPanel } from './admin.ts';
+
+export interface AppEnv {
+  root: HTMLElement;
+  storage: DeviceStorage;
+  storageSession?: StorageSession;
+  build: { version: string; id: string };
+  sealer?: Sealer;
+  apiBase?: string;
+  boardOrigins?: readonly string[];
+  /** Locale tables, loaded lazily by main.ts (i18n/runtime.ts). Defaults to English only. */
+  locales?: readonly LocaleDef[];
+  /** Saved BCP 47 language from the IndexedDB device settings. */
+  storedLanguage?: string;
+}
+
+interface Loaded {
+  apiId: string;
+  cacheKey: string;
+  keyContext: string;
+  storage: DeviceStorage;
+  api: ApiClient;
+  ctx?: ElectionContext;
+  ctxError?: string;
+  serverLog: { logPkB64u: string; origin: string };
+  origin: string;
+  logPk: Uint8Array;
+  title: string;
+  records: { seq: number; record: unknown }[];
+  /** Live update connection (SSE), started when the election is first opened. */
+  live?: LiveElection;
+  /** Incremental index of ballots, for receipt standing. */
+  ballots?: BallotIndex;
+}
+
+export function startApp(env: AppEnv): void {
+  const policy = boardPolicy(location.origin, env.apiBase, env.boardOrigins);
+  const storage = env.storageSession ?? new StorageSession(env.storage);
+  let organizerStorage = boardStorage(storage.current, policy.defaultBoard, location.origin);
+  const defs = env.locales ?? SOURCE_ONLY;
+  const availableLocales = offeredLocales(defs);
+  const locale = negotiateLocale({ query: new URLSearchParams(location.search).get('lang') ?? undefined, stored: env.storedLanguage, browser: navigator.languages, offered: availableLocales.map((l) => l.tag) });
+  const tr: Translator = createTranslator(locale, { defs });
+  const t = (k: MessageKey, a?: Args): string => tr.t(k, a);
+  document.documentElement.lang = locale;
+  document.documentElement.dir = tr.dir;
+
+  const polite = h('div', { id: 'live-polite', role: 'status', class: 'sr-only' });
+  const urgent = h('div', { id: 'live-urgent', role: 'alert', class: 'sr-only' });
+  const say = new Announcer(polite, urgent);
+  const main = h('main', { id: 'main', tabindex: -1 });
+  const nav = h('nav', { 'aria-label': t('qv.shell.nav'), class: 'site-nav' });
+  const storageNotice = h('aside', { id: 'storage-notice', class: 'hint' });
+  let clearConfirmation: HTMLElement | undefined;
+  const sealer = env.sealer ?? inlineSealer;
+  const signers = new Map<string, Signer>();
+  const hasUnlockedKeys = (): boolean => signers.size > 0 || storage.hasSigners;
+  const loaded = new Map<string, Loaded>();
+  const backedUp = new Set<string>();
+  const retrySessions = new Map<string, { manifestHash: string; voterPk: string; keyId: string; ctl: BallotController }>();
+  // A response received after its view was left must still be offered once, even when receipt saving is off.
+  // This holds only the public result in this document; signed retry bytes remain in the separate session controller.
+  const unseenCastReports = new Map<string, { manifestHash: string; keyId: string; report: CastReport }>();
+  let keyGeneration = 0;
+  let stopBallotView: (() => void) | undefined;
+  let active: Loaded | undefined;
+  const timer = new LockTimer(Date.now());
+
+  /** The open ballot session (if any): auto-lock drops its randomness and unsubmitted sealed ballot, then repaints (W4). */
+  let ballotLock: (() => void) | undefined;
+  let keyLock: (() => void) | undefined;
+  const lockAll = (): void => {
+    keyGeneration++;
+    storage.lockSigners();
+    for (const s of signers.values()) s.lock();
+    signers.clear();
+    for (const r of retrySessions.values()) r.ctl.retainPendingRetry();
+    keyLock?.();
+    ballotLock?.();
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && timer.shouldLock(Date.now())) { lockAll(); say.say(t('qv.key.locked')); }
+    timer.setHidden(document.hidden, Date.now());
+  });
+  const lockNotice = h('div', { class: 'hint' });
+  setInterval(() => {
+    const remaining = timer.warningMsRemaining(Date.now());
+    lockNotice.replaceChildren(...(remaining !== undefined && hasUnlockedKeys() ? [h('p', {}, t('qv.key.lockWarn', { seconds: Math.ceil(remaining / 1000) })), h('button', { type: 'button', onclick: () => { timer.touch(Date.now()); lockNotice.replaceChildren(); } }, t('qv.key.stayUnlocked'))] : []));
+    if (timer.shouldLock(Date.now()) && hasUnlockedKeys()) {
+      lockAll();
+      say.say(t('qv.key.locked'));
+    }
+  }, 15_000);
+  for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, () => {
+    const now = Date.now();
+    if (hasUnlockedKeys() && timer.shouldLock(now)) { lockAll(); say.say(t('qv.key.locked')); }
+    timer.touch(now);
+  }, { passive: true });
+
+  /** B3-28: asks before a key file whose KDF cost exceeds the defaults is derived. Cancel means no derivation at all. */
+  const costConfirmed = new Set<string>();
+  const confirmKdfCost = async (p: KdfParams): Promise<boolean> => {
+    const id = `${p.m}/${p.t}/${p.p}`;
+    if (costConfirmed.has(id)) return true;
+    const ok = await new Promise<boolean>((resolve) => {
+      const dialog = h('dialog', { 'aria-label': t('qv.key.unlock') });
+      const finish = (v: boolean): void => { (dialog as HTMLDialogElement).close(); dialog.remove(); resolve(v); };
+      add(dialog, [h('p', {}, t('qv.key.costWarn', { mem: String(Math.round(p.m / 1024)), passes: String(p.t), lanes: String(p.p) })),
+        h('button', { type: 'button', onclick: () => finish(false) }, t('qv.key.cancel')), h('button', { type: 'button', onclick: () => finish(true) }, t('qv.key.costConfirm'))]);
+      dialog.addEventListener('cancel', (e) => { e.preventDefault(); finish(false); });
+      document.body.append(dialog); (dialog as HTMLDialogElement).showModal();
+    });
+    if (ok) costConfirmed.add(id);
+    return ok;
+  };
+  const keyDeps = (): KeystoreDeps => ({ ...defaultDeps(), confirmCost: confirmKdfCost });
+
+  /** Clears this device's keys and receipts; a failure is announced (E-KEY-STORAGE), never reported as cleared (W9). */
+  const clearDevice = async (): Promise<boolean> => {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      const dialog = h('dialog', { 'aria-label': storage.isSession ? t('qv.storage.clear') : t('qv.key.forget') });
+      const finish = (v: boolean): void => { (dialog as HTMLDialogElement).close(); dialog.remove(); resolve(v); };
+      add(dialog, [h('p', {}, storage.isSession ? t('qv.storage.loss') : t('qv.key.forgetBody')), h('button', { type: 'button', onclick: () => finish(false) }, t('qv.key.cancel')), h('button', { type: 'button', onclick: () => finish(true) }, storage.isSession ? t('qv.storage.clear') : t('qv.key.forgetConfirm'))]);
+      dialog.addEventListener('cancel', (e) => { e.preventDefault(); finish(false); });
+      document.body.append(dialog); (dialog as HTMLDialogElement).showModal();
+    });
+    if (!confirmed) return false;
+    // Invalidate pending key work before the clear transaction can run.
+    lockAll();
+    try {
+      await storage.clear();
+    } catch {
+      say.say(t('qv.err.E-KEY-STORAGE.title'), true);
+      return false;
+    }
+    retrySessions.clear(); unseenCastReports.clear(); backedUp.clear(); stopLive(); loaded.clear();
+    organizerStorage = boardStorage(storage.current, policy.defaultBoard, location.origin);
+    // A live-connection announcement must not erase the result of an explicit clearing action.
+    clearConfirmation = h('p', { class: 'hint', tabindex: -1 }, storage.isSession ? t('qv.storage.cleared') : t('qv.device.cleared'));
+    void route();
+    return true;
+  };
+  const link = (href: string, text: string, cls = '', current?: Route): HTMLElement =>
+    h('a', { href, class: cls, 'aria-current': current && isCurrentPage(href, current) ? 'page' : undefined, onclick: (e: Event) => {
+      if (!shouldHandleNavigation(e as MouseEvent)) return;
+      e.preventDefault();
+      go(href);
+    } }, text);
+  const STEPS: MessageKey[] = ['qv.step.check', 'qv.step.key', 'qv.step.choose', 'qv.step.send'];
+  const stepper = (n: number): HTMLElement => h('ol', { class: 'steps', 'aria-label': t('qv.shell.stepOf', { current: n, total: STEPS.length }) },
+    ...STEPS.map((key, i) => h('li', { 'aria-current': i + 1 === n ? 'step' : undefined }, t(key))));
+  const more = (...kids: Child[]): HTMLElement => h('details', {}, h('summary', {}, t('qv.vote.moreDetails')), ...kids);
+  const heading = (text: string, lvl = 1): HTMLElement => h(`h${lvl}`, { tabindex: -1, class: 'step-heading' }, text);
+  const btn = (text: string, on: () => void, o: { primary?: boolean; disabled?: boolean; id?: string } = {}): HTMLElement =>
+    h('button', { type: 'button', class: o.primary ? 'btn primary' : 'btn', onclick: on, disabled: o.disabled === true, id: o.id }, text);
+  const field = (label: string, input: HTMLElement, hint?: string): HTMLElement => {
+    const id = nextId('f');
+    input.id = id;
+    const wrap = h('div', { class: 'field' }, h('label', { for: id }, label));
+    if (hint) {
+      const hid = `${id}-hint`;
+      wrap.append(h('p', { id: hid, class: 'hint' }, hint));
+      input.setAttribute('aria-describedby', hid);
+    }
+    wrap.append(input);
+    return wrap;
+  };
+  /** Local preferences never gate voting. Only a committed storage write earns a saved announcement. */
+  function settingsChoice(label: MessageKey, value: (s: DeviceSettings) => boolean,
+    change: (s: DeviceSettings, checked: boolean) => DeviceSettings, current: () => boolean, changed?: (checked: boolean) => void): HTMLElement {
+    const input = h('input', { type: 'checkbox', disabled: true }) as HTMLInputElement;
+    const status = h('p', { id: nextId('setting-status'), class: 'hint' });
+    input.setAttribute('aria-describedby', status.id);
+    const retry = btn(t('qv.device.retry'), () => { void read(); }) as HTMLButtonElement;
+    retry.hidden = true;
+    let saved = false;
+    const failed = (): void => {
+      input.disabled = true;
+      retry.hidden = false;
+      const message = t('qv.device.unconfirmed');
+      status.textContent = message; status.className = 'error';
+      say.say(message, true, current);
+    };
+    async function read(): Promise<void> {
+      input.disabled = true; retry.disabled = true;
+      try {
+        const settings = await storage.current.getSettings();
+        if (!current()) return;
+        saved = value(settings); input.checked = saved; changed?.(saved);
+        input.disabled = false; retry.hidden = true; status.textContent = ''; status.className = 'hint';
+      } catch { if (current()) failed(); }
+      finally { if (current()) retry.disabled = false; }
+    }
+    input.addEventListener('change', async () => {
+      if (!current() || input.disabled) return;
+      const checked = input.checked;
+      input.disabled = true; retry.disabled = true;
+      try {
+        const settings = await storage.current.updateSettings((settings) => change(settings, checked), current);
+        if (!current() || settings === undefined) return;
+        saved = value(settings); input.checked = saved; input.disabled = false; changed?.(saved);
+        status.className = 'hint'; status.textContent = t('qv.shell.done');
+        say.say(status.textContent, false, current);
+      } catch {
+        if (!current()) return;
+        input.checked = saved; failed();
+      } finally { if (current()) retry.disabled = false; }
+    });
+    const element = h('div', {}, h('label', { class: 'choice' }, input, ' ', t(label)), status, retry);
+    void read();
+    return element;
+  }
+  function devicePreferences(current: () => boolean): HTMLElement {
+    const reminder = h('p', { class: 'hint', hidden: true }, t(storage.isSession ? 'qv.storage.loss' : 'qv.device.shared'));
+    const help = h('p', { id: nextId('device-help'), class: 'hint' }, t('qv.device.rememberHelp'));
+    return h('fieldset', { class: 'device-settings', 'aria-describedby': help.id }, h('legend', {}, t('qv.device.settings')),
+      settingsChoice('qv.device.sharedToggle', (s) => s.sharedDevice, (s, checked) => ({ ...s, sharedDevice: checked }), current, (checked) => { reminder.hidden = !checked; }),
+      reminder,
+      settingsChoice('qv.receipt.remember', (s) => s.rememberReceipts, (s, checked) => ({ ...s, rememberReceipts: checked }), current),
+      help);
+  }
+  const codeEl = (text: string): HTMLElement => h('bdi', { dir: 'ltr', class: 'code' }, ...text.split('-').map((g, i, a) => h('span', {}, h('span', { 'aria-hidden': 'true' }, g + (i < a.length - 1 ? '-' : '')), h('span', { class: 'sr-only' }, [...g].join(' ') + (i < a.length - 1 ? ', ' : ''))))); // spoken form as real text (aria-label on a span is ignored)
+  const copyBtn = (text: string): HTMLElement =>
+    btn(t('qv.shell.copy'), () => {
+      navigator.clipboard.writeText(text).then(() => say.say(t('qv.shell.copied')), () => say.say(t('qv.shell.copyFailed'), true));
+    });
+  const copyText = (text: string, field: HTMLElement): void => {
+    const fallback = (): void => {
+      const sel = getSelection();
+      if (sel) { const r = document.createRange(); r.selectNodeContents(field); sel.removeAllRanges(); sel.addRange(r); }
+      say.say(t('qv.shell.copyFailed'), true);
+    };
+    if (!navigator.clipboard?.writeText) return fallback();
+    navigator.clipboard.writeText(text).then(() => say.say(t('qv.shell.copied')), fallback);
+  };
+  const inviteEnv = { origin: location.origin, board: policy.defaultBoard, copyLabel: (n: number): string => t('qv.org.inviteCopy', { n }), copy: copyText };
+  const errorBox = (ux: string, extra: Args = {}, ref?: string): HTMLElement => {
+    const k = (s: string): MessageKey => `qv.err.${ux}.${s}` as MessageKey;
+    const box = h('div', { class: 'error' });
+    try {
+      add(box, [h('h2', {}, t(k('title'), extra)), h('p', {}, t(k('body'), extra))]);
+      say.say(t(k('title'), extra), true); // the one assertive region announces it; the box itself is not a live region (QV-13-REQ-021)
+    } catch {
+      add(box, [h('h2', {}, t('qv.err.E-GEN-UNKNOWN.title')), h('p', {}, t('qv.err.E-GEN-UNKNOWN.body'))]);
+      say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
+    }
+    if (ref) box.append(h('p', { class: 'hint' }, t('qv.err.reference', { code: ux, request: ref })));
+    return box;
+  };
+  /** B3-06: an error box for a failure or ux code, with the arguments its text needs (see `uxPresentation`). */
+  const errorFor = (e: unknown, times: PhaseTimes = {}, ux?: string, ref?: string): HTMLElement => {
+    const p = uxPresentation(ux, e, times);
+    return errorBox(p.ux, p.args, ref ?? (e instanceof ApiError ? e.requestId : undefined));
+  };
+  const download = (name: string, text: string, type = 'application/json'): void => {
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const a = h('a', { href: url, download: name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+  const saveCode = (L: Loaded, code: string): HTMLElement => btn(t('qv.storage.saveCode'), () =>
+    download('qv-ballot-code.txt', `${L.apiId}\n${/^[0-9a-f]{64}$/.test(code) ? ballotCodeDisplay(hexToBytes(code, 32)) : code}\n`, 'text/plain'));
+  const receiptTitle = (outcome: string): MessageKey => outcome === 'ACCEPTED_RECORDED' ? 'qv.receipt.title' : outcome === 'PENDING_UNCONFIRMED' ? 'qv.receipt.pendingTitle' : outcome === 'AFTER_CLOSE' ? 'qv.receipt.afterCloseTitle' : outcome === 'DUPLICATE_IGNORED' ? 'qv.receipt.dupTitle' : outcome === 'SUPERSEDED' ? 'qv.receipt.supersededTitle' : 'qv.receipt.rejectedTitle';
+  const clearLabel = (): string => t(storage.isSession ? 'qv.storage.clear' : 'qv.receipt.clearDevice');
+  function updateStorageNotice(): void {
+    clear(storageNotice);
+    (languageSelect as HTMLSelectElement).disabled = storage.isSession;
+    if (storage.isSession) add(storageNotice, [h('h2', {}, t('qv.storage.sessionTitle')), h('p', {}, t('qv.storage.loss'))]);
+    else if (storage.failed) {
+      add(storageNotice, [h('h2', {}, t('qv.err.E-KEY-STORAGE.title')), h('p', {}, t(storage.ballotStarted ? 'qv.storage.blocked' : 'qv.storage.loss')),
+        btn(t('qv.storage.retry'), async () => {
+          storage.retry();
+          if (storage.ballotStarted) { try { await storage.current.getSettings(); } catch { /* The observer keeps the refusal visible. */ } }
+          else { lockAll(); void route(); }
+        })]);
+      if (storage.canSelectSession) storageNotice.append(btn(t('qv.storage.choose'), () => {
+        if (!storage.canSelectSession) return;
+        lockAll();
+        if (!storage.selectSession()) return;
+        say.say(t('qv.storage.sessionTitle'));
+        stopLive(); loaded.clear(); retrySessions.clear(); unseenCastReports.clear(); backedUp.clear();
+        organizerStorage = boardStorage(storage.current, policy.defaultBoard, location.origin);
+        void route();
+      }));
+    }
+    storageNotice.hidden = storageNotice.children.length === 0;
+  }
+
+  /** Set by views that can refresh themselves in place when live data arrives (receipt standing, results). */
+  let repaint: (() => void) | undefined;
+  let stopVerification: (() => void) | undefined;
+  window.addEventListener('pagehide', () => stopVerification?.());
+  const liveLine = h('p', { class: 'qv-live', id: 'qv-live' });
+  const liveText = (s: ConnStatus): string => {
+    switch (s.state) {
+      case 'connecting': return t('qv.live.connecting');
+      case 'live': return t('qv.live.live');
+      case 'reconnecting': return t('qv.live.reconnecting', { seconds: Math.max(1, Math.ceil((s.waitMs ?? 1000) / 1000)) });
+      case 'failed': return t('qv.live.failed');
+      default: return '';
+    }
+  };
+  let liveState: ConnStatus['state'] = 'closed';
+  let liveStatus: ConnStatus = { state: 'closed' };
+  let liveId: string | undefined;
+  const stopLive = (): void => {
+    for (const L of loaded.values()) {
+      L.live?.close();
+      delete L.live;
+    }
+    liveId = undefined;
+    liveState = 'closed';
+    liveStatus = { state: 'closed' };
+    liveLine.textContent = '';
+  };
+  /** Starts (once per election) the SSE connection; events only trigger a re-read of the signed log. */
+  function startLive(L: Loaded): void {
+    if (L.live !== undefined) return;
+    if (liveId !== undefined && liveId !== L.cacheKey) stopLive();
+    liveId = L.cacheKey;
+    const live = new LiveElection(L, {
+      onStatus: (st) => {
+        const prev = liveState;
+        liveState = st.state;
+        liveStatus = st;
+        if (loaded.get(L.cacheKey)?.live !== live) return;
+        liveLine.textContent = liveText(st);
+        if (st.state === 'failed' || (st.state === 'live' && prev === 'reconnecting')) say.say(liveText(st));
+      },
+      onChange: () => {
+        // Enrollment may have loaded before a manifest existed. Bind a newly derived context before a view can use it.
+        if (L.ctx !== undefined) bindContext(L, L.ctx);
+        if (active === L && repaint !== undefined) {
+          repaint();
+          say.say(t('qv.live.updated'));
+        }
+      },
+      onRecovered: () => { if (loaded.get(L.cacheKey)?.live === live) liveLine.textContent = liveText(liveStatus); },
+      onAlert: () => say.say(t('qv.live.alert'), true),
+      onError: () => { if (loaded.get(L.cacheKey)?.live === live) { liveLine.textContent = t('qv.live.failed'); say.say(t('qv.live.failed')); } },
+    });
+    L.live = live;
+    live.start();
+  }
+
+  let renderEpoch = 0;
+  function render(title: string, ...kids: Child[]): void {
+    const view = ++renderEpoch, epoch = routeEpoch;
+    repaint = undefined;
+    const current = parseRoute(location.pathname);
+    const election = current.name === 'election' ? active?.ctx?.manifest.title : undefined;
+    document.title = election === undefined ? t('qv.shell.titleNoElection', { step: title }) : t('qv.shell.title', { step: title, election });
+    clear(main);
+    const confirmation = clearConfirmation;
+    clearConfirmation = undefined;
+    add(main, [confirmation, ...kids]);
+    main.append(devicePreferences(() => currentRoute(epoch) && view === renderEpoch));
+    const hd = main.querySelector('.step-heading') as HTMLElement | null;
+    // Until the user navigates or interacts, renders (including async loads) keep the browser's start position so the
+    // first Tab reaches the skip link (QV-13 C-SHELL); afterwards focus moves to the new heading.
+    if (confirmation || navigated || interacted) (confirmation ?? hd ?? main).focus();
+    window.scrollTo(0, 0);
+  }
+
+  let navigated = false;
+  let interacted = false;
+  for (const type of ['keydown', 'pointerdown'] as const) document.addEventListener(type, () => { interacted = true; }, { capture: true, once: true });
+  function go(path: string): void {
+    navigated = true;
+    history.pushState({}, '', path);
+    void route();
+  }
+  window.addEventListener('popstate', () => { navigated = true; void route(); });
+  window.addEventListener('hashchange', () => {
+    // A same-document browser navigation can emit both popstate and hashchange for the same URL.
+    if (routeAddress === location.href) return;
+    navigated = true; void route();
+  });
+
+  function bindContext(L: Loaded, ctx: ElectionContext): void {
+    delete L.ctx; // A binding exception must not leave a live-derived context usable.
+    const bound = bindServerLog(ctx.manifest, L.serverLog);
+    if (!bound.ok) { L.ctxError = bound.detail; return; }
+    L.ctx = ctx;
+    L.logPk = bound.logPk;
+    L.origin = bound.origin;
+    delete L.ctxError;
+  }
+
+  async function load(id: string, board: string, readKey: string | undefined, epoch: number): Promise<Loaded> {
+    const generation = storage.generation, device = storage.current;
+    const cacheKey = electionCacheKey(board, id, readKey);
+    const cached = loaded.get(cacheKey);
+    if (cached?.ctx !== undefined) return cached;
+    // A draft can become ready between routes even when SSE hints are delayed. Retire its stream before replacing it.
+    cached?.live?.close();
+    if (cached) delete cached.live;
+    const api = new ApiClient({ baseUrl: board, readKey });
+    const el = await api.election(id);
+    const all = await api.allEntries(id);
+    const records = all.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) }));
+    const r = await deriveElectionContext(records);
+    const L: Loaded = { apiId: id, api, cacheKey, keyContext: electionCacheKey(board, id), storage: boardStorage(device, board, location.origin), serverLog: { logPkB64u: el.log_pk, origin: el.origin }, origin: el.origin, logPk: new Uint8Array(32), title: el.title ?? '', records };
+    if (r.ok) {
+      // Receipts and checkpoints are checked against the manifest's log key and origin, not the server's claim (WV-4).
+      bindContext(L, r.value);
+    } else L.ctxError = r.detail;
+    if (generation !== storage.generation) throw new Error('storage context changed');
+    // A slower earlier route must not replace a newer snapshot and orphan its live connection.
+    if (currentRoute(epoch)) loaded.set(cacheKey, L);
+    return L;
+  }
+
+  let routeEpoch = 0;
+  let routeAddress = location.href;
+  let resultsEpoch = 0;
+  const currentRoute = (epoch: number): boolean => epoch === routeEpoch;
+  async function route(): Promise<void> {
+    stopVerification?.();
+    stopVerification = undefined;
+    stopBallotView?.(); stopBallotView = undefined;
+    for (const [key, value] of retrySessions) {
+      if (!value.ctl.retainPendingRetry()) retrySessions.delete(key);
+    }
+    const epoch = ++routeEpoch;
+    routeAddress = location.href;
+    active = undefined;
+    repaint = undefined;
+    ballotLock = undefined;
+    // Clear the retiring form's secret fields without locking the voter signer used by the next view.
+    keyLock?.();
+    keyLock = undefined;
+    // Retire invalidated controls synchronously; users may interact before the next route's reads finish.
+    clear(main);
+    main.append(h('p', {}, t('qv.shell.loading')));
+    const r: Route = parseRoute(location.pathname);
+    if (r.name !== 'election') stopLive();
+    nav.replaceChildren(link('/', t('qv.nav.home'), '', r), link('/new', t('qv.nav.create'), '', r), link('/verify', t('qv.nav.verify'), '', r), link('/help', t('qv.shell.helpLink'), '', r));
+    try {
+      if (r.name === 'home') return home();
+      if (r.name === 'help') return helpView();
+      if (r.name === 'verify') return verifyView();
+      if (r.name === 'create') return await createView(epoch);
+      if (r.name === 'election') return await electionView(r, epoch);
+      render(t('qv.shell.notFoundTitle'), heading(t('qv.election.notFound')));
+    } catch (e) {
+      if (!currentRoute(epoch)) return;
+      stopLive();
+      const notFound = e instanceof ApiError && e.code === 'NOT_FOUND';
+      render(t('qv.shell.errorTitle'), notFound ? heading(t('qv.election.notFound')) : errorFor(e));
+    }
+  }
+
+  // ---------------------------------------------------------------- views
+  function home(): void {
+    const input = h('input', { type: 'text', autocomplete: 'off', spellcheck: false });
+    const err = h('p', { class: 'hint' });
+    render(t('qv.nav.home'), heading(t('qv.home.title')), h('p', {}, t('qv.home.intro')),
+      h('section', { 'aria-labelledby': 'how-h' }, h('h2', { id: 'how-h' }, t('qv.how.title')), h('ol', {}, h('li', {}, t('qv.how.s1')), h('li', {}, t('qv.how.s2')), h('li', {}, t('qv.how.s3')))), h('p', {}, t('qv.home.haveLink')),
+      field(t('qv.home.openId'), input, t('qv.home.openIdHint')), err,
+      btn(t('qv.home.open'), () => {
+        try {
+          const u = new URL((input as HTMLInputElement).value, location.href);
+          if (u.origin !== location.origin || u.username || u.password || parseRoute(u.pathname).name !== 'election') throw new Error('invalid election address');
+          go(u.pathname + u.hash);
+        } catch {
+          err.textContent = t('qv.home.badLink');
+          say.say(t('qv.home.badLink'), true);
+        }
+      }, { primary: true }));
+  }
+
+  function helpView(): void {
+    const root = document.documentElement;
+    const contrast = h('input', { type: 'checkbox', checked: root.hasAttribute('data-contrast'), onchange: (e: Event) => root.toggleAttribute('data-contrast', (e.target as HTMLInputElement).checked) });
+    const theme = h('select', { onchange: (e: Event) => {
+      const value = (e.target as HTMLSelectElement).value;
+      if (value === 'auto') root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', value);
+    } }, ...(['auto', 'light', 'dark'] as const).map((value) =>
+      h('option', { value, selected: value === (root.getAttribute('data-theme') ?? 'auto') }, t(`qv.help.theme.${value}`))));
+    render(t('qv.help.title'), heading(t('qv.help.title')), h('p', {}, t('qv.help.keyboard')), h('p', {}, t('qv.help.screenReader')),
+      field(t('qv.help.theme'), theme),
+      h('label', {}, contrast, ' ', t('qv.help.contrast')), h('p', { class: 'hint' }, t('qv.help.contrastHelp')),
+      h('h2', {}, t('qv.help.about')), h('p', {}, t('qv.help.aboutBody')), h('h2', {}, t('qv.help.howVerifier')), h('p', {}, t('qv.help.howVerifierBody')),
+      h('h2', {}, t('qv.help.report')), h('p', {}, t('qv.help.reportBody')), h('p', {}, t('qv.phish.neverask')));
+  }
+
+  function guaranteePanel(L: Loaded | undefined): HTMLElement {
+    const m = L?.ctx?.manifest;
+    const t_ = m?.t ?? 3, n_ = m?.n ?? 5;
+    const names = m?.trustees.map((x) => x.name) ?? [];
+    const ncs: MessageKey[] = ['qv.privacy.nc2', 'qv.privacy.nc3', 'qv.privacy.nc4', 'qv.privacy.nc5', 'qv.privacy.nc6', 'qv.privacy.nc7'];
+    return h('section', { 'aria-labelledby': 'g-h' },
+      h('h2', { id: 'g-h' }, t('qv.privacy.headline')),
+      h('p', {}, t('qv.privacy.g1')), h('p', {}, t('qv.privacy.g2', { t: t_, n: n_, trustee_names: names })),
+      h('p', {}, t('qv.privacy.g3')), h('p', {}, t('qv.privacy.g4')), h('p', {}, t('qv.privacy.public')),
+      h('h3', {}, t('qv.privacy.notclaimed.head')),
+      h('ul', {}, h('li', {}, t('qv.privacy.nc1', { t: t_ })), ...ncs.map((k) => h('li', {}, t(k)))),
+      h('p', {}, t('qv.privacy.review', { status: 'other' })),
+      h('details', {}, h('summary', {}, t('qv.privacy.why')), h('p', {}, t('qv.privacy.whyBody'))));
+  }
+
+  function electionHeader(L: Loaded): HTMLElement {
+    const idText = L.ctx ? electionIdOf(hexToBytes(L.ctx.manifestHashHex, 32)) : '';
+    return h('header', { class: 'election-head' }, h('p', {}, L.ctx?.manifest.title ?? L.title),
+      idText ? h('p', {}, t('qv.shell.electionId'), ': ', codeEl(idText), ' ', copyBtn(idText)) : null);
+  }
+
+  async function electionView(r: Extract<Route, { name: 'election' }>, epoch: number): Promise<void> {
+    const frag = parseFragment(location.hash);
+    const board = policy.select(frag.board);
+    if (liveId !== electionCacheKey(board, r.id, frag.readKey)) stopLive();
+    const L = await load(r.id, board, frag.readKey, epoch);
+    if (!currentRoute(epoch)) return;
+    active = L;
+    if (r.view === 'admin') {
+      const panel = adminPanel({ tr, say, api: L.api, apiId: L.apiId, storage: L.storage, keyDeps, current: () => currentRoute(epoch), download, error: errorFor });
+      keyLock = panel.invalidate;
+      return render(t('qv.shell.adminTitle'), electionHeader(L), panel.element);
+    }
+    if ((r.view === 'vote' || r.view === 'spoils') && L.ctx !== undefined) {
+      const page = await L.api.allEntries(r.id);
+      if (!currentRoute(epoch)) return;
+      const records = page.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) }));
+      const next = await deriveElectionContext(records, L.ctx?.manifestHashHex);
+      if (!currentRoute(epoch)) return;
+      if (!next.ok) throw new Error(next.detail);
+      L.records = records; L.ctx = next.value; delete L.ballots;
+    }
+    startLive(L);
+    const sub = r.view;
+    const tabs = h('ul', { class: 'tabs' }, ...([...(['overview', 'rules', 'key', 'vote', 'receipt', 'results', 'admin'] as const), ...(L.ctx?.manifest.spoil_trustee_decrypt === true ? (['spoils'] as const) : [])]).map((v) =>
+      h('li', {}, link(electionPath(r.id, v === 'overview' ? '' : v) + location.hash, t(({ overview: 'qv.nav.home', rules: 'qv.nav.rules', key: 'qv.key.title', vote: 'qv.nav.vote', receipt: 'qv.nav.receipt', results: 'qv.nav.results', admin: 'qv.nav.admin', spoils: 'qv.spoil.title' } as const)[v]), '', r))));
+    const head = [electionHeader(L), tabs, liveLine];
+    // Enrollment precedes DKG/roll commitment. This path cannot cast or claim roll membership.
+    if (L.ctx === undefined && frag.token && ['overview', 'rules', 'key'].includes(sub)) {
+      const summary = await L.api.election(L.apiId);
+      if (!currentRoute(epoch)) return;
+      if (summary.election_id !== L.apiId || summary.registration_scheme !== 'hashed-pop-v1') return render(t('qv.key.title'), ...head, h('p', { class: 'error' }, t('qv.key.enrollmentUnavailable')));
+      return keyView(L, undefined, head, frag.token);
+    }
+    if (L.ctx === undefined) return render(t('qv.shell.electionTitle'), ...head, errorBox('E-ORG-MANIFEST', { detail: L.ctxError ?? '' }));
+    const ctx = L.ctx;
+    if (sub === 'overview') {
+      let settings: DeviceSettings;
+      try { settings = await storage.current.getSettings(); }
+      catch {
+        if (currentRoute(epoch)) render(t('qv.nav.home'), ...head, stepper(1), heading(ctx.manifest.title), errorBox('E-KEY-STORAGE'), link(electionPath(r.id, 'rules') + location.hash, t('qv.nav.rules')));
+        return;
+      }
+      if (!currentRoute(epoch)) return;
+      const fmt = (iso: string): string => { const d = formatDeadline(iso, Intl.DateTimeFormat().resolvedOptions().timeZone, Intl.DateTimeFormat().resolvedOptions().timeZone, locale); return d.electionTime; };
+      const typed = h('input', { type: 'text', autocomplete: 'off', spellcheck: false });
+      const confirmed = settings.confirmed[ctx.manifestHashHex] === true;
+      const msg = h('div', {});
+      const setC = (v: boolean): Promise<DeviceSettings | undefined> => storage.current.updateSettings((latest) => ({ ...latest, confirmed: { ...latest.confirmed, [ctx.manifestHashHex]: v } }), () => currentRoute(epoch));
+      return render(t('qv.nav.home'), ...head, stepper(1), heading(ctx.manifest.title), h('p', {}, t('qv.election.invited')),
+        h('p', {}, t('qv.election.opens', { when: fmt(ctx.manifest.voting_open) })), h('p', {}, t('qv.election.closes', { when: fmt(ctx.manifest.voting_close) })),
+        h('p', {}, t('qv.election.contests', { count: ctx.manifest.contests.length }), ' · ', t('qv.election.roll', { count: ctx.rollSize })),
+        confirmed ? h('p', {}, t('qv.election.v1.confirmed')) : h('section', {}, h('p', {}, t('qv.election.v1.ask')),
+          field(t('qv.election.v1.typeIt'), typed),
+          h('div', { class: 'row' },
+            btn(t('qv.election.v1.match'), async () => {
+              const v = (typed as HTMLInputElement).value.trim();
+              if (v !== '' && !sameElectionId(v, electionIdOf(hexToBytes(ctx.manifestHashHex, 32)))) { clear(msg); msg.append(h('p', { class: 'error' }, t('qv.phish.mismatch'))); say.say(t('qv.phish.announce'), true); return; }
+              try { if (await setC(true) && currentRoute(epoch)) go(electionPath(r.id) + location.hash); }
+              catch { if (currentRoute(epoch)) { clear(msg); msg.append(errorBox('E-KEY-STORAGE')); } }
+            }, { primary: true }),
+            btn(t('qv.election.v1.mismatch'), () => { clear(msg); msg.append(h('p', { class: 'error' }, t('qv.phish.mismatch'))); say.say(t('qv.phish.announce'), true); }),
+            btn(t('qv.election.v1.none'), () => go(electionPath(r.id, 'rules') + location.hash))), msg),
+        h('p', {}, link(electionPath(r.id, 'rules') + location.hash, t('qv.nav.rules'))));
+    }
+    if (sub === 'rules') return render(t('qv.nav.rules'), ...head, stepper(1), heading(t('qv.nav.rules')), h('p', {}, t('qv.vote.privacyNote')), guaranteePanel(L),
+      settingsChoice('qv.election.rulesAck', (s) => s.rulesSeen[ctx.manifestHashHex] === true,
+        (s, checked) => ({ ...s, rulesSeen: { ...s.rulesSeen, [ctx.manifestHashHex]: checked } }), () => currentRoute(epoch)),
+      h('p', { class: 'hint' }, t('qv.election.rulesAckHint')), link(electionPath(r.id, 'key') + location.hash, t('qv.shell.continue'), 'btn primary'));
+    if (sub === 'key') return keyView(L, ctx, head, frag.token);
+    if (sub === 'vote') return await voteView(L, ctx, head);
+    if (sub === 'receipt') return await receiptView(L, ctx, head, epoch);
+    if (sub === 'results') return await resultsView(L, ctx, head, epoch);
+    if (sub === 'spoils') return render(t('qv.spoil.title'), ...head, spoilSharesPanel({ tr, say, api: L.api, apiId: L.apiId, ctx, records: () => L.records, roll: () => fullRoll(L), current: () => currentRoute(epoch) }));
+    return render(t('qv.shell.adminTitle'), ...head, heading(t('qv.nav.admin')), h('p', {}, t('qv.org.nopeek')), h('p', {}, t('qv.org.export')));
+  }
+
+  async function fullRoll(L: Loaded): Promise<string[]> {
+    const roll: string[] = [];
+    const cursors = new Set<string>();
+    let cursor: string | undefined;
+    for (let page = 0; page < 200; page++) {
+      const r = await L.api.roll(L.apiId, cursor);
+      for (const item of r.items) { const pk = b64uDecode(item.pk); if (!pk || pk.length !== 32) throw new Error('invalid voter list'); roll.push(bytesToHex(pk)); }
+      if (r.next_cursor === null) return roll;
+      if (cursors.has(r.next_cursor)) throw new Error('voter list pagination did not advance');
+      cursors.add(r.next_cursor); cursor = r.next_cursor;
+    }
+    throw new Error('voter list is too large');
+  }
+
+  function keyView(L: Loaded, ctx: ElectionContext | undefined, head: Child[], token: Uint8Array | undefined): void {
+    const epoch = routeEpoch, generation = storage.generation;
+    const here = (): boolean => currentRoute(epoch) && generation === storage.generation;
+    let work = 0;
+    const slot = keySlot(L.apiId);
+    const status = h('div', { class: 'hint' });
+    const out = h('div', {});
+    const backups = h('div', {});
+    const recovery = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
+    const pass = h('input', { type: 'password', autocomplete: 'new-password', spellcheck: false, autocapitalize: 'off', autocorrect: 'off' }) as HTMLInputElement;
+    const show = h('input', { type: 'checkbox', onchange: () => (pass.type = (show as HTMLInputElement).checked ? 'text' : 'password') });
+    const file = h('input', { type: 'file', accept: '.qvkey,application/json' }) as HTMLInputElement;
+    const mode = { v: 'create' };
+    keyLock = () => { work++; pass.value = ''; recovery.value = ''; file.value = ''; clear(backups); clear(out); clear(status); status.append(h('p', {}, t('qv.key.locked'))); };
+    const showErr = (e: unknown): void => {
+      if (!here()) return;
+      if (e instanceof KeySlotOccupiedError) { clear(status); status.append(h('p', {}, t('qv.key.locked'))); void renderForm(); return; }
+      if (e instanceof KeyError && e.code === 'E_KEY_CANCELLED') { clear(status); status.append(h('p', {}, t('qv.key.costCancelled'))); return; }
+      if (e instanceof KeyError && e.code !== 'E_KEY_LOCKED') { clear(status); status.append(h('p', {}, t(mode.v === 'recovery' ? 'qv.key.recoveryBad' : 'qv.key.importBad'))); return; }
+      const ux = e instanceof KeyError && e.code === 'E_KEY_LOCKED' ? 'E-KEY-LOCKED' : 'E-KEY-STORAGE';
+      clear(status); status.append(errorBox(ux));
+    };
+    const run = async (action: (current: () => boolean) => Promise<void>): Promise<void> => {
+      if (!here()) return;
+      clear(backups); clear(out);
+      const ticket = ++work, keys = keyGeneration;
+      const current = (): boolean => here() && ticket === work && keys === keyGeneration;
+      try { await action(current); } catch (e) { if (current()) showErr(e); }
+    };
+    const finish = async (signer: Signer, current: () => boolean): Promise<void> => {
+      let container;
+      try { container = await L.storage.getKey(slot); } catch (e) { signer.lock(); throw e; }
+      if (!current() || !container) { signer.lock(); return; }
+      signers.get(L.keyContext)?.lock();
+      signers.set(L.keyContext, signer); timer.touch(Date.now());
+      const backupId = `${L.keyContext}:${bytesToHex(signer.publicKey)}`;
+      let continuing = false;
+      const continueWithKey = async (): Promise<void> => {
+        if (!current() || signer.locked || continuing) return;
+        if (storage.isSession && !backedUp.has(backupId)) {
+          clear(out); out.append(h('p', {}, t('qv.storage.backup'))); return;
+        }
+        continuing = true;
+        try {
+          let registered = false;
+          if (token) {
+            const body = await registrationBody({ apiElectionId: L.apiId, token, signer });
+            if (!current()) return;
+            const result = await L.api.register(L.apiId, body);
+            registered = result.status === 'pending' || result.status === 'approved';
+            if (!registered) throw new Error('invalid registration response');
+          }
+          const onRoll = token || !ctx ? false : checkRoll(await fullRoll(L), ctx.rollRootHex, bytesToHex(signer.publicKey)).onRoll;
+          if (!current()) return;
+          clear(out);
+          add(out, [h('p', {}, t(registered ? 'qv.key.registered' : onRoll ? 'qv.key.onRoll' : 'qv.key.notYetRoll')),
+            link(electionPath(L.apiId, 'vote') + location.hash, t('qv.nav.vote'), 'btn primary')]);
+        } catch (e) {
+          if (!current()) return;
+          continuing = false; clear(out);
+          out.append(e instanceof ApiError && e.code === 'REGISTRATION_UNAVAILABLE' ? h('p', { class: 'error' }, t('qv.key.enrollmentUnavailable')) : errorFor(e, { opens: ctx?.manifest.voting_open, closes: ctx?.manifest.voting_close }));
+        }
+      };
+      clear(backups);
+      const recoveryOut = h('div', {});
+      add(backups, [btn(t('qv.key.download'), () => {
+        if (!current() || signer.locked) return;
+        download(`voting-key-${L.apiId.slice(0, 6)}.qvkey`, serializeContainer(container));
+        backedUp.add(backupId); void continueWithKey();
+      }), btn(t('qv.key.showRecovery'), async () => {
+        try {
+          const c = await recoveryCodeFor(container, pass.value, keyDeps());
+          if (!current() || signer.locked) return;
+          clear(recoveryOut); add(recoveryOut, [h('h2', {}, t('qv.key.recoveryHead')), h('p', {}, t('qv.key.recoveryHelp')), codeEl(c), btn(t('qv.key.recoveryHide'), () => { clear(recoveryOut); })]);
+        } catch (e) { if (current()) showErr(e); }
+      }), recoveryOut]);
+      await continueWithKey();
+      if (current()) void renderForm();
+    };
+    const act = h('div', {});
+    const renderForm = async (): Promise<void> => {
+      let have;
+      try { have = await L.storage.getKey(slot); } catch (e) { showErr(e); return; }
+      if (!here()) return;
+      clear(act);
+      if (have) {
+        pass.autocomplete = 'current-password';
+        add(act, [field(t('qv.key.passphrase'), pass), h('label', {}, show, ' ', t('qv.key.show')),
+          btn(t('qv.key.unlock'), () => run(async (current) => { clear(status); status.textContent = t('qv.key.working'); const u = await unlockKey({ storage: L.storage, slot, passphrase: pass.value, deps: keyDeps(), rewrap: !storage.isSession }); if (current()) status.textContent = ''; await finish(u.signer, current); }), { primary: true })]);
+        return;
+      }
+      const gen = btn(t('qv.key.generate'), () => { pass.value = generatePassphrase(systemRng); (show as HTMLInputElement).checked = true; pass.type = 'text'; status.textContent = t('qv.key.generated', { words: pass.value }); });
+      add(act, [h('fieldset', {}, h('legend', {}, t('qv.key.title')),
+        h('label', {}, h('input', { type: 'radio', name: 'm', checked: true, onchange: () => (mode.v = 'create') }), ' ', t('qv.key.optCreate')), h('br'),
+        h('label', {}, h('input', { type: 'radio', name: 'm', onchange: () => (mode.v = 'import') }), ' ', t('qv.key.optImport')), h('br'),
+        h('label', {}, h('input', { type: 'radio', name: 'm', onchange: () => (mode.v = 'recovery') }), ' ', t('qv.key.recoveryImport')), field(t('qv.key.recoveryImport'), recovery), h('br'),
+        h('label', {}, h('input', { type: 'radio', name: 'm', onchange: () => { mode.v = 'cli'; status.textContent = t('qv.key.cliHelp'); } }), ' ', t('qv.key.optCli'))),
+        field(t('qv.key.chooseFile'), file), field(t('qv.key.passphrase'), pass, t('qv.key.passphraseHint')), h('label', {}, show, ' ', t('qv.key.show')), gen,
+        btn(t('qv.key.create'), () => run(async (current) => {
+            if (mode.v === 'cli') return;
+            if (mode.v === 'recovery') {
+              await restoreFromRecovery({ storage: L.storage, slot, code: recovery.value, passphrase: pass.value, onlyIfAbsent: true, canInstall: current });
+              if (!current()) return;
+              const u = await unlockKey({ storage: L.storage, slot, passphrase: pass.value, deps: keyDeps(), rewrap: !storage.isSession });
+              recovery.value = '';
+              return await finish(u.signer, current);
+            }
+            if (mode.v === 'import') {
+              const f = file.files?.[0];
+              if (!f) { status.textContent = t('qv.key.importMissing'); return; }
+              await importKeyFile({ storage: L.storage, slot, text: await f.text(), passphrase: pass.value, deps: keyDeps(), onlyIfAbsent: true, canInstall: current });
+              if (!current()) return;
+              const u = await unlockKey({ storage: L.storage, slot, passphrase: pass.value, deps: keyDeps(), rewrap: !storage.isSession });
+              return await finish(u.signer, current);
+            }
+            const chk = checkPassphrase(pass.value);
+            if (!chk.ok) { status.textContent = t(`qv.key.pp.${chk.problems[0] ?? 'tooShort'}` as MessageKey); return; }
+            status.textContent = t('qv.key.working');
+            const k = await createKey({ storage: L.storage, slot, passphrase: pass.value, onlyIfAbsent: true, canInstall: current });
+            if (!current()) return;
+            const persisted = await L.storage.requestPersistence();
+            const u = await unlockKey({ storage: L.storage, slot, passphrase: pass.value, deps: keyDeps(), rewrap: !storage.isSession });
+            if (current()) status.textContent = `${t('qv.key.fingerprint', { words: k.fingerprint.join(' ') })} ${k.atFloor ? t('qv.key.floorWarn') : ''} ${persisted ? '' : t('qv.key.persistDenied')}`;
+            await finish(u.signer, current);
+        }), { primary: true })]);
+    };
+    render(t('qv.key.title'), ...head, stepper(2), heading(t('qv.key.title')), h('p', {}, t('qv.vote.keyWhat')), h('p', {}, t('qv.key.backup')), more(h('p', {}, t('qv.key.local')), h('p', {}, t('qv.key.residual')), h('p', {}, t(storage.isSession ? 'qv.storage.loss' : 'qv.device.shared'))),
+      token ? null : h('p', { class: 'hint' }, t('qv.key.noInvite')), act, status, backups, out,
+      btn(t(storage.isSession ? 'qv.storage.clear' : 'qv.key.forget'), () => { void clearDevice(); }));
+    void renderForm();
+    void ctx;
+  }
+
+  async function voteView(L: Loaded, ctx: ElectionContext, head: Child[]): Promise<void> {
+    const epoch = routeEpoch, generation = storage.generation;
+    let pending;
+    try { pending = await L.storage.getPendingCast(L.origin, L.apiId); }
+    catch { if (currentRoute(epoch)) render(t('qv.nav.vote'), ...head, errorBox('E-KEY-STORAGE')); return; }
+    if (!currentRoute(epoch)) return;
+    let retained = storage.isSession ? retrySessions.get(L.cacheKey) : undefined;
+    let completed = unseenCastReports.get(L.cacheKey);
+    if (retained || completed) {
+      const container = await L.storage.getKey(keySlot(L.apiId));
+      if (!currentRoute(epoch)) return;
+      const currentSigner = signers.get(L.keyContext);
+      if (completed && (completed.manifestHash !== ctx.manifestHashHex || completed.keyId !== container?.keyId ||
+          (currentSigner && completed.keyId !== keyIdOf(currentSigner.publicKey)))) {
+        unseenCastReports.delete(L.cacheKey); completed = undefined;
+      }
+      if (retained && (retained.manifestHash !== ctx.manifestHashHex || retained.keyId !== container?.keyId ||
+          (currentSigner && retained.voterPk !== bytesToHex(currentSigner.publicKey)) ||
+          (pending && retained.ctl.codeHex !== pending.code))) {
+        retained.ctl.retainPendingRetry(); retrySessions.delete(L.cacheKey); retained = undefined;
+      }
+    }
+    // Another tab's unresolved submission takes precedence; do not label it with this older result.
+    if (completed && pending && completed.report.codeHex !== pending.code) completed = undefined;
+    if (pending || retained || completed) {
+      storage.beginBallot();
+      const marker = pending;
+      const out = h('div', {});
+      const retryOut = h('div', {});
+      const session = retained;
+      const title = heading(t('qv.receipt.pendingTitle'));
+      const detail = h('p', {}, t('qv.receipt.pendingBody'));
+      const code = marker?.code ?? completed?.report.codeHex ?? session?.ctl.codeHex ?? '';
+      const drawRetry = (): void => {
+        if (!currentRoute(epoch)) return;
+        clear(retryOut);
+        const state = session?.ctl.state, report = session?.ctl.lastCast ?? completed?.report;
+        if (state?.kind === 'casting') retryOut.append(h('p', {}, t('qv.ballot.casting')));
+        if (session && state?.kind === 'failed' && state.retryCast) retryOut.append(btn(t('qv.ballot.cast'), async () => {
+          // Recheck the binding on the explicit action, including key changes since this view opened.
+          if (!currentRoute(epoch)) return;
+          try {
+            const key = await L.storage.getKey(keySlot(L.apiId));
+            const currentSigner = signers.get(L.keyContext);
+            if (!currentRoute(epoch) || key?.keyId !== session.keyId || retrySessions.get(L.cacheKey) !== session ||
+                (currentSigner && bytesToHex(currentSigner.publicKey) !== session.voterPk)) return;
+            await session.ctl.cast();
+          } catch { if (currentRoute(epoch)) say.say(t('qv.err.E-KEY-STORAGE.title'), true); }
+        }, { primary: true }));
+        const outcome = state?.kind === 'cast' ? state.outcome : completed?.report.outcome;
+        if (outcome !== undefined) {
+          title.textContent = t(receiptTitle(outcome));
+          detail.textContent = t(outcome === 'ACCEPTED_RECORDED' ? 'qv.receipt.proves' : outcome === 'PENDING_UNCONFIRMED' ? 'qv.receipt.pendingBody' : 'qv.receipt.doesnt');
+          retryOut.append(link(electionPath(L.apiId, 'receipt') + location.hash, t('qv.receipt.checkNow')));
+        }
+        if (report?.receipt) retryOut.append(btn(t('qv.receipt.save'), () => download(`qv-receipt-${L.apiId.slice(0, 6)}.json`, JSON.stringify(report.receipt, null, 2))));
+        if (report?.error) retryOut.append(errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, report.error.ux, report.error.requestId));
+        if (report?.storageFailed) retryOut.append(errorBox('E-KEY-STORAGE'));
+        if (completed && unseenCastReports.get(L.cacheKey) === completed) unseenCastReports.delete(L.cacheKey);
+      };
+      const check = btn(t('qv.receipt.checkNow'), async () => {
+        if (!marker) return;
+        (check as HTMLButtonElement).disabled = true;
+        try {
+          const result = await recoverCast({ pending: marker, origin: L.origin, electionId: L.apiId,
+            manifestHash: ctx.manifestHashHex, api: L.api, logPk: L.logPk, storage: L.storage });
+          if (!currentRoute(epoch)) return;
+          clear(out);
+          say.say(t(result.state === 'included' ? 'qv.receipt.consistent' : 'qv.receipt.notFound'));
+          if (result.state === 'included') {
+            retrySessions.delete(L.cacheKey);
+            out.append(h('p', {}, t('qv.receipt.included', { seq: result.seq, size: result.treeSize })),
+              btn(t('qv.shell.continue'), () => storage.isSession ? go(electionPath(L.apiId, 'receipt') + location.hash) : location.reload()));
+          } else out.append(h('p', {}, t('qv.receipt.notFound')), h('p', {}, t('qv.receipt.pendingBody')));
+        } catch (e) {
+          if (currentRoute(epoch)) { clear(out); out.append(e instanceof BoardIntegrityError ? errorBox(e.code) : errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close })); }
+        } finally { (check as HTMLButtonElement).disabled = false; }
+      }, { disabled: marker === undefined });
+      render(t('qv.nav.vote'), ...head, title,
+        detail, codeEl(/^[0-9a-f]{64}$/.test(code) ? ballotCodeDisplay(hexToBytes(code, 32)) : t('qv.receipt.pendingTitle')),
+        saveCode(L, code), retryOut, check, btn(clearLabel(), () => { void clearDevice(); }), out);
+      if (session) stopBallotView = session.ctl.subscribe(drawRetry);
+      drawRetry();
+      return;
+    }
+    const signer = signers.get(L.keyContext);
+    if (!signer) return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), h('p', {}, t('qv.key.locked')), link(electionPath(L.apiId, 'key') + location.hash, t('qv.key.unlock'), 'btn primary'));
+    if (ctx.phase !== 'open') return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, ctx.phase === 'ready' ? 'E-VOT-NOTOPEN' : 'E-VOT-CLOSED'));
+    const pkHex = bytesToHex(signer.publicKey);
+    if (storage.isSession && !backedUp.has(`${L.keyContext}:${pkHex}`)) return render(t('qv.nav.vote'), ...head,
+      h('p', {}, t('qv.storage.backup')), link(electionPath(L.apiId, 'key') + location.hash, t('qv.key.download')));
+    const container = storage.isSession ? await L.storage.getKey(keySlot(L.apiId)) : undefined;
+    if (!currentRoute(epoch)) return;
+    if (storage.isSession && container?.keyId !== keyIdOf(signer.publicKey)) {
+      signer.lock(); signers.delete(L.keyContext);
+      return render(t('qv.nav.vote'), ...head, h('p', {}, t('qv.key.locked')), link(electionPath(L.apiId, 'key') + location.hash, t('qv.key.unlock')));
+    }
+    const supersedes = lastOwnBallotCode(L.records, pkHex, bytesToHex(ctx.params.ctx), (env) => ed25519Verify(signer.publicKey, hexToBytes(env.sig, 64), castDigest(ctx.params.ctx, ballotCode(ctx.params.ctx, env.body))));
+    const ctl = new BallotController({ ctx, apiElectionId: L.apiId, origin: L.origin, signer, api: L.api, sealer, storage: L.storage, rng: systemRng, logPk: L.logPk, supersedes: supersedes || NO_SUPERSEDES, clientBuild: env.build.id });
+    storage.beginBallot();
+    if (container) {
+      retrySessions.set(L.cacheKey, { manifestHash: ctx.manifestHashHex, voterPk: pkHex, keyId: container.keyId, ctl });
+    }
+    const stop = ctl.subscribe((state) => {
+      const receiptEvidence = state.kind === 'failed' && !state.retryCast && ctl.lastCast?.receipt !== undefined;
+      if (state.kind !== 'cast' && !receiptEvidence) return;
+      ctl.discardSecrets();
+      if (retrySessions.get(L.cacheKey)?.ctl === ctl) retrySessions.delete(L.cacheKey);
+      stop();
+      if (storage.generation !== generation || currentRoute(epoch) || !ctl.lastCast) return;
+      unseenCastReports.set(L.cacheKey, { manifestHash: ctx.manifestHashHex, keyId: keyIdOf(signer.publicKey), report: ctl.lastCast });
+      const routeNow = parseRoute(location.pathname);
+      // Refresh only an already-open pending Vote view for this exact credential/context, never unrelated navigation.
+      if (active?.cacheKey === L.cacheKey && routeNow.name === 'election' && routeNow.view === 'vote') void route();
+    });
+    const draw = (): void => {
+      if (!currentRoute(epoch)) return;
+      const s = ctl.state;
+      if (signer.locked && s.kind !== 'casting' && s.kind !== 'cast' && !(s.kind === 'failed' && s.retryCast)) return render(t('qv.nav.vote'), ...head, heading(t('qv.nav.vote')), h('p', {}, t('qv.key.locked')), link(electionPath(L.apiId, 'key') + location.hash, t('qv.key.unlock'), 'btn primary'));
+      ballotLock = (): void => { ctl.lockSession(); draw(); };
+      const area = h('div', {});
+      if (s.kind === 'selecting') {
+        const sel: Record<string, string[]> = Object.assign(Object.create(null), s.selections);
+        const groups = ctx.manifest.contests.map((c) => {
+          const multi = c.method === 'approval' || c.method === 'k-of-n';
+          const max = maximumSelections(c);
+          const counter = h('p', { class: 'hint', 'aria-live': 'off' });
+          const upd = (): void => { counter.textContent = multi ? t('qv.ballot.counter', { selected: (sel[c.id] ?? []).length, max }) : ''; };
+          const fs = h('fieldset', {}, h('legend', {}, c.title), h('p', { class: 'hint' }, c.method === 'k-of-n' ? t('qv.ballot.chooseUpTo', { k: max }) : multi ? t('qv.ballot.chooseAny') : t('qv.ballot.chooseOne')));
+          for (const o of c.options) {
+            const inp = h('input', { type: multi ? 'checkbox' : 'radio', name: c.id, value: o.id, checked: (sel[c.id] ?? []).includes(o.id), onchange: (e: Event) => {
+              const el = e.target as HTMLInputElement;
+              if (multi) { const cur = new Set(sel[c.id] ?? []); if (el.checked) { if (cur.size >= max) { el.checked = false; say.say(t('qv.err.E-VOT-OVERVOTE.body', { k: max, x: cur.size + 1 }), true); return; } cur.add(o.id); } else cur.delete(o.id); sel[c.id] = [...cur]; } else sel[c.id] = [o.id];
+              upd();
+            } });
+            fs.append(h('label', { class: 'choice' }, inp, ' ', o.label));
+          }
+          upd();
+          fs.append(counter);
+          return fs;
+        });
+        add(area, [...groups, btn(t('qv.ballot.review'), () => { ctl.select(sel); ctl.review(); draw(); }, { primary: true })]);
+      } else if (s.kind === 'reviewing') {
+        const tbl = h('table', {}, h('caption', {}, t('qv.ballot.reviewTitle')), h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, t('qv.audit.contest')), h('th', { scope: 'col' }, t('qv.audit.choice')))),
+          h('tbody', {}, ...ctx.manifest.contests.map((c) => h('tr', {}, h('th', { scope: 'row' }, c.title), h('td', {}, (s.selections[c.id] ?? []).map((id) => c.options.find((o) => o.id === id)?.label ?? id).join(', ') || t('qv.ballot.noChoice'),
+            (s.selections[c.id] ?? []).length < maximumSelections(c) ? h('p', { class: 'hint' }, t('qv.ballot.undervote')) : null)))));
+        tbl.setAttribute('translate', 'no');
+        add(area, [h('p', {}, t('qv.ballot.reviewPrivate')), tbl, h('div', { class: 'row' }, btn(t('qv.shell.back'), () => { ctl.edit(); draw(); }), btn(t('qv.ballot.seal'), async () => { const p = ctl.seal(); draw(); await p; draw(); }, { primary: true })), h('p', { class: 'hint' }, t('qv.ballot.sealHelp'))]);
+      } else if (s.kind === 'sealing') add(area, [h('p', {}, t('qv.ballot.sealing')), h('progress', { 'aria-label': t('qv.a11y.working') })]);
+      else if (s.kind === 'sealed') {
+        const disp = ctl.codeDisplay ?? '';
+        const castB = btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true, disabled: !canCast(s), id: 'cast-btn' });
+        const testB = btn(t('qv.ballot.test'), async () => { const p = ctl.audit({ post: (document.getElementById('post-chk') as HTMLInputElement | null)?.checked ?? true, publishReveal: (document.getElementById('rev-chk') as HTMLInputElement | null)?.checked ?? false }); draw(); await p; draw(); }, { primary: true, disabled: !canAudit(s), id: 'test-btn' });
+        add(area, [h('p', {}, t(storage.isSession ? 'qv.storage.loss' : 'qv.ballot.recoveryStorage')), h('p', {}, t('qv.ballot.codeHelp')), h('p', {}, t('qv.ballot.code'), ': ', codeEl(disp), ' ', copyBtn(disp)), saveCode(L, ctl.codeHex ?? ''),
+          h('details', {}, h('summary', {}, t('qv.ballot.readSlowly')), h('p', {}, spokenForm(disp))),
+          h('h2', {}, t('qv.ballot.choose')), h('p', {}, t('qv.vote.codeWhat')),
+          h('div', { class: 'row equal' }, h('div', {}, castB, h('p', { class: 'hint' }, t('qv.ballot.castHelp'))), h('div', {}, testB, h('p', { class: 'hint' }, t('qv.ballot.testHelp')))),
+          h('h3', {}, t('qv.vote.doubleCheck')), h('p', {}, t('qv.vote.optional')), h('p', {}, t('qv.audit.why')),
+          h('p', {}, t('qv.audit.public')),
+          h('label', {}, h('input', { type: 'checkbox', id: 'post-chk', checked: true }), ' ', t('qv.audit.postOpt')), h('br'),
+          h('label', {}, h('input', { type: 'checkbox', id: 'rev-chk' }), ' ', t('qv.audit.publishReveal'))]);
+        // The code is in the DOM now; only then do the buttons become usable (REQ-011).
+        queueMicrotask(() => { if (!currentRoute(epoch)) return; ctl.codeRendered(); (castB as HTMLButtonElement).disabled = !canCast(ctl.state); (testB as HTMLButtonElement).disabled = !canAudit(ctl.state); say.say(t('qv.ballot.sealedAnnounce')); (castB as HTMLElement).focus(); });
+      } else if (s.kind === 'casting' || s.kind === 'auditing') add(area, [h('p', {}, s.kind === 'casting' ? t('qv.ballot.casting') : t('qv.ballot.testing')), h('progress', { 'aria-label': t('qv.a11y.working') })]);
+      else if (s.kind === 'audited') {
+        const a = ctl.lastAudit;
+        add(area, [h('h2', { tabindex: -1, class: 'step-heading' }, t('qv.audit.title')), h('p', {}, t('qv.audit.why')), h('h3', {}, t('qv.audit.autoChecks')), h('ul', {}, ...(a?.result.checks ?? []).map((c) => h('li', {}, `${t(({ context: 'qv.audit.check.code', code: 'qv.audit.check.code', proofs: 'qv.audit.check.proofs', plaintext: 'qv.audit.check.plain' } as const)[c.id])}: ${c.ok ? t('qv.verify.status.pass') : t('qv.verify.status.fail')}`))),
+          h('table', {}, h('caption', {}, t('qv.audit.matchQ')), h('tbody', {}, ...ctx.manifest.contests.map((c) => h('tr', {}, h('th', { scope: 'row' }, c.title), h('td', {}, (a?.result.selections[c.id] ?? []).map((id) => c.options.find((o) => o.id === id)?.label ?? id).join(', ') || t('qv.ballot.noChoice')))))),
+          h('p', {}, t('qv.audit.sameSoftware')), a?.posted ? h('p', {}, t('qv.audit.posted')) : h('p', {}, t('qv.audit.notPosted')),
+          h('fieldset', {}, h('legend', {}, t('qv.audit.matchQ')), h('label', {}, h('input', { type: 'radio', name: 'mq', onchange: () => { ctl.confirmMatch(true); } }), ' ', t('qv.audit.matchYes')), h('br'), h('label', {}, h('input', { type: 'radio', name: 'mq', onchange: () => { ctl.confirmMatch(false); } }), ' ', t('qv.audit.matchNo'))),
+          h('p', {}, t(a?.result.ok ? 'qv.audit.ok' : 'qv.audit.mismatch')),
+          btn(t('qv.audit.download'), () => a && download('qv-audit.json', a.text)), h('p', {}, t('qv.audit.secondDeviceHelp')),
+          btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); }, { primary: true }), h('p', { class: 'hint' }, t('qv.ballot.newCodeDifferent'))]);
+      } else if (s.kind === 'cast') {
+        const rep = ctl.lastCast;
+        const titleKey = receiptTitle(s.outcome);
+        add(area, [h('h2', { tabindex: -1, class: 'step-heading' }, t(titleKey)), rep?.codeDisplay ? h('p', {}, t('qv.ballot.code'), ': ', codeEl(rep.codeDisplay)) : null,
+          rep?.seq !== undefined && s.outcome === 'ACCEPTED_RECORDED' ? h('p', {}, t('qv.receipt.logged', { time: new Date((rep.sequencedAt ?? 0) * 1000).toLocaleString(locale), seq: rep.seq })) : null,
+          s.outcome === 'ACCEPTED_RECORDED' ? h('p', {}, t('qv.receipt.proves')) : s.outcome === 'PENDING_UNCONFIRMED' ? h('p', {}, t('qv.receipt.pendingBody')) : null, h('p', {}, t('qv.receipt.doesnt')), h('p', {}, t('qv.receipt.shared')),
+          rep?.error ? errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, rep.error.ux, rep.error.requestId) : null,
+          rep?.storageFailed ? errorBox('E-KEY-STORAGE') : null,
+          rep?.receipt ? btn(t('qv.receipt.save'), () => download(`qv-receipt-${L.apiId.slice(0, 6)}.json`, JSON.stringify(rep.receipt, null, 2))) : null,
+          rep ? saveCode(L, rep.codeHex) : null,
+          btn(clearLabel(), () => { void clearDevice(); }), link(electionPath(L.apiId, 'receipt') + location.hash, t('qv.receipt.checkNow'))]);
+      } else {
+        // A failed CAST keeps the receipt when the board accepted the ballot. "Seal a new ballot" appears only where NEW_SEAL is accepted.
+        const rep = ctl.lastCast?.codeHex === s.sealed?.code ? ctl.lastCast : undefined;
+        add(area, [s.retryCast ? h('p', {}, t('qv.receipt.pendingBody')) : null, link(electionPath(L.apiId, 'vote') + location.hash, t('qv.receipt.checkNow')), errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, s.error.startsWith('E-') ? s.error : 'E-GEN-UNKNOWN'),
+          rep ? h('p', {}, t('qv.ballot.code'), ': ', codeEl(rep.codeDisplay), saveCode(L, rep.codeHex)) : null,
+          rep?.receipt ? btn(t('qv.receipt.save'), () => download(`qv-receipt-${L.apiId.slice(0, 6)}.json`, JSON.stringify(rep.receipt, null, 2))) : null,
+          s.retryCast ? btn(t('qv.ballot.cast'), async () => { const p = ctl.cast(); draw(); await p; draw(); }, { primary: true }) : canNewSeal(s) ? btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); }) : null]);
+      }
+      render(t('qv.nav.vote'), ...head, stepper(s.kind === 'selecting' || s.kind === 'reviewing' || s.kind === 'sealing' ? 3 : 4), heading(t('qv.ballot.title')), h('p', {}, t('qv.vote.privacyNote')), area, more(h('p', {}, t(ctx.manifest.ballots.max_per_voter === 1 ? 'qv.ballot.oneBallot' : 'qv.ballot.revoteNote')), guaranteePanel(L)));
+      const nh = area.querySelector('.step-heading') as HTMLElement | null;
+      nh?.focus();
+    };
+    draw();
+  }
+
+  async function receiptView(L: Loaded, ctx: ElectionContext, head: Child[], epoch: number): Promise<void> {
+    const stored = await L.storage.getReceipts(L.apiId);
+    if (!currentRoute(epoch)) return;
+    const out = h('div', {});
+    const checks = new ReceiptCheckGate();
+    const checkButtons: HTMLButtonElement[] = [];
+    const invalidate = (): void => { checks.invalidate(); clear(out); };
+    const runCheck = async (operation: (current: () => boolean) => Promise<void>): Promise<void> => {
+      invalidate();
+      await checks.run(async (valid) => {
+        codeInput.disabled = true;
+        (file as HTMLInputElement).disabled = true;
+        for (const button of checkButtons) button.disabled = true;
+        try { await operation(() => currentRoute(epoch) && valid()); }
+        finally {
+          codeInput.disabled = false;
+          (file as HTMLInputElement).disabled = false;
+          for (const button of checkButtons) button.disabled = false;
+        }
+      });
+    };
+    const codeInput = h('input', { type: 'text', autocomplete: 'off', spellcheck: false, maxlength: 256, oninput: invalidate }) as HTMLInputElement;
+    const checkCode = btn(t('qv.receipt.checkCode'), () => runCheck(async (current) => {
+      const input = codeInput.value;
+      try {
+        const result = await lookupBallotCode({ input, api: L.api, apiElectionId: L.apiId,
+          ctx: ctx.params.ctx, logPk: L.logPk, expectedOrigin: L.origin, pinned: await L.storage.getHead(L.apiId) });
+        if (!current()) return;
+        clear(out);
+        if (result.state === 'included') {
+          await L.storage.putHead({ ...result.head, electionId: L.apiId });
+          if (!current()) return;
+          out.append(codeEl(ballotCodeDisplay(hexToBytes(result.code, 32), true)), h('p', {}, t('qv.receipt.included', { seq: result.seq, size: result.treeSize })), h('p', {}, t('qv.receipt.consistent')));
+        } else out.append(h('p', {}, t(result.state === 'invalid-code' ? 'qv.receipt.invalidCode' : result.state === 'ambiguous' ? 'qv.receipt.ambiguousCode' : 'qv.receipt.notFound')));
+      } catch (error) {
+        if (!current()) return;
+        clear(out);
+        out.append(error instanceof BoardIntegrityError ? errorBox(error.code) : errorFor(error));
+        say.say(t('qv.err.E-BOARD-INCL-FAIL.title'), true);
+      }
+    }));
+    checkButtons.push(checkCode as HTMLButtonElement);
+    const check = async (seq: number, leafB64u: string, code: string, current: () => boolean): Promise<boolean> => {
+      try {
+        const leaf = b64uDecode(leafB64u);
+        if (!leaf) throw new Error('bad receipt');
+        const r = await checkBallotCodeEntry({ api: L.api, apiElectionId: L.apiId, ctx: ctx.params.ctx, logPk: L.logPk, expectedLeaf: leaf, seq, code, pinned: await L.storage.getHead(L.apiId), expectedOrigin: L.origin });
+        if (!current()) return false;
+        clear(out);
+        if (r.state === 'included') {
+          await L.storage.putHead({ ...r.head, electionId: L.apiId });
+          if (!current()) return false;
+          out.append(codeEl(ballotCodeDisplay(hexToBytes(code, 32), true)), h('p', {}, t('qv.receipt.included', { seq: r.seq, size: r.treeSize })), h('p', {}, t('qv.receipt.consistent')));
+          return true;
+        }
+        out.append(h('p', {}, t('qv.receipt.notFound')));
+      } catch (e) {
+        if (!current()) return false;
+        clear(out);
+        out.append(e instanceof BoardIntegrityError ? errorBox(e.code) : errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }));
+        say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
+      }
+      return false;
+    };
+    const binding = { election: L.apiId, manifestHash: ctx.manifestHashHex };
+    const file = h('input', { type: 'file', accept: 'application/json', onchange: async (e: Event) => {
+      const f = (e.target as HTMLInputElement).files?.[0];
+      invalidate();
+      if (!f) return;
+      await runCheck(async (current) => {
+        try {
+          if (f.size > MAX_RECEIPT_FILE_BYTES) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is too large');
+          const p = parseReceiptFile(await f.text(), binding);
+          if (!current()) return;
+          if (!p) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is malformed or belongs to another election');
+          const included = await check(p.seq, p.leaf_hash, p.ballot_code, current);
+          if (included && current()) addStanding(p.seq, p.ballot_code);
+        } catch (error) {
+          if (!current()) return;
+          clear(out);
+          out.append(error instanceof BoardIntegrityError ? errorBox(error.code) : errorFor(error));
+          say.say(t('qv.err.E-BOARD-INCL-FAIL.title'), true);
+        }
+      });
+    } });
+    // Standing: is this receipt still the voter's newest ballot? Derived from the public log we hold; refreshed in place on live updates.
+    const standings: { seq: number; code: string; el: HTMLElement }[] = [];
+    const standingText = (seq: number, code: string): { text: string; kind: string; note?: string } => {
+      const cur = L.ctx;
+      if (cur === undefined) return { text: t('qv.receipt.standing.unknown'), kind: 'unknown' };
+      L.ballots ??= new BallotIndex(cur.params.ctx);
+      L.ballots.update(L.records);
+      const st = L.ballots.standing(seq, code, { openSeq: cur.openSeq, closeSeq: cur.closeSeq, maxPerVoter: cur.manifest.ballots.max_per_voter });
+      switch (st.state) {
+        case 'current': return { text: t('qv.receipt.standing.current'), kind: 'current' };
+        case 'superseded': return { text: t('qv.receipt.standing.superseded', { seq: st.bySeq }), kind: 'superseded', note: t('qv.receipt.standing.supersededNote') };
+        case 'mismatch': return { text: t('qv.receipt.standing.mismatch'), kind: 'mismatch' };
+        default: return { text: t('qv.receipt.standing.unknown'), kind: 'unknown' };
+      }
+    };
+    const paintStanding = (x: { seq: number; code: string; el: HTMLElement }): void => {
+      const r = standingText(x.seq, x.code);
+      clear(x.el);
+      x.el.className = `qv-standing ${r.kind}`;
+      add(x.el, [h('strong', {}, t('qv.receipt.standing.title'), ': '), r.text, r.note ? h('span', { class: 'hint' }, ' ', r.note) : null]);
+    };
+    const addStanding = (seq: number, code: string): void => {
+      const el = h('p', {});
+      const x = { seq, code, el };
+      standings.push(x);
+      paintStanding(x);
+      standingBox.append(el);
+    };
+    const standingBox = h('div', {});
+    const items = stored.map((s) => {
+      const f = parseReceiptFile(s.json, binding);
+      const el = h('span', {});
+      if (f) standings.push({ seq: f.seq, code: s.code, el });
+      const button = btn(t('qv.receipt.check'), () => runCheck(async (current) => { if (f) await check(f.seq, f.leaf_hash, f.ballot_code, current); }));
+      checkButtons.push(button as HTMLButtonElement);
+      return h('li', {}, codeEl(ballotCodeDisplay(hexToBytes(s.code, 32), true)), ' ', button, h('div', {}, el));
+    });
+    for (const x of standings) paintStanding(x);
+    render(t('qv.nav.receipt'), ...head, heading(t('qv.receipt.checkTitle')), h('p', {}, t('qv.receipt.proves')),
+      field(t('qv.receipt.enterCode'), codeInput), h('p', { class: 'hint' }, t('qv.receipt.codeHelp')), checkCode, field(t('qv.receipt.orFile'), file), standingBox,
+      h('h2', {}, t('qv.receipt.stored')), stored.length === 0 ? h('p', {}, t('qv.receipt.none')) : h('ul', {}, ...items), out);
+    repaint = () => { for (const x of standings) paintStanding(x); };
+    void ctx;
+  }
+
+  function authorKeyInput(): HTMLTextAreaElement {
+    return h('textarea', { rows: 3, maxlength: 2080, autocomplete: 'off', spellcheck: false }) as HTMLTextAreaElement;
+  }
+
+  async function resultsView(L: Loaded, ctx: ElectionContext, head: Child[], epoch = routeEpoch): Promise<void> {
+    if (!currentRoute(epoch)) return;
+    const view = ++resultsEpoch;
+    if (!ctx.tally) {
+      render(t('qv.results.title'), ...head, heading(t('qv.results.title')), h('p', {}, t('qv.results.notYet')));
+      repaint = () => { if (L.ctx?.tally) void resultsView(L, L.ctx, head, epoch); };
+      return;
+    }
+    const keys = authorKeyInput(), out = h('div', {});
+    let generation = 0;
+    const current = (run: number): boolean => currentRoute(epoch) && view === resultsEpoch && run === generation;
+    keys.addEventListener('input', () => { generation++; clear(out); out.textContent = t('qv.verify.run'); });
+    render(t('qv.results.title'), ...head, heading(t('qv.results.title')),
+      field(t('qv.verify.authorKeys'), keys, t('qv.verify.authorKeysHint')),
+      btn(t('qv.verify.run'), () => check(keys.value), { primary: true }), out);
+    // A live append creates a fresh view without carrying user pins into an automatic run.
+    repaint = () => { void resultsView(L, L.ctx ?? ctx, head, epoch); };
+    async function check(keyText: string): Promise<void> {
+      const run = ++generation;
+      clear(out); out.textContent = t('qv.verify.running');
+      try {
+        const extraAuthorKeys = parseAuthorKeyInput(keyText);
+        const snapshot = [...L.records];
+        let board: unknown;
+        try { board = (await L.api.exportWithBoard(L.apiId) as { board?: unknown })?.board; } catch { /* absent evidence remains INCOMPLETE */ }
+        if (!current(run)) return;
+        const roll = await fullRoll(L);
+        if (!current(run)) return;
+        const report = await verifyLoadedElection(snapshot, ctx, roll, board, extraAuthorKeys);
+        if (!current(run)) return;
+        if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
+        clear(out);
+        if (!canShowResults(report)) {
+          add(out, [errorBox('E-VER-FAIL', { id: Object.entries(report.checks).find(([,v]) => v === 'fail')?.[0] ?? report.findings[0]?.code ?? 'tally' }), ...reportContent(report)]);
+          return;
+        }
+        const charts = await (async () => {
+          await pinnedPreloads();
+          return import('./charts.ts');
+        })().catch(() => undefined);
+        if (!current(run)) return;
+        if (L.records.length !== snapshot.length) return resultsView(L, L.ctx ?? ctx, head, epoch);
+        const sections = (): HTMLElement[] => {
+          const cur = ctx;
+          const tally = ctx.tally!;
+          return tally.results.map((res) => {
+            const c = cur.manifest.contests.find((x) => x.id === res.contest);
+            const opts = tally.contests.find((x) => x.id === res.contest)?.options ?? [];
+            const label = (id: string): string => c?.options.find((o) => o.id === id)?.label ?? id;
+            const text = opts.map((o) => `${label(o.id)} ${o.T}`).join(', ');
+            const winners = res.outcome.kind === 'winners' ? res.outcome.winners ?? [] : [];
+            return h('section', {}, h('h2', {}, c?.title ?? res.contest),
+              charts ? charts.renderBarChart({ t, rtl: tr.dir === 'rtl' }, c?.title ?? res.contest, { options: opts.map((o) => ({ id: o.id, label: label(o.id), count: o.T })), winners }) : null,
+              h('table', {}, h('caption', {}, c?.title ?? res.contest), h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, t('qv.results.option')), h('th', { scope: 'col' }, t('qv.results.count')))),
+                h('tbody', {}, ...opts.map((o) => h('tr', {}, h('th', { scope: 'row' }, label(o.id)), h('td', {}, String(o.T)))))),
+              h('p', {}, t('qv.results.summary', { text })), h('p', {}, t('qv.results.participation', { count: res.participation })),
+              h('p', {}, t('qv.results.quorum', { met: String(res.quorum_met) })),
+              h('p', {}, res.outcome.kind === 'winners' ? t('qv.results.outcome.winners', { names: winners.map(label) }) : t(`qv.results.outcome.${res.outcome.kind}` as MessageKey)));
+          });
+        };
+        add(out, [...reportContent(report), ...sections(), h('details', {}, h('summary', {}, t('qv.results.how')), h('p', {}, t('qv.results.howBody')), link('/verify', t('qv.nav.verify')))]);
+      } catch (e) {
+        if (!current(run)) return;
+        clear(out); add(out, [h('h2', {}, t('qv.verify.verdict.FAIL')), h('p', {}, e instanceof Error ? e.message : t('qv.err.E-GEN-UNKNOWN.body'))]);
+      }
+    }
+    await check('');
+  }
+
+  const checkMessages: Record<string, MessageKey> = {
+    'chk.manifest.hash': 'qv.verify.chk.chk.manifest.hash',
+    'chk.manifest.sig': 'qv.verify.chk.chk.manifest.sig',
+    'chk.keys.trustees': 'qv.verify.chk.chk.keys.trustees',
+    'chk.board.append_only': 'qv.verify.chk.chk.board.append_only',
+    'chk.board.witness': 'qv.verify.chk.chk.board.witness',
+    'chk.ballots.valid': 'qv.verify.chk.chk.ballots.valid',
+    'chk.ballots.latest': 'qv.verify.chk.chk.ballots.latest',
+    'chk.tally.aggregate': 'qv.verify.chk.chk.tally.aggregate',
+    'chk.tally.decrypt': 'qv.verify.chk.chk.tally.decrypt',
+    'chk.result.rules': 'qv.verify.chk.chk.result.rules',
+    'chk.benaloh.spoiled': 'qv.verify.chk.chk.benaloh.spoiled',
+    'chk.receipts.sample': 'qv.verify.chk.chk.receipts.sample',
+    'chk.encoding.canonical': 'qv.verify.chk.chk.encoding.canonical',
+    'chk.time.window': 'qv.verify.chk.chk.time.window',
+  };
+  const checkLabel = (key: string, status = false): string => {
+    if (status) return t(`qv.verify.status.${key}` as MessageKey);
+    const message = Object.hasOwn(checkMessages, key) ? checkMessages[key] : undefined;
+    return message ? t(message) : key;
+  };
+  function reportContent(rep: Awaited<ReturnType<typeof verifyElectionText>>, mism = false): Child[] {
+    const summary = verificationSummary(rep, mism);
+    return [mism ? errorBox('E-VER-ANCHOR') : null, h('h2', {}, t(`qv.verify.verdict.${summary.verdict}`)),
+      h('p', {}, t('qv.verify.itemized', { passed: summary.passed, total: summary.total })),
+      h('ul', {}, ...Object.entries(rep.checks).map(([k, v]) => h('li', {}, `${checkLabel(k)}: ${checkLabel(v, true)}`))),
+      ...rep.caveats.map((c) => h('p', { class: 'hint' }, c)), h('p', {}, t('qv.audit.sameSoftware')),
+      ...rep.findings.slice(0, 50).map((f) => h('p', {}, `${f.code}: ${f.detail}`))];
+  }
+
+  function verifyView(): void {
+    const file = h('input', { type: 'file', accept: 'application/json' }) as HTMLInputElement;
+    const anchor = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
+    const out = h('div', {}), keys = authorKeyInput();
+    const progress = h('progress', { 'aria-label': t('qv.verify.progressLabel'), hidden: true }) as HTMLProgressElement;
+    const detail = h('p', { class: 'hint' });
+    const epoch = routeEpoch;
+    let generation = 0;
+    let active: AbortController | undefined;
+    const current = (run: number): boolean => currentRoute(epoch) && run === generation;
+    const announce = (msg: string, urgent = false): void => {
+      const run = generation;
+      say.say(msg, urgent, () => current(run));
+    };
+    const busy = (value: boolean): void => {
+      runButton.disabled = value;
+      cancelButton.disabled = !value;
+      progress.hidden = !value;
+      out.setAttribute('aria-busy', String(value));
+    };
+    const invalidate = (): void => {
+      generation++;
+      active?.abort();
+      active = undefined;
+      busy(false);
+      clear(out);
+      detail.textContent = '';
+    };
+    stopVerification = invalidate;
+    const changed = (): void => { invalidate(); announce(t('qv.verify.run')); };
+    file.addEventListener('change', changed);
+    anchor.addEventListener('input', changed);
+    keys.addEventListener('input', changed);
+    const cancelButton = btn(t('qv.key.cancel'), () => {
+      invalidate();
+      out.textContent = t('qv.verify.cancelled');
+      announce(t('qv.verify.cancelled'));
+      runButton.focus();
+    }, { disabled: true }) as HTMLButtonElement;
+    const runButton = btn(t('qv.verify.run'), async () => {
+        const f = file.files?.[0]; if (!f) return;
+        invalidate();
+        const run = ++generation;
+        const scope = new AbortController();
+        active = scope;
+        const anchorText = anchor.value;
+        busy(true);
+        clear(out); out.textContent = t('qv.verify.running');
+        announce(t('qv.verify.running'));
+        let lastYield = 0;
+        let lastStage: VerificationProgress['stage'] | undefined;
+        try {
+          const extraAuthorKeys = parseAuthorKeyInput(keys.value);
+          if (f.size > 64 * 1024 * 1024) throw new Error('file exceeds 67108864 bytes');
+          const text = await f.text();
+          if (!current(run)) return;
+          const rep = await verifyPublicBundleText(text, { extraAuthorKeys, cooperative: { signal: scope.signal, checkpoint: async (p) => {
+            if (!current(run)) { scope.abort(); return; }
+            progress.max = Math.max(1, p.total);
+            progress.value = p.completed;
+            progress.setAttribute('data-stage', p.stage);
+            detail.textContent = t('qv.verify.progress', { done: p.completed, total: p.total });
+            const newStage = lastStage !== p.stage;
+            lastStage = p.stage;
+            if (newStage || performance.now() - lastYield >= 16) {
+              await new Promise<void>((resolve) => setTimeout(resolve, 0));
+              lastYield = performance.now();
+            }
+          } } });
+          let mism = false;
+          if (anchorText.trim() !== '') { try { const mh = (JSON.parse(text) as { manifest_hash: string }).manifest_hash; mism = !sameElectionId(anchorText, electionIdOf(hexToBytes(mh, 32))); } catch { mism = true; } }
+          if (!current(run)) return;
+          clear(out);
+          add(out, [...reportContent(rep, mism), h('p', {}, t('qv.verify.counts', { cast: rep.counts.cast, counted: rep.counts.counted, spoiled: rep.counts.spoiled })), h('p', {}, t('qv.verify.scope')),
+            btn(t('qv.verify.download'), () => download('qv-verify-report.json', JSON.stringify(rep, null, 2)))]);
+          announce(t(`qv.verify.verdict.${verificationSummary(rep, mism).verdict}`));
+        } catch (e) { if (!current(run)) return; clear(out); add(out, [h('h2', {}, t('qv.verify.verdict.FAIL')), h('p', {}, e instanceof Error ? e.message : t('qv.err.E-GEN-UNKNOWN.body'))]); announce(t('qv.verify.verdict.FAIL'), true); }
+        finally { if (current(run)) { active = undefined; busy(false); detail.textContent = ''; } }
+      }, { primary: true }) as HTMLButtonElement;
+    render(t('qv.nav.verify'), heading(t('qv.verify.title')), h('p', {}, t('qv.phish.verifierwarn')), field(t('qv.verify.file'), file), field(t('qv.verify.anchor'), anchor, t('qv.verify.anchorHint')),
+      field(t('qv.verify.authorKeys'), keys, t('qv.verify.authorKeysHint')), runButton, cancelButton, progress, detail, out);
+  }
+
+  async function createView(epoch: number): Promise<void> {
+    const out = h('div', {});
+    const title = h('input', { type: 'text' }) as HTMLInputElement;
+    const tpl = h('select', {}, ...TEMPLATES.map((x) => h('option', { value: x }, t(`qv.org.tpl.${x}` as MessageKey)))) as HTMLSelectElement;
+    const q = h('input', { type: 'text' }) as HTMLInputElement;
+    const opts = h('textarea', { rows: 4 }) as HTMLTextAreaElement;
+    const rollT = h('textarea', { rows: 6, spellcheck: false }) as HTMLTextAreaElement;
+    const trustees = h('textarea', { rows: 3, spellcheck: false }) as HTMLTextAreaElement;
+    const tt = h('input', { type: 'number', min: 1, value: 2 }) as HTMLInputElement;
+    const k = h('input', { type: 'number', min: 1, step: 1, value: 1 }) as HTMLInputElement;
+    const maxBallots = h('input', { type: 'number', min: 1, max: 20, step: 1, value: 8 }) as HTMLInputElement;
+    const quorum = h('input', { type: 'number', min: 0, step: 1, value: 0 }) as HTMLInputElement;
+    const org = await organizerStorage.getKey(ORGANIZER_SLOT);
+    if (!currentRoute(epoch)) return;
+    const publicationUnlock = (): ((passphrase: string) => Promise<Signer>) => {
+      const device = organizerStorage, keys = keyGeneration;
+      return (passphrase) => storage.protectSigner(async () =>
+        (await unlockKey({ storage: device, slot: ORGANIZER_SLOT, passphrase, rewrap: false, deps: keyDeps() })).signer,
+      () => currentRoute(epoch) && keys === keyGeneration);
+    };
+    let organizerPk: string | undefined;
+    const keys = organizerKeyPanel({ tr, storage: organizerStorage, deps: keyDeps, hasKey: org !== undefined, backupRequired: storage.isSession, current: () => currentRoute(epoch),
+      ready: (pk) => { organizerPk = pk; }, error: (e) => errorFor(e), download: (text) => download('organizer.qvkey', text) });
+    let lockPublication = (): void => {};
+    keyLock = (): void => { keys.lock(); lockPublication(); };
+    // Set by a successful preview; the publish section uses it. The state of a failed publish is kept here, in memory only.
+    let prepared: { form: PublishForm; rollHex: string[] } | undefined;
+    let pubState: PublishState | undefined;
+    const publishBox = h('div', {});
+    const times = organizerTimes({ tr, current: () => currentRoute(epoch), changed: () => {
+      prepared = undefined; pubState = undefined; clear(out); clear(publishBox);
+    } });
+    const publishSection = (): HTMLElement => {
+      const orgIn = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
+      const pw = h('input', { type: 'password', autocomplete: 'current-password', spellcheck: false, autocapitalize: 'off', autocorrect: 'off' }) as HTMLInputElement;
+      const pubOut = h('div', {});
+      const orgName = h('input', { type: 'text', maxlength: 120 }) as HTMLInputElement;
+      const orgToken = h('input', { type: 'password', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
+      lockPublication = (): void => { pw.value = ''; orgToken.value = ''; };
+      let enrollment: { name: string; token: string; key: string } | undefined;
+      let enrolling = false;
+      const orgBtn = btn(t('qv.org.enroll'), async () => {
+        if (enrolling || !currentRoute(epoch)) return;
+        if (!enrollment && orgName.value.trim() === '') { clear(pubOut); pubOut.append(h('p', {}, t('qv.org.nameRequired'))); return; }
+        enrolling = true;
+        (orgBtn as HTMLButtonElement).disabled = true;
+        (pubBtn as HTMLButtonElement).disabled = true;
+        orgName.disabled = true; orgToken.disabled = true;
+        enrollment ??= { name: orgName.value, token: orgToken.value, key: b64uEncode(systemRng.bytes(16)) };
+        clear(pubOut); pubOut.append(h('p', {}, t('qv.org.enrolling')));
+        const passphrase = pw.value; pw.value = '';
+        try {
+          const id = await enrollOrganization({ name: enrollment.name, token: enrollment.token, idempotencyKey: enrollment.key, passphrase,
+            storage: organizerStorage, apiBase: policy.defaultBoard, origin: location.origin, deps: keyDeps(), unlock: publicationUnlock() });
+          if (!currentRoute(epoch)) return;
+          orgIn.value = id; enrollment.token = ''; orgToken.value = '';
+          clear(pubOut); pubOut.append(h('p', {}, t('qv.org.enrolled', { id })));
+          say.say(t('qv.org.enrolled', { id }));
+        } catch (e) {
+          if (currentRoute(epoch)) { clear(pubOut); pubOut.append(errorFor(e), h('p', {}, t('qv.org.enrollRetry'))); (orgBtn as HTMLButtonElement).disabled = false; }
+        } finally { pw.value = ''; enrolling = false; if (currentRoute(epoch)) (pubBtn as HTMLButtonElement).disabled = false; }
+      });
+      const pubBtn = btn(t('qv.org.publish'), async () => {
+        const prep = prepared;
+        if (!prep || enrolling || !currentRoute(epoch)) return;
+        const button = pubBtn as HTMLButtonElement;
+        clear(pubOut);
+        button.disabled = true;
+        (orgBtn as HTMLButtonElement).disabled = true;
+        add(pubOut, [h('p', {}, t('qv.org.publishing'))]);
+        let o: PublishOutcome;
+        const passphrase = pw.value; pw.value = '';
+        try {
+          o = await runPublish({ orgId: orgIn.value, passphrase, form: prep.form, rollHex: prep.rollHex, prior: pubState, storage: organizerStorage, apiBase: policy.defaultBoard, origin: location.origin, deps: keyDeps(), unlock: publicationUnlock() });
+        } finally {
+          pw.value = '';
+        }
+        if (!currentRoute(epoch)) return;
+        clear(pubOut);
+        if (o.kind === 'published') {
+          pubState = o.state;
+          add(pubOut, [h('p', {}, t('qv.org.published', { id: o.electionId })), link(electionPath(o.electionId, 'admin'), t('qv.nav.admin')), h('p', {}, t('qv.admin.pin'), ': ', o.state.manifestHashHex ?? ''), h('h2', {}, t('qv.org.inviteList')), h('p', {}, t('qv.org.publishInvites')),
+            inviteRows(inviteEnv, o.electionId, o.invites)]);
+          say.say(t('qv.org.published', { id: o.electionId }));
+          return;
+        }
+        button.disabled = false;
+        if (enrollment === undefined) (orgBtn as HTMLButtonElement).disabled = false;
+        if (o.kind === 'noOrg') return void add(pubOut, [h('p', { class: 'error' }, t('qv.org.orgRequired'))]);
+        if (o.kind === 'noKey') return void add(pubOut, [h('p', { class: 'error' }, t('qv.org.publishNoKey'))]);
+        if (o.kind === 'locked') return void add(pubOut, [errorBox(o.ux)]);
+        if (o.kind === 'failed') {
+          if (o.state !== undefined) pubState = o.state;
+          add(pubOut, [errorBox(o.ux, { detail: o.detail }, o.ref), h('p', {}, t('qv.org.publishResume'))]);
+          say.say(t('qv.org.publishResume'), true);
+        }
+      }, { primary: true });
+      return h('section', { 'aria-labelledby': 'pub-h' }, h('h2', { id: 'pub-h' }, t('qv.org.publish')), h('p', {}, t('qv.org.publishHelp')),
+        h('p', {}, t('qv.org.enrollHelp')), field(t('qv.org.organizationName'), orgName), field(t('qv.org.registrationToken'), orgToken), orgBtn,
+        field(t('qv.org.orgId'), orgIn, t('qv.org.orgIdHint')), field(t('qv.key.passphrase'), pw), pubBtn, pubOut);
+    };
+    render(t('qv.nav.create'), heading(t('qv.org.title')), keys.element,
+      field(t('qv.org.name'), title), field(t('qv.org.template'), tpl), field(t('qv.org.question'), q), field(t('qv.org.options'), opts), field(t('qv.org.k'), k), field(t('qv.org.maxBallots'), maxBallots), field(t('qv.org.quorum'), quorum),
+      times.element, field(t('qv.org.roll'), rollT, t('qv.org.rollHelp')),
+      field(t('qv.org.trustees'), trustees, t('qv.org.trusteeFormat')), field(t('qv.org.threshold'), tt),
+      h('p', {}, t('qv.org.translateWarn')), h('p', {}, t('qv.org.freeze')),
+      btn(t('qv.org.freezeConfirm'), () => {
+        if (!currentRoute(epoch)) return;
+        clear(out);
+        clear(publishBox);
+        prepared = undefined;
+        pubState = undefined;
+        if (organizerPk === undefined) return void add(out, [h('p', {}, t('qv.org.unlockFirst'))]);
+        const roll = parseRoll(rollT.value);
+        if (roll.errors.length) return void add(out, [h('ul', {}, ...roll.errors.map((e) => h('li', {}, t('qv.org.rollRow', { row: e.row, problem: t(e.problem === 'dup' ? 'qv.org.rollDup' : e.problem === 'badHex' ? 'qv.org.rollBadHex' : 'qv.org.rollBadKey') }))))]);
+        const tl = trustees.value.split(/\r?\n/).filter(Boolean).map((l) => { const [n, k] = l.split(','); return { name: (n ?? '').trim(), signPkHex: (k ?? '').trim().toLowerCase() }; });
+        const resolvedTimes = times.read();
+        if (!resolvedTimes) return void add(out, [errorBox('E-ORG-MANIFEST', { detail: t('qv.org.invalidDate') })]);
+        const form: PublishForm = { title: title.value, contests: [{ template: tpl.value as Template, question: q.value, options: opts.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean), k: Number(k.value) }],
+          ...resolvedTimes, maxBallots: Number(maxBallots.value), quorumCount: Number(quorum.value), trustees: tl, t: Number(tt.value) };
+        const res = buildManifest({ ...form, coordinatorPkHex: organizerPk, logPkHex: organizerPk, origin: policy.defaultBoard, rollHex: roll.keys, electionIdHex: bytesToHex(systemRng.bytes(16)) });
+        if (!res.ok) return void add(out, [errorBox(res.code, { detail: res.detail })]);
+        prepared = { form, rollHex: roll.keys };
+        add(publishBox, [publishSection()]);
+        add(out, [h('p', {}, t('qv.org.rollSummary', { count: roll.keys.length, root: roll.rootHex ?? '' }))]);
+      }, { primary: true }), out, publishBox);
+  }
+
+  // ---------------------------------------------------------------- shell
+  const skip = h('a', { href: '#main', class: 'skip', onclick: (e: Event) => { e.preventDefault(); main.focus(); } }, t('qv.shell.skip'));
+  const changeLanguage = async (select: HTMLSelectElement): Promise<void> => {
+    if (storage.isSession) { select.value = locale; return; }
+    const nextLanguage = select.value;
+    if (!availableLocales.some((l) => l.tag === nextLanguage)) { select.value = locale; return; }
+    const priorUrl = `${location.pathname}${location.search}${location.hash}`;
+    const nextUrl = new URL(location.href);
+    nextUrl.searchParams.delete('lang');
+    try {
+      history.replaceState(history.state, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+      await writeLanguagePreference(storage.current, nextLanguage);
+      location.reload();
+    } catch {
+      history.replaceState(history.state, '', priorUrl);
+      select.value = locale;
+      say.say(t('qv.locale.saveFailed'), true);
+    }
+  };
+  const languageSelect = h('select', { onchange: (e: Event) => { void changeLanguage(e.currentTarget as HTMLSelectElement); } },
+    ...availableLocales.map((l) => h('option', { value: l.tag }, l.autonym)));
+  (languageSelect as HTMLSelectElement).value = locale;
+  const languagePicker = availableLocales.length > 1 ? h('p', { class: 'language-picker' }, h('label', {}, t('qv.shell.language'), ' ', languageSelect)) : null;
+  const header = buildHeader([t('qv.banner.experimental'), t('qv.banner.demo')], h('p', { class: 'brand' }, t('qv.app.name')), nav, languagePicker);
+  const footer = h('footer', {}, h('p', {}, t('qv.shell.footer.build', { version: env.build.version, build: env.build.id })), h('p', {}, h('a', { href: '/verify' }, t('qv.shell.footer.verifyPage')), ' · ', h('a', { href: 'https://github.com/djshellshoxxx/quietvote' }, t('qv.shell.footer.source')), ' · ', h('a', { href: 'https://djshellshoxxx.github.io/circuitdriftlabs/' }, t('qv.shell.footer.cdlCredit'))));
+  clear(env.root);
+  add(env.root, [skip, header, lockNotice, storageNotice, main, footer, polite, urgent,
+    h('noscript', {}, t('qv.shell.noscript'))]);
+  storage.changed = updateStorageNotice;
+  updateStorageNotice();
+  void route();
+  void b64uEncode;
+}

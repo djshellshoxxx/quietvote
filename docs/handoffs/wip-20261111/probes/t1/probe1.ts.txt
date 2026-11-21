@@ -1,0 +1,36 @@
+// timing probe (scratch; not part of the repo)
+import { performance } from 'node:perf_hooks';
+const W = '/home/user/qv-wt/t1-random-elections/packages/protocol';
+const sim = await import(`${W}/test/helpers/sim.ts`);
+const proto = await import(`${W}/src/index.ts`);
+
+const t = (label: string, t0: number): void => console.log(`${label.padEnd(44)} ${(performance.now() - t0).toFixed(1)} ms`);
+
+for (const [n, tt] of [[1, 1], [2, 1], [2, 2], [3, 2], [4, 3], [5, 3]] as const) {
+  const t0 = performance.now();
+  await sim.setup({ seed: `probe-dkg-${n}-${tt}`, n, t: tt, voters: 4, contests: [sim.defaultContests()[0]] });
+  t(`setup n=${n} t=${tt}`, t0);
+}
+
+const contests = sim.defaultContests();
+for (const c of contests) {
+  const s = await sim.setup({ seed: `probe-${c.id}`, n: 3, t: 2, voters: 6, contests: [c] });
+  let t0 = performance.now();
+  for (let i = 0; i < 6; i++) sim.castBallot(s, i, { [c.id]: [c.options[0].id] });
+  t(`6 casts ${c.method} (${c.options.length} opts, L=${c.selection_limit})`, t0);
+  sim.closeElection(s);
+  t0 = performance.now();
+  sim.publishTally(s, [1, 2]);
+  t(`  publishTally t=2`, t0);
+  const b = sim.bundleOf(s);
+  t0 = performance.now();
+  const r = await proto.verifyElection(b);
+  t(`  verifyElection -> ${r.verdict}`, t0);
+  t0 = performance.now();
+  const b2 = sim.clone(b);
+  t(`  clone bundle`, t0);
+  t0 = performance.now();
+  const an = proto.analyzeBallotLog(s.params, new Set(s.rollHex), sim.voterEnvelopes(s), s.openSeq, s.closeSeq);
+  t(`  analyzeBallotLog (6 envelopes)`, t0);
+  void b2; void an;
+}

@@ -1,0 +1,116 @@
+{
+  "source": {
+    "local": "ac08d6d6c94d59d4a8ec168af9dd13b45d622047",
+    "remote": "fb5934cc954796a0d5bb98fe1c5cb3a2729868d7",
+    "tree": "02412dbf8d6b2645e2198cad898f53fcfdace22e"
+  },
+  "run": 43964742293,
+  "scope": "All jobs passed on this checkpoint, before modern enrollment, unsigned policy drafting, no-tally verdicts and subsequent changes. Not a final-candidate release receipt.",
+  "jobs": [
+    {
+      "id": 133641090223,
+      "name": "production browser journeys, CSP and automated a11y",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090408,
+      "name": "vectors, Python verifier and production build",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090600,
+      "name": "test cli+board (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090621,
+      "name": "test cli+board (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090624,
+      "name": "typecheck and supply-chain gates",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090640,
+      "name": "test trustee+crypto (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090651,
+      "name": "test protocol+verifier (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090686,
+      "name": "test trustee+crypto (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090749,
+      "name": "test server+web (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090754,
+      "name": "test server+web (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 133641090777,
+      "name": "test protocol+verifier (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "conformance": {
+    "python_units": 134,
+    "python_vectors": {
+      "total": 282,
+      "pass": 282,
+      "fail": 0,
+      "not_implemented": 0
+    },
+    "strict_shared_comparator": {
+      "agree": 27,
+      "total": 27,
+      "differences": 0
+    },
+    "web_build_kib": {
+      "all": 198,
+      "entry": 95.3,
+      "standalone": 186.9
+    }
+  },
+  "other_runs": [
+    {
+      "id": 43964742312,
+      "name": "claims lint",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43964742277,
+      "name": "web pseudo-locale visual checks",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43964742293,
+      "name": "ci",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ]
+}

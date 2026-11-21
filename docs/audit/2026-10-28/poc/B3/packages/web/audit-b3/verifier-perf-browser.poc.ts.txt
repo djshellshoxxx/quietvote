@@ -1,0 +1,34 @@
+// B3 audit PoC (Playwright): standalone verifier.html in Chromium on a 24-ballot bundle: wall time, and whether the page stays responsive
+// while it runs (QV-19 s7: "10,000 ballots verified in a Worker pool in < 5 min ... with progress and resumability").
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { FakeBoard, TEST_CONTESTS } from '../test/helpers/fake-board.ts';
+import { bundleOf, castBallot, closeElection, publishTally, setup } from '../../protocol/test/helpers/sim.ts';
+import { exe, pw, startStack } from './harness.ts';
+
+const N = Number(process.env.N ?? 24);
+const sim = await setup({ seed: 'b3-perf-browser', n: 3, t: 2, voters: N, contests: TEST_CONTESTS()!, minCounted: 3 });
+for (let i = 0; i < N; i++) castBallot(sim, i, { budget: ['yes'], board: ['p', 'q'] });
+closeElection(sim); publishTally(sim, [1, 2]);
+const stack = await startStack(new FakeBoard(sim), sim.voters[0]!.secretKey);
+const bundleFile = join(stack.dist, 'bundle.json');
+writeFileSync(bundleFile, JSON.stringify(bundleOf(sim)));
+const html = readFileSync(join(stack.dist, 'verifier.html'));
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+await p.route('http://verifier.test/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: html }));
+await p.goto('http://verifier.test/verifier.html');
+await p.locator('#file').setInputFiles(bundleFile);
+// frame ticker: the longest gap between animation frames while the checks run
+await p.evaluate(() => { const w = window as unknown as { gaps: number[]; last: number }; w.gaps = []; w.last = performance.now(); const tick = (): void => { const n = performance.now(); w.gaps.push(n - w.last); w.last = n; requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+const t0 = Date.now();
+await p.locator('#run').click();
+await p.locator('#out h2').waitFor({ timeout: 300000 });
+const ms = Date.now() - t0;
+const maxGap = await p.evaluate(() => Math.round(Math.max(...(window as unknown as { gaps: number[] }).gaps)));
+console.log(`${N} ballots: verdict "${await p.locator('#out h2').innerText()}" after ${ms} ms (${(ms / N).toFixed(0)} ms/ballot) -> 10,000 ballots ~ ${Math.round(ms / N * 10000 / 60000)} min; longest gap between animation frames while running: ${maxGap} ms`);
+console.log('progress element present while running: n/a (page shows a single "Running..." line, no <progress>); Workers used:', await p.evaluate(() => typeof Worker !== 'undefined' ? 'page script does not construct any Worker' : 'n/a'));
+const src = readFileSync(join(stack.dist, 'verifier.html'), 'utf8');
+console.log('verifier.html mentions "new Worker":', /new Worker\(/.test(src), '| mentions <progress>:', /<progress/.test(src));
+await browser.close();
+stack.close();

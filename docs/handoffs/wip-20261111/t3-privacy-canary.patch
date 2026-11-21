@@ -1,0 +1,511 @@
+diff --git a/packages/server/test/helpers/canary-scan.ts b/packages/server/test/helpers/canary-scan.ts
+new file mode 100644
+index 0000000..92614e9
+--- /dev/null
++++ b/packages/server/test/helpers/canary-scan.ts
+@@ -0,0 +1,344 @@
++// Canary registry, multi-pattern byte scanner and artifact collectors for the privacy canary tests (backlog T-245 / T-110,
++// QV-11 §8.4 "canary injection"). Synthetic values only. Nothing here knows about the server: the policy (which canary class may
++// appear in which artifact) lives in the test file, next to the spec citations.
++//
++// What the scanner can and cannot see. A canary is searched as: its text (any letter case), UTF-16LE, percent-encoding, hex of
++// the text, raw bytes / hex for binary values, and each of those inside base64 or base64url at any byte alignment (so a value
++// inside a `body_b64u` member or a hex field inside such a body is found). Optionally plain SHA-256 / SHA-1 / MD5 digests of a
++// text canary. It does NOT see keyed hashes, encryption under an unknown key, compression or truncation below the needle
++// length. A clean scan is therefore evidence about plain and commonly encoded copies, not a proof of absence of every derivative.
++import { createHash } from 'node:crypto';
++import { cpSync, readdirSync, readFileSync, statSync } from 'node:fs';
++import { join } from 'node:path';
++import { DatabaseSync } from 'node:sqlite';
++
++export interface Canary {
++  /** Unique name, e.g. `voter2/ua`. */
++  id: string;
++  /** Dot-separated class the policy decides on, e.g. `net.ua`. */
++  cls: string;
++  /** Actor the value belongs to (`voter2`, `organizer`, `server`, ...). */
++  owner: string;
++  text?: string;
++  bytes?: Uint8Array;
++}
++
++export interface Hit {
++  canary: Canary;
++  /** How the value was encoded where it was found, e.g. `text`, `hex`, `b64(text)`, `sha256-hex`. */
++  form: string;
++  offset: number;
++}
++
++interface Needle {
++  canary: Canary;
++  form: string;
++  bytes: Uint8Array;
++}
++
++/** Shortest value accepted as a canary: anything shorter is too likely to occur by chance in megabytes of key material. */
++const MIN_TEXT = 8;
++const MIN_BYTES = 16;
++/** A base64 window is only stable (independent of the neighbouring bytes) for part of the value; below this it is not searched. */
++const MIN_B64_SOURCE = 12;
++
++const lowerAscii = (b: Uint8Array): Uint8Array => {
++  const out = new Uint8Array(b.length);
++  for (let i = 0; i < b.length; i++) {
++    const x = b[i]!;
++    out[i] = x >= 0x41 && x <= 0x5a ? x + 0x20 : x;
++  }
++  return out;
++};
++
++/**
++ * The substrings of base64(prefix || value || suffix) that depend on `value` alone, for the three possible byte alignments,
++ * in the standard and the URL-safe alphabet.
++ */
++export function base64Windows(value: Uint8Array): string[] {
++  if (value.length < MIN_B64_SOURCE) return [];
++  const out = new Set<string>();
++  for (let pad = 0; pad < 3; pad++) {
++    const enc = Buffer.concat([Buffer.alloc(pad), value]).toString('base64').replace(/=+$/, '');
++    const start = pad === 0 ? 0 : pad + 1;
++    const end = Math.floor(((pad + value.length) * 8) / 6);
++    const s = enc.slice(start, end);
++    out.add(s);
++    out.add(s.replace(/\+/g, '-').replace(/\//g, '_'));
++  }
++  return [...out];
++}
++
++const ascii = (s: string): Uint8Array => new Uint8Array(Buffer.from(s, 'utf8'));
++
++function needlesFor(c: Canary, digests: boolean): { cs: Needle[]; ci: Needle[] } {
++  const cs: Needle[] = [];
++  const ci: Needle[] = [];
++  const add = (list: Needle[], form: string, bytes: Uint8Array): void => {
++    if (bytes.length >= MIN_TEXT) list.push({ canary: c, form, bytes });
++  };
++  const b64 = (form: string, source: Uint8Array): void => {
++    for (const w of base64Windows(source)) add(cs, form, ascii(w));
++  };
++  if (c.text !== undefined) {
++    const exact = ascii(c.text);
++    // The case-insensitive pass (lower-cased needle against the lower-cased artifact) finds the text in any letter case.
++    add(ci, 'text', lowerAscii(exact));
++    add(ci, 'utf16le', lowerAscii(new Uint8Array(Buffer.from(c.text, 'utf16le'))));
++    const pct = encodeURIComponent(c.text);
++    if (pct !== c.text) add(ci, 'percent-encoded', lowerAscii(ascii(pct)));
++    add(ci, 'hex(text)', ascii(Buffer.from(exact).toString('hex')));
++    b64('b64(text)', exact);
++    if (digests) {
++      for (const alg of ['sha256', 'sha1', 'md5'] as const) {
++        const d = new Uint8Array(createHash(alg).update(exact).digest());
++        add(cs, `${alg}-raw`, d);
++        add(ci, `${alg}-hex`, ascii(Buffer.from(d).toString('hex')));
++        b64(`b64(${alg})`, d);
++      }
++    }
++  }
++  if (c.bytes !== undefined) {
++    const hex = Buffer.from(c.bytes).toString('hex');
++    add(cs, 'raw', c.bytes);
++    add(ci, 'hex', ascii(hex));
++    b64('b64(raw)', c.bytes);
++    b64('b64(hex)', ascii(hex));
++  }
++  return { cs, ci };
++}
++
++/** Byte-level multi-pattern matcher: a two-byte prefilter, then a four-byte prefix table, then a full comparison. */
++class Matcher {
++  private readonly pre = new Uint8Array(65536);
++  private readonly table = new Map<number, Needle[]>();
++  readonly size: number;
++  constructor(needles: readonly Needle[]) {
++    this.size = needles.length;
++    for (const n of needles) {
++      const b = n.bytes;
++      this.pre[b[0]! | (b[1]! << 8)] = 1;
++      const k = (b[0]! | (b[1]! << 8) | (b[2]! << 16) | (b[3]! << 24)) >>> 0;
++      const l = this.table.get(k);
++      if (l) l.push(n);
++      else this.table.set(k, [n]);
++    }
++  }
++  scan(hay: Uint8Array, out: Hit[]): void {
++    const pre = this.pre;
++    const end = hay.length - 3;
++    for (let i = 0; i < end; i++) {
++      const k2 = hay[i]! | (hay[i + 1]! << 8);
++      if (pre[k2] === 0) continue;
++      const cand = this.table.get((k2 | (hay[i + 2]! << 16) | (hay[i + 3]! << 24)) >>> 0);
++      if (cand === undefined) continue;
++      next: for (const n of cand) {
++        const b = n.bytes;
++        if (i + b.length > hay.length) continue;
++        for (let j = 4; j < b.length; j++) if (hay[i + j] !== b[j]) continue next;
++        out.push({ canary: n.canary, form: n.form, offset: i });
++      }
++    }
++  }
++}
++
++export class Scanner {
++  private readonly cs: Matcher;
++  private readonly ci: Matcher;
++  constructor(cs: Needle[], ci: Needle[]) {
++    this.cs = new Matcher(cs);
++    this.ci = new Matcher(ci);
++  }
++  get needles(): number {
++    return this.cs.size + this.ci.size;
++  }
++  /** Every occurrence of every canary form in `bytes`. */
++  scan(bytes: Uint8Array): Hit[] {
++    const out: Hit[] = [];
++    this.cs.scan(bytes, out);
++    this.ci.scan(lowerAscii(bytes), out);
++    return out;
++  }
++}
++
++export class CanarySet {
++  readonly list: Canary[] = [];
++  private readonly ids = new Map<string, Canary>();
++  private readonly digests = new Set<string>();
++
++  private put(c: Canary): Canary {
++    if (this.ids.has(c.id)) throw new Error(`duplicate canary id ${c.id}`);
++    this.ids.set(c.id, c);
++    this.list.push(c);
++    return c;
++  }
++  /** A text value. `digests` also searches its unsalted SHA-256 / SHA-1 / MD5 (for values that must not survive "in any form"). */
++  text(cls: string, id: string, owner: string, value: string, o: { digests?: boolean } = {}): Canary {
++    if (value.length < MIN_TEXT) throw new Error(`canary ${id} is too short to be searched reliably`);
++    const c = this.put({ id, cls, owner, text: value });
++    if (o.digests) this.digests.add(id);
++    return c;
++  }
++  /** A binary value (key, seed, scalar, digest). */
++  bin(cls: string, id: string, owner: string, value: Uint8Array): Canary {
++    if (value.length < MIN_BYTES) throw new Error(`canary ${id} is too short to be searched reliably`);
++    return this.put({ id, cls, owner, bytes: new Uint8Array(value) });
++  }
++  get(id: string): Canary {
++    const c = this.ids.get(id);
++    if (!c) throw new Error(`unknown canary ${id}`);
++    return c;
++  }
++  has(id: string): boolean {
++    return this.ids.has(id);
++  }
++  ofClass(prefix: string): Canary[] {
++    return this.list.filter((c) => c.cls === prefix || c.cls.startsWith(`${prefix}.`));
++  }
++  compile(): Scanner {
++    const cs: Needle[] = [];
++    const ci: Needle[] = [];
++    for (const c of this.list) {
++      const n = needlesFor(c, this.digests.has(c.id));
++      cs.push(...n.cs);
++      ci.push(...n.ci);
++    }
++    return new Scanner(cs, ci);
++  }
++}
++
++/** Deterministic high-entropy token: lower-case hex of SHA-256(seed, label). */
++export function token(seed: string, label: string, hexChars = 24): string {
++  return createHash('sha256').update(`${seed}\0${label}`).digest('hex').slice(0, hexChars);
++}
++
++// ---------------------------------------------------------------------------------------------------- artifacts
++
++export type ArtifactKind = 'log' | 'stdio' | 'file' | 'cell' | 'http' | 'sse' | 'webhook' | 'export';
++
++export interface Artifact {
++  kind: ArtifactKind;
++  /** Human-readable location, used in failure messages. */
++  name: string;
++  bytes: Uint8Array;
++  /** Free-form attributes the policy reads (snapshot, db, table, column, actor, part, ...). */
++  meta: Record<string, string>;
++  /** Canary classes this particular artifact may carry in addition to what the policy allows for its kind. */
++  allow?: ReadonlySet<string>;
++}
++
++export interface Finding {
++  artifact: Artifact;
++  canary: Canary;
++  forms: string[];
++  offset: number;
++}
++
++/** One finding per (artifact, canary); the forms seen are collected. */
++export function scanArtifacts(s: Scanner, arts: readonly Artifact[]): Finding[] {
++  const out: Finding[] = [];
++  for (const a of arts) {
++    if (a.bytes.length < 4) continue;
++    const per = new Map<string, Finding>();
++    for (const h of s.scan(a.bytes)) {
++      const f = per.get(h.canary.id);
++      if (f === undefined) per.set(h.canary.id, { artifact: a, canary: h.canary, forms: [h.form], offset: h.offset });
++      else if (!f.forms.includes(h.form)) f.forms.push(h.form);
++    }
++    out.push(...per.values());
++  }
++  return out;
++}
++
++export const describeFinding = (f: Finding): string => `${f.canary.cls} canary "${f.canary.id}" as ${f.forms.join('+')} in ${f.artifact.name} @${f.offset}`;
++
++// ---------------------------------------------------------------------------------------------------- disk
++
++export interface DiskFile {
++  /** Path relative to the data directory, forward slashes. */
++  rel: string;
++  bytes: Buffer;
++}
++
++export function walkFiles(root: string): DiskFile[] {
++  const out: DiskFile[] = [];
++  const rec = (dir: string, rel: string): void => {
++    for (const name of readdirSync(dir).sort()) {
++      const p = join(dir, name);
++      const r = rel === '' ? name : `${rel}/${name}`;
++      if (statSync(p).isDirectory()) rec(p, r);
++      else out.push({ rel: r, bytes: readFileSync(p) });
++    }
++  };
++  rec(root, '');
++  return out;
++}
++
++export type SqlCell = string | number | bigint | Uint8Array | null;
++
++export interface TableDump {
++  /** Database file, relative to the data directory. */
++  db: string;
++  table: string;
++  /** CREATE TABLE text as stored in sqlite_master. */
++  sql: string;
++  columns: string[];
++  rows: SqlCell[][];
++}
++
++/** Every row of every table (including SQLite's own bookkeeping tables) of one database file. Opens the file read-write: pass a copy. */
++export function dumpSqlite(path: string, db: string): TableDump[] {
++  const h = new DatabaseSync(path);
++  try {
++    const tables = h.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name").all() as { name: string; sql: string | null }[];
++    return tables.map((t) => {
++      const q = `"${t.name.replace(/"/g, '""')}"`;
++      const columns = (h.prepare(`PRAGMA table_info(${q})`).all() as { name: string }[]).map((c) => c.name);
++      const rows = (h.prepare(`SELECT * FROM ${q}`).all() as Record<string, SqlCell>[]).map((r) => columns.map((c) => r[c] ?? null));
++      return { db, table: t.name, sql: t.sql ?? '', columns, rows };
++    });
++  } finally {
++    h.close();
++  }
++}
++
++export function cellBytes(v: SqlCell): Uint8Array {
++  if (v === null) return new Uint8Array(0);
++  if (v instanceof Uint8Array) return v;
++  return new Uint8Array(Buffer.from(String(v), 'utf8'));
++}
++
++export interface Snapshot {
++  label: string;
++  files: DiskFile[];
++  tables: TableDump[];
++}
++
++/**
++ * What someone copying the data directory at this moment would get: the raw bytes of every file (taken before any SQLite
++ * handle of ours touches them) and a dump of every table of every `.sqlite` file in the copy. The live directory is only read.
++ */
++export function snapshotDataDir(dataDir: string, copyTo: string, label: string): Snapshot {
++  cpSync(dataDir, copyTo, { recursive: true });
++  const files = walkFiles(copyTo);
++  const tables = files.filter((f) => f.rel.endsWith('.sqlite')).flatMap((f) => dumpSqlite(join(copyTo, f.rel), f.rel));
++  return { label, files, tables };
++}
++
++/** Raw-file and per-cell artifacts of a snapshot. */
++export function snapshotArtifacts(s: Snapshot): Artifact[] {
++  const out: Artifact[] = [];
++  for (const f of s.files) out.push({ kind: 'file', name: `${s.label}:${f.rel}`, bytes: f.bytes, meta: { snapshot: s.label, rel: f.rel } });
++  for (const t of s.tables) {
++    t.rows.forEach((row, r) => {
++      row.forEach((v, c) => {
++        if (v === null) return;
++        out.push({
++          kind: 'cell', name: `${s.label}:${t.db}:${t.table}.${t.columns[c]}[row ${r}]`, bytes: cellBytes(v),
++          meta: { snapshot: s.label, db: t.db, table: t.table, column: t.columns[c]!, row: String(r) },
++        });
++      });
++    });
++  }
++  return out;
++}
+diff --git a/packages/server/test/helpers/canary-world.ts b/packages/server/test/helpers/canary-world.ts
+new file mode 100644
+index 0000000..c112555
+--- /dev/null
++++ b/packages/server/test/helpers/canary-world.ts
+@@ -0,0 +1,155 @@
++// World variant for the privacy canary tests (T-245): every request of the election flow is sent with node:http so that the
++// test controls the source address the server sees (a loopback alias per actor, where the platform can bind one) and every
++// request header, and every exchange is recorded for scanning. The protocol flow itself is the unchanged `World`.
++import { request as httpRequest } from 'node:http';
++import { connect } from 'node:net';
++import { utf8, type Ed25519Keypair } from '@quietvote/crypto';
++import type { Manifest, ManifestContest } from '@quietvote/protocol';
++import { signRequest } from '../../src/index.ts';
++import { World, type Resp, type WorldOpts } from './world.ts';
++
++/** What one actor's client looks like on the network. */
++export interface NetIdentity {
++  name: string;
++  /** Loopback alias the client binds to, so `socket.remoteAddress` on the server is this value. */
++  localAddress?: string;
++  /** Sent on every request of this actor. */
++  headers: Record<string, string>;
++  /** Sent as `Authorization: Bearer ...` on requests that carry no request signature. */
++  bearer?: string;
++  /** Appended to every request target as `ref=<token>`. */
++  queryToken?: string;
++}
++
++export interface Exchange {
++  n: number;
++  actor: string;
++  /** What the step was for (`register`, `cast`, `error-probe`, ...). */
++  label: string;
++  method: string;
++  target: string;
++  /** Value of the request's Authorization header, if any. */
++  authorization: string | undefined;
++  status: number;
++  /** Status line and response header block as received. */
++  head: string;
++  body: Buffer;
++  /** Canary classes this response may legitimately carry (decided by the caller of the step). */
++  allow: ReadonlySet<string>;
++}
++
++interface Scope {
++  id: NetIdentity;
++  label: string;
++  allow: ReadonlySet<string>;
++}
++
++export interface ManifestText {
++  title: string;
++  contests: ManifestContest[];
++  trusteeNames: string[];
++}
++
++const NONE: ReadonlySet<string> = new Set();
++/** Routes that refuse unknown query parameters: the query canary is left off there. */
++const STRICT_QUERY = /\/(spoil-shares|imports|admin\/elections)(\?|$)/;
++
++export class CanaryWorld extends World {
++  readonly exchanges: Exchange[] = [];
++  /** False when this platform cannot bind the loopback aliases; the source-address canaries are then not injectable. */
++  peerBinding = false;
++  manifestText: ManifestText | undefined;
++  private scope: Scope;
++
++  constructor(o: WorldOpts, base: NetIdentity) {
++    super(o);
++    this.scope = { id: base, label: 'setup', allow: NONE };
++  }
++
++  override async start(): Promise<void> {
++    await super.start();
++    const u = new URL(this.base);
++    const probe = this.scope.id.localAddress;
++    this.peerBinding = probe === undefined ? false : await new Promise<boolean>((resolve) => {
++      const s = connect({ host: u.hostname, port: Number(u.port), localAddress: probe });
++      s.once('connect', () => {
++        s.destroy();
++        resolve(true);
++      });
++      s.once('error', () => resolve(false));
++    });
++  }
++
++  /** Runs `fn` as `id`: all requests made inside carry that identity and are recorded under `label` with the given allowance. */
++  async as<T>(id: NetIdentity, label: string, fn: () => Promise<T>, allow: readonly string[] = []): Promise<T> {
++    const prev = this.scope;
++    this.scope = { id, label, allow: new Set(allow) };
++    try {
++      return await fn();
++    } finally {
++      this.scope = prev;
++    }
++  }
++
++  /** The most recent exchange (e.g. to read a binary response body). */
++  get lastExchange(): Exchange {
++    const e = this.exchanges.at(-1);
++    if (!e) throw new Error('no exchange recorded yet');
++    return e;
++  }
++
++  override async req(
++    method: string, path: string, body?: unknown,
++    o: { key?: Ed25519Keypair; headers?: Record<string, string>; raw?: Uint8Array; nonce?: Uint8Array; ts?: number } = {},
++  ): Promise<Resp> {
++    const { id, label, allow } = this.scope;
++    const target = id.queryToken !== undefined && !STRICT_QUERY.test(path) ? `${path}${path.includes('?') ? '&' : '?'}ref=${id.queryToken}` : path;
++    const bytes = o.raw ?? (body === undefined ? new Uint8Array(0) : utf8(JSON.stringify(body)));
++    const headers: Record<string, string> = { ...id.headers, ...(o.headers ?? {}) };
++    if (bytes.length > 0) headers['content-type'] = 'application/json';
++    let authorization: string | undefined;
++    // the signature covers the final request target, query canary included
++    if (o.key) authorization = signRequest(o.key.secretKey, o.key.publicKey, method, target, this.audience, bytes, o.ts ?? this.nowSec, o.nonce ?? this.rng.bytes(16));
++    else if (id.bearer !== undefined) authorization = `Bearer ${id.bearer}`;
++    if (authorization !== undefined) headers['authorization'] = authorization;
++    const r = await this.send(id, method, target, headers, bytes);
++    const head = `HTTP/1.1 ${r.status}\r\n${r.rawHeaders.map((v, i) => (i % 2 === 0 ? `${v}: ` : `${v}\r\n`)).join('')}`;
++    this.exchanges.push({ n: this.exchanges.length, actor: id.name, label, method, target, authorization, status: r.status, head, body: r.body, allow });
++    const h = new Headers();
++    for (let i = 0; i + 1 < r.rawHeaders.length; i += 2) h.append(r.rawHeaders[i]!, r.rawHeaders[i + 1]!);
++    const text = r.body.toString('utf8');
++    let json: unknown;
++    try {
++      json = JSON.parse(text);
++    } catch {
++      json = undefined;
++    }
++    return { status: r.status, headers: h, json, text };
++  }
++
++  private send(id: NetIdentity, method: string, target: string, headers: Record<string, string>, bytes: Uint8Array): Promise<{ status: number; rawHeaders: string[]; body: Buffer }> {
++    const u = new URL(this.base);
++    return new Promise((resolve, reject) => {
++      const req = httpRequest({
++        host: u.hostname, port: Number(u.port), method, path: target, agent: false,
++        headers: { ...headers, connection: 'close', ...(bytes.length > 0 ? { 'content-length': String(bytes.length) } : {}) },
++        ...(this.peerBinding && id.localAddress !== undefined ? { localAddress: id.localAddress } : {}),
++      }, (res) => {
++        const chunks: Buffer[] = [];
++        res.on('data', (d: Buffer) => chunks.push(d));
++        res.on('end', () => resolve({ status: res.statusCode ?? 0, rawHeaders: res.rawHeaders, body: Buffer.concat(chunks) }));
++        res.on('error', reject);
++      });
++      req.on('error', reject);
++      if (bytes.length > 0) req.end(Buffer.from(bytes));
++      else req.end();
++    });
++  }
++
++  override buildManifest(): Manifest {
++    const m = super.buildManifest();
++    const t = this.manifestText;
++    if (t === undefined) return m;
++    return { ...m, title: t.title, contests: t.contests, trustees: m.trustees.map((x, i) => ({ ...x, name: t.trusteeNames[i] ?? x.name })) };
++  }
++}

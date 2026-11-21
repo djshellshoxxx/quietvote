@@ -1,0 +1,51 @@
+import { supplementalAuthorFixture } from './helpers/supplemental-author.ts';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { signRecord } from '@quietvote/protocol';
+import { bundleOf, castBallot, closeElection, publishTally, setup, clone } from '../../protocol/test/helpers/sim.ts';
+import { deriveElectionContext } from '../src/flow/election.ts';
+import { fixtureWitnesses, witnessedBoard } from './helpers/witnessed-board.ts';
+import { canShowResults, verificationSummary, verifyLoadedElection, verifyPublicBundleText } from '../src/flow/verification.ts';
+
+test('B3-02: genuine proof-verified tally displays; coordinator-signed forged counts are hidden', async () => {
+  const sim = await setup({ seed: 'b3-results', n: 3, t: 2, voters: 4, minCounted: 3, boundLog: true, witnessQuorum: 2, witnesses: fixtureWitnesses('b3-results') });
+  for (let i = 0; i < 4; i++) castBallot(sim, i, { budget: ['yes'], chair: ['ann'] });
+  closeElection(sim); publishTally(sim, [1, 2]);
+  const b = bundleOf(sim);
+  const records = [{ seq: 0, record: b.manifest }, ...b.log.map((r) => ({ seq: r.seq, record: r.entry }))];
+  const ctx = await deriveElectionContext(records); assert.ok(ctx.ok);
+  const absent = await verifyLoadedElection(records, ctx.value, b.roll);
+  assert.equal(absent.verdict, 'INCOMPLETE'); assert.equal(canShowResults(absent), false);
+  const evidence = witnessedBoard(sim, b);
+  assert.equal((await verifyPublicBundleText(JSON.stringify({ ...b, allowNoLog: true, options: { allowNoLog: true } }))).verdict, 'INCOMPLETE');
+  assert.equal((await verifyPublicBundleText(JSON.stringify({ ...b, board: {} }))).verdict, 'FAIL');
+  assert.equal((await verifyPublicBundleText(JSON.stringify({ ...b, board: evidence }))).verdict, 'PASS');
+  assert.equal((await verifyPublicBundleText('{"a":1,"a":2}')).verdict, 'FAIL');
+  const good = await verifyLoadedElection(records, ctx.value, b.roll, evidence);
+  assert.equal(canShowResults(good), true);
+  assert.equal(verificationSummary(good).partial, true, 'optional receipt sampling remains separate from witnessed board verification');
+  assert.equal(verificationSummary(good, true).verdict, 'FAIL', 'anchor mismatch overrides visible verdict');
+  const rec = records.find((r) => (r.record as any).body?.type === 'tally')!;
+  const forged = clone((rec.record as any).body);
+  forged.contests[0].options[0].T++;
+  const c = sim.coord[0]!;
+  rec.record = signRecord(c.secretKey, c.publicKey, sim.params!.ctx, forged);
+  const mismatched = await verifyLoadedElection(records, ctx.value, b.roll, evidence);
+  assert.equal(mismatched.verdict, 'FAIL', 'board evidence must bind the actual loaded record snapshot');
+  const bad = await verifyLoadedElection(records, ctx.value, b.roll);
+  assert.equal(bad.verdict, 'FAIL'); assert.equal(canShowResults(bad), false);
+  assert.equal(canShowResults(await verifyLoadedElection(records, ctx.value, b.roll.slice(1))), false);
+});
+
+
+test('public upload and live helpers use explicit author pins, with no witness override', async () => {
+  for (const quorum of [2, 0]) {
+    const f = await supplementalAuthorFixture(quorum);
+    const records = [{ seq: 0, record: f.bundle.manifest }, ...f.bundle.log.map((r) => ({ seq: r.seq, record: r.entry }))];
+    const ctx = await deriveElectionContext(records); assert.ok(ctx.ok);
+    assert.equal((await verifyPublicBundleText(f.untrustedText)).verdict, 'FAIL');
+    assert.equal((await verifyPublicBundleText(f.untrustedText, { extraAuthorKeys: ['ab'.repeat(32)] })).verdict, 'FAIL');
+    assert.equal((await verifyPublicBundleText(f.untrustedText, { extraAuthorKeys: [f.key] })).verdict, quorum ? 'PASS' : 'INCOMPLETE');
+    assert.equal((await verifyLoadedElection(records, ctx.value, f.bundle.roll, f.board, [f.key])).verdict, quorum ? 'PASS' : 'INCOMPLETE');
+  }
+});

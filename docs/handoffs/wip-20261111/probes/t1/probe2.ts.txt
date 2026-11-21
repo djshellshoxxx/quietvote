@@ -1,0 +1,38 @@
+// timing probe 2 (scratch): DKG verification cost inside verifyElection, per (n,t); per-ciphertext costs
+import { performance } from 'node:perf_hooks';
+const W = '/home/user/qv-wt/t1-random-elections/packages/protocol';
+const sim = await import(`${W}/test/helpers/sim.ts`);
+const proto = await import(`${W}/src/index.ts`);
+
+const ms = (t0: number): string => (performance.now() - t0).toFixed(1).padStart(7);
+const yn = sim.defaultContests()[0];
+for (const [n, tt] of [[1, 1], [2, 1], [2, 2], [3, 1], [3, 2], [3, 3], [4, 2], [4, 3], [5, 3], [5, 5]] as const) {
+  let t0 = performance.now();
+  const s = await sim.setup({ seed: `probe2-${n}-${tt}`, n, t: tt, voters: 3, contests: [yn] });
+  const tSetup = ms(t0);
+  sim.closeElection(s);
+  const b = sim.bundleOf(s);
+  t0 = performance.now();
+  const r = await proto.verifyElection(b);
+  const tV0 = ms(t0);
+  console.log(`n=${n} t=${tt} setup ${tSetup} ms   verify(no ballots, no tally) ${tV0} ms -> ${r.verdict}`);
+}
+// per ballot cost, 3 voters all vote, tally with t trustees
+for (const [n, tt] of [[1, 1], [3, 2], [5, 3]] as const) {
+  const s = await sim.setup({ seed: `probe2b-${n}-${tt}`, n, t: tt, voters: 3, contests: [yn] });
+  let t0 = performance.now();
+  for (let i = 0; i < 3; i++) sim.castBallot(s, i, { budget: ['yes'] });
+  const tCast = ms(t0);
+  sim.closeElection(s);
+  t0 = performance.now();
+  sim.publishTally(s, Array.from({ length: tt }, (_, i) => i + 1));
+  const tTally = ms(t0);
+  const b = sim.bundleOf(s);
+  t0 = performance.now();
+  const r = await proto.verifyElection(b);
+  const tV = ms(t0);
+  t0 = performance.now();
+  const r2 = await proto.verifyElectionText(JSON.stringify(b));
+  const tVT = ms(t0);
+  console.log(`n=${n} t=${tt} 3 yes/no ballots: cast ${tCast}  tally ${tTally}  verify ${tV} (${r.verdict})  verifyText ${tVT} (${r2.verdict}) bundle ${JSON.stringify(b).length} bytes`);
+}

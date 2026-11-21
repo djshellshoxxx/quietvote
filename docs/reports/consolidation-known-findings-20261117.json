@@ -1,0 +1,1335 @@
+{
+  "title": "Previously known findings: current mechanism reconciliation",
+  "review_date": "2026-11-18",
+  "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+  "candidate_pr57_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+  "pr58_catalog_sha": "9a03414e0e826db292f9dd5728e4d3d2f0682784",
+  "historical_findings_sha": "424110d90e23dc443aa4498a4340973d3c8cb8b6",
+  "read_only": true,
+  "denominator": {
+    "rows": 33,
+    "method": "Reconstruct the catalog statement as the first 20 B1 \u00a74.2 known rows (through C11) plus the 13 B2 KNOWN rows. Preserve grouped aliases as rows. Exclude the final six B1 known rows that already appear directly in the 72 extracted matrix: TSV-04, TSV-06, PY-01, PY-02, WV-9, and N-13/N-24/N-25/N-27.",
+    "caveat": "PR58 JSON does not provide a standalone 33-element known array. This explicit reconstruction is not a claim of 33 independent additional vulnerabilities. TR-07/TR-08 exactly duplicates a 72-row item and several other rows share mechanisms/components."
+  },
+  "status_counts": {
+    "fixed": 24,
+    "reproducible": 2,
+    "unverified": 2,
+    "partial": 5
+  },
+  "status_definitions": {
+    "fixed": "The narrow recorded mechanism is implemented correctly in inspected source, with executed evidence where listed. This is not a blanket security closure; source-only rows and execution limits are explicit.",
+    "partial": "A component/guard is repaired or coverage improved, but a specific residual or qualification gap remains.",
+    "reproducible": "Existing independently executed canonical evidence demonstrates the recorded mechanism; candidate-only repairs remain separate.",
+    "unverified": "Source identifies a retained construction/surface, but fresh impact or complete security qualification is unavailable. Presence is not confused with demonstrated exploit impact."
+  },
+  "evidence_policy": [
+    "Repository sources and historical reports were read only. No product edit or remote mutation was performed.",
+    "No new probe output is used in this matrix. Interrupted/withdrawn known-p11-p10 scratch probes are deliberately excluded, per parent instruction.",
+    "Crypto/protocol/verifier/Python suite evidence is from PR57 fd23cb3, not a new canonical suite run. Unchanged relevant source or unchanged guard logic is stated where evidence is transferred.",
+    "The canonical custody/server log contains 32 executed passing tests. The TR-03 test title is not treated as proof of an actual child-process race.",
+    "Existing test source alone is not an execution receipt. BC-01/BC-10/DEP-01 are narrowly source-reviewed fixes with explicit unexecuted runtime qualification.",
+    "AI analysis and passing tests do not count as human/security-group approvals."
+  ],
+  "highest_priority_gaps": [
+    {
+      "priority": 1,
+      "ids": [
+        "P11"
+      ],
+      "gap": "Python recomputes T_valid but reports mismatched decrypters as a note; source-confirmed parity and truthfulness gap.",
+      "next_step": "Small isolated fatal E_DEC_PROOF/decrypt-fail repair with valid-control, wrong-list, and informational-invalid-share regressions. See known-p11-handoff.md. No new reproduction claimed."
+    },
+    {
+      "priority": 2,
+      "ids": [
+        "P10"
+      ],
+      "gap": "Approved differing signed election marker bodies remain L in both verifiers.",
+      "next_step": "Compare authenticated marker bodies; identical L, differing F/E_MARKERS; preserve malformed/unauthorized noise behavior and valid historical outcomes."
+    },
+    {
+      "priority": 3,
+      "ids": [
+        "KNOWN BC-02 / BC-04"
+      ],
+      "gap": "Approved standalone self-attested witness-policy downgrade is absent.",
+      "next_step": "Require external policy for standalone VERIFIED via PARTIAL/exit 3; update valid controls with explicit policy. Election-bundle path remains as specified."
+    },
+    {
+      "priority": 4,
+      "ids": [
+        "CP-02",
+        "C3 (OQ-7, T-043)"
+      ],
+      "gap": "Canonical failed-RNG weaknesses have candidate-only repairs.",
+      "next_step": "Complete required candidate review/approval gates before integration; do not re-count as newly found vulnerabilities or canonical fixes."
+    },
+    {
+      "priority": 5,
+      "ids": [
+        "KNOWN TR-03",
+        "CP-08"
+      ],
+      "gap": "Real cross-process custody release/crash qualification and comprehensive mutation adequacy remain open.",
+      "next_step": "Schedule targeted qualification for the actual remaining boundary; avoid interpreting in-process or source pins as broader evidence."
+    },
+    {
+      "priority": 6,
+      "ids": [
+        "CP-06",
+        "C11"
+      ],
+      "gap": "Retained DKG construction limitation and public deterministic RNG surface have no new impact/closure qualification.",
+      "next_step": "Resolve construction assumptions and API migration scope deliberately; no uniform-key or production-misuse claim from present evidence."
+    }
+  ],
+  "rows": [
+    {
+      "id": "CP-01",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "A cast ciphertext rewrapped as a spoil under a different code bypassed conflict handling; invalid casts could plant alpha conflicts.",
+      "current_finding": "The ballot analysis collects cast alpha values only after envelope validity, checks signed spoils against them independent of reveal mode, and excludes rewrap conflicts. Recorded TypeScript and Python residual cases have current regression evidence.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/ballotlog.ts",
+          "observation": "castAlphas and signedSpoils processing; common all-mode conflict analysis."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/verify.ts",
+          "observation": "Spoil verification consumes the recomputed conflict analysis."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/verifier-py/qv_verifier/election.py",
+          "observation": "Current cast/spoil conflict analysis mirrors the recorded accepted-envelope restriction."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/test/audit.test.ts",
+          "observation": "All-mode/order rewrap controls; exact executed cases are listed in protocol-tests.log."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "CP-01: six mode/order rewrap cases, honest control, above-limit and after-close cases; relevant protocol source is unchanged between canonical and #57."
+        },
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/python-units.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "222-test Python suite on #57; terse output, therefore this is supporting suite evidence rather than a named individual Python result."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "CP-01 (verifier-py residual)",
+          "relation": "same_mechanism_component",
+          "explanation": "The Python component is already one of the 72 rows."
+        },
+        {
+          "id": "B1-01",
+          "relation": "related",
+          "explanation": "Later spoil limit/window cases use the same analysis but are not identical to every older rewrap case."
+        }
+      ],
+      "remaining_limit_or_acceptance": "Historical rewrap/plant closure is scoped to inspected production analysis. The lower-level trusteeDecryptSpoiled helper accepts a previously verified SpoilRecord and no cast set; a fresh proof of misuse of that API was not performed. KNOWN TR-01 / CP-01 below is the same risk in server/trustee paths.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "CP-02",
+      "historical_severity": "Low",
+      "status": "reproducible",
+      "historical_mechanism": "Failed RNG reuses cp-dec nonce for different aggregate statements, exposing the secret share.",
+      "current_finding": "Canonical decProve derives cp-dec-nonce from secret, context, contest, option and rand32 without the complete statement. Independent canonical failed-RNG evidence is retained. #57 supplies the approved statement-bound nonce revision.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/proofs.ts",
+          "observation": "decProve around 215\u2013225 omits A/B/M from canonical nonce derivation."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/transcript.ts",
+          "observation": "Canonical cp-dec-nonce registry field list."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/docs/plan/DECISIONS-2026-11-04.md",
+          "observation": "CP-02 and C3 approved recommendation batches nonce registry changes; ADR-027 adopts the register."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/nonce-baseline.json",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "Independent current canonical failed-RNG reproduction."
+        },
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/nonce-candidate.json",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Candidate comparison blocks the repeated-nonce mechanism."
+        },
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/crypto-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Candidate constant-RNG regression coverage."
+        },
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Candidate end-to-end dealing, key-confirmation and decryption coverage."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "#57 implements the repair. Do not transfer candidate closure to canonical.",
+      "overlap_with_72": [
+        {
+          "id": "B1-12",
+          "relation": "same_mechanism",
+          "explanation": "Same failed-RNG nonce weakness; do not count the historical alias as a separate vulnerability."
+        }
+      ],
+      "remaining_limit_or_acceptance": "Canonical remains affected. Candidate evidence is not a human or security-group approval; required review and integration gates remain separate.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "CP-03",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "Closed-schema checks admitted inherited Object.prototype property names.",
+      "current_finding": "Schema required/optional membership uses Object.hasOwn; inherited names no longer satisfy field membership.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/schema.ts",
+          "observation": "check() around 69\u201376 uses own-property membership."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "CP-03 Object.prototype schema names regression; schema.ts is unchanged from canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "B1-02",
+          "relation": "related",
+          "explanation": "Both touch malformed-record treatment; the prototype-membership mechanism is narrower and distinct."
+        }
+      ],
+      "remaining_limit_or_acceptance": "",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "CP-04",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "Mixed-order Ed25519 public keys/R values produced divergent TypeScript/Python acceptance sets.",
+      "current_finding": "The TypeScript wrapper enforces strict subgroup policy; Python also rejects mixed-order public keys. Current independent-construction and strict-signature evidence covers the recorded mechanism.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/ed25519.ts",
+          "observation": "Strict point predicate includes non-small-order and torsion-free checks; explicit zip215:false."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/verifier-py/qv_verifier/ed25519.py",
+          "observation": "Strict public-key/signature validation."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/crypto-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "CP-04 mixed-order public key/R rejection with honest controls; ed25519 source is unchanged from canonical."
+        },
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/python-units.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Python suite on #57 includes independent-construction strict-point tests; individual names not printed."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "CP-04 (verifier-py residual)",
+          "relation": "same_mechanism_component",
+          "explanation": "Python residual is already a 72-row item."
+        },
+        {
+          "id": "B1-08",
+          "relation": "related",
+          "explanation": "Manifest acceptance has additional independent differences; CP-04 closure does not close all B1-08."
+        }
+      ],
+      "remaining_limit_or_acceptance": "",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "CP-05",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "Additional conflicting or late signed roll commits were ignored.",
+      "current_finding": "Each valid coordinator roll commitment is compared with the supplied roll and all roll commits must precede election-open.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/verify.ts",
+          "observation": "Around 389\u2013408 validate every signed roll commit; 480\u2013485 reject late commits."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "CP-05 signed roll commit replay after open is fatal; relevant verifier source unchanged from canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "The evidence covers the recorded conflicting/late-commit mechanism, not all possible log equivocation.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "CP-06",
+      "historical_severity": "Info",
+      "status": "unverified",
+      "historical_mechanism": "A rushing corrupt dealer can bias the Feldman DKG joint key through selective abort.",
+      "current_finding": "Current trustee specification explicitly retains rushing/last-mover bias as a residual construction property. No fresh bias experiment or uniform-key proof was performed.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high for retained limitation; unverified for exploit magnitude/qualification",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/docs/17-key-ceremony-trustees.md",
+          "observation": "Around 455 names rushing/last-mover bias as residual and delegates analysis to QV-16."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/dkg.ts",
+          "observation": "Public deterministic qualification retains the existing construction."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/crypto-protocol.md",
+          "observation": "Historical CP-06 reasoning at 127; not current execution."
+        }
+      ],
+      "execution_evidence": [],
+      "execution_scope": "Source inspection only; relevant test source is not represented as an executed test.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Unverified means unqualified construction security, not uncertainty that the limitation is documented. A uniform-K claim requires a separate construction/assumption decision and proof; documentation alone is not a cryptographic repair.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "CP-07 / C10",
+      "historical_severity": "Info/Low",
+      "status": "fixed",
+      "historical_mechanism": "An untrusted sealed-bundle scrypt logN=22 header could request about 4 GiB before authentication.",
+      "current_finding": "The hard maximum is now logN=20, with a caller-selected lower maximum; header bounds are checked before KDF work.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/bundle-cipher.ts",
+          "observation": "BUNDLE_MAX_LOGN=20; openWithPassphrase validates maxLogN and header before kdf."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/crypto-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "C10 rejects a header above the work cap before scrypt; bundle-cipher.ts unchanged from canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "This closes the recorded unbounded/high default header path under the adopted cap. A permitted logN=20 can still be expensive (roughly 1 GiB for the scrypt memory formula); no deployment resource qualification claimed.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "CP-08",
+      "historical_severity": "Info",
+      "status": "partial",
+      "historical_mechanism": "Cryptographic unit/mutation tests did not detect several Fiat\u2013Shamir omissions and the strict-mode toggle.",
+      "current_finding": "Specific omissions now have per-field conformance, adaptive/compensated negative tests, the hs_nz counter model and strict-mode pin. No new comprehensive mutation sweep was run, and the static M18 pin is not a behavioral discrimination proof.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/test/cp08-fiat-shamir.test.ts",
+          "observation": "Registry conformance, adversarial negatives, one-field changes and hs_nz counter model."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/test/cp08-ed25519-zip215.test.ts",
+          "observation": "ZIP-215 negatives and explicit option source pin."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/NOTES.md",
+          "observation": "319\u2013340 documents named coverage and the historical five-mutant receipt."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/crypto-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Executed named M3/M7/M8/M15/M18 and every-field tests; not a comprehensive fresh mutation sweep."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "#57 updates nonce-related expectations. Its 101-pass crypto run is candidate evidence; unaffected tests support the corresponding unchanged canonical mechanisms.",
+      "overlap_with_72": [
+        {
+          "id": "B1-11",
+          "relation": "same_mechanism",
+          "explanation": "Same coverage qualification gap; alias must not add another vulnerability count."
+        }
+      ],
+      "remaining_limit_or_acceptance": "Complete mutation adequacy remains open. Source pin coverage should be described separately from behaviorally distinguishing vectors.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "P1 / TSV-05",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "A content-verifier PASS ignored absent or failed independent board evidence.",
+      "current_finding": "Default election verification is INCOMPLETE without required log evidence. Explicit trusted-caller content-only mode is constrained; supplied failed/malformed evidence cannot be waived.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/verify.ts",
+          "observation": "126\u2013131 and 160\u2013167 missing-log and content-only verdict rules."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/verifier/src/verify.ts",
+          "observation": "Composed board/witness evidence cannot yield PASS after skipped or failed verification."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/verifier-py/qv_verifier/election.py",
+          "observation": "verify_bundle default log gate and caller-only allow_no_log."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/verifier-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Seven explicit P1 cases: default board requirement, malformed/redacted evidence, unsigned policy, zero-witness opt-in, exceptions and CLI report scope; relevant sources unchanged from canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "TSV-04",
+          "relation": "same_mechanism_component",
+          "explanation": "Throwing-board path is a component of the repaired evidence policy."
+        },
+        {
+          "id": "PY-02",
+          "relation": "related",
+          "explanation": "Python no-evidence verdict reporting overlaps policy but includes separate per-check semantics."
+        }
+      ],
+      "remaining_limit_or_acceptance": "A deliberate, prominently caveated content-only PASS is still available to trusted callers; it is not a log-integrity PASS.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "P2",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "Duplicate counted voters/codes could pad the privacy floor for trustee decryption.",
+      "current_finding": "The lower-level tally decryption helper rejects a counted list with repeated voter or ballot code before floor evaluation.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/tally.ts",
+          "observation": "trusteeDecryptTally around 41\u201345 enforces unique voters and codes."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "P2 duplicate-voter and duplicate-code rejection with honest distinct-counted control; relevant source unchanged."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "The helper still requires an authenticated, correctly analyzed counted set from its caller; this is not proof of safety for arbitrary fabricated inputs.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "P3",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "A second different coordinator-signed tally was treated as an ignorable duplicate.",
+      "current_finding": "Byte-identical tally reposts are class L; a different tally body is fatal. Current Python handling distinguishes identical and conflicting bodies.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/verify.ts",
+          "observation": "538\u2013541 distinguish identical tally from conflicting body."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/verifier-py/qv_verifier/election.py",
+          "observation": "Around 639\u2013641 distinguish identical and different tally records."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/test/second-wave.test.ts",
+          "observation": "P3 regression includes coordinator re-signing and identical control."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "P3 signed conflicting tally FAIL and identical repeat PASS; relevant source unchanged."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "B1-02",
+          "relation": "same_mechanism_component",
+          "explanation": "The 72-row non-ballot anomaly/parity item includes duplicate tally classification."
+        }
+      ],
+      "remaining_limit_or_acceptance": "",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "P4",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "A bad attached reveal caused an otherwise voter-signed spoil to be ignored, allowing the same code to count.",
+      "current_finding": "Signed spoil status is retained independently of attached reveal correctness. A later cast of the same code remains excluded and the bad reveal is reported.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/ballotlog.ts",
+          "observation": "Signed-spoil tracking is separate from reveal validity."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/test/second-wave.test.ts",
+          "observation": "P4/REQ-015 corrupt attached reveal then cast regression."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "P4 mismatch-reveal spoil remains binding and later cast is excluded; relevant source unchanged."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "B1-01",
+          "relation": "related",
+          "explanation": "Shared spoil analysis; the older attached-reveal condition is distinct from later limit/window acceptance cases."
+        }
+      ],
+      "remaining_limit_or_acceptance": "",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "P6",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "Trustee/witness display names lacked bidi/NFC validation.",
+      "current_finding": "Current manifest validation rejects the recorded bidi-control and non-NFC trustee/witness names.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/manifest.ts",
+          "observation": "Manifest text validation for trustee and witness names."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/test/second-wave.test.ts",
+          "observation": "P6 bidi and non-NFC rejection cases."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "P6 named regression executes; manifest validation source unchanged."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "B1-05",
+          "relation": "same_mechanism_component",
+          "explanation": "Name validation is part of the broader 72-row text policy item."
+        }
+      ],
+      "remaining_limit_or_acceptance": "",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "P7 / TSV-03",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "Below-floor decryption was marked pass and an existing rules failure was overwritten as not_run.",
+      "current_finding": "Decrypt becomes pass only after actual successful combination; the floor path leaves decrypt unrun and preserves the recorded rules failure.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/verify.ts",
+          "observation": "Around 544 and 599\u2013607 only actual decryption can pass; floor failure precedes combination."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/test/second-wave.test.ts",
+          "observation": "P7/TSV-03 below-floor status assertions."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "P7 below-floor verdict/check regression; relevant source unchanged."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "B1-07",
+          "relation": "related",
+          "explanation": "Per-check dependency/parity family, but not identical to every B1-07 distinguishing input."
+        },
+        {
+          "id": "PY-02",
+          "relation": "related",
+          "explanation": "General no-evidence reporting overlaps; do not infer all Python dependency cases from this TS result."
+        }
+      ],
+      "remaining_limit_or_acceptance": "",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "P9",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "An invalid key confirmation shadowed a later valid confirmation by the same trustee.",
+      "current_finding": "A trustee enters the seen/keyconf set only after a valid proof, so invalid-first records cannot shadow the later valid confirmation.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/verify.ts",
+          "observation": "442\u2013450 validates keyconf before recording it as seen."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/test/second-wave.test.ts",
+          "observation": "P9 invalid-first/later-valid regression."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "P9 valid-later keyconf recovery PASS and earlier invalid L finding; relevant source unchanged."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "The exact older Python behavior was already permissive in the desired direction; this execution is the TS regression, not an independent new Python claim.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "P10",
+      "historical_severity": "Info",
+      "status": "partial",
+      "historical_mechanism": "Differing duplicate election-open/close markers are class L with first valid record winning.",
+      "current_finding": "Canonical TypeScript and Python still treat duplicates as nonfatal without comparing bodies. The approved decision register requires identical repeats L and differing signed bodies F/E_MARKERS. The newer requirement is not implemented.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/verify.ts",
+          "observation": "468\u2013470 applies L to every duplicate valid election marker."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/verifier-py/qv_verifier/election.py",
+          "observation": "Duplicate marker branches around 430/497 retain first-wins nonfatal behavior."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/docs/plan/DECISIONS-2026-11-04.md",
+          "observation": "85\u201393 P10 recommends differing=F E_MARKERS, identical=L; adopted by ADR-027."
+        }
+      ],
+      "execution_evidence": [],
+      "execution_scope": "Source inspection only; relevant test source is not represented as an executed test.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "B1-02",
+          "relation": "related",
+          "explanation": "General first-valid-record rule does not close the separately approved differing-marker equivocation requirement."
+        }
+      ],
+      "remaining_limit_or_acceptance": "Source-confirmed residual only; no new reproduction used. Acceptance: authorized identical open/close repost leaves valid outcome unchanged with L; authorized differing body is F/E_MARKERS in both verifiers. Keep unauthorized/malformed record noise rules unchanged.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md",
+      "candidate_resolution": {
+        "pr": 64,
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/64",
+        "head": "4b88209afb5a6c8fba1df06e0af8d1c1ac21d15f",
+        "status": "unmerged candidate",
+        "reviewed_local_commit": "a0f6c2565256b036eb1d8835998c6717a0284ceb",
+        "reviewed_tree": "266c5a41a87802fc3d512982002f01eb93a03516",
+        "scope": "TypeScript and Python authenticate election-open/close markers before comparing canonical bodies; identical repeats remain L and differing authenticated bodies are fatal E_MARKERS with dependent checks stopped.",
+        "review_report": "consolidation-p10-review-20261117.md",
+        "qualification": "Independent focused 11 TypeScript and 15 Python tests passed on the reviewed local commit. Canonical status and source-only baseline evidence above remain unchanged; required human/security and integration gates remain separate."
+      }
+    },
+    {
+      "id": "P11",
+      "historical_severity": "Low",
+      "status": "partial",
+      "historical_mechanism": "Published tally.decrypters was not required to equal recomputed T_valid.",
+      "current_finding": "TypeScript now fails chk.tally.decrypt with E_DEC_PROOF on exact-array mismatch. Python recomputes T_valid but only appends a note when tally.decrypters differs, then continues decrypt/rules. This is a source-confirmed Python residual.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/verify.ts",
+          "observation": "605\u2013607 require tally.decrypters to equal dec.value.validSet and fail the decryption check otherwise."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/verifier-py/qv_verifier/election.py",
+          "observation": "696\u2013719 recompute T_valid; 720\u2013721 mismatch merely appends a note; canonical S and decryption follow."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/test/second-wave.test.ts",
+          "observation": "124\u2013135 P11 valid control and changed decrypters assert TS FAIL/decrypt fail."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/docs/16-crypto-protocol.md",
+          "observation": "QV-16-REQ-019 (75): recompute every tally field; \u00a75.19.1 (765): decrypters lists all T_valid members, not only canonical S."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/docs/35-second-verifier.md",
+          "observation": "REQ-003/005 require truthful checks and no rules evaluation after decryption failure."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Existing #57 TS P11 regression passed; verify.ts unchanged from canonical. This is not an executed Python mismatch regression."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "B1-07",
+          "relation": "related",
+          "explanation": "Broad report parity is related; the 72-row evidence did not establish this specific Python mismatch behavior."
+        }
+      ],
+      "remaining_limit_or_acceptance": "No new reproduction is claimed or relied on, per parent instruction. See known-p11-handoff.md for minimal repair and regression boundary; no P11-specific ADR was located.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md",
+      "candidate_resolution": {
+        "pr": 63,
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/63",
+        "head": "0042967a76ef871d01f3726d1ff9331293e9a255",
+        "status": "unmerged candidate",
+        "reviewed_local_commit": "20a1932c109a773bf2944f6c58e621c73cb9e856",
+        "reviewed_tree": "311b4a68e8c41957470cfa43a7cd37f835ddce69",
+        "scope": "Python treats a published decrypter list differing from recomputed T_valid as fatal E_DEC_PROOF, fails chk.tally.decrypt, and withholds dependent results.",
+        "review_report": "consolidation-p11-review-20261117.md",
+        "qualification": "Independent focused two-test execution was on parent 19983c6; the final documentation-only follow-up was separately source-reviewed with runtime/test equivalence. Canonical status and its evidence above remain unchanged; required human/security and integration gates remain separate."
+      }
+    },
+    {
+      "id": "C1, C4, C5, C6, C7, C8",
+      "historical_severity": "Low/Info",
+      "status": "fixed",
+      "historical_mechanism": "Grouped primitive API guard defects: identity DH recipient/statements, out-of-range scalar, non-QV-JSON canonicalization, invalid limit throwing, and zero trustee index.",
+      "current_finding": "The corresponding guard functions reject the recorded invalid inputs. The six aliases remain one historical table row; their checks are individually identified in the executed crypto log.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/share-cipher.ts",
+          "observation": "C1 identity recipient guard before DH encryption."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/elgamal.ts",
+          "observation": "C4 requires 0<r<ell."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/json.ts",
+          "observation": "C5 canonicalization validates the QV-JSON domain."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/proofs.ts",
+          "observation": "C6 invalid-u32 limit returns false; C8 DH/cp-dec-spoil identity rejection."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/feldman.ts",
+          "observation": "C7 rejects zero trustee index."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/crypto-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Named C1/C4/C5/C6/C7/C8 checks all pass. Guard logic is unchanged from canonical even where #57 modifies other proof nonce code."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "This grouped row closes the named API input cases only; it is not a general primitive audit.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "C3 (OQ-7, T-043)",
+      "historical_severity": "Info",
+      "status": "reproducible",
+      "historical_mechanism": "PoK, share-key and DH proof nonces use plain CSPRNG and repeat under a failed RNG.",
+      "current_finding": "Canonical prover functions still use scalarRandomNonZero(rng); independent baseline evidence covers failed-RNG behavior. The adopted hedging revision exists in #57.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/proofs.ts",
+          "observation": "pokProve 49\u201353, shareKeyProve 66\u201370 and dhProve 84\u201389 use unhedged RNG nonces."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/docs/plan/DECISIONS-2026-11-04.md",
+          "observation": "167\u2013174 batches C3 with CP-02 under a statement-bound nonce registry revision."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/nonce-baseline.json",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "Canonical proof-family repeated-RNG probe."
+        },
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/nonce-candidate.json",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Candidate changed-statement failed-RNG comparison."
+        },
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/crypto-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Candidate conformance nonce hedge tests."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "#57 implements the C3 proof-family hedges; canonical remains unchanged.",
+      "overlap_with_72": [
+        {
+          "id": "B1-12",
+          "relation": "related",
+          "explanation": "Same failed-RNG/nonce policy family; C3 covers additional proof families beyond the cp-dec row."
+        }
+      ],
+      "remaining_limit_or_acceptance": "Historically this was an allowed design choice; the later approved requirement changes the acceptance target. Candidate tests do not replace required human/security-group approval.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "C11",
+      "historical_severity": "Info",
+      "status": "unverified",
+      "historical_mechanism": "Deterministic test RNG helpers are exported from the production crypto entry point.",
+      "current_finding": "The export surface remains: index.ts exports rng.ts, including streamRng, constantRng and vecrng. Their documentation labels them testing/vector helpers. A production misuse path was not demonstrated.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high for public surface; unverified for production misuse",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/index.ts",
+          "observation": "Line 5 exports all rng.ts symbols."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/crypto/src/rng.ts",
+          "observation": "systemRng uses crypto.getRandomValues; deterministic helpers remain public exports with test-only comments."
+        }
+      ],
+      "execution_evidence": [],
+      "execution_scope": "Source inspection only; relevant test source is not represented as an executed test.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Export presence is source-confirmed. Unverified refers to a concrete production impact/closure, not the existence of the exports. Moving them requires a deliberate API/test-consumer migration; no such migration is in #57.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B1-quietvote-crypto-protocol.md"
+    },
+    {
+      "id": "KNOWN SRV-001",
+      "historical_severity": "High",
+      "status": "fixed",
+      "historical_mechanism": "Peer disconnect after an oversized chunked request caused req.socket.destroy() to throw and terminate the server.",
+      "current_finding": "The finish callback now uses req.socket?.destroy(), safely handling a vanished socket; route body limits remain enforced.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/src/http.ts",
+          "observation": "450 uses optional socket destruction; 165\u2013171 limits streamed bytes."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/test/audit.test.ts",
+          "observation": "318 oversized chunked-body and safe error response regression."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "Executed SRV-001 chunked-body cutoff case on canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Source closes the specific null-socket dereference. The reused test is an HTTP body-limit regression, not a newly executed real child-process peer-disconnect crash campaign.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN SRV-002",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "Compressed IPv6 spellings split one network into multiple rate-limit buckets.",
+      "current_finding": "Current IPv6 parsing normalizes addresses into the adopted /56 bucket before applying request limits.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/src/ratelimit.ts",
+          "observation": "89\u2013109 normalization and 134 bucket use."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/test/audit.test.ts",
+          "observation": "50 canonical/compressed /56 same-bucket test under ADR-027 N-32(a)."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "SRV-002 compressed-address /56 regression executed on canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "The adopted /56 rule differs from the old report\u2019s /64 terminology. This does not establish global distributed rate-limit resistance.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN SRV-003",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "Read-key protected responses could be publicly cached.",
+      "current_finding": "HTTP response handling overrides route public cache policy with private,no-store when access is restricted.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/src/http.ts",
+          "observation": "Around 398 restricted response cache override."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/test/audit.test.ts",
+          "observation": "71 read-key protected response regression."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "SRV-003 cache header regression executed on canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Closes the recorded cache-control disclosure mechanism; no external CDN/proxy qualification is claimed.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN SRV-004",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "Log entry pages were capped only by entry count, permitting large request allocations.",
+      "current_finding": "The entries route tracks serialized entry bytes and stops the page at cfg.maxPageBytes while retaining forward paging progress.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/src/app.ts",
+          "observation": "730\u2013738 byte accounting and page cutoff."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/test/audit.test.ts",
+          "observation": "149 byte-bounded page and complete paging regression."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "SRV-004 page limit and full paging control executed on canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "The first bounded entry may be included to make progress. This is the recorded per-page bound, not overall load qualification.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN SRV-005/006/007",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "Grouped malformed TAR acceptance, SPA fallback for /api paths, and string-built idempotency DELETE SQL.",
+      "current_finding": "Server TAR parsing delegates to the shared strict board framing; static serving excludes /api before SPA fallback; idempotency deletes use bound parameters.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/src/tar.ts",
+          "observation": "Compatibility exports delegate to @quietvote/board."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/board/src/tar.ts",
+          "observation": "Shared archive parser validates framing."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/src/static.ts",
+          "observation": "67 refuses /api and /api/* before fallback."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/src/controldb.ts",
+          "observation": "512/524 prepared idempotency delete statements."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "Named SRV-005 malformed TAR, SRV-006 SPA/traversal and SRV-007 SQL/idempotency cleanup tests on canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Three aliases remain one historical row. No blanket parser fuzz or SQL audit closure is inferred.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN TR-01 / CP-01",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "The server/trustee path admitted and decrypted a counted ciphertext rewrapped as trustee-mode spoil under another code.",
+      "current_finding": "Production releaseSpoil authenticates the election/log, gathers cast alpha values and refuses requested spoil ciphertext components that overlap cast material. Current server/protocol paths reject the recorded admission mechanism.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/src/trustee.ts",
+          "observation": "829\u2013858 verifiedElection, cast-code/alpha collection, and refusal before share release."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/protocol/src/ballotlog.ts",
+          "observation": "Shared all-mode rewrap rejection."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/server/src/election.ts",
+          "observation": "Server consumes authenticated ballot-log validation."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "TR-01 cast-as-spoil release refusal executes on canonical."
+        },
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/crypto_review/protocol-tests.log",
+          "executed_sha": "fd23cb3a481328a2b6315ae34cc2ee589b31aead",
+          "scope": "Shared CP-01 rewrap/order controls on unchanged protocol source."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "CP-01 (verifier-py residual)",
+          "relation": "related",
+          "explanation": "Same risk family but this row concerns server/trustee release, not the Python verifier."
+        }
+      ],
+      "remaining_limit_or_acceptance": "This is internally overlapping with CP-01 above; do not add independent vulnerability counts for aliases/components. Invalid raw cast alpha planting in the trustee\u2019s extra defensive set was not separately requalified here.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN TR-03",
+      "historical_severity": "Low",
+      "status": "partial",
+      "historical_mechanism": "Concurrent trustee processes could violate one-shot release on the same sealed bundle.",
+      "current_finding": "An O_EXCL lock and compare-before-write sealed hash now guard persistence; output is released only after save, and failure invalidates cached outputs. Executed tests use separate Trustee objects, held locks and Promise concurrency, not real concurrent child processes.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/src/fsutil.ts",
+          "observation": "123\u2013140 withLock uses open(wx), then closes and unlinks in finally."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/src/trustee.ts",
+          "observation": "277\u2013294 save compares disk hash under lock, syncs ledger and invalidates on failure."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/test/audit.test.ts",
+          "observation": "132\u2013156 object/held-lock/Promise tests; title says second process but body does not spawn a process."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/test/custody.test.ts",
+          "observation": "Canonical path aliases share lock and release ledger."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "Executed stale-object, lock contention, failed save, relocated backup, restore ledger and canonical alias cases on canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Historical missing guards are repaired; real cross-process simultaneous release and crash/recovery qualification remain unverified. The status is conservative about that exact original concurrency boundary.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN TR-04",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "Release verified a presented log without comparing it with the trustee\u2019s previously imported log.",
+      "current_finding": "assertNoFork compares every previously known sequence with the presented entries and refuses changed or missing earlier entries before release.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/src/trustee.ts",
+          "observation": "742 onward assertNoFork compares this.d.log with presented entries and rejects duplicate/changed/missing known sequences."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/test/audit.test.ts",
+          "observation": "159\u2013175 altered known entry, missing known entry and good control."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "TR-04 imported-log fork refusal executed on canonical."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Closes the recorded imported-prefix check, not independent external witness/rollback qualification.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN TR-07/TR-08",
+      "historical_severity": "Info/Low",
+      "status": "fixed",
+      "historical_mechanism": "Public debugPlaintext exposure and symlink-following shred.",
+      "current_finding": "Production debugPlaintext is absent. Current custody logic refuses symlinks, hardlinks, nonregular files and replaced backup bytes before destructive removal.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/src/trustee.ts",
+          "observation": "Production source search found no debugPlaintext API."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/src/fsutil.ts",
+          "observation": "Identity/type checked shredding."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/trustee/test/custody.test.ts",
+          "observation": "TR-08 symlink, hardlink, nonregular and replacement regressions."
+        }
+      ],
+      "execution_evidence": [
+        {
+          "artifact": "/workspace/scratch/2a75600f2d9c/analysis/custody-server-audit.log",
+          "executed_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+          "scope": "Canonical executed custody checks; reused from the B2 current matrix."
+        }
+      ],
+      "execution_scope": "Reused execution only; no new probe result relied on in this matrix.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "KNOWN TR-07/TR-08",
+          "relation": "exact_row",
+          "explanation": "This grouped row is already explicitly one of the 72. Do not count it a second time."
+        }
+      ],
+      "remaining_limit_or_acceptance": "No global secret-lifetime or physical-storage-erasure guarantee is implied.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN BC-01",
+      "historical_severity": "Medium",
+      "status": "fixed",
+      "historical_mechanism": "Standalone board verification returned VERIFIED using a self-attested bundled log key.",
+      "current_finding": "The CLI downgrades otherwise verified standalone board output to PARTIAL when --log-key is absent.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/cli/src/cmd-board.ts",
+          "observation": "73\u201382 apply explicit log-key downgrade and partial exit behavior."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/cli/test/audit.test.ts",
+          "observation": "24\u201337 source regression asserts no-log-key exit 3 and pinned-log-key exit 0; not newly executed here."
+        }
+      ],
+      "execution_evidence": [],
+      "execution_scope": "Source inspection only; relevant test source is not represented as an executed test.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Source-confirmed narrow log-key fix. No new CLI run is claimed. The separate witness-policy default residual remains in BC-02 below.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN BC-02 / BC-04",
+      "historical_severity": "Medium",
+      "status": "partial",
+      "historical_mechanism": "No external witness-policy flag for standalone board verification and no manifest pin for ballot encryption/audit.",
+      "current_finding": "The CLI now accepts --witness-policy and --manifest-hash and passes these to verification/encryption. However standalone board verification still only warns when witness policy is self-attested; the ADR-027 adopted PARTIAL/exit-3 default is absent.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/cli/src/cmd-board.ts",
+          "observation": "Accepted policy flag and explicit verify options; 73\u201382 downgrade only unpinned log key."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/board/src/bundle.ts",
+          "observation": "121\u2013123 chooses bundle policy when no external policy and emits a warning without itself forcing PARTIAL."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/cli/src/cmd-ballot.ts",
+          "observation": "39 and 52 accept/use pinned manifest hash for election context."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/cli/test/audit.test.ts",
+          "observation": "39\u201358 external witness policy and 76\u201399 manifest pin test source; not newly executed."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/docs/plan/DECISIONS-2026-11-04.md",
+          "observation": "BC-02 option A: self-attested policy must downgrade to PARTIAL/exit 3; adopted in ADR-027."
+        }
+      ],
+      "execution_evidence": [],
+      "execution_scope": "Source inspection only; relevant test source is not represented as an executed test.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [
+        {
+          "id": "B1-06",
+          "relation": "related",
+          "explanation": "Same anchor trust family but different commands and acceptance paths."
+        }
+      ],
+      "remaining_limit_or_acceptance": "Source-confirmed approved-default residual. Old BC-01 test expects exit 0 with only log key and author key, so a green old test would not close the newer decision. Add explicit policy for VERIFIED controls; keep the election-bundle path unchanged.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md",
+      "candidate_resolution": {
+        "pr": 62,
+        "url": "https://github.com/djshellshoxxx/quietvote/pull/62",
+        "head": "6875cd36c65427dbc0b877b356727a396b7f9581",
+        "status": "unmerged candidate",
+        "reviewed_local_commit": "dcce09e794fbb15d303d380d610fd8cc5c0249c1",
+        "reviewed_tree": "dd86a0b5129560f888c9e1b97914fa11e9d4eea6",
+        "scope": "Otherwise verified standalone board output becomes PARTIAL/exit 3 when either the external log-key or witness-policy anchor is absent. Actual failures remain failures and the trusted-manifest election path is unchanged.",
+        "review_report": "consolidation-current-recheck-20261117.md",
+        "qualification": "Ten independent focused CLI tests passed on the reviewed local commit. This repairs the BC-02 residual within the grouped row; canonical status and baseline evidence above remain unchanged. Required approval and integration gates remain separate."
+      }
+    },
+    {
+      "id": "KNOWN BC-10",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "verifyLog(null) threw instead of returning a structured failure.",
+      "current_finding": "The outer verification body catches malformed bundle access, and verdict construction uses optional bundle/entry access so null returns FAILED.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/board/src/bundle.ts",
+          "observation": "99\u2013115 guarded verdict constructor and outer try; 287\u2013291 structural failure catch."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/board/test/audit-bc.test.ts",
+          "observation": "312/334 malformed/null structural inputs; test source only in this workstream."
+        }
+      ],
+      "execution_evidence": [],
+      "execution_scope": "Source inspection only; relevant test source is not represented as an executed test.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "Direct source review supports the exact JSON-null behavior. No new BC-10 test execution or arbitrary-hostile-JavaScript-object totality claim is made.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    },
+    {
+      "id": "KNOWN DEP-01",
+      "historical_severity": "Low",
+      "status": "fixed",
+      "historical_mechanism": "CLI imported @quietvote/verifier without declaring it as a runtime dependency.",
+      "current_finding": "The CLI package now explicitly declares @quietvote/verifier in dependencies.",
+      "canonical_sha": "72bccc6ac7881f0e6b7c21e1c111ee8f34b95a54",
+      "confidence": "high",
+      "source_evidence": [
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/cli/package.json",
+          "observation": "dependencies includes @quietvote/verifier: *."
+        },
+        {
+          "path": "/workspace/scratch/2a75600f2d9c/quietvote/packages/cli/src/cmd-verify.ts",
+          "observation": "Runtime dependency use."
+        }
+      ],
+      "execution_evidence": [],
+      "execution_scope": "Source inspection only; relevant test source is not represented as an executed test.",
+      "candidate_pr57_effect": "No relevant repair unique to #57 identified.",
+      "overlap_with_72": [],
+      "remaining_limit_or_acceptance": "The specific missing declaration is corrected by inspection. A clean external package install/distribution test was not performed.",
+      "historical_table": "/workspace/scratch/2a75600f2d9c/quietvote/docs/audit/2026-10-28/B2-quietvote-server-board.md"
+    }
+  ]
+}

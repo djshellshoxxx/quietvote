@@ -1,0 +1,78 @@
+// Shared Playwright harness for the B3 PoCs: serves the REAL production build (buildSite, real CSP header) and routes /api/* to a
+// switchable FakeBoard, exactly like e2e/run.ts. Playwright and Chromium are the preinstalled global copies (not repo dependencies).
+import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
+import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { extname, join } from 'node:path';
+import { streamRng } from '@quietvote/crypto';
+import { buildSite, csp } from '../src/build/site.ts';
+import { FLOOR_PARAMS, defaultDeps, serializeContainer, wrapSeed } from '../src/key/keystore.ts';
+import type { FakeBoard } from '../test/helpers/fake-board.ts';
+
+export const PASS = 'correct horse battery staple';
+const CHROMIUM = process.env.QV_CHROMIUM ?? '/opt/pw-browsers/chromium';
+const req = createRequire('/opt/node22/lib/node_modules/');
+export const pw: typeof import('playwright') = req('playwright');
+export const exe = statSync(CHROMIUM).isDirectory() ? join(CHROMIUM, 'chrome-linux', 'chrome') : CHROMIUM;
+export const AXE = '/tmp/claude-0/-home-user/b9ccda38-9f8d-54d6-a99c-1f20e1924081/scratchpad/tools/axe.min.js';
+
+export interface Stack {
+  origin: string;
+  dist: string;
+  keyFile: string;
+  board: { current: FakeBoard };
+  /** hook to alter /api responses: return a Response to short-circuit. */
+  intercept: { fn?: (method: string, path: string, body: string | undefined, real: () => Promise<Response>) => Promise<Response | undefined> };
+  tamper: { fn?: (path: string, body: Buffer) => Buffer };
+  close(): void;
+}
+
+export async function startStack(board: FakeBoard, voterSecret: Uint8Array, opts: { dist?: string } = {}): Promise<Stack> {
+  if (!existsSync(exe)) throw new Error('no chromium');
+  const dist = opts.dist ?? mkdtempSync(join(tmpdir(), 'qv-b3-'));
+  if (opts.dist === undefined) await buildSite(dist);
+  const policy = csp().header;
+  const MIME: Record<string, string> = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json' };
+  const ref = { current: board };
+  const intercept: Stack['intercept'] = {};
+  const tamper: Stack['tamper'] = {};
+  const server: Server = createServer(async (rq, rs) => {
+    const url = new URL(rq.url ?? '/', 'http://x');
+    if (url.pathname.startsWith('/api/')) {
+      const body = await new Promise<string | undefined>((res) => { const c: Buffer[] = []; rq.on('data', (d: Buffer) => c.push(d)); rq.on('end', () => res(c.length ? Buffer.concat(c).toString() : undefined)); });
+      const real = (): Promise<Response> => ref.current.fetch(url.pathname + url.search, { method: rq.method ?? 'GET', headers: rq.headers as Record<string, string>, ...(body === undefined ? {} : { body }) });
+      let r: Response | undefined;
+      try { r = await intercept.fn?.(rq.method ?? 'GET', url.pathname, body, real); } catch { r = new Response('{}', { status: 502 }); }
+      r ??= await real().catch(() => new Response('{}', { status: 502 }));
+      rs.writeHead(r.status, { 'Content-Type': r.headers.get('Content-Type') ?? 'application/json' });
+      rs.end(Buffer.from(await r.arrayBuffer()));
+      return;
+    }
+    let file = url.pathname.startsWith('/assets/') || url.pathname === '/verifier.html' ? url.pathname : '/index.html';
+    if (!existsSync(join(dist, file))) file = '/index.html';
+    let body = readFileSync(join(dist, file));
+    if (tamper.fn) body = tamper.fn(file, body);
+    rs.writeHead(200, { 'Content-Type': MIME[extname(file)] ?? 'application/octet-stream', 'Content-Security-Policy': file === '/verifier.html' ? "default-src 'none'" : policy, 'Cross-Origin-Opener-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff' });
+    rs.end(body);
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const keyFile = join(dist, 'voter.qvkey');
+  const w = await wrapSeed(voterSecret.slice(), PASS, { ...defaultDeps(), rng: streamRng('b3-key') }, FLOOR_PARAMS);
+  writeFileSync(keyFile, serializeContainer(w.container));
+  return { origin, dist, keyFile, board: ref, intercept, tamper, close: () => server.close() };
+}
+
+export const results: { name: string; ok: boolean; note: string }[] = [];
+export async function step(name: string, f: () => Promise<string | void>): Promise<void> {
+  try {
+    const note = (await f()) ?? '';
+    results.push({ name, ok: true, note });
+    console.log(`PASS - ${name}${note ? `\n        ${note.split('\n').join('\n        ')}` : ''}`);
+  } catch (e) {
+    const note = e instanceof Error ? e.message.split('\n')[0]! : String(e);
+    results.push({ name, ok: false, note });
+    console.log(`FAIL - ${name}\n        ${note}`);
+  }
+}

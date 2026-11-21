@@ -1,0 +1,62 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "primitives/hash",
+  "operation": "hash.sha512",
+  "description": "SHA512 known answers (FIPS 180-4 examples)",
+  "origin": "external",
+  "source": {
+    "name": "FIPS 180-4 examples",
+    "url": "https://csrc.nist.gov/publications/detail/fips/180/4/final",
+    "retrieved": "2026-10-21",
+    "source_sha256": "not-computed (values re-derived from the standard text by the author; see README)"
+  },
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "sha512-abc",
+      "input": {
+        "msg_hex": "616263"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "digest_hex": "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
+        }
+      },
+      "tags": [
+        "kat",
+        "external"
+      ]
+    },
+    {
+      "id": "sha512-empty",
+      "input": {
+        "msg_hex": ""
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "digest_hex": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+        }
+      },
+      "tags": [
+        "kat",
+        "external"
+      ]
+    }
+  ]
+}

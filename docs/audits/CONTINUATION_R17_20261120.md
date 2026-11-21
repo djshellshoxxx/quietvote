@@ -1,0 +1,31 @@
+# QuietVote R17 — exact-source CI typecheck and defensive boundary repair — 2026-11-20
+
+## Publication boundary
+
+Expected predecessor is draft PR #71 head `ef8436cdae9902ebec375afd0e6483302d525847`, complete tree `62241159f92c9f8fd3f99eed76759de41e773bf3`, with main `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. This handoff and the two source paths are intended to be published together by a non-force expected-head fast-forward. Resolve actual R17 identity from the commit containing this file and verify the complete tree and three blob paths; do not treat this document alone as proof of publication. No native Git fetch/diff or shell network approval was used.
+
+## Source-derived repair
+
+R16's hosted [typecheck and supply-chain job](https://github.com/djshellshoxxx/quietvote/actions/runs/44798833781) completed its supply-chain/dependency stages successfully but failed specifically at `npm run typecheck`: `packages/cli/test/checkpoint-pin.test.ts(11,38): TS2339 Property 'error' does not exist on type 'never'`. The assertion narrowed the discriminant to success before a redundant failure branch. The test helper now checks/throws on failure first and returns the narrowed success value. Do not describe this failure as a vulnerability or a vendor dependency failure.
+
+A focused single-coordinator source inspection also identified a normal runtime Result-boundary risk when a caller passes null anchors or non-array/sparse consistency proof containers despite TypeScript's declared types. The pure checkpoint-pin helper now checks the anchors object before dereferencing, refuses non-array equal-size proof inputs, and requires bounded dense 32-byte hash proof arrays for growth. It keeps the same named QV_BOARD_ORIGIN_MISMATCH and QV_BOARD_BAD_PROOF refusals and does not modify old state. A new authored benign regression tests null inputs, a malformed proof-like object, sparse proof data and retained-byte integrity. It has **not** yet been executed on this R17 source; do not count it as an independent worker acceptance.
+
+R17 changes ONLY `packages/cli/src/checkpoint-pin.ts`, `packages/cli/test/checkpoint-pin.test.ts` and this handoff. The helper remains unconnected: no CLI storage flag, automatic write, persisted receipt, kernel lock, filesystem provider, board/server/browser mutation or deployed freshness guarantee. R15/R16 pure verified signed note/consistency and canonical record boundaries remain intact.
+
+## Observed predecessor CI receipts (R16 only)
+
+At source-bound inspection, R16 [visual 44798833766](https://github.com/djshellshoxxx/quietvote/actions/runs/44798833766) and [claims 44798834074](https://github.com/djshellshoxxx/quietvote/actions/runs/44798834074) concluded SUCCESS. R16 [CI 44798833781](https://github.com/djshellshoxxx/quietvote/actions/runs/44798833781) was still overall QUEUED with one failed typecheck job while other platform jobs were in progress. CLI+board test jobs on Ubuntu Node 22 and 24 and Windows Node 22 succeeded, and their hosted logs explicitly include R16 checkpoint-pin test cases. These are source-qualified **hosted R16 tests**, not fresh independent review workers and not R17 coverage. A final CI conclusion must be fetched, not inferred from individual jobs. The R16 synthetic merge `de5aaa62cacfb77527f86556e4a3cedd3f7e0799` had tree `62241159f92c9f8fd3f99eed76759de41e773bf3`, parents main/R16. New R17 jobs require their own tested synthetic merge SHA/tree verification.
+
+## Outstanding genuine independent three-lane assignment
+
+1. **Fresh code audit worker:** inspect R17 canonical parser, null-anchor guard, proof-container validation, Result and TS discriminant behavior. In a truly isolated checkout verify all @quietvote/* resolutions, run root typecheck and focused checkpoint pin groups, record exact tested commit/tree and terminal results.
+2. **Fresh ordinary functional bug-hunt worker:** run INITIAL / UNCHANGED / one-to-two growth and multi-hash growth, equal-size refusal, stale prior preservation, sparse/proof-like inputs, and confirm unrelated receipt-check source remains unchanged. Preserve all original assertions/timeouts; record executable receipts.
+3. **Fresh defensive source review worker:** separately inspect independent origin/key anchors, signed-note parsing, optional auxiliary text canonicalization, proof fidelity, nonaliasing, runtime malformed inputs and future native owner/ACL, namespace, lock, crash-durability boundaries. Use only benign tests and defensive analysis.
+
+No separate fresh workers were dispatched in this connector-only increment; a single coordinator inspection does **not** satisfy this three-worker set or authorize a fresh-generation handoff. No source-specific R17 independent test result or security approval is asserted.
+
+## Durable custody contract remains OPEN
+
+Under QV-18 REQ-026, actual persistence must obtain independently authenticated per-origin/key paths and trustworthy native owner/ACL namespace custody on Windows, macOS and Linux; acquire a kernel-enforced stable cross-process exclusive lock; descriptor-read and authenticate the newest retained state; verify exact old/new consistency against that newest head while holding custody; publish via private same-filesystem staging with mandatory file AND directory durability barriers; and recover ambiguous commits without deleting or overwriting a newer trusted checkpoint. Refuse uncertain ACL, I/O and durability. Do not infer freshness, witness coverage or governance policy; preserve INCOMPLETE and all previous evidence. Native POSIX mode alone is not effective ACL proof; existing Windows private-file routines do not qualify this workflow. Read the R15 storage RFC and R16 handoff before any integration.
+
+Formal main-promotion barriers remain: appointed security reviewer and sensitive-change approvals, owner provenance decisions including historical DCO for `8f865fb` and `a5e5d19`, governance/ratification, membership, challenges/FINAL, authenticated freshness, native ACL and all unadopted contracts. Preserve main, original branches, paused investigations and automations; no merge, release, deploy, forced ref, retroactive signature or new PR comments. If R17 native custody cannot be qualified, explicitly hold integration rather than claiming completion.

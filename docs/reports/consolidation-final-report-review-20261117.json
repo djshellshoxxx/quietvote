@@ -1,0 +1,253 @@
+{
+  "review_kind": "Independent AI source/evidence review of final report delta; not a formal approving review",
+  "reviewed_at_utc": "2026-11-18T09:16:11.735848+00:00",
+  "worktree": "session-evidence/quietvote-report",
+  "head": "e354d605a6c8e624f2e0fc72e53d91db6c94aa53",
+  "tree": "c1ee3113fee79c76a294319b6f61c4cee1c39eea",
+  "parent": "4113625422e8e6b23dc7f9ed137cedcfb4b3a39f",
+  "clean_before_and_after": true,
+  "changed_file_count": 18,
+  "changed_paths": [
+    "docs/reports/consolidation-combined-review-20261117.md",
+    "docs/reports/consolidation-core-handoff-20261117.md",
+    "docs/reports/consolidation-current-findings-20261117.json",
+    "docs/reports/consolidation-current-recheck-20261117.md",
+    "docs/reports/consolidation-current-validation-20261117.json",
+    "docs/reports/consolidation-known-findings-20261117.json",
+    "docs/reports/consolidation-known-findings-20261117.md",
+    "docs/reports/consolidation-p10-review-20261117.md",
+    "docs/reports/consolidation-p11-review-20261117.md",
+    "docs/reports/consolidation-public-composition-20261117.md",
+    "docs/reports/consolidation-remote-snapshot-20261117.json",
+    "docs/reports/consolidation-remote-snapshot-20261117.md",
+    "docs/reports/consolidation-report-review-20261117.md",
+    "docs/reports/consolidation-revote-copy-review-20261117.md",
+    "docs/reports/consolidation-w15-current-review-20261117.md",
+    "docs/reports/consolidation-web-checks-review-20261117.md",
+    "docs/reports/consolidation-web-recheck-20261117.md",
+    "docs/reports/consolidation-windows-ci-triage-20261117.md"
+  ],
+  "runtime_changes": false,
+  "runtime_tests_rerun": false,
+  "remote_mutations": false,
+  "result": "No blocking report defect or required factual correction identified within the stated scope.",
+  "blocking_findings": [],
+  "required_corrections": [],
+  "formal_approval_issued": false,
+  "verification": {
+    "historical_72": {
+      "count": 72,
+      "unique_ids": 72,
+      "original_fields_and_canonical_statuses_identical_to_parent": true,
+      "sole_row_additions": [
+        "B1-08 candidate_followups: M7 / #61",
+        "B3-04 candidate_followups: W15 / #60",
+        "B3-14 candidate_followups: copy / #65"
+      ],
+      "classification": "Historical findings remain bound to 424110d9; current baseline remains 72bccc6. Candidate repairs are explicitly unmerged."
+    },
+    "canonical_validation_receipt": {
+      "path": "docs/reports/consolidation-validation-20261117.json",
+      "identical_to_parent": true,
+      "parent_and_head_blob": "d90c6bf441129014106f65f8ee92b66cb3038d52",
+      "new_receipt_is_distinct": "docs/reports/consolidation-current-validation-20261117.json"
+    },
+    "known_33": {
+      "source_artifact": "session-evidence/analysis/branch_inventory/known-findings-current.json",
+      "independent_recheck_receipt": "session-evidence/analysis/branch_inventory/final-report-known-composition-review.json",
+      "receipt_sha256": "ac7b441d357818909a8d425e82c2c988268e26b8f7e5da6cd0debf28309060b8",
+      "count": 33,
+      "original_fields_and_top_metadata_identical_after_removing_candidate_resolution": true,
+      "candidate_additions": [
+        "P10",
+        "P11",
+        "BC-02/04"
+      ],
+      "canonical_status_counts": {
+        "fixed": 24,
+        "partial": 5,
+        "reproducible": 2,
+        "unverified": 2
+      },
+      "overlap_preserved": true,
+      "not_additive_unique_vulnerability_count": true,
+      "attribution": "Branch inventory agent independently compared its original source artifact to final report at this exact commit; result read and incorporated."
+    },
+    "published_sources": [
+      {
+        "pr": 60,
+        "published": "754c586aa65735d50514b543a62a5e3c96a4d138",
+        "tree": "0db87c6933db0ba9123bd583083a2a98faeee2a6",
+        "matches_recorded_and_local": true,
+        "parent_matches": true,
+        "file_delta_matches": true,
+        "author": "sheldon <127660907+djshellshoxxx@users.noreply.github.com>",
+        "author_matching_dco": true
+      },
+      {
+        "pr": 61,
+        "published": "04171611e8c8d836ede49c30f0c6f0acc9d0da05",
+        "tree": "e937d8ec4af92af1f9076342d9ef84aab505c145",
+        "matches_recorded_and_local": true,
+        "parent_matches": true,
+        "file_delta_matches": true,
+        "author": "sheldon <127660907+djshellshoxxx@users.noreply.github.com>",
+        "author_matching_dco": true
+      },
+      {
+        "pr": 62,
+        "published": "6875cd36c65427dbc0b877b356727a396b7f9581",
+        "tree": "dd86a0b5129560f888c9e1b97914fa11e9d4eea6",
+        "matches_recorded_and_local": true,
+        "parent_matches": true,
+        "file_delta_matches": true,
+        "author": "sheldon <127660907+djshellshoxxx@users.noreply.github.com>",
+        "author_matching_dco": true
+      },
+      {
+        "pr": 63,
+        "published": "0042967a76ef871d01f3726d1ff9331293e9a255",
+        "tree": "311b4a68e8c41957470cfa43a7cd37f835ddce69",
+        "matches_recorded_and_local": true,
+        "parent_matches": true,
+        "file_delta_matches": true,
+        "author": "sheldon <127660907+djshellshoxxx@users.noreply.github.com>",
+        "author_matching_dco": true
+      },
+      {
+        "pr": 64,
+        "published": "4b88209afb5a6c8fba1df06e0af8d1c1ac21d15f",
+        "tree": "266c5a41a87802fc3d512982002f01eb93a03516",
+        "matches_recorded_and_local": true,
+        "parent_matches": true,
+        "file_delta_matches": true,
+        "author": "sheldon <127660907+djshellshoxxx@users.noreply.github.com>",
+        "author_matching_dco": true
+      },
+      {
+        "pr": 65,
+        "published": "0653163a3cee2b230398a572723a028c0dda6d7d",
+        "tree": "66472438d182cf27a1e0b69deec4d5bd299363ef",
+        "matches_recorded_and_local": true,
+        "parent_matches": true,
+        "file_delta_matches": true,
+        "author": "sheldon <127660907+djshellshoxxx@users.noreply.github.com>",
+        "author_matching_dco": true
+      },
+      {
+        "pr": 66,
+        "published": "ae17bd0c2a33427a77b2d71673ed55787c463c6c",
+        "tree": "ac3735480e347226e2d4a9dda228d2e3cf10868e",
+        "matches_recorded_and_local": true,
+        "parent_matches": true,
+        "file_delta_matches": true,
+        "author": "sheldon <127660907+djshellshoxxx@users.noreply.github.com>",
+        "author_matching_dco": true
+      }
+    ],
+    "combined_sources": {
+      "initial": {
+        "head": "6f7d4daddc667bf0b1b4cd0dc1099c0813599968",
+        "tree": "9fe4efb1753f9ffbbe94aa8379663654aa722a15"
+      },
+      "final": {
+        "head": "cf53e694483ccb45466b19f27cf8c642800b6c85",
+        "tree": "316c490b46a2062556360c3c0201f1a1c6ae105c"
+      },
+      "delta_files": [
+        "packages/web/test/app-precompile.test.ts",
+        "packages/web/test/no-bearer.test.ts"
+      ],
+      "public_replay_commit": "1733e8bf3aaf1860b0c9f2680300310a70e3e2fd",
+      "public_replay_tree_read_from_git": "316c490b46a2062556360c3c0201f1a1c6ae105c",
+      "matches_final_tree": true,
+      "source_tree_only_reproduction": true,
+      "execution_binding": "Python232, TS423, Py285, strict27, production build200345 remain bound to 6f7. Final root tsc/i18n/web338 remain bound to cf53. Unchanged production source is explicitly used to transfer build identity; no final-head production execution invented."
+    },
+    "review_copies": {
+      "normalized_exact_before_publication_note": [
+        "combined-independent-review.md",
+        "p11-independent-review.md",
+        "pr59-independent-review.md",
+        "w15-independent-review.md",
+        "windows-ci-triage.md"
+      ],
+      "p10_delta": "Only a factual published-PR64 link/head and unmerged/local-binding note after the preserved original review."
+    },
+    "log_hash_records": {
+      "evidence_id_records": 25,
+      "additional_log_path_records": 12,
+      "total_record_references": 37,
+      "mismatches": 0,
+      "qualification": "This counts embedded hash-record references, not necessarily unique logs. Hash and byte-count checks preserve evidence integrity; they do not rerun tests or recreate past process exits."
+    },
+    "snapshot": {
+      "all_original_60_retained_unchanged": true,
+      "new_branches": 8,
+      "removed_branches": [],
+      "pr_counts_from_number_sets": {
+        "all": 66,
+        "open": 12,
+        "merged": 8,
+        "closed_unmerged": 46
+      },
+      "formal_review_count": 0,
+      "ready_prs": [
+        57
+      ],
+      "pr60_statuses_from_jobs": {
+        "success": 11,
+        "failure": 3,
+        "in_progress": 2,
+        "queued": 11
+      }
+    },
+    "publication_boundary": {
+      "snapshot_finished_at_utc": "2026-11-18 09:01:17 UTC",
+      "pr59_observed_head": "4113625422e8e6b23dc7f9ed137cedcfb4b3a39f",
+      "precedes_this_report_commit": true,
+      "no_future_ci_inference": true
+    },
+    "core_handoff": "Read the complete handoff and spot-checked canonical route sizes, voter limits, registration status, list/publication source, migration versions/checksum enforcement and accepted ADR-027/029. Proposals and missing runtime contracts are identified as such; no completed D-99, rollback-floor, export-ack or freshness implementation is asserted.",
+    "documentation_checks": {
+      "attribution": "Root-executed logs independently read; no check rerun in this review.",
+      "links": "1553 links in 293 files; none broken",
+      "claims": "0 findings; 272 files and 45 rules checked",
+      "traceability": "Root reports structural pass; log retains 166/530 in-scope Must links and partial/unimplemented statuses, not full conformance.",
+      "logs": [
+        {
+          "path": "session-evidence/analysis/report-final-links.log",
+          "sha256": "9f3d52c13fe7eee0910ba34a74e1ffa7cb2a90057aaff46f5a2e6080444d9214"
+        },
+        {
+          "path": "session-evidence/analysis/report-final-claims.log",
+          "sha256": "75c66cf7c9d1d4b9702a4263224a04e8ee52ce3d2ebff7f6d1673c2e7241022f"
+        },
+        {
+          "path": "session-evidence/analysis/report-final-trace.log",
+          "sha256": "fb7b7ba8b76588c90073f93add32d53b60195ec2ce5a5e098d299cddb9e2495c"
+        }
+      ]
+    }
+  },
+  "remaining_merge_and_qualification_gates": [
+    "All 12 open PRs have zero formal review submissions at the stored snapshot; #57 alone is ready. Readiness and passing CI do not establish approval.",
+    "QV-30 section10 at line183 and REQ018 at line266 require two approvals including a security reviewer for crypto/protocol/vector and listed sensitive changes. The report does not treat an AI source review as that approval.",
+    "QV-30 section9.2 line172 explicitly names main; section1 and section13 line236 retain second-person/CODEOWNER language. The report preserves intermediate-branch ambiguity and grants no categorical docs-only exemption.",
+    "CONTRIBUTING.md line7 requires author-matching DCO; #58 remains missing it and the report does not substitute another author attestation.",
+    "PR60 full matrix has three failed Windows jobs and unfinished jobs at the stored 09:01 snapshot. Twelve server recovery failures remain unresolved; native/non-native path mismatch is explicitly only a hypothesis. PR66 Windows evidence was queued.",
+    "No main/canonical merge or production/election qualification is asserted; complete required combined/platform/manual acceptance remains separate."
+  ],
+  "evidence_artifacts": [
+    "session-evidence/analysis/crypto_review/final-report-structural-checks.json",
+    "session-evidence/analysis/crypto_review/final-report-evidence-checks.json",
+    "session-evidence/analysis/crypto_review/final-report-snapshot-log-checks.json"
+  ],
+  "limitations": [
+    "Read-only final report review, not a fresh security audit of every historical mechanism.",
+    "No runtime, browser or Windows suite rerun.",
+    "Remote statuses were checked for faithful representation of the stored timestamped evidence; no later live-state claim is made.",
+    "Private session log identifiers are explicitly described as external execution evidence rather than repository download links.",
+    "No formal approval, rule waiver, source edit, merge or remote metadata change occurred."
+  ]
+}

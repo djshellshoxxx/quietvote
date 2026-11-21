@@ -1,0 +1,41 @@
+# B1 audit PoC (2026-10-28): evaluate the op-level inputs written by oplevel.ts with verifier-py and print TS vs Python.
+# Run from the worktree root: python3 -I audit-b1-poc/op_py.py
+import json, os, sys
+here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(here, '..', 'verifier-py'))
+from qv_verifier import manifest, dkg, ed25519  # noqa: E402
+from qv_verifier.errors import QVError  # noqa: E402
+
+def py(f):
+    try:
+        return 'OK', f()
+    except QVError as e:
+        return f'{e.code}: {e.detail}', None
+    except Exception as e:  # noqa: BLE001
+        return f'EXCEPTION {e!r}', None
+
+print('== manifest validation (TS validateManifest vs PY manifest.validate)')
+for c in json.load(open(os.path.join(here, 'out', 'op-manifest.json'))):
+    pr, _ = py(lambda: manifest.validate(c['manifest'], c['roll_size']))
+    ts_ok = c['ts'] == 'OK'
+    py_ok = pr == 'OK'
+    print(f"{c['id']:46} TS={'accept' if ts_ok else 'REJECT'} PY={'accept' if py_ok else 'REJECT'} "
+          f"{'DIVERGE' if ts_ok != py_ok else 'same   '}  ts[{c['ts'][:60]}] py[{pr[:60]}]")
+
+print('== DKG adjudication (TS adjudicateDkg vs PY dkg.adjudicate)')
+for s in json.load(open(os.path.join(here, 'out', 'op-dkg.json'))):
+    pr, r = py(lambda: dkg.adjudicate(bytes.fromhex(s['manifest_hash_hex']), s['n'], s['t'], s['markers'], s['records']))
+    pyv = {'Q': r['Q'], 'ctx': r['ctx'].hex()[:16]} if r else {'error': pr}
+    tsv = {'Q': s['ts']['Q'], 'ctx': s['ts']['ctx_hex'][:16]} if 'Q' in s['ts'] else {'error': s['ts']['error']}
+    print(f"{s['id']:36} TS={json.dumps(tsv):45} PY={json.dumps(pyv):45} {'DIVERGE' if tsv != pyv else 'same'}")
+
+print('== Ed25519 verify with a mixed-order public key (TS ed25519Verify vs PY ed25519.verify)')
+e = json.load(open(os.path.join(here, 'out', 'op-ed25519.json')))
+pk = bytes.fromhex(e['cases'][0]['public_hex'])
+print('PY valid_public_key(mixed-order pk) =', ed25519.valid_public_key(pk))
+agree = 0
+for c in e['cases']:
+    pv = ed25519.verify(bytes.fromhex(c['public_hex']), bytes.fromhex(c['msg_hex']), bytes.fromhex(c['sig_hex']))
+    agree += (pv == c['ts'])
+    print(f"{c['id']:18} k mod 8={c['k_mod_8']}  TS={c['ts']}  PY={pv}  {'same' if pv == c['ts'] else 'DIVERGE'}")
+print(f"agreement {agree}/{len(e['cases'])}")

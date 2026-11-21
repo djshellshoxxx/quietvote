@@ -1,0 +1,20 @@
+// B3 audit PoC (Playwright): QV-13-REQ-064 / QV-ADR-P13-3 gating. Unreviewed machine-draft locales must never be offered or even downloaded.
+import { FakeBoard, sharedSim } from '../test/helpers/fake-board.ts';
+import { exe, pw, startStack } from './harness.ts';
+
+const sim = await sharedSim();
+const stack = await startStack(new FakeBoard(sim), sim.voters[0]!.secretKey);
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+for (const q of ['?lang=es', '?lang=ar', '?lang=fr-CA', '?lang=en-XA', '?lang=xx', ''] as const) {
+  const ctx = await browser.newContext({ locale: q === '' ? 'ar-SA' : 'en-US' });
+  const p = await ctx.newPage();
+  const reqs: string[] = [];
+  p.on('request', (r) => { const u = new URL(r.url()); if (u.pathname.startsWith('/assets/')) reqs.push(u.pathname.replace(/^\/assets\//, '').replace(/[-.][A-Za-z0-9]{8,12}\.js$/, '.js')); });
+  await p.goto(`${stack.origin}/${q}`);
+  await p.getByRole('heading', { level: 1 }).waitFor();
+  const info = await p.evaluate(() => ({ lang: document.documentElement.lang, dir: document.documentElement.dir, h1: document.querySelector('h1')?.textContent }));
+  console.log(`${(q || '(browser language ar-SA)').padEnd(24)} -> html lang=${info.lang} dir=${info.dir} h1="${info.h1}" | assets fetched: ${[...new Set(reqs)].join(', ')}`);
+  await ctx.close();
+}
+await browser.close();
+stack.close();
