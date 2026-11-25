@@ -169,7 +169,7 @@ class HeldStream {
       clearTimeout(waiting.timer);
       this.waiting = undefined;
       try {
-        if (rest.trim() !== '') throw new WindowsPrivateFileError();
+        if (!/^[\x20\t\r\n]*$/.test(rest)) throw new WindowsPrivateFileError();
         waiting.resolve(reply(line));
       } catch (error) {
         waiting.reject(error instanceof WindowsPrivateFileError ? error : new WindowsPrivateFileError());

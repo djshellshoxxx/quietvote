@@ -1,5 +1,32 @@
 # QuietVote branch inventory
 
+## November 24, 2026 live reconciliation
+
+A fresh independent read-only comparison found **75 remote branch tips**, with
+no differences between the fetched refs and a final `git ls-remote --heads`
+read. Main remains `019f4e789be2ff38a5fb2d348c3b225cc87cf296`. At the start of
+this continuation the cumulative candidate was
+`918dc4b63bfe8bd8d9a3abe9db9949dad2f78630`, 547 commits ahead of main.
+
+**68 of the 75 tips are already ancestors of that candidate**; two are also
+contained in main (main and its identical alias). The seven non-ancestor tips
+are unchanged from the historical classification below. The unsigned visual-CI
+fix is patch-equivalent to its preserved signed replacement. Six other tips are
+historical/superseded documentation or mixed #27 work whose accepted behavior
+has been reconstructed against current migrations and contracts. The retained,
+previously rejected web-ballot patch is not an accepted implementation.
+
+The three tips added after the original 72-branch inventory are the cumulative
+candidate itself and the source branches for PRs #72 and #73; all are contained.
+Open PR heads #43, #57, #60, #61, #63, #64, #65, #66, #69 and #70 are also
+ancestors. No additional modern branch needs a source merge. PR #27 remains
+divergent and requires its existing selective disposition, not a blanket merge.
+
+This is an ancestry and content-disposition result, not a claim that main is
+consolidated or that required formal reviews are complete. Original branches
+remain preserved. The [R22 continuation](CONTINUATION_R22_20261124.md) records
+the source correction and its separately attributed verification.
+
 ## Scope and immutable baseline
 
 This engineering inventory covers **72 remote branches**, all **70 discovered pull requests**, three additional historical PR head commits, and **479 workflow runs**. Branch pagination returned no second page. Local branch enumeration, complete Git history, merge bases, ancestry, stable patch equivalence, and three-way merge checks were used; the GitHub compare API alone was not sufficient because large file lists are capped.
