@@ -1,0 +1,30 @@
+// B3 audit PoC: /verifier.html served by the reference server's static handler (its own CSP header) in a real browser.
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { buildSite } from '../src/build/site.ts';
+import { buildServer } from '../../server/src/index.ts';
+import { bundleOf, castBallot, closeElection, publishTally, setup } from '../../protocol/test/helpers/sim.ts';
+import { TEST_CONTESTS } from '../test/helpers/fake-board.ts';
+import { exe, pw } from './harness.ts';
+const sim = await setup({ seed: 'b3-vs', n: 3, t: 2, voters: 4, contests: TEST_CONTESTS()!, minCounted: 3 });
+for (let i = 0; i < 4; i++) castBallot(sim, i, { budget: ['yes'], board: ['p', 'q'] });
+closeElection(sim); publishTally(sim, [1, 2]);
+const dist = mkdtempSync(join(tmpdir(), 'qv-b3-vs-')); const data = mkdtempSync(join(tmpdir(), 'qv-b3-vd-'));
+await buildSite(dist);
+const bundleFile = join(dist, '..', `bundle-${Date.now()}.json`);
+writeFileSync(bundleFile, JSON.stringify(bundleOf(sim)));
+const server = buildServer({ dataDir: data, staticDir: dist, minFreeBytes: 0, logSink: () => undefined });
+const { url } = await server.start();
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+const msgs: string[] = [];
+p.on('console', (m) => { if (m.type() === 'error') msgs.push(m.text().slice(0, 170)); });
+await p.goto(`${url}/verifier.html`);
+await p.locator('#file').setInputFiles(bundleFile);
+await p.locator('#run').click();
+let out = '(no output after 20 s)';
+try { await p.locator('#out h2').waitFor({ timeout: 20000 }); out = (await p.locator('#out').innerText()).replace(/\n+/g, ' | ').slice(0, 80); } catch { /* keep */ }
+console.log('verifier.html via the reference server:', out);
+console.log('console errors:', msgs.join(' || '));
+await browser.close(); await server.stop(); rmSync(dist, { recursive: true, force: true }); rmSync(data, { recursive: true, force: true }); rmSync(bundleFile, { force: true });

@@ -1,0 +1,14 @@
+# B1 audit PoC helper: run the Python second verifier (verify_bundle) on bundle files given as argv.
+import json, sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'verifier-py'))
+from qv_verifier.election import verify_bundle
+from qv_verifier import qvjson
+for f in sys.argv[1:]:
+    b = qvjson.parse(open(f, 'rb').read())
+    try:
+        r = verify_bundle(b)
+        failed = [k for k, s in r['checks'].items() if s == 'fail']
+        fat = sorted({x['code'] for x in r['findings'] if x['fatal']})
+        print(json.dumps({'file': '/'.join(f.split('/')[-2:]), 'verdict': r['verdict'], 'failed': failed, 'codes': r['codes'], 'fatal': fat}))
+    except Exception as e:
+        print(json.dumps({'file': '/'.join(f.split('/')[-2:]), 'verdict': 'EXCEPTION', 'error': repr(e)}))

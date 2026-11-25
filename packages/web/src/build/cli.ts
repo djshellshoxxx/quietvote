@@ -1,0 +1,18 @@
+import { gzipSync } from 'node:zlib';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { buildSite, PKG } from './site.ts';
+import { buildArguments } from './config.ts';
+
+const args = buildArguments(process.argv.slice(2));
+const out = args.out ?? join(PKG, 'dist');
+const r = await buildSite(out, args);
+const gz = (p: string): number => gzipSync(readFileSync(join(out, p))).length;
+const jsAssets = r.assets.filter((a) => a.path.endsWith('.js'));
+const js = jsAssets.reduce((n, a) => n + gz(a.path), 0);
+// Report the entry separately for its own budget; its static shared imports also load with it.
+// The aggregate counts every emitted JS asset once, including lazy catalogs/charts and the sealing Worker.
+const entry = jsAssets.find((a) => /^assets\/app\./.test(a.path));
+console.log(`built ${out} (build ${r.buildId}); js gzip ${(js / 1024).toFixed(1)} kB (all files)${entry ? `, entry ${(gz(entry.path) / 1024).toFixed(1)} kB` : ''}; verifier.html ${(r.verifierBytes / 1024).toFixed(1)} kB`);
+for (const a of jsAssets) console.log(`  ${a.path}: ${(a.size / 1024).toFixed(1)} kB raw, ${(gz(a.path) / 1024).toFixed(1)} kB gzip`);
+if (js > 200 * 1024) console.warn('WARNING: JS exceeds the 200 kB compressed budget (QV-13-REQ-041)');

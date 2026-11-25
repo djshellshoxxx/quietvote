@@ -1,0 +1,30 @@
+// Exploration only (scratchpad): baseline + timings.
+import { bytesToHex, jcs } from '/home/user/qv-wt/s2-tally/packages/crypto/src/index.ts';
+import { verifyElection, analyzeBallotLog, type ManifestContest } from '/home/user/qv-wt/s2-tally/packages/protocol/src/index.ts';
+import { setup, castBallot, spoilBallot, closeElection, publishTally, bundleOf, clone, voterEnvelopes } from '/home/user/qv-wt/s2-tally/packages/protocol/test/helpers/sim.ts';
+
+const yn: ManifestContest[] = [{
+  id: 'budget', title: 'Adopt?', method: 'yes-no', options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }], selection_limit: 1, min_selections: 0,
+  rule: { type: 'threshold', num: 1, den: 2, basis: 'yes+no', strict: true }, tie_break: { type: 'status-quo', option: 'no' },
+}];
+
+const t0 = Date.now();
+const sim = await setup({ seed: 's2-explore1', n: 3, t: 2, voters: 5, contests: yn, maxSpoils: 1000 });
+console.log('setup ms', Date.now() - t0);
+let t1 = Date.now();
+for (let i = 0; i < 5; i++) castBallot(sim, i, { budget: [i % 2 === 0 ? 'yes' : 'no'] });
+console.log('5 casts ms', Date.now() - t1);
+t1 = Date.now();
+for (let k = 0; k < 20; k++) spoilBallot(sim, 0, { budget: ['yes'] }, 'publish');
+console.log('20 publish spoils build ms', Date.now() - t1);
+closeElection(sim);
+t1 = Date.now();
+const an = analyzeBallotLog(sim.params!, new Set(sim.rollHex), voterEnvelopes(sim), sim.openSeq!, sim.closeSeq!);
+console.log('analysis ms', Date.now() - t1, 'counted', an.counted.length, 'spoiled', an.spoiled.size);
+publishTally(sim, [1, 2]);
+t1 = Date.now();
+const rep = await verifyElection(clone(bundleOf(sim)));
+console.log('verify ms', Date.now() - t1, rep.verdict, JSON.stringify(rep.checks), JSON.stringify(rep.results));
+console.log(JSON.stringify(rep.findings));
+const tally = sim.log.at(-1)!.entry as { body: { spoiled: unknown[] } };
+console.log('tally spoiled entries', tally.body.spoiled.length, 'bytes', jcs(tally as never).length, bytesToHex(new Uint8Array(1)));

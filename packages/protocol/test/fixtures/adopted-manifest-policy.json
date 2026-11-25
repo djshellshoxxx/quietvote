@@ -1,0 +1,23 @@
+{
+  "manifest_cases": [
+    {"id":"threshold-yes-no","basis":"yes+no","valid":true},
+    {"id":"threshold-counted","basis":"counted","valid":true},
+    {"id":"reserved-threshold-roll","basis":"roll","valid":false,"ts_error":"E_SCHEMA","py_error":"E_MANIFEST"},
+    {"id":"single-choice-one-option","method":"single-choice","options":["a"],"valid":false,"ts_error":"E_MANIFEST","py_error":"E_MANIFEST"},
+    {"id":"single-choice-two-options","method":"single-choice","options":["a","b"],"valid":true},
+    {"id":"single-choice-explicit-one-winner","method":"single-choice","options":["a","b","c"],"winners":1,"valid":true},
+    {"id":"single-choice-two-winners","method":"single-choice","options":["a","b","c"],"winners":2,"valid":false,"ts_error":"E_MANIFEST","py_error":"E_MANIFEST"},
+    {"id":"approval-two-winners","method":"approval","options":["a","b","c"],"winners":2,"valid":true},
+    {"id":"k-of-n-two-winners","method":"k-of-n","options":["a","b","c"],"selection_limit":2,"winners":2,"valid":true},
+    {"id":"counted-threshold-with-roll-quorum","basis":"counted","quorum":{"type":"fraction","basis":"roll","num":1,"den":2},"valid":true}
+  ],
+  "rules_cases": [
+    {"id":"blank-does-not-increase-yes-no-base","basis":"yes+no","counts":{"yes":3,"no":1},"participation":6,"roll_size":10,"quorum":null,"outcome":{"kind":"passed"}},
+    {"id":"blank-increases-counted-base","basis":"counted","counts":{"yes":3,"no":1},"participation":6,"roll_size":10,"quorum":null,"outcome":{"kind":"rejected","reason":"tie-break"}},
+    {"id":"all-blank-yes-no-has-no-base","basis":"yes+no","counts":{"yes":0,"no":0},"participation":3,"roll_size":10,"quorum":null,"outcome":{"kind":"rejected","reason":"no-base"}},
+    {"id":"all-blank-counted-keeps-base","basis":"counted","counts":{"yes":0,"no":0},"participation":3,"roll_size":10,"quorum":null,"outcome":{"kind":"rejected"}},
+    {"id":"blank-voter-satisfies-roll-quorum","basis":"yes+no","counts":{"yes":3,"no":1},"participation":5,"roll_size":10,"quorum":{"type":"fraction","basis":"roll","num":1,"den":2},"outcome":{"kind":"passed"}},
+    {"id":"roll-quorum-still-rejects-low-participation","basis":"yes+no","counts":{"yes":3,"no":1},"participation":4,"roll_size":10,"quorum":{"type":"fraction","basis":"roll","num":1,"den":2},"outcome":{"kind":"no-quorum"}},
+    {"id":"threshold-does-not-use-roll-size","basis":"counted","counts":{"yes":3,"no":1},"participation":4,"roll_size":100,"quorum":null,"outcome":{"kind":"passed"}}
+  ]
+}

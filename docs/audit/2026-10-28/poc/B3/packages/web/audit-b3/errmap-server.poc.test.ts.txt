@@ -1,0 +1,134 @@
+// B3 audit PoC: error-code mapping of the web client against the REAL server's answers.
+// Run: node --test --test-reporter=spec packages/web/audit-b3/errmap-server.poc.test.ts
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { bytesToHex, ed25519Verify, hexToBytes, systemRng } from '@quietvote/crypto';
+import { NO_SUPERSEDES, ballotCode, castDigest } from '@quietvote/protocol';
+import { ApiClient } from '../src/api/client.ts';
+import { BallotController, lastOwnBallotCode } from '../src/flow/ballot-controller.ts';
+import { deriveElectionContext } from '../src/flow/election.ts';
+import { entryRecord } from '../src/flow/entries.ts';
+import { inlineSealer } from '../src/flow/seal.ts';
+import { createTranslator } from '../src/i18n/index.ts';
+import { createSigner } from '../src/key/signer.ts';
+import { MemoryStorage } from '../src/key/storage.ts';
+import { World, kp } from '../../server/test/helpers/world.ts';
+
+const t = createTranslator('en').t;
+const SEL = { budget: ['yes'], chair: ['ann'] };
+
+async function setupWorld(seed: string): Promise<World> {
+  const w = new World({ seed, n: 3, t: 2, voters: 3 });
+  await w.start();
+  await w.setupOrgAndElection(); await w.registerVoters(); await w.publishManifest(); await w.ceremony(); await w.open();
+  return w;
+}
+async function ctlFor(w: World, api: ApiClient, secret: Uint8Array): Promise<BallotController> {
+  const all = await api.allEntries(w.electionId);
+  const records = all.entries.map((e) => ({ seq: e.seq, record: entryRecord(e) }));
+  const r = await deriveElectionContext(records);
+  assert.ok(r.ok);
+  const signer = await createSigner(secret.slice());
+  const cx = r.value.params.ctx;
+  const sup = lastOwnBallotCode(records, bytesToHex(signer.publicKey), bytesToHex(cx), (env) => ed25519Verify(signer.publicKey, hexToBytes(env.sig, 64), castDigest(cx, ballotCode(cx, env.body)))) || NO_SUPERSEDES;
+  return new BallotController({ ctx: r.value, apiElectionId: w.electionId, origin: w.origin, signer, api, sealer: inlineSealer, storage: new MemoryStorage(), rng: systemRng, logPk: hexToBytes(w.logPkHex, 32), supersedes: sup, clientBuild: 'poc', now: () => w.nowSec });
+}
+const run = async (c: BallotController) => { c.select(SEL); c.review(); await c.seal(); c.codeRendered(); return c.cast(); };
+
+test('control (no finding): a key that is not on the roll gets 403 AUTHOR_NOT_AUTHORIZED and the web client maps it to E-VOT-NOTONROLL', async () => {
+  const w = await setupWorld('b3-notroll');
+  try {
+    const api = new ApiClient({ baseUrl: w.base, sleep: async () => undefined });
+    const stranger = kp('b3-stranger', 'voter');
+    const raw = await (async () => {
+      // what the server answers, read straight from the wire through a raw POST of the entry the controller builds
+      const posts: { status: number; text: string }[] = [];
+      const spy = new ApiClient({ baseUrl: w.base, sleep: async () => undefined, fetch: async (u, init) => { const r = await globalThis.fetch(u, init); if (init?.method === 'POST' && u.endsWith('/log/entries')) posts.push({ status: r.status, text: await r.clone().text() }); return r; } });
+      const c = await ctlFor(w, spy, stranger.secretKey);
+      const rep = await run(c);
+      return { rep, posts };
+    })();
+    console.log('server answer:', raw.posts[0]?.status, raw.posts[0]?.text.slice(0, 160));
+    console.log('web outcome :', raw.rep?.outcome, raw.rep?.error?.ux, '->', JSON.stringify(t(`qv.err.${raw.rep!.error!.ux}.title` as never)), '/', JSON.stringify(t(`qv.err.${raw.rep!.error!.ux}.body` as never)));
+    assert.equal(raw.rep?.error?.ux, 'E-VOT-NOTONROLL');
+  } finally { await w.stop(); }
+});
+
+test('B3-F30: REVOTE_LIMIT (429, retryable:false) is forced to retryable by problem(): the ballot is re-posted 4 times and the UI offers a pointless retry', async () => {
+  const w = await setupWorld('b3-limit');
+  try {
+    const posts: number[] = [];
+    const bodies: string[] = [];
+    const api = new ApiClient({ baseUrl: w.base, sleep: async () => undefined, fetch: async (u, init) => { const r = await globalThis.fetch(u, init); if (init?.method === 'POST' && u.endsWith('/log/entries')) { posts.push(r.status); bodies.push((await r.clone().text()).slice(0, 220)); } return r; } });
+    const secret = w.voters[0]!.secretKey;
+    for (let i = 0; i < 4; i++) { w.tick(3); const c = await ctlFor(w, api, secret); const rep = await run(c); assert.equal(rep?.outcome, 'ACCEPTED_RECORDED', `ballot ${i + 1}`); }
+    posts.length = 0; bodies.length = 0;
+    w.tick(3);
+    const c5 = await ctlFor(w, api, secret);
+    const rep = await run(c5);
+    console.log('5th ballot (max_per_voter = 4): POST attempts =', posts.length, posts.join(','), '| outcome', rep?.outcome, rep?.error?.ux, '| controller state', c5.state.kind, (c5.state as { retryCast?: boolean }).retryCast ? '(retry button offered)' : '');
+    console.log('problem codes per attempt:', bodies.map((b) => (/"code":"([A-Z_]+)"/.exec(b) ?? [])[1]).join(' > '), '| first body retryable flag:', /"retryable":(true|false)/.exec(bodies[0]!)?.[1]);
+    assert.equal(posts.length, 4);
+    assert.equal(c5.state.kind, 'failed');
+  } finally { await w.stop(); }
+});
+
+test('control: Benaloh test ballots (private and published reveal) posted by the web client are accepted by the real server', async () => {
+  const w = await setupWorld('b3-audit');
+  try {
+    const api = new ApiClient({ baseUrl: w.base, sleep: async () => undefined });
+    for (const publishReveal of [false, true]) {
+      w.tick(3);
+      const c = await ctlFor(w, api, w.voters[publishReveal ? 1 : 0]!.secretKey);
+      c.select(SEL); c.review(); await c.seal(); c.codeRendered();
+      const res = await c.audit({ post: true, publishReveal });
+      console.log(`audit publishReveal=${publishReveal}: checks ok=${res?.ok} posted=${c.lastAudit?.posted} state=${c.state.kind}`);
+      assert.equal(res?.ok, true);
+      assert.equal(c.lastAudit?.posted, true);
+    }
+    const spoils = (await api.allEntries(w.electionId)).entries.filter((e) => e.type === 'ballot_audit').length;
+    console.log('ballot_audit entries on the real server:', spoils);
+    assert.equal(spoils, 2);
+  } finally { await w.stop(); }
+});
+
+test('control: re-posting the identical entry bytes is idempotent on the real server (the retry-after-unknown-delivery path is safe)', async () => {
+  const w = await setupWorld('b3-idem');
+  try {
+    const api = new ApiClient({ baseUrl: w.base, sleep: async () => undefined });
+    const c = await ctlFor(w, api, w.voters[0]!.secretKey);
+    c.select(SEL); c.review(); await c.seal(); c.codeRendered();
+    // drive cast() to the point where `pending` is built, then post the same bytes a second time by hand
+    const rep = await c.cast();
+    assert.equal(rep?.outcome, 'ACCEPTED_RECORDED');
+    const pending = (c as unknown as { pending?: { headerB64u: string; bodyB64u: string } }).pending;
+    // pending is dropped after success (discardSecrets); rebuild it from the log instead
+    const entries = (await api.allEntries(w.electionId)).entries.filter((e) => e.type === 'ballot');
+    assert.equal(entries.length, 1);
+    const again = await fetch(`${w.base}/api/v1/elections/${w.electionId}/log/entries`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ header: entries[0]!.header_b64u, body: entries[0]!.body_b64u }) });
+    console.log('second POST of identical bytes ->', again.status, '(first was 201); pending kept after success:', pending !== undefined);
+    assert.equal(again.status, 200);
+  } finally { await w.stop(); }
+});
+
+test('control: "Check inclusion now" (checkInclusion + consistency against the pinned head) works against the real server', async () => {
+  const { checkInclusion } = await import('../src/flow/receipt.ts');
+  const w = await setupWorld('b3-incl');
+  try {
+    const api = new ApiClient({ baseUrl: w.base, sleep: async () => undefined });
+    const c = await ctlFor(w, api, w.voters[0]!.secretKey);
+    c.select(SEL); c.review(); await c.seal(); c.codeRendered();
+    const rep = await c.cast();
+    assert.equal(rep?.outcome, 'ACCEPTED_RECORDED');
+    const store = (c as unknown as { d: { storage: MemoryStorage } }).d.storage;
+    const rec = (await store.getReceipts(w.electionId))[0]!;
+    const file = JSON.parse(rec.json) as { seq: number; leaf_hash: string };
+    const { b64uDecode } = await import('../src/util/hex.ts');
+    w.tick(30);
+    // more entries after the receipt so that the head moves and a consistency proof is needed
+    await w.cast(1, SEL);
+    const r = await checkInclusion({ api, apiElectionId: w.electionId, logPk: hexToBytes(w.logPkHex, 32), leafHash: b64uDecode(file.leaf_hash)!, seq: file.seq, pinned: await store.getHead(w.electionId) });
+    console.log('checkInclusion ->', r.state, r.state === 'included' ? `seq ${r.seq}, tree size ${r.treeSize}` : '');
+    assert.equal(r.state, 'included');
+  } finally { await w.stop(); }
+});

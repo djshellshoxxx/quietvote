@@ -1,0 +1,102 @@
+{
+  "source": "00646a2ca8e6895abc0b62ab958caa7ae96d7ab2",
+  "local": "bf6c36df2bb8df6bd5b985a55a29ad4e2a1af912",
+  "tree": "292c4ce7c65860b20033e1972c58f3e3530697de",
+  "run": 43962161087,
+  "jobs": [
+    {
+      "id": 133632124343,
+      "name": "vectors, Python verifier and production build",
+      "status": "completed",
+      "conclusion": "failure",
+      "failures": [
+        "Compare verifiers within shared capabilities"
+      ]
+    },
+    {
+      "id": 133632124915,
+      "name": "production browser journeys, CSP and automated a11y",
+      "status": "completed",
+      "conclusion": "failure",
+      "failures": [
+        "Run all required browser journeys"
+      ]
+    },
+    {
+      "id": 133632125010,
+      "name": "test cli+board (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    },
+    {
+      "id": 133632125032,
+      "name": "test protocol+verifier (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    },
+    {
+      "id": 133632125066,
+      "name": "test server+web (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    },
+    {
+      "id": 133632125082,
+      "name": "test cli+board (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    },
+    {
+      "id": 133632125113,
+      "name": "typecheck and supply-chain gates",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    },
+    {
+      "id": 133632125121,
+      "name": "test server+web (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    },
+    {
+      "id": 133632125154,
+      "name": "test trustee+crypto (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    },
+    {
+      "id": 133632125168,
+      "name": "test protocol+verifier (node 24, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    },
+    {
+      "id": 133632125184,
+      "name": "test trustee+crypto (node 22, ubuntu-24.04)",
+      "status": "completed",
+      "conclusion": "success",
+      "failures": []
+    }
+  ],
+  "scope": "Initial combined checkpoint only; superseded by subsequent implementations. All workspace shards passed. Comparator and new organizer browser fixture failed; both were repaired in later commits. Not a final-candidate release receipt.",
+  "counts_node24": {
+    "cli": 81,
+    "board": 76,
+    "server": 272,
+    "web": 312,
+    "trustee": 113,
+    "crypto": 93,
+    "protocol": 215,
+    "verifier": 25
+  },
+  "browser_fail": "New organizer test prepared one signature under fixture's 2-of-3 policy; UI correctly disabled send. Later test uses separate coordinator devices.",
+  "comparison_fail": "Three inherited report differences. Later implementation follows existing ADR027 A/A/A choices; strict comparator/corpus unchanged."
+}

@@ -1,0 +1,30 @@
+import { connect } from 'node:net';
+import { createServer } from 'node:http';
+
+// Minimal model of the server's handle(): does Node interleave pipelined handlers?
+const trace: string[] = [];
+let n = 0;
+const srv = createServer((req, res) => {
+  const id = ++n;
+  trace.push(`req${id}:start`);
+  void (async () => {
+    const chunks: Buffer[] = [];
+    for await (const ch of req) chunks.push(ch as Buffer);
+    trace.push(`req${id}:body`);
+    await Promise.resolve(); trace.push(`req${id}:hop1`);
+    await Promise.resolve(); trace.push(`req${id}:hop2`);
+    await Promise.resolve(); trace.push(`req${id}:hop3`);
+    res.writeHead(200, { 'Content-Length': '2' }); res.end('ok');
+    trace.push(`req${id}:sent`);
+  })();
+});
+await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+const port = (srv.address() as { port: number }).port;
+const one = (b: string) => `POST /x HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: ${b.length}\r\n\r\n${b}`;
+await new Promise<void>((resolve) => {
+  const s = connect(port, '127.0.0.1', () => s.write(one('{"a":1}') + one('{"a":2}') + one('{"a":3}')));
+  let got = '';
+  s.on('data', (d) => { got += d; if ((got.match(/HTTP\/1.1 200/g) ?? []).length === 3) { s.destroy(); resolve(); } });
+});
+console.log(trace.join('\n'));
+srv.close();

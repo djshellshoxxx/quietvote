@@ -1,0 +1,10 @@
+// Child process for the KNOWN SRV-001 PoC (b2-audit-poc.test.ts): a plain server process with no test-runner exception handler.
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { buildServer } from '../../src/index.ts';
+
+const s = buildServer({ dataDir: mkdtempSync(join(tmpdir(), 'qv-b2-srv001-')), logSink: () => {}, minFreeBytes: 0 });
+const a = await s.start();
+process.stdout.write(`PORT ${a.port}\n`);
+setInterval(() => undefined, 1000);

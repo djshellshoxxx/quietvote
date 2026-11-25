@@ -1,0 +1,214 @@
+// Static site generation: hashed assets, SRI, strict CSP (meta + headers file), asset manifest, offline verifier page.
+// Deterministic: no timestamps; same inputs give byte-identical output (QV-19 §9).
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { build as esbuild, type BuildOptions } from 'esbuild';
+import { EN } from '../i18n/en.ts';
+import { LOCALE_META, type LocaleMeta } from '../i18n/locales-core.ts';
+import { hasReviews } from '../i18n/runtime.ts';
+import { precompileI18nPlugin } from './precompile.ts';
+import { boardOrigins as checkedOrigins } from '../api/origins.ts';
+import { siteConfig } from './config.ts';
+export { checkOrigin } from '../api/origins.ts';
+
+const here = dirname(fileURLToPath(import.meta.url));
+export const PKG = join(here, '..', '..');
+
+const hashOf = (algo: 'sha256' | 'sha384', data: string | Uint8Array, enc: 'hex' | 'base64'): string => createHash(algo).update(data).digest(enc);
+export const sri = (data: string | Uint8Array): string => `sha384-${hashOf('sha384', data, 'base64')}`;
+
+const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+// Both HTML entry points declare a self-contained icon to avoid implicit /favicon.ico requests.
+const iconDataUrl = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>');
+
+export function csp(boardOrigins: readonly string[] = []): { header: string; meta: string } {
+  const connect = ["'self'", ...checkedOrigins(boardOrigins)].join(' ');
+  const common = [
+    "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' data:", "font-src 'self'", `connect-src ${connect}`,
+    "worker-src 'self'", "manifest-src 'self'", "base-uri 'none'", "form-action 'self'", "object-src 'none'",
+    "require-trusted-types-for 'script'", 'trusted-types qv-default', 'upgrade-insecure-requests',
+  ];
+  return { header: [...common, "frame-ancestors 'none'", 'report-uri /csp-report'].join('; '), meta: common.join('; ') };
+}
+
+export function headersFile(boardOrigins: readonly string[] = [], verifier?: { scriptHash: string; styleHash: string; policy: string }): string {
+  let { header } = csp(boardOrigins);
+  // Hosts can enforce every matching rule. Permit only these exact offline bytes in the common header; the app's
+  // own meta CSP still permits no inline code. The offline meta policy independently forbids network and workers.
+  if (verifier) header = header.replace("script-src 'self'", `script-src 'self' '${verifier.scriptHash}'`).replace("style-src 'self'", `style-src 'self' '${verifier.styleHash}'`);
+  return [
+    '/*', `  Content-Security-Policy: ${header}`, '  Cross-Origin-Opener-Policy: same-origin', '  Cross-Origin-Embedder-Policy: require-corp',
+    '  Cross-Origin-Resource-Policy: same-origin', '  Referrer-Policy: no-referrer',
+    '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), clipboard-read=(), interest-cohort=()',
+    '  X-Content-Type-Options: nosniff', '  Strict-Transport-Security: max-age=63072000; includeSubDomains', '  Cache-Control: no-cache',
+    ...(verifier ? ['/verifier.html', `  Content-Security-Policy: ${verifier.policy}; frame-ancestors 'none'`] : []),
+    '/assets/*', '  Cache-Control: public, max-age=31536000, immutable', '',
+  ].join('\n');
+}
+
+export interface Asset {
+  path: string;
+  sha256: string;
+  sha384: string;
+  integrity: string;
+  size: number;
+}
+
+const common: BuildOptions = {
+  bundle: true, format: 'esm', target: 'es2022', minify: true, legalComments: 'none', write: false, sourcemap: false, logLevel: 'silent',
+  define: { 'process.env.NODE_ENV': '"production"' }, absWorkingDir: PKG,
+};
+
+/**
+ * QV-ADR-027 W15 (option A): source files of the lazy chunks that get an integrity-pinned modulepreload: the results chart and
+ * the catalog of every locale with review records (the only catalogs `loadLocaleDefs()` ever fetches). Unreviewed catalogs are
+ * never fetched by the app, so they are not preloaded (no eager download). The seal worker is not covered (documented gap).
+ */
+export function lazyPreloadSources(meta: readonly LocaleMeta[] = LOCALE_META): string[] {
+  return ['src/ui/charts.ts', ...meta.filter((m) => m.tier !== 'source' && hasReviews(m)).map((m) => `src/i18n/catalogs/${m.tag}.ts`)];
+}
+
+export function htmlPage(a: { js: Asset; css: Asset; worker: Asset; modules?: Asset[]; lazy?: Asset[]; version: string; buildId: string; apiBase?: string; connectOrigins: string[] }): string {
+  const config = siteConfig(a);
+  const { meta } = csp(config.connectOrigins);
+  return `<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${meta}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="qv-version" content="${esc(a.version)}">
+<meta name="qv-build" content="${esc(a.buildId)}">
+<meta name="qv-worker" content="/${a.worker.path}">
+<meta name="qv-api-base" content="${esc(config.apiBase)}">
+<meta name="qv-board-origins" content="${esc(config.connectOrigins.join(' '))}">
+<title>${esc(EN['qv.app.name'].message)}</title>
+<link rel="icon" type="image/svg+xml" href="${iconDataUrl}">
+<link rel="stylesheet" href="/${a.css.path}" integrity="${a.css.integrity}" crossorigin="anonymous">
+${[...(a.modules ?? []), ...(a.lazy ?? [])].map((m) => `<link rel="modulepreload" href="/${m.path}" integrity="${m.integrity}" crossorigin="anonymous">`).join('\n')}
+<link rel="modulepreload" href="/${a.js.path}" integrity="${a.js.integrity}" crossorigin="anonymous">
+</head>
+<body>
+<div id="app"><p>${esc(EN['qv.shell.loading'].message)}</p><noscript><p>${esc(EN['qv.shell.noscript'].message)}</p></noscript></div>
+<script type="module" src="/${a.js.path}" integrity="${a.js.integrity}" crossorigin="anonymous"></script>
+</body>
+</html>
+`;
+}
+
+export async function verifierHtml(): Promise<{ html: string; scriptHash: string; styleHash: string; policy: string }> {
+  const stubCatalogs = {
+    name: 'stub-catalogs',
+    setup(b: { onResolve(o: { filter: RegExp }, cb: () => { path: string }): void }) {
+      b.onResolve({ filter: /catalogs\/(es|fr|de|pt-BR|ar)\.ts$/ }, () => ({ path: resolve('src/i18n/catalogs/verifier-stub.ts') }));
+    },
+  };
+  const r = await esbuild({ ...common, format: 'iife', entryPoints: ['src/verifier/page.ts'], outdir: 'out', plugins: [stubCatalogs] });
+  const js = new TextDecoder().decode(r.outputFiles![0]!.contents).replace(/<\/script/gi, '<\\/script').replace(/<script/gi, (m) => `<\\x73${m.slice(2)}`).replace(/<!--/g, '<\\x21--');
+  const css = 'body{font:1.1rem/1.6 system-ui,sans-serif;max-inline-size:44rem;margin:1rem auto;padding-inline:16px;background:#fff;color:#14213d}@media(prefers-color-scheme:dark){body{background:#10151f;color:#eef2f8}}label{display:block;font-weight:600;margin-block-start:1rem}input,textarea,button{font:inherit;min-block-size:44px}:focus-visible{outline:3px solid #b45309;outline-offset:2px}.sr{position:absolute;clip-path:inset(50%);inline-size:1px;block-size:1px}';
+  const sh = `sha256-${hashOf('sha256', js, 'base64')}`;
+  const st = `sha256-${hashOf('sha256', css, 'base64')}`;
+  const policy = `default-src 'none'; script-src '${sh}'; style-src '${st}'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'`;
+  // An explicit inline icon prevents a browser's default /favicon.ico request under the offline image policy.
+  const html = `<!doctype html>
+<html lang="en" dir="ltr"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuietVote verifier</title><link rel="icon" type="image/svg+xml" href="${iconDataUrl}"><style>${css}</style></head>
+<body><main><h1>Verify an election</h1><p>This page makes no network requests. You can disconnect before you load a bundle.</p>
+<p>A checker you didn’t download or compare yourself can lie. Compare this file’s SHA-256 with the signed release manifest.</p>
+<label for="file">Election bundle file (JSON)</label><input id="file" type="file" accept="application/json">
+<label for="anchor">Election ID you were told (from your organizer, not from this page)</label><input id="anchor" type="text" autocomplete="off" spellcheck="false">
+<label for="author-keys">Additional public signing keys (optional)</label><p id="author-keys-help">Use keys obtained separately from a trusted source. Enter up to 32 keys, one per line, each with 64 lower-case hexadecimal digits.</p><textarea id="author-keys" rows="3" maxlength="2080" autocomplete="off" spellcheck="false" aria-describedby="author-keys-help"></textarea>
+<p><button id="run" type="button">Run checks</button> <button id="cancel" type="button" disabled>Cancel verification</button></p><progress id="progress" aria-label="Verification work in current stage" max="1" value="0" hidden></progress><p id="progress-detail"></p><div id="out" aria-busy="false"></div><div id="live" class="sr" role="status" aria-live="polite"></div></main>
+<script>${js}</script></body></html>
+`;
+  return { html, scriptHash: sh, styleHash: st, policy };
+}
+
+export async function buildSite(outDir: string, opts: { version?: string; apiBase?: string; connectOrigins?: string[]; /** tests only: which locales count as reviewed for preloads */ localeMeta?: readonly LocaleMeta[] } = {}): Promise<{ assets: Asset[]; buildId: string; verifierBytes: number }> {
+  const config = siteConfig(opts);
+  // Every production build consumes verified vendor copies, including callers that bypass the npm CLI.
+  execFileSync(process.execPath, [join(PKG, '..', '..', 'scripts', 'vendor.mjs'), 'check'], { stdio: 'pipe' });
+  rmSync(outDir, { recursive: true, force: true });
+  mkdirSync(join(outDir, 'assets'), { recursive: true });
+  const assets: Asset[] = [];
+  const emitNamed = (file: string, data: Uint8Array): Asset => {
+    const path = `assets/${file}`;
+    writeFileSync(join(outDir, path), data);
+    const a: Asset = { path, sha256: hashOf('sha256', data, 'hex'), sha384: hashOf('sha384', data, 'hex'), integrity: sri(data), size: data.length };
+    assets.push(a);
+    return a;
+  };
+  const emit = (name: string, ext: string, data: Uint8Array | string): Asset => {
+    const sha256 = hashOf('sha256', data, 'hex');
+    const path = `assets/${name}.${sha256.slice(0, 12)}.${ext}`;
+    writeFileSync(join(outDir, path), data);
+    const a: Asset = { path, sha256, sha384: hashOf('sha384', data, 'hex'), integrity: sri(data), size: typeof data === 'string' ? Buffer.byteLength(data) : data.length };
+    assets.push(a);
+    return a;
+  };
+  // Code splitting: dynamic import() boundaries (translated catalogs, results chart) become chunks next to the entry. esbuild names
+  // chunks by content hash, so imports between files stay valid; the entry is renamed by its own hash below and imports its chunks
+  // by relative path (all live in assets/; esbuild names shared chunks `chunk-<hash>.js`). Chunks are listed in asset-manifest.json like every other asset.
+  // Module scripts decode as UTF-8, so keep catalog text literal instead of expanding it into ASCII escapes.
+  // The existing sealing Worker is an ES module. Build both entries in one graph so identical crypto code is emitted once;
+  // each Worker still instantiates its own module state. The standalone offline verifier remains a separate closed build.
+  const app = await esbuild({ ...common, charset: 'utf8', metafile: true, splitting: true, chunkNames: '[name]-[hash]', entryPoints: { app: 'src/main.ts', 'seal-worker': 'src/worker/seal-worker.ts' }, outdir: 'out', plugins: [precompileI18nPlugin()] });
+  const css = readFileSync(join(PKG, 'static', 'styles.css'));
+  const entry = app.outputFiles!.find((f) => /[\\/]app\.js$/.test(f.path));
+  const worker = app.outputFiles!.find((f) => /[\\/]seal-worker\.js$/.test(f.path));
+  if (entry === undefined || worker === undefined) throw new Error('entry bundle missing from build output');
+  const chunks = app.outputFiles!.filter((f) => f !== entry && f !== worker).sort((x, y) => (x.path < y.path ? -1 : 1));
+  for (const c of chunks) emitNamed(c.path.split(/[\\/]/).pop()!, c.contents);
+  const js = emit('app', 'js', entry.contents);
+  const wk = emit('seal-worker', 'js', worker.contents);
+  const cs = emit('styles', 'css', css);
+  const buildId = hashOf('sha256', assets.map((a) => a.sha256).sort().join('\n') + JSON.stringify(config), 'hex').slice(0, 12);
+  const version = opts.version ?? (JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8')) as { version: string }).version;
+  const { apiBase, connectOrigins } = config;
+  const visiting = new Set<string>();
+  const visit = (path: string, into: Set<string>): void => {
+    if (visiting.has(path)) throw new Error('cyclic module graph cannot be preloaded dependency-first');
+    visiting.add(path);
+    for (const imp of app.metafile!.outputs[path]?.imports ?? []) {
+      if (imp.kind !== 'import-statement' || imp.external || into.has(imp.path)) continue;
+      visit(imp.path, into); into.add(imp.path);
+    }
+    visiting.delete(path);
+  };
+  const staticModules = new Set<string>();
+  visit(Object.keys(app.metafile!.outputs).find((p) => p.endsWith('/app.js'))!, staticModules);
+  // QV-ADR-027 W15: each pinned lazy chunk plus its own static imports (a module the import() graph would otherwise fetch unpinned).
+  const lazyModules = new Set<string>();
+  for (const src of lazyPreloadSources(opts.localeMeta)) {
+    const out = Object.entries(app.metafile!.outputs).find(([, o]) => o.entryPoint === src)?.[0];
+    if (out === undefined) throw new Error(`lazy chunk for ${src} missing from build output`);
+    visit(out, lazyModules); lazyModules.add(out);
+  }
+  const nameOf = (p: string): string => `assets/${p.split('/').pop()!}`;
+  const staticNames = new Set([...staticModules].map(nameOf));
+  const lazyNames = new Set([...lazyModules].map(nameOf).filter((n) => !staticNames.has(n)));
+  const orderedAssets = (names: Set<string>): Asset[] => [...names].map((name) => {
+    const asset = assets.find((a) => a.path === name);
+    if (!asset) throw new Error('a pinned module is missing from the emitted assets');
+    return asset;
+  });
+  const lazy = orderedAssets(lazyNames);
+  writeFileSync(join(outDir, 'index.html'), htmlPage({ js, css: cs, worker: wk, modules: orderedAssets(staticNames), lazy, version, buildId, apiBase, connectOrigins }));
+  const v = await verifierHtml();
+  writeFileSync(join(outDir, 'verifier.html'), v.html);
+  if (Buffer.byteLength(v.html) >= 400 * 1024) throw new Error('verifier.html exceeds 400 KB (QV-19-REQ-016)');
+  writeFileSync(join(outDir, '_headers'), headersFile(connectOrigins, v));
+  const manifest = {
+    schema: 'qv-client-assets/1', version, build_id: buildId,
+    deployment: { api_base: apiBase, board_origins: connectOrigins },
+    client_assets: assets.map((a) => ({ path: a.path, sha384: a.sha384, sha256: a.sha256, size: a.size })).sort((x, y) => (x.path < y.path ? -1 : 1)),
+    verifier_page: { path: 'verifier.html', sha256: hashOf('sha256', v.html, 'hex') },
+    index_html: { sha256: hashOf('sha256', readFileSync(join(outDir, 'index.html')), 'hex') },
+  };
+  writeFileSync(join(outDir, 'asset-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  return { assets, buildId, verifierBytes: Buffer.byteLength(v.html) };
+}

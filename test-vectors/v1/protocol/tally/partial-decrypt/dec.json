@@ -1,0 +1,123 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "protocol/tally",
+  "operation": "tally.partial_verify",
+  "description": "Partial decryption proofs (QV-16 §5.16)",
+  "origin": "quietvote",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "dec-valid",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "cid": "budget",
+        "oid": "yes",
+        "j": 2,
+        "Yj_hex": "9c43f6c94842e3381b06ff497ef94679dd96b77c3a16c595b10da31481ae5b02",
+        "A_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "B_hex": "a01a29b76c63d27bceefbf85530131765d2a25184aa8d222c4f15f12bb7c057d",
+        "M_hex": "e8a80d46edf4b5a7c1c4028df7544e1c6bfd2e76861b8b4449c01d335aaac47a",
+        "proof": {
+          "c": "f79e05d4df052f4b177ccf807ec5ea892b4945c2d5cf6d585f73be686d6ce203",
+          "s": "31352c515e4575ad732f552ed386b38f46ead358d52f8a0100564fde4d5e1b0c"
+        }
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "valid": true
+        }
+      },
+      "tags": [
+        "kat"
+      ]
+    },
+    {
+      "id": "dec-wrong-share",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "cid": "budget",
+        "oid": "yes",
+        "j": 2,
+        "Yj_hex": "9c43f6c94842e3381b06ff497ef94679dd96b77c3a16c595b10da31481ae5b02",
+        "A_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "B_hex": "a01a29b76c63d27bceefbf85530131765d2a25184aa8d222c4f15f12bb7c057d",
+        "M_hex": "b42779639ea286157d9ecc9f8eba893077a6266f8bb9b0f11bf1095cd3d8665a",
+        "proof": {
+          "c": "f79e05d4df052f4b177ccf807ec5ea892b4945c2d5cf6d585f73be686d6ce203",
+          "s": "31352c515e4575ad732f552ed386b38f46ead358d52f8a0100564fde4d5e1b0c"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DEC_PROOF"
+      },
+      "tags": [
+        "negative",
+        "attack:wrong-partial"
+      ]
+    },
+    {
+      "id": "dec-other-ciphertext",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "cid": "budget",
+        "oid": "yes",
+        "j": 2,
+        "Yj_hex": "9c43f6c94842e3381b06ff497ef94679dd96b77c3a16c595b10da31481ae5b02",
+        "A_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "B_hex": "60105cd77fefc51e6f20c6e978c5cde8e02258b3284013d79b036f2686ca940c",
+        "M_hex": "e8a80d46edf4b5a7c1c4028df7544e1c6bfd2e76861b8b4449c01d335aaac47a",
+        "proof": {
+          "c": "f79e05d4df052f4b177ccf807ec5ea892b4945c2d5cf6d585f73be686d6ce203",
+          "s": "31352c515e4575ad732f552ed386b38f46ead358d52f8a0100564fde4d5e1b0c"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DEC_PROOF"
+      },
+      "tags": [
+        "negative"
+      ]
+    },
+    {
+      "id": "dec-index-mismatch",
+      "input": {
+        "ctx_hex": "1a15df6885d957eac89210e7e2f6bcc0292865c3c7368f53e1793ca226b65217",
+        "cid": "budget",
+        "oid": "yes",
+        "j": 3,
+        "Yj_hex": "9c43f6c94842e3381b06ff497ef94679dd96b77c3a16c595b10da31481ae5b02",
+        "A_hex": "000caee09bbc6b8030092777357eec214fc9ce1efd865be0a7bf92371e84af7e",
+        "B_hex": "a01a29b76c63d27bceefbf85530131765d2a25184aa8d222c4f15f12bb7c057d",
+        "M_hex": "e8a80d46edf4b5a7c1c4028df7544e1c6bfd2e76861b8b4449c01d335aaac47a",
+        "proof": {
+          "c": "f79e05d4df052f4b177ccf807ec5ea892b4945c2d5cf6d585f73be686d6ce203",
+          "s": "31352c515e4575ad732f552ed386b38f46ead358d52f8a0100564fde4d5e1b0c"
+        }
+      },
+      "expect": {
+        "ok": false,
+        "error": "E_DEC_PROOF"
+      },
+      "tags": [
+        "negative"
+      ]
+    }
+  ]
+}

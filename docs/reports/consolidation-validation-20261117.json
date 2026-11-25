@@ -1,0 +1,223 @@
+{
+  "date": "2026-11-17",
+  "timezone": "America/Los_Angeles",
+  "runtime_baseline": "4c2051e4d174fd97cac9cead4be69cd6912d8c71",
+  "baseline_docs_tip_at_completion": "23c180bd6f1a85ec5f803f0273a38c459c0ac0d8",
+  "baseline_workspace_tests": {
+    "board": 76,
+    "cli": 113,
+    "crypto": 93,
+    "protocol": 370,
+    "server": 287,
+    "trustee": 113,
+    "verifier": 38,
+    "web": 326,
+    "total": 1416,
+    "failed": 0,
+    "skipped": 0
+  },
+  "baseline_typecheck": "passed",
+  "python_units": 221,
+  "cli_vectors": {
+    "passed": 420,
+    "failed": 0,
+    "unrun_files": 0
+  },
+  "python_corpus": {
+    "passed": 282,
+    "failed": 0,
+    "unsupported": 0
+  },
+  "shared_report_comparison": {
+    "agreed": 27,
+    "different": 0,
+    "excluded_capabilities": [
+      "chk.board.append_only",
+      "chk.board.witness",
+      "chk.receipts.sample"
+    ]
+  },
+  "tooling_tests": 55,
+  "build": "passed unchanged budgets",
+  "dependency_boundaries": "passed with existing documented deviations",
+  "lockfile": "passed",
+  "npm_audit_vulnerabilities_reported": 0,
+  "combined_repair_source": "4b93752e6e8f1f5cff14474576d6a3d6265502a2",
+  "combined_repair_focused": {
+    "passed": 26,
+    "failed": 0,
+    "skipped": 0
+  },
+  "combined_repair_typecheck": "passed",
+  "prior_qualified_integration_run": 43982203881,
+  "prior_failed_milestones_run": 43983217985,
+  "hosted_final_candidate": {
+    "run_id": 44227868083,
+    "url": "https://github.com/djshellshoxxx/quietvote/actions/runs/44227868083",
+    "head_sha": "8686e625270826bc0776596a1bbaf434832f4afd",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 134545389916,
+        "name": "vectors, Python verifier and production build",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:05:07Z",
+        "completed_at": "2026-11-18T03:08:43Z"
+      },
+      {
+        "id": 134545390166,
+        "name": "production browser journeys, CSP and automated a11y",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:06:09Z",
+        "completed_at": "2026-11-18T03:08:08Z"
+      },
+      {
+        "id": 134545390269,
+        "name": "test trustee+crypto (node 22, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:05:10Z",
+        "completed_at": "2026-11-18T03:08:32Z"
+      },
+      {
+        "id": 134545390365,
+        "name": "test protocol+verifier (node 22, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:06:19Z",
+        "completed_at": "2026-11-18T03:08:30Z"
+      },
+      {
+        "id": 134545390417,
+        "name": "test cli+board (node 22, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:07:28Z",
+        "completed_at": "2026-11-18T03:20:06Z"
+      },
+      {
+        "id": 134545390473,
+        "name": "test cli+board (node 24, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:08:33Z",
+        "completed_at": "2026-11-18T03:20:26Z"
+      },
+      {
+        "id": 134545390658,
+        "name": "test server+web (node 22, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:10:51Z",
+        "completed_at": "2026-11-18T03:13:28Z"
+      },
+      {
+        "id": 134545390701,
+        "name": "test protocol+verifier (node 24, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:08:36Z",
+        "completed_at": "2026-11-18T03:10:51Z"
+      },
+      {
+        "id": 134545390886,
+        "name": "test trustee+crypto (node 24, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:10:41Z",
+        "completed_at": "2026-11-18T03:15:22Z"
+      },
+      {
+        "id": 134545390896,
+        "name": "test server+web (node 24, ubuntu-24.04)",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:08:45Z",
+        "completed_at": "2026-11-18T03:10:49Z"
+      },
+      {
+        "id": 134545391628,
+        "name": "typecheck and supply-chain gates",
+        "conclusion": "success",
+        "started_at": "2026-11-18T03:11:13Z",
+        "completed_at": "2026-11-18T03:11:46Z"
+      }
+    ],
+    "workspace_tests": {
+      "node22": {
+        "packages": {
+          "board": 78,
+          "cli": 113,
+          "crypto": 93,
+          "protocol": 370,
+          "server": 294,
+          "trustee": 113,
+          "verifier": 38,
+          "web": 326
+        },
+        "total": 1425,
+        "failed": 0,
+        "skipped": 0
+      },
+      "node24": {
+        "packages": {
+          "board": 78,
+          "cli": 113,
+          "crypto": 93,
+          "protocol": 370,
+          "server": 294,
+          "trustee": 113,
+          "verifier": 38,
+          "web": 326
+        },
+        "total": 1425,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    "python_units": 221,
+    "cli_vectors": {
+      "passed": 420,
+      "failed": 0,
+      "unrun": 0
+    },
+    "python_corpus": {
+      "passed": 282,
+      "failed": 0,
+      "unsupported": 0
+    },
+    "shared_report_comparison": {
+      "agreed": 27,
+      "different": 0,
+      "excluded_capabilities": [
+        "chk.board.append_only",
+        "chk.board.witness",
+        "chk.receipts.sample"
+      ]
+    },
+    "browser": {
+      "verifier": 26,
+      "automated_accessibility": 49,
+      "status": "passed hosted required browser job",
+      "manual_assistive_technology_qualified": false
+    },
+    "build": "passed unchanged size budgets",
+    "typecheck": "passed",
+    "dependency_lockfile_audit": "passed; npm audit reported zero vulnerabilities"
+  },
+  "release_qualified": false,
+  "canonical_merge": {
+    "branch": "integration/quietvote-completion",
+    "sha": "38192a5498a7b6fdc612c8e6c240a8596626d579",
+    "tree": "f8e11e87605b7155b5cd4d7fe31a7e3f0f71c7d7",
+    "parents": [
+      "44f73ca8c52511d8587d8381ef7a5c589c4626af",
+      "8686e625270826bc0776596a1bbaf434832f4afd"
+    ]
+  },
+  "publication_receipt": "consolidation-publication-20261117.json",
+  "documentation_followup": {
+    "scope": "README and docs only; runtime, test, dependency and workflow paths remain identical to the qualified candidate",
+    "claims_lint": {
+      "candidate_findings": 19,
+      "final_findings": 0,
+      "policy": "unchanged; narrow source/agent-review wording corrections"
+    },
+    "keyless_and_ipv6_status": "updated from historical in-progress wording to included",
+    "first_hosted_merge_dco": "44f73ca has no sign-off; recorded without rewriting history",
+    "published_candidate_and_final_runtime_merge_dco": "matching publisher author sign-offs verified"
+  }
+}

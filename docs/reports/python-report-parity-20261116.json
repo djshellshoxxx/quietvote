@@ -1,0 +1,53 @@
+{
+  "source": "4efcc58cfedaaaf6a7f2833d422bb8d838e86635",
+  "tree": "de66560786ffca1b2d20063e3bda0e467b0aec5c",
+  "base": "bf6c36df2bb8df6bd5b985a55a29ad4e2a1af912",
+  "node": "v24.22.1",
+  "python": "Python 3.12.14",
+  "checks": {
+    "python": {
+      "exit": 0,
+      "seconds": 22.95
+    },
+    "vectors": {
+      "exit": 0,
+      "seconds": 20.07
+    },
+    "compare": {
+      "exit": 0,
+      "seconds": 23.34
+    },
+    "links": {
+      "exit": 0,
+      "seconds": 0.41
+    }
+  },
+  "python_tests": 77,
+  "focused_tests": 6,
+  "vectors": {
+    "total": 282,
+    "pass": 234,
+    "fail": 0,
+    "not_implemented": 48
+  },
+  "comparison": {
+    "reports_agree": 27,
+    "verdicts_agree": 27,
+    "total": 27,
+    "disagree": 0,
+    "excluded": [
+      "chk.board.append_only",
+      "chk.board.witness",
+      "chk.receipts.sample"
+    ]
+  },
+  "unmodified": [
+    "test-vectors",
+    "scripts/compare-verifiers.ts"
+  ],
+  "limitations": [
+    "pre-log implementation lane; not integrated-candidate acceptance",
+    "independent review requested; external security/protocol approval not claimed",
+    "other semantics outside three approved report-dependency cases unchanged"
+  ]
+}

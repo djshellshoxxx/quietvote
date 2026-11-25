@@ -1,0 +1,68 @@
+import { connect } from 'node:net';
+import { World } from '/home/user/qv-wt/t2-concurrency/packages/server/test/helpers/world.ts';
+import { makeCast } from '/home/user/qv-wt/t2-concurrency/packages/protocol/src/index.ts';
+import { b64u } from '/home/user/qv-wt/t2-concurrency/packages/board/src/index.ts';
+
+function rawReq(path: string, body: unknown): string {
+  const b = JSON.stringify(body);
+  return `POST ${path} HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: ${Buffer.byteLength(b)}\r\n\r\n${b}`;
+}
+function pipeline(base: string, reqs: string[]): Promise<{ status: number; body: string }[]> {
+  return new Promise((resolve, reject) => {
+    const s = connect(Number(new URL(base).port), '127.0.0.1', () => s.write(reqs.join('')));
+    let buf = Buffer.alloc(0);
+    const out: { status: number; body: string }[] = [];
+    const timer = setTimeout(() => { s.destroy(); reject(new Error('timeout ' + out.length)); }, 10000);
+    s.on('data', (d) => {
+      buf = Buffer.concat([buf, d]);
+      for (;;) {
+        const i = buf.indexOf('\r\n\r\n');
+        if (i < 0) break;
+        const head = buf.subarray(0, i).toString();
+        const cl = Number(/content-length: (\d+)/i.exec(head)?.[1] ?? 0);
+        if (buf.length < i + 4 + cl) break;
+        out.push({ status: Number(head.split(' ')[1]), body: buf.subarray(i + 4, i + 4 + cl).toString() });
+        buf = buf.subarray(i + 4 + cl);
+      }
+      if (out.length === reqs.length) { clearTimeout(timer); s.destroy(); resolve(out); }
+    });
+    s.on('error', reject);
+  });
+}
+
+const w = new World({ seed: 'pipe1', n: 3, t: 2, voters: 4 });
+await w.start();
+await w.setupOrgAndElection(); await w.registerVoters(); await w.publishManifest(); await w.ceremony(); await w.open();
+const rt = (await w.server.pool.get(w.electionId))! as any;
+const trace: string[] = [];
+const origPre = rt.precheck.bind(rt);
+rt.precheck = (h: Uint8Array, b: Uint8Array, internal: boolean) => { trace.push(`pre(${internal ? 'locked' : 'open'})`); return origPre(h, b, internal); };
+const path = `/api/v1/elections/${w.electionId}/log/entries`;
+
+// A: identical ballot x3, frozen clock
+{
+  const v = w.voters[0]!;
+  const e = w.entry('ballot', v, makeCast(w.params, v.secretKey, w.build(0, { budget: ['yes'], chair: ['ann'] })));
+  const body = { header: b64u(e.headerBytes), body: b64u(e.body) };
+  const r = await pipeline(w.base, [rawReq(path, body), rawReq(path, body), rawReq(path, body)]);
+  console.log('A ballot x3:', r.map((x) => x.status), r.map((x) => JSON.parse(x.body).code ?? JSON.parse(x.body).receipt?.seq));
+  console.log('  trace', trace.join(' ')); trace.length = 0;
+}
+// B: identical notice x3
+{
+  w.tick(5);
+  const e = w.entry('notice', w.coord[0]!, w.control('security-notice', 'x'));
+  const body = { header: b64u(e.headerBytes), body: b64u(e.body) };
+  const r = await pipeline(w.base, [rawReq(path, body), rawReq(path, body), rawReq(path, body)]);
+  console.log('B notice x3:', r.map((x) => x.status), r.map((x) => JSON.parse(x.body).code ?? JSON.parse(x.body).receipt?.seq));
+  console.log('  trace', trace.join(' ')); trace.length = 0;
+}
+// C: parallel fetch identical notice x3
+{
+  w.tick(5);
+  const e = w.entry('notice', w.coord[0]!, w.control('security-notice', 'y'));
+  const r = await Promise.all([1, 2, 3].map(() => w.submit(e.headerBytes, e.body)));
+  console.log('C notice x3 parallel:', r.map((x) => x.status), r.map((x) => x.json.code ?? x.json.receipt?.seq));
+  console.log('  trace', trace.join(' ')); trace.length = 0;
+}
+await w.stop();

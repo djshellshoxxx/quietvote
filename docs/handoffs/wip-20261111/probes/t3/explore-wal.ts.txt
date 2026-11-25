@@ -1,0 +1,56 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { World, kp } from '/home/user/qv-wt/t3-privacy-canary/packages/server/test/helpers/world.ts';
+import { open as unseal } from '/home/user/qv-wt/t3-privacy-canary/packages/server/src/kek.ts';
+import { b64u } from '/home/user/qv-wt/t3-privacy-canary/packages/board/src/index.ts';
+import { ed25519Sign, utf8, sha256, bytesToHex } from '/home/user/qv-wt/t3-privacy-canary/packages/crypto/src/index.ts';
+
+const DAY = 86_400_000;
+const w = new World({ seed: 'explore-wal', n: 3, t: 2, voters: 0, server: { retentionSweepMs: 0 } as never });
+await w.start();
+await w.setupOrgAndElection();
+w.clock += 17 * 60_000 + 23_456;
+const items = Array.from({ length: 5 }, (_, i) => ({ label: `LABELCANARY-${i}-zzzzzzzzzzzz`, contact: `contactcanary-${i}@example.invalid` }));
+const inv = (await w.signed('POST', `/api/v1/elections/${w.electionId}/invites`, { items }, w.owner, w.idemKey())).json.invites as { invite_id: string; code: string }[];
+const rt = (await w.server.pool.get(w.electionId))!;
+const before = rt.edb.db.prepare('SELECT invite_id, label_enc, contact_enc FROM voter_invite ORDER BY rowid').all() as { invite_id: string; label_enc: Uint8Array; contact_enc: Uint8Array }[];
+const order = [3, 0, 4, 1];
+const voters = order.map((i) => kp('explore-wal', `v${i}`));
+for (let k = 0; k < order.length; k++) {
+  const v = voters[k]!;
+  const pop = ed25519Sign(v.secretKey, new Uint8Array([...utf8(`QV-REG-v1\0${w.electionId}\0`), ...v.publicKey]));
+  const r = await w.req('POST', `/api/v1/elections/${w.electionId}/registrations`, { invite_code: inv[order[k]!]!.code, pk: b64u(v.publicKey), alg: 'ed25519', pop: b64u(pop) });
+  if (r.status !== 201) throw new Error(r.text);
+  w.tick(60);
+}
+const files = (): string[] => (readdirSync(w.dir, { recursive: true, encoding: 'utf8' }) as string[]).map((f) => join(w.dir, f)).filter((f) => statSync(f).isFile());
+const show = (tag: string): void => {
+  console.log(`--- ${tag}`);
+  for (const f of files()) {
+    const b = readFileSync(f);
+    const hits: string[] = [];
+    before.forEach((r, i) => {
+      if (r.label_enc && b.includes(Buffer.from(r.label_enc))) hits.push(`label_enc#${i}`);
+      if (r.contact_enc && b.includes(Buffer.from(r.contact_enc))) hits.push(`contact_enc#${i}`);
+    });
+    for (let i = 0; i < 5; i++) { if (b.includes(`LABELCANARY-${i}`)) hits.push(`PLAINTEXT label ${i}`); if (b.includes(`contactcanary-${i}`)) hits.push(`PLAINTEXT contact ${i}`); if (b.includes(inv[i]!.code)) hits.push(`PLAINTEXT code ${i}`); }
+    console.log(f.replace(w.dir, ''), b.length, hits.join(' '));
+  }
+};
+show('after registration (contacts of 3,0,4,1 NULLed by consumeInvite)');
+console.log(rt.edb.db.prepare('SELECT invite_id, state, registered_at, closed_at, label_enc IS NOT NULL AS l, contact_enc IS NOT NULL AS c FROM voter_invite ORDER BY rowid').all());
+console.log(rt.edb.db.prepare('SELECT rowid, voter_kid, registered_at FROM voter ORDER BY rowid').all());
+w.clock += 8 * DAY;
+console.log('purged', await w.server.retention.runOnce());
+show('after retention purge (server running)');
+console.log(rt.edb.db.prepare('PRAGMA wal_checkpoint(TRUNCATE)').all());
+show('after wal_checkpoint(TRUNCATE)');
+// recover a purged label from the WAL residue, if any, to show it is decryptable with on-disk keys
+const reg = w.server.env.control.election(w.electionId)!;
+const dek = unseal(w.server.env.kek, reg.dek_wrapped!, `dek:${w.electionId}`);
+console.log('label#3 decrypts to', Buffer.from(unseal(dek, before[3]!.label_enc, 'label')).toString());
+void sha256; void bytesToHex;
+await w.server.stop();
+show('after clean stop');
+const { rmSync } = await import('node:fs');
+rmSync(w.dir, { recursive: true, force: true });

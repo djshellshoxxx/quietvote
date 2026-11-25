@@ -1,0 +1,749 @@
+diff --git a/packages/protocol/test/helpers/random-oracle.ts b/packages/protocol/test/helpers/random-oracle.ts
+new file mode 100644
+index 0000000..41b36c0
+--- /dev/null
++++ b/packages/protocol/test/helpers/random-oracle.ts
+@@ -0,0 +1,328 @@
++// Independent plaintext oracle for the randomized-election harness (test/random-elections.test.ts).
++//
++// It answers, from the PLAINTEXT plan of an election alone (who submitted what, in which log order, under which rules):
++// which ballot of which voter is counted, what every option's count is, what the published results must be, whether the
++// privacy floor allows a tally at all, and how the verifier must classify every envelope.
++//
++// Independence rule: this file imports nothing from packages/protocol/src or @quietvote/crypto. It is written from the
++// specs (QV-16 §5.13.2, §5.14.2-§5.14.4, §5.19.3, QV-ADR-021, QV-20 §5-§7) and from the errata recorded in
++// packages/protocol/NOTES.md (X-10, X-13, X-14, X-15). A ballot is identified by a small integer chosen by the generator,
++// never by a hash, so no protocol code is needed to decide the revote chain. SHA-256 (node:crypto) is used only for the
++// RFC 9162 root over the counted set.
++import { createHash } from 'node:crypto';
++
++export type Method = 'yes-no' | 'single-choice' | 'approval' | 'k-of-n';
++export interface OContest {
++  id: string;
++  method: Method;
++  options: readonly { id: string }[];
++  selection_limit?: number;
++  winners?: number;
++  rule?: { num: number; den: number; basis: 'yes+no' | 'counted'; strict: boolean };
++  tie_break: { type: string; option?: string };
++}
++export interface OQuorum {
++  type: 'fraction' | 'count';
++  num?: number;
++  den?: number;
++  value?: number;
++}
++export interface ORules {
++  contests: readonly OContest[];
++  rollSize: number;
++  maxPerVoter: number;
++  maxSpoilsPerVoter: number;
++  quorum?: OQuorum | undefined;
++  minCountedBallots?: number | undefined;
++}
++
++/** A way in which an envelope is broken regardless of where it sits in the log (QV-16 §5.14.4 checks 1-9). */
++export type Defect = 'schema' | 'ctx' | 'sig' | 'proof';
++export type Selections = Record<string, string[]>;
++
++/** One distinct ballot body. The same body can appear in several log events (replay, spoil-then-cast). */
++export interface OBallot {
++  id: number;
++  /** Actor label. Roll members are `v<index>`; anything else is a key that is not on the roll. */
++  voter: string;
++  eligible: boolean;
++  /** The ballot this one names as its predecessor: an earlier ballot id, null (32 zero bytes) or random bytes. */
++  supersedes: number | null | 'garbage';
++  selections: Selections;
++  defects: readonly Defect[];
++}
++export type Slot = 'early' | 'window' | 'late';
++/** One voter envelope in log order. `early` = before election-open, `late` = after election-close. */
++export interface OEvent {
++  slot: Slot;
++  intent: 'cast' | 'spoil';
++  ballot: number;
++}
++
++export type Fate =
++  | { kind: 'counted' }
++  /** Admissible when it was appended, later replaced by the same voter's next admissible ballot. */
++  | { kind: 'superseded' }
++  /** Admitted Benaloh audit record (first one for this ballot). */
++  | { kind: 'audit' }
++  /** A further admitted spoil of an already audited ballot: absorbed without a finding. */
++  | { kind: 'audit-repeat' }
++  | { kind: 'ignored'; code: string };
++
++export interface Classification {
++  fates: Fate[];
++  /** voter label -> { counted ballot id, index of the counted event }. */
++  counted: Map<string, { ballot: number; event: number }>;
++  /** Admitted audit ballot ids, in log order. */
++  audits: number[];
++  /** Ballot ids that some authenticated spoil names: they can never be counted. */
++  spoiled: Set<number>;
++}
++
++const ignored = (code: string): Fate => ({ kind: 'ignored', code });
++
++/** First failing context-free check in the order of QV-16 §5.14.4 (1 schema, 2 ctx, 3 eligibility, 4 signature, 8 proofs). */
++export function envelopeError(b: OBallot): string | null {
++  if (b.defects.includes('schema')) return 'E_SCHEMA';
++  if (b.defects.includes('ctx')) return 'E_CTX';
++  if (!b.eligible) return 'E_VOTER_NOT_ELIGIBLE';
++  if (b.defects.includes('sig')) return 'E_SIG';
++  if (b.defects.includes('proof')) return 'E_CDS';
++  return null;
++}
++
++/**
++ * The counting rule (QV-16 §5.14.2): per voter, in log order, a cast is admissible iff its envelope is valid, it lies in the
++ * window, it names the voter's previous admissible ballot (or zero bytes when there is none), the voter has fewer than
++ * `max_per_voter` admissible ballots so far, and its code was never spoiled. The counted ballot is the last admissible one.
++ */
++export function classify(rules: ORules, ballots: readonly OBallot[], events: readonly OEvent[]): Classification {
++  const body = (e: OEvent): OBallot => {
++    const b = ballots[e.ballot];
++    if (b === undefined || b.id !== e.ballot) throw new Error(`oracle: event names unknown ballot ${e.ballot}`);
++    return b;
++  };
++  // QV-16 §5.13.2 item 4 with NOTES X-10 / B1-01: every authenticated spoil puts its code in the spoiled set, wherever the
++  // record sits (outside the window, above the audit limit) and whether the same body is cast before or after it.
++  const spoiled = new Set<number>();
++  for (const e of events) if (e.intent === 'spoil' && envelopeError(body(e)) === null) spoiled.add(e.ballot);
++
++  const fates: Fate[] = [];
++  const audits: number[] = [];
++  const audited = new Set<number>();
++  const voters = new Map<string, { last: number | null; lastEvent: number; admissible: number; spoils: number }>();
++  events.forEach((e, i) => {
++    const b = body(e);
++    const err = envelopeError(b);
++    if (err !== null) {
++      fates[i] = ignored(err);
++      return;
++    }
++    if (e.slot !== 'window') {
++      fates[i] = ignored('E_TIME_WINDOW');
++      return;
++    }
++    let st = voters.get(b.voter);
++    if (st === undefined) voters.set(b.voter, (st = { last: null, lastEvent: -1, admissible: 0, spoils: 0 }));
++    if (e.intent === 'spoil') {
++      st.spoils += 1;
++      if (st.spoils > rules.maxSpoilsPerVoter) fates[i] = ignored('E_REVOTE_LIMIT');
++      else if (audited.has(b.id)) fates[i] = { kind: 'audit-repeat' };
++      else {
++        audited.add(b.id);
++        audits.push(b.id);
++        fates[i] = { kind: 'audit' };
++      }
++      return;
++    }
++    if (b.supersedes !== st.last) fates[i] = ignored('E_SUPERSEDES');
++    else if (st.admissible >= rules.maxPerVoter) fates[i] = ignored('E_REVOTE_LIMIT');
++    else if (spoiled.has(b.id)) fates[i] = ignored('E_SPOILED_CODE_CAST');
++    else {
++      if (st.lastEvent >= 0) fates[st.lastEvent] = { kind: 'superseded' };
++      st.last = b.id;
++      st.lastEvent = i;
++      st.admissible += 1;
++      fates[i] = { kind: 'counted' };
++    }
++  });
++  const counted = new Map<string, { ballot: number; event: number }>();
++  for (const [voter, st] of voters) if (st.last !== null) counted.set(voter, { ballot: st.last, event: st.lastEvent });
++  return { fates, counted, audits, spoiled };
++}
++
++export type Counts = Record<string, Record<string, number>>;
++
++/** Per option: the number of counted ballots that select it. */
++export function tallyCounts(contests: readonly OContest[], ballots: readonly OBallot[], counted: Iterable<{ ballot: number }>): Counts {
++  const counts: Counts = {};
++  for (const c of contests) {
++    counts[c.id] = {};
++    for (const o of c.options) counts[c.id]![o.id] = 0;
++  }
++  for (const { ballot } of counted) {
++    const sel = ballots[ballot]!.selections;
++    for (const c of contests) for (const oid of new Set(sel[c.id] ?? [])) counts[c.id]![oid]! += 1;
++  }
++  return counts;
++}
++
++export type Outcome = { kind: 'passed' | 'rejected' | 'no-quorum' | 'tie' | 'winners'; winners?: string[]; tied?: string[]; reason?: string };
++export interface ResultRow {
++  contest: string;
++  participation: number;
++  quorum_met: boolean;
++  outcome: Outcome;
++}
++
++/** QV-16 §5.19.3 item 1. Compared by cross-multiplication in exact integers; no division. */
++export function quorumIsMet(q: OQuorum | undefined, V: number, rollSize: number): boolean {
++  if (q === undefined) return true;
++  if (q.type === 'count') return V >= q.value!;
++  return BigInt(V) * BigInt(q.den!) >= BigInt(q.num!) * BigInt(rollSize);
++}
++
++const byId = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
++
++/** QV-16 §5.19.3 items 2-3 with the outcome format of NOTES X-15. `T` is the per-option count of ONE contest. */
++export function contestOutcome(c: OContest, T: Record<string, number>, V: number): Outcome {
++  if (c.method === 'yes-no') {
++    const r = c.rule!;
++    const yes = BigInt(T['yes'] ?? 0);
++    const no = BigInt(T['no'] ?? 0);
++    const base = r.basis === 'yes+no' ? yes + no : BigInt(V);
++    if (base === 0n) return { kind: 'rejected', reason: 'no-base' };
++    const lhs = yes * BigInt(r.den);
++    const rhs = BigInt(r.num) * base;
++    if (lhs > rhs) return { kind: 'passed' };
++    if (lhs < rhs) return { kind: 'rejected' };
++    if (!r.strict) return { kind: 'passed' }; // exactly at a ">=" threshold
++    // exactly at a strict threshold: the rule cannot decide, the declared tie-break does
++    if (c.tie_break.type === 'declare-tie') return { kind: 'tie', tied: ['no', 'yes'] };
++    const winner = c.tie_break.type === 'status-quo' ? c.tie_break.option! : 'no'; // lexicographic: "no" < "yes"
++    return { kind: winner === 'yes' ? 'passed' : 'rejected', reason: 'tie-break' };
++  }
++  let seats = c.winners ?? (c.method === 'k-of-n' ? c.selection_limit! : 1);
++  // Walk the distinct counts from the highest; a whole level is seated while it fits.
++  const levels = [...new Set(c.options.map((o) => T[o.id] ?? 0))].sort((a, b) => b - a);
++  const winners: string[] = [];
++  for (const level of levels) {
++    const ids = c.options.map((o) => o.id).filter((id) => (T[id] ?? 0) === level).sort(byId);
++    if (ids.length <= seats) {
++      winners.push(...ids);
++      seats -= ids.length;
++      continue;
++    }
++    if (seats === 0) break;
++    if (c.tie_break.type === 'declare-tie') return { kind: 'tie', winners, tied: ids };
++    return { kind: 'winners', winners: [...winners, ...ids.slice(0, seats)], reason: 'tie-break' };
++  }
++  return { kind: 'winners', winners };
++}
++
++export function evaluateResults(rules: ORules, counts: Counts, V: number): ResultRow[] {
++  const quorum_met = quorumIsMet(rules.quorum, V, rules.rollSize);
++  return rules.contests.map((c) => ({
++    contest: c.id,
++    participation: V,
++    quorum_met,
++    outcome: quorum_met ? contestOutcome(c, counts[c.id] ?? {}, V) : { kind: 'no-quorum' },
++  }));
++}
++
++/** QV-ADR-021 (NOTES X-13): the manifest value, else 5 for a roll of 8 or more, else 3. */
++export function privacyFloor(rules: ORules): number {
++  return rules.minCountedBallots ?? (rules.rollSize >= 8 ? 5 : 3);
++}
++
++export interface Expectation extends Classification {
++  V: number;
++  counts: Counts;
++  results: ResultRow[];
++  floor: number;
++  belowFloor: boolean;
++  castSeen: number;
++  spoilSeen: number;
++  /** Number of admissible ballots that a later ballot of the same voter replaced. */
++  superseded: number;
++  /** Findings the verifier must report for ignored envelopes, by code. */
++  ignored: Record<string, number>;
++  /** Named checks of the ballot section: true = `pass`. */
++  checks: { ballotsValid: boolean; ballotsLatest: boolean; window: boolean; benaloh: boolean; encoding: boolean };
++}
++
++/** Everything the harness compares against the real pipeline, from the plaintext plan alone. */
++export function expectElection(rules: ORules, ballots: readonly OBallot[], events: readonly OEvent[]): Expectation {
++  const cl = classify(rules, ballots, events);
++  const V = cl.counted.size;
++  const counts = tallyCounts(rules.contests, ballots, cl.counted.values());
++  const ignoredBy: Record<string, number> = {};
++  const checks = { ballotsValid: true, ballotsLatest: true, window: true, benaloh: true, encoding: true };
++  let superseded = 0;
++  cl.fates.forEach((f, i) => {
++    if (f.kind === 'superseded') superseded += 1;
++    if (f.kind !== 'ignored') return;
++    ignoredBy[f.code] = (ignoredBy[f.code] ?? 0) + 1;
++    const e = events[i]!;
++    switch (f.code) {
++      case 'E_TIME_WINDOW':
++        checks.window = false;
++        break;
++      case 'E_SUPERSEDES':
++        checks.ballotsLatest = false;
++        break;
++      case 'E_REVOTE_LIMIT':
++        if (e.intent === 'cast') checks.ballotsLatest = false; // an over-limit audit is ignored without failing a check
++        break;
++      case 'E_SPOILED_CODE_CAST':
++        checks.benaloh = false;
++        break;
++      case 'E_SCHEMA':
++        checks.encoding = false;
++        checks.ballotsValid = false;
++        break;
++      default:
++        checks.ballotsValid = false; // E_CTX, E_VOTER_NOT_ELIGIBLE, E_SIG, E_CDS
++    }
++  });
++  const floor = privacyFloor(rules);
++  return {
++    ...cl,
++    V,
++    counts,
++    results: evaluateResults(rules, counts, V),
++    floor,
++    belowFloor: V < floor,
++    castSeen: events.filter((e) => e.intent === 'cast').length,
++    spoilSeen: events.filter((e) => e.intent === 'spoil').length,
++    superseded,
++    ignored: ignoredBy,
++    checks,
++  };
++}
++
++// ---------------------------------------------------------------- RFC 9162 root over the counted set
++
++const sha256 = (...parts: Uint8Array[]): Buffer => {
++  const h = createHash('sha256');
++  for (const p of parts) h.update(p);
++  return h.digest();
++};
++
++/**
++ * QV-16 §5.19.1 `counted_root`: RFC 9162 Merkle tree hash over leaf_data = ballot_code(32) || voter_pk(32), sorted by voter_pk.
++ * Bottom-up formulation (pair neighbours, promote an unpaired last node unchanged), which equals the RFC's recursive
++ * split at the largest power of two below n.
++ */
++export function countedRootHex(pairs: readonly { voter: string; code: string }[]): string {
++  const sorted = [...pairs].sort((a, b) => byId(a.voter, b.voter));
++  let level: Buffer[] = sorted.map((p) => sha256(Uint8Array.of(0), Buffer.from(p.code + p.voter, 'hex')));
++  if (level.length === 0) return sha256().toString('hex');
++  while (level.length > 1) {
++    const next: Buffer[] = [];
++    for (let i = 0; i + 1 < level.length; i += 2) next.push(sha256(Uint8Array.of(1), level[i]!, level[i + 1]!));
++    if (level.length % 2 === 1) next.push(level[level.length - 1]!);
++    level = next;
++  }
++  return level[0]!.toString('hex');
++}
+diff --git a/packages/protocol/test/helpers/random-plan.ts b/packages/protocol/test/helpers/random-plan.ts
+new file mode 100644
+index 0000000..81cb475
+--- /dev/null
++++ b/packages/protocol/test/helpers/random-plan.ts
+@@ -0,0 +1,409 @@
++// Seeded generator of small random elections for test/random-elections.test.ts.
++//
++// A generated election is a PLAINTEXT plan: the manifest parameters plus the ordered list of voter envelopes (who, which
++// selections, which predecessor they name, cast or spoil, valid or broken in which way, inside or outside the window).
++// It contains no cryptography; helpers/random-pipeline.ts turns it into real records and helpers/random-oracle.ts says what
++// the result must be. Everything is a pure function of the seed string (streamRng: SHA-512 counter mode, tests only).
++import { streamRng, type Rng } from '@quietvote/crypto';
++import type { Manifest, ManifestContest, SpoilMode } from '../../src/index.ts';
++import { classify, expectElection, type Defect, type OBallot, type OEvent, type ORules, type Selections, type Slot } from './random-oracle.ts';
++
++/** Uniform draws from the injected deterministic stream (rejection sampling, no modulo bias). Never Math.random. */
++export class Dice {
++  private readonly rng: Rng;
++  constructor(seed: string) {
++    this.rng = streamRng(seed);
++  }
++  /** Uniform integer in [0, n). */
++  int(n: number): number {
++    if (!Number.isSafeInteger(n) || n <= 0 || n > 0x1_0000_0000) throw new RangeError(`Dice.int(${n})`);
++    const limit = Math.floor(0x1_0000_0000 / n) * n;
++    for (;;) {
++      const b = this.rng.bytes(4);
++      const x = ((b[0]! << 24) | (b[1]! << 16) | (b[2]! << 8) | b[3]!) >>> 0;
++      if (x < limit) return x % n;
++    }
++  }
++  /** True with probability num/den. */
++  chance(num: number, den: number): boolean {
++    return this.int(den) < num;
++  }
++  pick<T>(xs: readonly T[]): T {
++    if (xs.length === 0) throw new RangeError('Dice.pick([])');
++    return xs[this.int(xs.length)]!;
++  }
++  /** `pairs` = [value, integer weight]. */
++  weighted<T>(pairs: readonly (readonly [T, number])[]): T {
++    let total = 0;
++    for (const [, w] of pairs) total += w;
++    let x = this.int(total);
++    for (const [v, w] of pairs) {
++      if (x < w) return v;
++      x -= w;
++    }
++    throw new Error('unreachable');
++  }
++  shuffle<T>(xs: readonly T[]): T[] {
++    const out = [...xs];
++    for (let i = out.length - 1; i > 0; i--) {
++      const j = this.int(i + 1);
++      [out[i], out[j]] = [out[j]!, out[i]!];
++    }
++    return out;
++  }
++  sample<T>(xs: readonly T[], k: number): T[] {
++    return this.shuffle(xs).slice(0, k);
++  }
++}
++
++export interface PlanEvent extends OEvent {
++  /** Spoil records only. */
++  mode?: SpoilMode;
++  /** What the generator meant by this event (diagnostics only; the oracle never reads it). */
++  tag: string;
++}
++
++export interface ElectionSpec {
++  /** Seed of the simulated election: keys, DKG and ballot randomness all derive from it. */
++  seed: string;
++  label: string;
++  rollSize: number;
++  n: number;
++  t: number;
++  /** Trustee indices (1-based) that release tally shares, in the order they answer. */
++  release: number[];
++  contests: ManifestContest[];
++  maxPerVoter: number;
++  maxSpoils: number;
++  quorum: Manifest['quorum'];
++  minCounted: number | undefined;
++  spoilTrustees: boolean;
++  /** The coordinator sends its own aggregates for the trustees to compare (QV-16 §5.16). */
++  claimAggregates: boolean;
++  /** Envelopes after election-close are appended after the tally record instead of before it. */
++  lateAfterTally: boolean;
++  ballots: OBallot[];
++  events: PlanEvent[];
++}
++
++export function rulesOf(spec: Pick<ElectionSpec, 'contests' | 'rollSize' | 'maxPerVoter' | 'maxSpoils' | 'quorum' | 'minCounted'>): ORules {
++  return {
++    contests: spec.contests, rollSize: spec.rollSize, maxPerVoter: spec.maxPerVoter, maxSpoilsPerVoter: spec.maxSpoils,
++    quorum: spec.quorum, minCountedBallots: spec.minCounted,
++  };
++}
++
++/** Ciphertexts in one ballot: one per real option plus one placeholder per unit of `selection_limit` (QV-16 §5.9.1). */
++export function ciphertextsPerBallot(contests: readonly ManifestContest[]): number {
++  return contests.reduce((n, c) => n + c.options.length + (c.selection_limit ?? 0), 0);
++}
++
++const SLOT_ORDER: Record<Slot, number> = { early: 0, window: 1, late: 2 };
++
++/** Builds a plan event by event. `v<i>` is roll member i; any other label is a key that is not on the roll. */
++export class PlanBuilder {
++  readonly ballots: OBallot[] = [];
++  private readonly bySlot: Record<Slot, PlanEvent[]> = { early: [], window: [], late: [] };
++
++  ballot(voter: string, selections: Selections, o: { supersedes?: number | null | 'garbage'; defects?: Defect[]; eligible?: boolean } = {}): number {
++    const id = this.ballots.length;
++    this.ballots.push({
++      id, voter, eligible: o.eligible ?? /^v\d+$/.test(voter), supersedes: o.supersedes ?? null, selections, defects: o.defects ?? [],
++    });
++    return id;
++  }
++  cast(ballot: number, slot: Slot = 'window', tag = 'cast'): void {
++    this.bySlot[slot].push({ slot, intent: 'cast', ballot, tag });
++  }
++  spoil(ballot: number, mode: SpoilMode, slot: Slot = 'window', tag = 'spoil'): void {
++    this.bySlot[slot].push({ slot, intent: 'spoil', ballot, mode, tag });
++  }
++  /** Appends a verbatim copy of an earlier event (same envelope bytes) to `slot`. */
++  replay(of: PlanEvent, slot: Slot = 'window', tag = 'replay'): void {
++    const e: PlanEvent = { slot, intent: of.intent, ballot: of.ballot, tag };
++    if (of.mode !== undefined) e.mode = of.mode;
++    this.bySlot[slot].push(e);
++  }
++  /** Events in log order: before election-open, inside the window, after election-close. */
++  get events(): PlanEvent[] {
++    return [...this.bySlot.early, ...this.bySlot.window, ...this.bySlot.late];
++  }
++  eventsIn(slot: Slot): readonly PlanEvent[] {
++    return this.bySlot[slot];
++  }
++}
++void SLOT_ORDER;
++
++// ---------------------------------------------------------------- generator
++
++export interface GenLimits {
++  /** Target upper bound on ciphertexts per election (about 11 ms of proof verification each, per verification). */
++  ctBudget: number;
++  /** Hard cap on voter envelopes per election. */
++  maxEvents: number;
++}
++export const DEFAULT_LIMITS: GenLimits = { ctBudget: 30, maxEvents: 10 };
++
++const OPTION_IDS = ['a', 'b', 'c', 'x1', 'x10', 'x2', 'z', '0', 'aa', 'k-9', 'k_9', 'opt'];
++const CONTEST_IDS = ['budget', 'chair', 'q1', 'q2', 'items', 'board', '7'];
++
++type Shape = Pick<ManifestContest, 'id' | 'title' | 'method' | 'options' | 'min_selections'> & { selection_limit?: number };
++
++function genShapes(d: Dice): Shape[] {
++  const count = d.weighted([[1, 66], [2, 27], [3, 7]] as const);
++  const ids = d.sample(CONTEST_IDS, count);
++  return ids.map((id): Shape => {
++    const method = d.weighted([['yes-no', 34], ['single-choice', 24], ['approval', 22], ['k-of-n', 20]] as const);
++    const opts = (n: number): { id: string; label: string }[] => d.sample(OPTION_IDS, n).map((o) => ({ id: o, label: `Option ${o}` }));
++    const base = { id, title: `Contest ${id}`, method, min_selections: 0 as const };
++    switch (method) {
++      case 'yes-no':
++        return { ...base, options: [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }], selection_limit: 1 };
++      case 'single-choice':
++        return { ...base, options: opts(2 + d.int(3)), selection_limit: 1 };
++      case 'approval':
++        return { ...base, options: opts(1 + d.int(4)) };
++      case 'k-of-n': {
++        const n = 2 + d.int(4);
++        return { ...base, options: opts(n), selection_limit: 1 + d.int(n - 1) };
++      }
++    }
++  });
++}
++
++function genSelections(d: Dice, shapes: readonly Shape[]): Selections {
++  const blankBallot = d.chance(1, 10);
++  const sel: Selections = {};
++  for (const c of shapes) {
++    const ids = c.options.map((o) => o.id);
++    if (blankBallot || d.chance(1, 8)) {
++      sel[c.id] = [];
++      continue;
++    }
++    switch (c.method) {
++      case 'yes-no':
++      case 'single-choice':
++        sel[c.id] = [d.pick(ids)];
++        break;
++      case 'approval':
++        sel[c.id] = d.shuffle(ids.filter(() => d.chance(1, 2)));
++        break;
++      case 'k-of-n': {
++        const L = c.selection_limit!;
++        const k = d.chance(2, 3) ? L : d.int(L + 1);
++        sel[c.id] = d.sample(ids, k);
++      }
++    }
++  }
++  return sel;
++}
++
++const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
++
++/**
++ * A random election from `seed`. Structure, turnout, revotes, audits and junk envelopes are random; the rule parameters
++ * (thresholds, quorum, privacy floor) are then drawn close to the boundary the campaign actually reached, so exact ties,
++ * quorum boundaries and floor boundaries are frequent instead of rare.
++ */
++export function generateElection(seed: string, label: string, limits: GenLimits = DEFAULT_LIMITS): ElectionSpec {
++  const d = new Dice(`${seed}/plan`);
++  const shapes = genShapes(d);
++  const cts = shapes.reduce((n, c) => n + c.options.length + (c.selection_limit ?? 0), 0);
++  const rollSize = d.weighted([[1, 3], [2, 5], [3, 15], [4, 17], [5, 15], [6, 12], [7, 9], [8, 8], [9, 6], [10, 4], [11, 3], [12, 3]] as const);
++  const n = d.weighted([[1, 12], [2, 30], [3, 38], [4, 12], [5, 8]] as const);
++  const t = 1 + d.int(n);
++  const maxPerVoter = d.weighted([[1, 22], [2, 38], [3, 28], [4, 12]] as const);
++  const maxSpoils = d.weighted([[0, 12], [1, 28], [2, 35], [3, 25]] as const);
++  const lateAfterTally = d.chance(1, 2);
++  const draft = { contests: shapes as ManifestContest[], rollSize, maxPerVoter, maxSpoils, quorum: undefined, minCounted: undefined };
++  const structure = rulesOf(draft);
++
++  const plan = new PlanBuilder();
++  const roll = Array.from({ length: rollSize }, (_, i) => `v${i}`);
++  const cap = Math.max(4, Math.min(limits.maxEvents, Math.floor(limits.ctBudget / cts)));
++  let budget = cap;
++  const lastSubmitted = new Map<string, number>();
++  const casts = new Map<string, number[]>();
++  const spoils = new Map<string, number[]>();
++  const noteCast = (voter: string, id: number): void => {
++    lastSubmitted.set(voter, id);
++    casts.set(voter, [...(casts.get(voter) ?? []), id]);
++  };
++  /** What an honest client reads from the log so far: the voter's latest admissible ballot (QV-16 §5.14.2). */
++  const prefixLast = (voter: string): number | null => classify(structure, plan.ballots, plan.events).counted.get(voter)?.ballot ?? null;
++  const admissibleSoFar = (voter: string): number =>
++    classify(structure, plan.ballots, plan.events).fates.filter((f, i) => (f.kind === 'counted' || f.kind === 'superseded') && plan.ballots[plan.events[i]!.ballot]!.voter === voter).length;
++  const sel = (): Selections => genSelections(d, shapes);
++  const mode = (): SpoilMode => d.weighted([['publish', 40], ['private', 35], ['trustees', 25]] as const);
++  const honestCast = (voter: string, tag: string, slot: Slot = 'window'): void => {
++    const id = plan.ballot(voter, sel(), { supersedes: slot === 'early' ? null : prefixLast(voter) });
++    plan.cast(id, slot, tag);
++    noteCast(voter, id);
++    budget -= 1;
++  };
++  const freshSpoil = (voter: string, tag: string, slot: Slot = 'window'): void => {
++    const id = plan.ballot(voter, sel(), { supersedes: prefixLast(voter) });
++    plan.spoil(id, mode(), slot, tag);
++    spoils.set(voter, [...(spoils.get(voter) ?? []), id]);
++    budget -= 1;
++  };
++
++  // -- before election-open (a server that appends too early)
++  if (d.chance(18, 100)) {
++    for (let k = 1 + d.int(2); k > 0 && budget > 2; k--) {
++      if (d.chance(3, 5)) honestCast(d.pick(roll), 'early-cast', 'early');
++      else freshSpoil(d.pick(roll), 'early-spoil', 'early');
++    }
++  }
++  const lateCount = d.chance(18, 100) ? 1 + d.int(2) : 0;
++
++  // -- the voting window
++  const turnout = d.weighted([[0, 4], [35, 14], [70, 30], [100, 52]] as const);
++  const intending = d.shuffle(roll).filter(() => d.chance(turnout, 100));
++  let extras = Math.min(d.weighted([[0, 22], [1, 24], [2, 20], [3, 16], [4, 11], [5, 7]] as const), Math.max(0, budget - lateCount - 1));
++  const primaries = intending.slice(0, Math.max(0, budget - lateCount - extras));
++  if (d.chance(1, 3)) extras = Math.max(extras, d.int(Math.max(1, budget - lateCount - primaries.length + 1)));
++  const timeline = d.shuffle([...primaries.map((v) => ({ primary: v })), ...Array.from({ length: extras }, () => ({ primary: undefined }))]);
++  const outsiders = ['x0', 'x1'];
++  const active = (): string[] => roll.filter((v) => (casts.get(v) ?? []).length > 0);
++  type Kind = 'revote' | 'burst' | 'stale' | 'garbage' | 'naive' | 'spoil' | 'recast-spoiled' | 'spoil-cast' | 'outsider' | 'foreign' | 'bad-sig' | 'bad-proof' | 'bad-schema' | 'replay';
++  const extra = (): void => {
++    const kind = d.weighted<Kind>([
++      ['revote', 22], ['burst', 7], ['stale', 7], ['garbage', 3], ['naive', 4], ['spoil', 14], ['recast-spoiled', 6], ['spoil-cast', 4],
++      ['outsider', 7], ['foreign', 4], ['bad-sig', 4], ['bad-proof', 4], ['bad-schema', 2], ['replay', 12],
++    ]);
++    const voters = active();
++    switch (kind) {
++      case 'revote':
++        return honestCast(voters.length > 0 ? d.pick(voters) : d.pick(roll), 'revote');
++      case 'burst': {
++        // one voter keeps revoting until one ballot is beyond max_per_voter
++        const v = voters.length > 0 ? d.pick(voters) : d.pick(roll);
++        const want = maxPerVoter + 1 - admissibleSoFar(v);
++        for (let k = 0; k < Math.max(1, want) && budget > lateCount; k++) honestCast(v, 'burst');
++        return;
++      }
++      case 'stale': {
++        // names an older ballot (or none) although a newer admissible one exists: two devices of one voter
++        const v = voters.find((x) => prefixLast(x) !== null);
++        if (v === undefined) return honestCast(d.pick(roll), 'revote');
++        const older = (casts.get(v) ?? []).filter((id) => id !== prefixLast(v));
++        const id = plan.ballot(v, sel(), { supersedes: older.length > 0 && d.chance(1, 2) ? d.pick(older) : null });
++        plan.cast(id, 'window', 'stale');
++        noteCast(v, id);
++        budget -= 1;
++        return;
++      }
++      case 'garbage': {
++        const v = d.pick(roll);
++        const id = plan.ballot(v, sel(), { supersedes: 'garbage' });
++        plan.cast(id, 'window', 'garbage-supersedes');
++        noteCast(v, id);
++        budget -= 1;
++        return;
++      }
++      case 'naive': {
++        // a client that chains to the last ballot it SENT, admissible or not
++        const v = d.pick(roll);
++        const id = plan.ballot(v, sel(), { supersedes: lastSubmitted.get(v) ?? null });
++        plan.cast(id, 'window', 'naive-chain');
++        noteCast(v, id);
++        budget -= 1;
++        return;
++      }
++      case 'spoil':
++        return freshSpoil(d.pick(roll), 'spoil');
++      case 'recast-spoiled': {
++        // the body of an audited ballot is also submitted as a cast (QV-16 §5.14.4 check 14)
++        const v = roll.find((x) => (spoils.get(x) ?? []).length > 0);
++        if (v === undefined) return freshSpoil(d.pick(roll), 'spoil');
++        plan.cast(d.pick(spoils.get(v)!), 'window', 'cast-of-spoiled');
++        budget -= 1;
++        return;
++      }
++      case 'spoil-cast': {
++        // a voter signs a spoil for a ballot it already cast
++        if (voters.length === 0) return freshSpoil(d.pick(roll), 'spoil');
++        const v = d.pick(voters);
++        plan.spoil(d.pick(casts.get(v)!), mode(), 'window', 'spoil-of-cast');
++        budget -= 1;
++        return;
++      }
++      case 'outsider': {
++        // a perfectly formed ballot chain from a key that is not on the roll
++        const x = d.pick(outsiders);
++        const defects: Defect[] = d.chance(1, 5) ? ['sig'] : [];
++        const id = plan.ballot(x, sel(), { supersedes: lastSubmitted.get(x) ?? null, defects, eligible: false });
++        if (d.chance(4, 5)) plan.cast(id, 'window', 'outsider-cast');
++        else plan.spoil(id, mode(), 'window', 'outsider-spoil');
++        lastSubmitted.set(x, id);
++        budget -= 1;
++        return;
++      }
++      case 'foreign': {
++        // an envelope that belongs to another election (wrong ctx)
++        const id = plan.ballot('donor', {}, { defects: ['ctx'], eligible: false });
++        if (d.chance(3, 4)) plan.cast(id, 'window', 'foreign-cast');
++        else plan.spoil(id, 'publish', 'window', 'foreign-spoil');
++        budget -= 1;
++        return;
++      }
++      case 'bad-sig':
++      case 'bad-proof':
++      case 'bad-schema': {
++        const v = d.pick(roll);
++        const defect: Defect = kind === 'bad-sig' ? 'sig' : kind === 'bad-proof' ? 'proof' : 'schema';
++        const id = plan.ballot(v, sel(), { supersedes: prefixLast(v), defects: [defect] });
++        plan.cast(id, 'window', kind);
++        lastSubmitted.set(v, id);
++        budget -= 1;
++        return;
++      }
++      case 'replay': {
++        const all = plan.events;
++        if (all.length === 0) return honestCast(d.pick(roll), 'revote');
++        plan.replay(d.pick(all), 'window', 'replay');
++        budget -= 1;
++      }
++    }
++  };
++  for (const step of timeline) {
++    if (budget <= lateCount) break;
++    if (step.primary !== undefined) honestCast(step.primary, 'first-vote');
++    else extra();
++  }
++
++  // -- after election-close (a server that appends too late)
++  for (let k = lateCount; k > 0 && budget > 0; k--) {
++    const windowEvents = plan.eventsIn('window');
++    const kind = d.weighted([['cast', 40], ['replay', 30], ['spoil', 15], ['spoil-cast', 15]] as const);
++    if (kind === 'replay' && windowEvents.length > 0) {
++      plan.replay(d.pick(windowEvents), 'late', 'late-replay');
++      budget -= 1;
++    } else if (kind === 'spoil-cast' && !lateAfterTally && active().length > 0) {
++      // only while the tally is still to come: the coordinator must see the record that removes a ballot from the count
++      const v = d.pick(active());
++      plan.spoil(d.pick(casts.get(v)!), mode(), 'late', 'late-spoil-of-cast');
++      budget -= 1;
++    } else if (kind === 'spoil') freshSpoil(d.pick(roll), 'late-spoil', 'late');
++    else honestCast(d.pick(roll), 'late-cast', 'late');
++  }
++
++  // -- rule parameters, drawn near what the campaign reached
++  const reached = expectElection(structure, plan.ballots, plan.events);
++  const V = reached.V;
++  const contests = shapes.map((c): ManifestContest => {
++    const T = reached.counts[c.id]!;
++    if (c.method === 'yes-no') {
++      const basis = d.pick(['yes+no', 'counted'] as const);
++      const base = basis === 'yes+no' ? T['yes']! + T['no']! : V;
++      const exact: [number, number] = base > 0 ? [T['yes']!, base] : [1, 2];
++      let [num, den] = d.weighted<[number, number] | 'random'>([[exact, 40], [[1, 2], 18], [[2, 3], 12], [[3, 4], 5], [[0, 1], 5], [[1, 1], 5], ['random', 15]]) as [number, number] | 'random' extends infer R ? R extends 'random' ? never : [number, number] : never;
++      void num; void den;
++      return { ...c, rule: { type: 'threshold', num: 1, den: 2, basis, strict: true }, tie_break: { type: 'declare-tie' } };
++    }
++    return { ...c, tie_break: { type: 'declare-tie' } };
++  });
++  void contests; void gcd;
++  throw new Error('generator not finished');
++}

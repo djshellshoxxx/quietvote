@@ -1,0 +1,137 @@
+{
+  "scope": "Frozen source and first published documentation checkpoint; final receipt-only successor is separately scanned before push",
+  "source_sha": "247df393ea1ace300fe5ed1f569a12090e1364dc",
+  "base_main_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+  "scanner": "detect-secrets 1.5.0",
+  "invocation": "detect-secrets scan --all-files --no-verify .",
+  "cwd": "/workspace/work/outgoing-source-versions",
+  "settings": "default plugins/filters; credential verification network disabled",
+  "source_versions": {
+    "commits": 200,
+    "blob_versions": 1392,
+    "bytes": 26206253
+  },
+  "flagged_blob_versions": 181,
+  "candidate_findings": 18465,
+  "exhaustive_review_tuple_equality": true,
+  "vector_review": {
+    "flagged_blob_path_versions": 126,
+    "logical_paths": 76,
+    "findings": 17885,
+    "triaged": 17885,
+    "unresolved": 0,
+    "operational_credential_candidates": 0,
+    "exact_finding_line_string_sha1_matches": 17885,
+    "by_detector": {
+      "Hex High Entropy String": 16522,
+      "Base64 High Entropy String": 1360,
+      "Secret Keyword": 3
+    },
+    "by_category": {
+      "public_test_digest_or_binding": 715,
+      "public_test_group_element": 4153,
+      "public_test_proof_scalar": 7603,
+      "public_file_digest_or_merkle_root": 411,
+      "public_test_public_key": 816,
+      "public_test_signature": 1876,
+      "public_test_ciphertext_or_authentication_tag": 904,
+      "deterministic_test_randomness": 50,
+      "public_encoded_board_header": 633,
+      "public_encoded_protocol_record": 633,
+      "public_log_merkle_hash": 28,
+      "public_canonical_or_framed_test_bytes": 56,
+      "public_rfc8032_test_seed": 4,
+      "deterministic_private_key_fixture": 3
+    },
+    "by_provenance_method": {
+      "exact_sha1_match_to_regenerated_json_string_leaf": 17353,
+      "independently_recomputed_rfc9162_merkle_root_of_public_file_digest_list": 6,
+      "sha256_of_exact_snapshot_blob_bytes": 405,
+      "exact_historical_value_recomputation": 121
+    },
+    "manifest_versions": 6,
+    "manifest_file_digests_verified": 409,
+    "manifest_merkle_roots_verified": 6,
+    "historical_verification": {
+      "historical_open_signatures_recomputed": 68,
+      "board_entries_recomputed": 633,
+      "board_bodies_matched_to_snapshot_protocol_records": 633,
+      "board_roots_recomputed": 26,
+      "receipt_leaf_matches": 211,
+      "receipt_promise_signatures_recomputed": 20,
+      "novel_non_manifest_findings": 121,
+      "novel_value_hashes_with_evidence": 56,
+      "unresolved_count": 0
+    }
+  },
+  "nonvector_review": {
+    "flagged_blob_versions": 55,
+    "distinct_original_paths": 31,
+    "findings": 580,
+    "by_disposition": {
+      "false_positive": 24,
+      "public_metadata": 537,
+      "synthetic_key_material": 19
+    },
+    "by_detector": {
+      "Base64 High Entropy String": 17,
+      "Basic Auth Credentials": 4,
+      "Hex High Entropy String": 538,
+      "Secret Keyword": 21
+    },
+    "unresolved_credentials": 0,
+    "exact_scanner_fingerprint_rematches": 580,
+    "git_blob_hashes_verified": 55
+  },
+  "unresolved_credentials": 0,
+  "positive_control": {
+    "synthetic_aws_style_key_findings": 1,
+    "outside_repository": true
+  },
+  "evidence_sha256": {
+    "source-secrets-checkpoint-valid.json": "f8e799bd067d6982863ea16bcf77a33c52dcceee7343e861111124757d054f2a",
+    "secret-triage-vectors.json": "b8802685081302d353618e3cae28c0c75154259ad0d7f39d8c730752543995d0",
+    "secret-triage-nonvectors.json": "dfd3e5eee0e0421e5df8f0a60f5e24568588b32ab5f4475379847fc025ce43e8"
+  },
+  "reproduction_notes": [
+    "Run the scanner with the snapshot root as cwd and dot as target; external absolute paths invoked from another cwd can omit files and are not receipts.",
+    "Extract each distinct git blob in origin/main..HEAD under <blob>/<originalpath>; retain all historical versions.",
+    "Later documentation-only checkpoints require an additional scan/triage; the final publication receipt is in the consolidated handoff."
+  ],
+  "limitations": "Publication hygiene only; synthetic/private key fixtures are intentionally public test data. This does not establish absence of all secrets or independent security approval.",
+  "first_publication": {
+    "branch": "integration/quietvote-consolidated-20261030",
+    "local_remote_readback_sha": "1a751ab58aef41a1ae1a7beb433d853938549b3a",
+    "main_sha": "019f4e789be2ff38a5fb2d348c3b225cc87cf296",
+    "draft_pr": "https://github.com/djshellshoxxx/quietvote/pull/22",
+    "outgoing_versions": {
+      "commits": 201,
+      "blob_versions": 1401,
+      "bytes": 27367160
+    },
+    "delta_review": {
+      "delta_findings": 24,
+      "unique_delta_fingerprints": 21,
+      "flagged_blob_versions": 4,
+      "exact_detector_fingerprint_line_rematches": 24,
+      "git_blob_hashes_verified": 4,
+      "by_disposition": {
+        "public_metadata": 24
+      },
+      "by_metadata_kind": {
+        "git_commit_object_id": 19,
+        "evidence_file_sha256": 5
+      },
+      "independent_audit_doc_second_review_findings": 17,
+      "unresolved_credentials": 0,
+      "previous_scan_findings_preserved": 18465,
+      "final_scan_findings": 18489
+    },
+    "full_scan_candidate_findings": 18489,
+    "unresolved_credentials": 0,
+    "evidence_sha256": {
+      "source-secrets-final.json": "3ba6acc21e6e0beb3e1abdb831848ff02f836e6281289a7e3068f13c69e48074",
+      "secret-final-doc-triage.json": "d829c95745be7c2f47895dca33fa534b4da8d1024a4f1f528b62e075b13fea5b"
+    }
+  }
+}

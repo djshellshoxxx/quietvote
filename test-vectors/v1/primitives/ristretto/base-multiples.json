@@ -1,0 +1,296 @@
+{
+  "$schema": "https://quietvote.example/schema/vector-file.schema.json",
+  "format_version": 1,
+  "protocol_version": "qv1",
+  "suite": "primitives/ristretto",
+  "operation": "ristretto.encode_base_mul",
+  "description": "[k]G for k = 0..16 (k = 1, 2, 3 equal the RFC 9496 Appendix A values)",
+  "origin": "hybrid",
+  "status": "candidate",
+  "generator": {
+    "commit": "n/a",
+    "tool": "vecgen@0.1.0",
+    "seed_ref": "streamRng(SHA-512 counter) seeds named per vector"
+  },
+  "independent_confirmations": [],
+  "encoding": {
+    "bytes": "hex-lower",
+    "scalars": "QV-16 §5.2 (32-byte LE, < l)",
+    "points": "QV-16 §5.2 (ristretto255 canonical)",
+    "ints": "decimal-string"
+  },
+  "vectors": [
+    {
+      "id": "base-mul-0",
+      "input": {
+        "scalar_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9496-checked"
+      ]
+    },
+    {
+      "id": "base-mul-1",
+      "input": {
+        "scalar_hex": "0100000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "e2f2ae0a6abc4e71a884a961c500515f58e30b6aa582dd8db6a65945e08d2d76"
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9496-checked"
+      ]
+    },
+    {
+      "id": "base-mul-2",
+      "input": {
+        "scalar_hex": "0200000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "6a493210f7499cd17fecb510ae0cea23a110e8d5b901f8acadd3095c73a3b919"
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9496-checked"
+      ]
+    },
+    {
+      "id": "base-mul-3",
+      "input": {
+        "scalar_hex": "0300000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "94741f5d5d52755ece4f23f044ee27d5d1ea1e2bd196b462166b16152a9d0259"
+        }
+      },
+      "tags": [
+        "kat",
+        "rfc9496-checked"
+      ]
+    },
+    {
+      "id": "base-mul-4",
+      "input": {
+        "scalar_hex": "0400000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "da80862773358b466ffadfe0b3293ab3d9fd53c5ea6c955358f568322daf6a57"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-5",
+      "input": {
+        "scalar_hex": "0500000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "e882b131016b52c1d3337080187cf768423efccbb517bb495ab812c4160ff44e"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-6",
+      "input": {
+        "scalar_hex": "0600000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "f64746d3c92b13050ed8d80236a7f0007c3b3f962f5ba793d19a601ebb1df403"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-7",
+      "input": {
+        "scalar_hex": "0700000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "44f53520926ec81fbd5a387845beb7df85a96a24ece18738bdcfa6a7822a176d"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-8",
+      "input": {
+        "scalar_hex": "0800000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "903293d8f2287ebe10e2374dc1a53e0bc887e592699f02d077d5263cdd55601c"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-9",
+      "input": {
+        "scalar_hex": "0900000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "02622ace8f7303a31cafc63f8fc48fdc16e1c8c8d234b2f0d6685282a9076031"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-10",
+      "input": {
+        "scalar_hex": "0a00000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "20706fd788b2720a1ed2a5dad4952b01f413bcf0e7564de8cdc816689e2db95f"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-11",
+      "input": {
+        "scalar_hex": "0b00000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "bce83f8ba5dd2fa572864c24ba1810f9522bc6004afe95877ac73241cafdab42"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-12",
+      "input": {
+        "scalar_hex": "0c00000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "e4549ee16b9aa03099ca208c67adafcafa4c3f3e4e5303de6026e3ca8ff84460"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-13",
+      "input": {
+        "scalar_hex": "0d00000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "aa52e000df2e16f55fb1032fc33bc42742dad6bd5a8fc0be0167436c5948501f"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-14",
+      "input": {
+        "scalar_hex": "0e00000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "46376b80f409b29dc2b5f6f0c52591990896e5716f41477cd30085ab7f10301e"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-15",
+      "input": {
+        "scalar_hex": "0f00000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "e0c418f7c8d9c4cdd7395b93ea124f3ad99021bb681dfc3302a9d99a2e53e64e"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    },
+    {
+      "id": "base-mul-16",
+      "input": {
+        "scalar_hex": "1000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "expect": {
+        "ok": true,
+        "output": {
+          "point_hex": "c862fced1314e81e9b77d02b847689096b4e7ded39b009b9c996982e4ecac66e"
+        }
+      },
+      "tags": [
+        "kat",
+        "generated"
+      ]
+    }
+  ]
+}

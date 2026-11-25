@@ -1,0 +1,78 @@
+// B2 audit proof-of-concept (AI-assisted audit, 2026-10-28; report: /home/user/audit/reports/B2-quietvote-server-board.md).
+// NOT an independent audit. The test ASSERTS THE CURRENT (defective) behaviour at SHA 424110d; a fix should make it fail. Synthetic data only.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { trusteeMain } from '../src/index.ts';
+import { mkDeps, PASS } from './helpers/harness.ts';
+
+test('B2-08 PoC: destroy resolves recorded relative backup paths against the CURRENT directory: the real backup survives, an unrelated file is shredded', async (t) => {
+  const home = process.cwd();
+  const dirA = mkdtempSync(join(tmpdir(), 'qv-b2-trusteeA-'));
+  const dirB = mkdtempSync(join(tmpdir(), 'qv-b2-trusteeB-'));
+  const out: string[] = [];
+  const err: string[] = [];
+  const io = { out: (s: string) => out.push(s), err: (s: string) => err.push(s), promptSecret: async () => PASS };
+  const d = mkDeps('b2-destroy');
+  const run = (a: string[]): Promise<number> => trusteeMain([...a, '--json'], io, d, {});
+  const bundle = join(dirA, 'share.qvtb');
+  try {
+    process.chdir(dirA);
+    assert.equal(await run(['keygen', '--bundle', bundle]), 0, err.join('\n'));
+    // the trustee makes a backup with a relative destination (as documented: `backup --bundle F --to F2`)
+    assert.equal(await run(['backup', '--bundle', bundle, '--to', 'share-backup.qvtb']), 0, err.join('\n'));
+    const realBackup = join(dirA, 'share-backup.qvtb');
+    const sealed = readFileSync(realBackup);
+    // weeks later, from another working directory that happens to hold a file of the same name
+    const unrelated = join(dirB, 'share-backup.qvtb');
+    writeFileSync(unrelated, 'unrelated synthetic user data\n');
+    writeFileSync(join(dirB, 'audit-close.json'), '{}');
+    process.chdir(dirB);
+    const rc = await run(['destroy', '--bundle', bundle, '--audit-close', join(dirB, 'audit-close.json'), '--confirm', 'x']);
+    assert.equal(rc, 0, err.join('\n'));
+    const report = JSON.parse(out.pop()!) as { backups_removed: string[]; backups_missing: string[] };
+    t.diagnostic(`destroy report: ${JSON.stringify(report)}; real backup still present: ${existsSync(realBackup)}; unrelated file present: ${existsSync(unrelated)}`);
+    assert.deepEqual(report.backups_removed, ['share-backup.qvtb'], 'the tool reports the backup as removed');
+    assert.ok(existsSync(realBackup), 'BUG: the real sealed backup (holding sk_sign) survives destroy');
+    assert.deepEqual(readFileSync(realBackup), sealed, 'and is untouched');
+    assert.ok(!existsSync(unrelated), 'BUG: an unrelated file in the current directory was overwritten and unlinked');
+    assert.ok(!existsSync(bundle), 'the live bundle itself is gone');
+  } finally {
+    process.chdir(home);
+    rmSync(dirA, { recursive: true, force: true });
+    rmSync(dirB, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------------------------------------- KNOWN TR-01 / CP-01
+import { bytesToHex } from '@quietvote/crypto';
+import { ballotCode, collectSpoilShares, decryptSpoiled, makeSpoil, type BallotBody, type SignedRecord, type SpoilShareBody } from '@quietvote/protocol';
+import { electionFixture } from './helpers/harness.ts';
+
+test('KNOWN TR-01/CP-01 (fix on unmerged PR #8/#10; docs/audit/README.md calls it closed) still present: the spoil relay decrypts a COUNTED ballot re-wrapped under a new code', async (t) => {
+  const H = bytesToHex;
+  const fx = await electionFixture({ n: 4, t: 3, seed: 'b2-tr01', spoilDecrypt: true, close: false });
+  const c = fx.c;
+  try {
+    const o = fx.outcome;
+    const p = c.params(o);
+    const b = c.build(o, 0, { budget: ['no'] }, 7);
+    c.castBuilt(o, 0, b); // counted ballot of voter 0 (synthetic)
+    const forged: BallotBody = { ...b.body, supersedes: 'ff'.repeat(32) }; // same ciphertexts and proofs, new ballot code
+    const code = ballotCode(p.ctx, forged);
+    c.push(makeSpoil(p, c.voters[0]!.secretKey, { ...b, body: forged, code }, 'trustees'));
+    c.marker('election-close');
+    await c.syncAll();
+    const recs: SignedRecord<SpoilShareBody>[] = [];
+    for (const i of [1, 2, 3]) recs.push((await c.act(i, (tr) => tr.releaseSpoil(c.bundle(), [H(code)]))).obj.records[0] as SignedRecord<SpoilShareBody>);
+    const col = collectSpoilShares(c.manifest, p.ctx, H(code), recs);
+    const out = decryptSpoiled(p, o.Y, new Set(o.Q), { code: H(code), body: forged }, col.sets);
+    assert.ok(out.ok);
+    t.diagnostic(`3 trustees released spoil shares for the re-wrapped code; decrypted selections = ${JSON.stringify(out.value.selections)} (the counted vote)`);
+    assert.deepEqual(out.value.selections, { budget: ['no'] }, 'BUG: the counted ballot\'s plaintext is recovered');
+  } finally {
+    c.cleanup();
+  }
+});

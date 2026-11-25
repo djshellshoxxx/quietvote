@@ -1,0 +1,22 @@
+// B3 audit PoC: route() has no staleness guard, so a slow view (results: lazy chart chunk) overwrites a later view.
+import { FakeBoard, TEST_CONTESTS } from '../test/helpers/fake-board.ts';
+import { castBallot, closeElection, publishTally, setup } from '../../protocol/test/helpers/sim.ts';
+import { exe, pw, startStack } from './harness.ts';
+const sim = await setup({ seed: 'b3-race', n: 3, t: 2, voters: 4, contests: TEST_CONTESTS()!, minCounted: 3 });
+for (let i = 0; i < 4; i++) castBallot(sim, i, { budget: ['yes'], board: ['p', 'q'] });
+closeElection(sim); publishTally(sim, [1, 2]);
+const board = new FakeBoard(sim);
+const stack = await startStack(board, sim.voters[0]!.secretKey);
+const browser = await pw.chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
+const p = await (await browser.newContext()).newPage();
+await p.route('**/assets/charts-*.js', async (r) => { await new Promise((res) => setTimeout(res, 1500)); await r.continue(); });
+await p.goto(`${stack.origin}/e/${board.apiId}`);
+await p.getByRole('heading', { level: 1 }).waitFor({ timeout: 20000 });
+await p.getByRole('link', { name: 'Results' }).first().click();   // slow: waits for the chart chunk
+await p.getByRole('link', { name: 'Check a receipt' }).first().click(); // fast: renders at once
+await p.waitForTimeout(300);
+console.log('0.3 s after the second click: url =', new URL(p.url()).pathname.split('/').pop(), '| h1 =', await p.locator('main h1').first().innerText());
+await p.waitForTimeout(3000);
+console.log('3 s later                   : url =', new URL(p.url()).pathname.split('/').pop(), '| h1 =', await p.locator('main h1').first().innerText());
+await browser.close();
+stack.close();

@@ -1,0 +1,6 @@
+M27 DKG: duplicate A_0 rule removed                     crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 1)  81s
+M28 verify: E_AGG_IDENTITY check removed                crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  75s
+M29 verify: published T not compared                    crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 3)  76s
+M30 verify: keyconf timeliness ignored                  crypto=survived (# fail 0)  protocol-subset=survived (# fail 0)  91s
+M31 rules: strict comparison becomes non-strict         crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 4)  72s
+M32 sum bound L*V check removed                         crypto=survived (# fail 0)  protocol-subset=KILLED   (# fail 1)  87s
