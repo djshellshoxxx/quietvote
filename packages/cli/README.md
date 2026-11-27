@@ -71,9 +71,11 @@ process. Arguments and native stdin/stdout/stderr pass directly to that process;
 the offline trustee retains its own parsing, hidden prompts, private-file access
 and exit codes. The wrapper does not import trustee code or read passphrases.
 Missing/unlaunchable commands return exit 4 without printing their arguments.
-Cancellation forwards SIGINT/SIGTERM and allows one second for termination before
-forcing the child to stop. Cancellation is a failure, including when the child
-exits gracefully; inspect the trustee's existing recovery state before resuming.
+When Node delivers SIGINT or SIGTERM to the wrapper, it forwards the signal and
+allows one second before forcing the child to stop. This cancellation path was
+tested on POSIX; Windows termination and interactive-console behavior require
+separate qualification. Cancellation is a failure, including when the child exits
+gracefully; inspect the trustee's existing recovery state before resuming.
 
 For a workspace checkout, install the locked dependencies and put
 `node_modules/.bin` on PATH before running the delegate. POSIX resolves the
