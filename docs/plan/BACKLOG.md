@@ -207,7 +207,7 @@ The original audit of 2026-10-21 was superseded during the same day by the refre
 | T-165 | `qv vote` (encrypt, prove, sign, submit, receipt) | QV-05 | P0 | M | T-101 | Eng-C | [~] |
 | T-166 | `qv audit` — Benaloh challenge from CLI | QV-16 OQ (v0.5) | P0 | M | T-102 | Eng-C | [~] |
 | T-167 | `qv verify` wrapping reference verifier; `qv receipt check` | S1, QV-18 | P0 | S | T-143 | Eng-C | [~] |
-| T-168 | `qv trustee …` subcommands delegating to trustee package | QV-17 | P1 | S | T-126 | Eng-C | [ ] |
+| T-168 | `qv trustee …` subcommands delegating to trustee package | QV-17 | P1 | S | T-126 | Eng-C | [~] Implemented; native qualification tracked in [R23](../audits/CONTINUATION_R23_20261127.md) |
 | T-169 | `qv export/import`, `qv monitor` | QV-18 §12 | P1 | M | T-107 | Eng-C | [ ] |
 | T-170 | CLI e2e tests (scripted whole election incl. trustees) | QV-11 L5 | P0 | M | T-165,T-168 | QA | [ ] |
 | T-171 | CLI packaging: signed single-file builds, reproducible | QV-19, G8 | P1 | M | T-170 | Eng-R | [ ] |
