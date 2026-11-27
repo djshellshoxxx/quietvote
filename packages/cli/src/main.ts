@@ -18,6 +18,7 @@ import { ONLINE_EXPORTS } from './cmd-online-exports.ts';
 import { ONLINE_ORGS } from './cmd-online-org.ts';
 import { cmdOnlineBackupCreate } from './cmd-online-backup.ts';
 import { cmdElectionCheckTally } from './cmd-tally-check.ts';
+import { cmdHealth } from './cmd-health.ts';
 
 export const VERSION = '0.1.0';
 
@@ -25,6 +26,8 @@ export const HELP = `qv ${VERSION}: QuietVote command line (offline verification
 
 usage:
   qv --version                     print the version
+  qv health <server-origin> [--timeout-ms <1..120000>] [--json]
+                                   check service health, database readiness and instance metadata (availability only)
   qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only] [--extra-author-key <hex>]...
                                    verify an election bundle (V1..V14); runs the canary self-test first
                                    extra author keys: at most 32 independently obtained public signing keys
@@ -137,6 +140,7 @@ but something could not be checked: that is not a pass), 4 unreadable or malform
 
 type Cmd = (argv: string[], io: Io) => Promise<number>;
 const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
+  health: cmdHealth,
   verify: cmdVerify,
   'verify-receipt': cmdVerifyReceipt,
   selftest: cmdSelftest,
