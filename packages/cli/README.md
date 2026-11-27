@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|receipt-check|election-tally-draft|election-export`, and the recorded-export management commands below.
+Commands: `health`, `trustee`, `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|receipt-check|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -34,9 +34,62 @@ grant coordinator, trustee, voter, or control authority and does not replace
 witness evidence. `verifyWithSelfTest` accepts the same keys as its trusted caller
 option `extraAuthorKeys`.
 
-Exit codes: 0 ok, 1 failure, 2 usage, 3 incomplete/partial, 4 bad input, 70 internal. Design notes: `packages/verifier/NOTES.md`.
+Exit codes: 0 ok, 1 failure, 2 usage, 3 incomplete/partial, 4 bad input, 70 internal. The `trustee` delegate preserves the offline trustee's own exit codes. Design notes: `packages/verifier/NOTES.md`.
 
 See docs/08-architecture-deployment.md and docs/30-engineering-standards.md.
+
+## Service health
+
+```sh
+qv health https://vote.example --json
+qv health http://127.0.0.1:8080 --timeout-ms 5000
+```
+
+This explicitly checks `/healthz`, `/readyz` and `/api/v1/instance` once each,
+using unsigned GET requests. All three must report their expected success shape
+for exit 0; failed, unavailable or malformed responses give exit 1, with each
+endpoint's result retained. Invalid arguments give exit 2. The transport accepts
+HTTPS origins or loopback HTTP, refuses redirects, and applies the existing
+20-second default deadline (1..120000 ms) to each request including its body.
+Each body is limited to 64 KiB. No credentials or election records are read.
+
+JSON reports `scope: "service-health"`, `ready`, `election_verified: false` and
+the three endpoint results. Availability and basic response shape do not prove
+API-version compatibility, election integrity, server identity, release
+authenticity or sustained uptime. Extra response fields and raw server messages
+are omitted.
+
+## Offline trustee delegation
+
+```sh
+qv trustee help
+qv trustee status --bundle trustee.qvtb --passphrase-file private-passphrase.txt
+```
+
+The approved ADR-027/N-39c adapter runs `qv-trustee` from PATH in a separate
+process. Arguments and native stdin/stdout/stderr pass directly to that process;
+the offline trustee retains its own parsing, hidden prompts, private-file access
+and exit codes. The wrapper does not import trustee code or read passphrases.
+Missing/unlaunchable commands return exit 4 without printing their arguments.
+When Node delivers SIGINT or SIGTERM to the wrapper, it forwards the signal and
+allows one second before forcing the child to stop. This cancellation path was
+tested on POSIX; Windows termination and interactive-console behavior require
+separate qualification. Cancellation is a failure, including when the child exits
+gracefully; inspect the trustee's existing recovery state before resuming.
+
+For a workspace checkout, install the locked dependencies and put
+`node_modules/.bin` on PATH before running the delegate. POSIX resolves the
+selected executable's real path. Windows supports a native `qv-trustee.exe` or
+the recognized standard npm Node launcher: its exact target must match the
+associated `@quietvote/trustee` package's declared binary. Custom or differently
+formatted Windows wrappers are refused; no shell is enabled as a fallback.
+Explicit PATH directories are trusted executable locations. Empty entries do
+not implicitly select the current directory.
+
+The [continuation receipt](../../docs/audits/CONTINUATION_R23_20261127.md)
+distinguishes local process tests from native-platform and manual terminal
+qualification. This adapter does not complete trustee hardware packaging or
+durable checkpoint retention.
 
 New QVKEY1 keys use the same passphrase normalization in the CLI and web client: phrases of at least six embedded-list words
 accept case, whitespace and hyphen variants; other phrases retain NFKC-normalized spelling. Keep the exact spelling used for

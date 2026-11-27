@@ -292,7 +292,7 @@ Checkboxes in BACKLOG are updated to match. Priority and owner role are as in BA
 | T-165 `qv vote` (encrypt, prove, sign, submit, receipt) | cli | P0 | Partial | QV-05 (owner role: T-101). Evidence (2026-10-21): ballot encrypt and audit exist; submit and receipt do not (cli NOTES). |
 | T-166 `qv audit` — Benaloh challenge from CLI | cli | P0 | Partial | QV-16 OQ (v0.5) (owner role: T-102). Evidence (2026-10-21): ballot audit exists under that name; qv audit not. |
 | T-167 `qv verify` wrapping reference verifier; `qv receipt check` | cli | P0 | Partial | S1, QV-18 (owner role: T-143). Evidence (2026-10-21): qv verify exists; receipt check does not (cli NOTES). |
-| T-168 `qv trustee …` subcommands delegating to trustee package | cli | P1 | Open | QV-17 (owner role: T-126). |
+| T-168 `qv trustee …` subcommands delegating to trustee package | cli | P1 | Partial | ADR-027/N-39c adapter implemented and locally reviewed; native qualification remains separate. [R23 receipt](../audits/CONTINUATION_R23_20261127.md). |
 | T-169 `qv export/import`, `qv monitor` | cli | P1 | Open | QV-18 §12 (owner role: T-107). |
 | T-170 CLI e2e tests (scripted whole election incl. trustees) | cli | P0 | Open | QV-11 L5 (owner role: T-165,T-168). |
 | T-171 CLI packaging: signed single-file builds, reproducible | cli | P1 | Open | QV-19, G8 (owner role: T-170). |
