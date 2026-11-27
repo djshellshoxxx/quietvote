@@ -19,6 +19,7 @@ import { ONLINE_ORGS } from './cmd-online-org.ts';
 import { cmdOnlineBackupCreate } from './cmd-online-backup.ts';
 import { cmdElectionCheckTally } from './cmd-tally-check.ts';
 import { cmdHealth } from './cmd-health.ts';
+import { cmdTrustee } from './cmd-trustee.ts';
 
 export const VERSION = '0.1.0';
 
@@ -28,6 +29,8 @@ usage:
   qv --version                     print the version
   qv health <server-origin> [--timeout-ms <1..120000>] [--json]
                                    check service health, database readiness and instance metadata (availability only)
+  qv trustee <args...>              run the separate offline qv-trustee command from PATH;
+                                   native input/output and trustee exit codes are preserved (help: qv trustee help)
   qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only] [--extra-author-key <hex>]...
                                    verify an election bundle (V1..V14); runs the canary self-test first
                                    extra author keys: at most 32 independently obtained public signing keys
@@ -145,6 +148,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   'verify-receipt': cmdVerifyReceipt,
   selftest: cmdSelftest,
   keygen: cmdKeygen,
+  trustee: cmdTrustee,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
   board: { verify: cmdBoardVerify },
   election: { 'check-tally': cmdElectionCheckTally, 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
@@ -168,7 +172,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
     const entry = Object.hasOwn(TABLE, a) ? TABLE[a] : undefined;
     if (entry === undefined) throw new UsageError(`unknown command "${a}"`);
     if (typeof entry === 'function') {
-      if (rest.includes('--help')) {
+      if (a !== 'trustee' && rest.includes('--help')) {
         io.out(HELP);
         return EXIT.ok;
       }
