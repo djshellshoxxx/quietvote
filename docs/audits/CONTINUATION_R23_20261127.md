@@ -82,6 +82,27 @@ preserved. A separate source reviewer also checked package-layout selection.
 These are engineering reviews, not the appointed security-reviewer approvals
 required for main promotion.
 
+### Native qualification follow-up
+
+The initial [matrix run 45984508826](https://github.com/djshellshoxxx/quietvote/actions/runs/45984508826)
+checked out synthetic merge `4ed886aa99fcc002c2cabba5114136ef9e0547b5`, whose tree
+matches published `b36bcd723673114bfa262e85519aa01d9f258f0e`. Both macOS CLI cells
+identified a new test expectation error: the resolver correctly canonicalized
+`/var/folders` to `/private/var/folders`, while the npm fixture expected the
+original spelling. The expectation now compares the exact canonical target with
+`realpathSync`; full deep equality, package association and actual child execution
+assertions remain. Production resolver code is unchanged. The Windows Node 24
+CLI cell passed all 189 applicable tests, including all six health and all nine
+applicable trustee cases, with eight platform skips.
+
+That run also exposed two failures in unchanged components: the Windows Node 24
+server's initial key fixture again timed out at the native service handshake,
+and its trustee TR-03 concurrent-release case saw both attempts rejected where
+the test requires one success. The latter log omits the rejection classifications;
+it does not establish a duplicate release or a native startup cause. Neither
+failure is repaired or hidden by the canonical-path correction. Corrected-source
+platform results and these remaining gates are maintained in PR #74.
+
 ## Verification and limits
 
 | Check | Observed result |
@@ -89,11 +110,12 @@ required for main promotion.
 | Health suite, Linux/Node 24.22.3 | 6 passed, zero failed/skipped; author and independent runs |
 | Trustee suite, Linux/Node 24.22.3 | 11 passed, zero failed/skipped; author and independent runs |
 | Combined new suites, Linux/Node 22.18.0 at `8dd8c0e` | 17 passed, zero failed/skipped |
+| Canonical-path correction under deliberately aliased TMPDIR | All 11 trustee tests passed on Linux/Node 22.18.0 and independently on 24.22.3; reviewed test blob `507c76f42bd9a653cf4ef97cf9f026c98e8f7d58`; strict target checks preserved |
 | Combined TypeScript compilation | Passed |
 | Dependency boundary check | Passed with two inherited D-97 deviations reported; no new violations |
 | Actual npm launcher generation from current trustee source | Target resolution and real help execution passed on Linux; not native Windows qualification |
 | Full CLI workspace on Linux/Node 24.22.3, same runtime tree as local `8dd8c0e` | 197 discovered: 186 passed, zero failed/cancelled, 11 platform skips; shell exit 0; 706,985 ms |
-| Documentation links / claims lint / traceability | 2,766 links in 422 files with no broken links; zero claims findings across 401 files / 45 rules; trace check passed |
+| Documentation links / claims lint / traceability | 2,767 links in 422 files with no broken links; zero claims findings across 401 files / 45 rules; trace check passed |
 | New-source native platform CI | `ci:full-matrix` requested; current-source run identities, checkout binding and final results are maintained in [PR #74](https://github.com/djshellshoxxx/quietvote/pull/74) |
 
 Publication scanning used detect-secrets 1.5.0 with default plugins and credential

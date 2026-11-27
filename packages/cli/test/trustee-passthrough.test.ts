@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { constants, tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -105,7 +105,7 @@ test('trustee npm shim resolves only its associated local or global package', (t
     t.after(() => rmSync(root, { recursive: true, force: true }));
     const f = npmFixture(root, global, 'process.stdout.write("fixture trustee"); process.exitCode = 20;');
     const p = trusteeProgram([f.path], 'win32');
-    assert.deepEqual(p, { command: process.execPath, prefix: [f.target] });
+    assert.deepEqual(p, { command: process.execPath, prefix: [realpathSync(f.target)] });
     const child = spawnSync(p.command, p.prefix, { encoding: 'utf8' });
     assert.equal(child.status, 20);
     assert.equal(child.stdout, 'fixture trustee');
