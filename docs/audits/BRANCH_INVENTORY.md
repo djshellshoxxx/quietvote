@@ -1,5 +1,23 @@
 # QuietVote branch inventory
 
+## November 27, 2026 reconciliation
+
+Fresh enumeration found **76 remote branch tips**, excluding symbolic origin/HEAD.
+**69 are ancestors** of PR #74 head `60e8f1790c129b9a1d19e5f16cf50e99cafcf241`,
+including PR #71 head `45c1048e759df5a783edbf253bda268e36377dea`. Main remains
+`019f4e789be2ff38a5fb2d348c3b225cc87cf296`; #74 is 553 commits ahead, zero behind.
+
+The same seven retained branches below need no blanket merge. The visual-CI patch
+is equivalent to its preserved signed replacement; historical docs are superseded;
+#27 retains its selective recovery. No additional modern source branch needs a
+merge. These are candidate-preservation counts, not completed main promotion.
+
+[PR #74 CI](https://github.com/djshellshoxxx/quietvote/actions/runs/45987725942)
+completed 26 jobs successfully and failed one Windows/Node 24 server fixture.
+All six CLI and all six trustee cells passed. New work has separate evidence in
+[R24](CONTINUATION_R24_20261127.md). Original branches remain preserved.
+
+
 ## November 24, 2026 live reconciliation
 
 A fresh independent read-only comparison found **75 remote branch tips**, with

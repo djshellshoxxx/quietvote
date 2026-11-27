@@ -1,5 +1,20 @@
 # @quietvote/cli: implementation notes
 
+
+## Offline ballot status (2026-11-27)
+
+`ballot status` implements task 4 of the CLI inventory (T-167). It requires an
+independent manifest hash, complete archive, verified tally and the exact snapshot's
+witness quorum. Preliminary counted arrays, failed subordinate checks and unsupported
+outcome-affecting controls cannot establish status. Supersession follows the actual
+same-voter predecessor chain; exclusion alone never implies supersession.
+
+The archive preparer additionally returns its existing authenticated checkpoints and
+notices. Existing validation remains unchanged. Output preserves protocol caveats,
+prints no voter lists or selections, and is scoped to one snapshot without freshness
+or FINAL assurance. No dependency, protocol encoding or signature changes.
+See the [R24 continuation](../../docs/audits/CONTINUATION_R24_20261127.md).
+
 ## Private files on POSIX and Windows (2026-11-19)
 
 Keys, seed files, passphrase files, governance signing inputs, read-key files and invitation tokens are read as bounded owner-private snapshots. POSIX checks use the descriptor that supplies bytes. Windows uses the fixed `src/windows-private-files.ps1` helper through Windows PowerShell **5.1** and .NET Framework; the same native `FileStream` supplies its ACL and file bytes. Missing or unusable native protection, wrong ownership, a broad/inherited or unsupported DACL, and unsafe aliases refuse the operation. There is no unchecked Windows fallback or shell/path interpolation. Native private I/O accepts ordinary local drive paths; UNC shares, device paths and alternate data streams are refused. Existing broad Windows ACLs are not silently repaired.

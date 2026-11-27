@@ -1,5 +1,6 @@
 import { FailError, InputError, UsageError } from './args.ts';
 import { cmdBallotAudit, cmdBallotEncrypt } from './cmd-ballot.ts';
+import { cmdBallotStatus } from './cmd-ballot-status.ts';
 import { cmdVerifyReceipt } from './cmd-receipt.ts';
 import { cmdBoardVerify } from './cmd-board.ts';
 import { cmdElectionDraftRecord } from './cmd-lifecycle.ts';
@@ -46,6 +47,9 @@ usage:
                     [--intent cast|spoil] [--supersedes <hex>] [--audit-out <file>] [--publish-reveal]
                     [--passphrase-file <f> | --passphrase-stdin] [--json]
   qv ballot audit --election <bundle> --ballot <audit-file|envelope> [--manifest-hash <hex>] [--json]
+  qv ballot status --election <archive.qvb> --code <hex> --manifest-hash <hex> [--json]
+                                   check one ballot against a pinned, witnessed, fully verified tally snapshot;
+                                   missing tally or witness evidence stays unverified; no freshness or finality claim
   qv board verify <board-bundle|election-bundle> [--log-key <hex>] [--manifest-hash <hex>] [--author-key <hex>]...
                     [--witness-policy <file>] [--pin-file <f>] [--json]
                                    standalone VERIFIED needs --log-key and --witness-policy from trusted sources
@@ -149,7 +153,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   selftest: cmdSelftest,
   keygen: cmdKeygen,
   trustee: cmdTrustee,
-  ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit },
+  ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit, status: cmdBallotStatus },
   board: { verify: cmdBoardVerify },
   election: { 'check-tally': cmdElectionCheckTally, 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
   online: { ...ONLINE_ORGS, ...ONLINE_EXPORTS, 'backup-create': cmdOnlineBackupCreate, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'receipt-check': cmdOnlineReceiptCheck, 'election-export': cmdOnlineElectionExport },
