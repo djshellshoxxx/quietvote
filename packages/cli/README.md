@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `health`, `trustee`, `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|receipt-check|election-tally-draft|election-export`, and the recorded-export management commands below.
+Commands: `health`, `trustee`, `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit|status`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|receipt-check|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -679,3 +679,37 @@ The combined executable election now invokes both `invites-create` and `enroll`
 for all voters. Organization bootstrap and public manifest choices remain its
 fixtures. This does not implement legacy invitation conversion, delivery services,
 pinned-roll admission or group/label membership policy.
+
+## Offline ballot status
+
+```sh
+qv ballot status --election retained.qvb --manifest-hash ANNOUNCED_HASH --code BALLOT_CODE --json
+```
+
+Obtain the manifest hash independently. Both hash and code must be exactly 64
+lowercase hexadecimal digits. Input must be a complete, unredacted public archive,
+at most 64 MiB and 10,000 entries. No network request or file write occurs.
+
+Status requires the manifest, trustee ceremony, board, ballot proofs, revote rules,
+voting window, spoil checks and published tally to verify. The exact snapshot must
+also have the pinned manifest's witness quorum. Unsupported outcome-affecting
+controls leave status unverified, and protocol caveats remain visible. There is no
+content-only override.
+
+| Status | Meaning within this snapshot | Exit |
+| --- | --- | --- |
+| `COUNTED` | Included in the fully checked tally. | 0 |
+| `SUPERSEDED` | Replaced through the verified same-voter chain by a later counted cast. | 0 |
+| `SPOILED` | A spoiled test ballot; not counted. This is not a separate private-reveal audit. | 0 |
+| `ABSENT` | Absent here; not proof it was never submitted or accepted elsewhere. | 1 |
+| `EXCLUDED` | Recorded but neither counted nor proved superseded. | 1 |
+| `UNVERIFIED` | Required evidence failed or remains incomplete. | 1 for failure; 3 for incomplete |
+
+Malformed options exit 2; unreadable, malformed or oversized archives exit 4. Wrong
+manifest pins exit 1. Archive preparation refusals do not emit a status.
+JSON uses `qv-ballot-status/v1`, includes the selected code and snapshot origin/size/root,
+and distinguishes the stricter command verdict from `verification.protocol_verdict`.
+`counted` is null when unverified, true only for COUNTED, otherwise false within the
+snapshot. It does not print voter lists or selections. Human caveats are JSON-quoted.
+Even a checked archive can be old: `freshnessVerified` and `finalityVerified` are always
+false. QuietVote remains unaudited and not for real elections.

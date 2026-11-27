@@ -107,7 +107,7 @@ export function prepareElectionArchive(path: string, pin: string) {
   if (!structure.ok) throw new FailError(`archive verification refused: ${structure.findings.map((f) => f.code).join(', ')}`);
   const controlSeq = structure.notices.reduce((current, notice) => notice.control_seq ?? current, 0);
   const snapshot = { origin: structure.origin, tree_size: structure.tree.size, root_hash: toHex(structure.tree.root()) };
-  return { content, board, serverKey, controlSeq, snapshot };
+  return { content, board, serverKey, controlSeq, snapshot, checkpoints: structure.checkpoints, notices: structure.notices };
 }
 
 export async function cmdElectionPrepare(argv: string[], io: Io): Promise<number> {
