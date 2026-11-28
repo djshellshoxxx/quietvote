@@ -77,9 +77,20 @@ passed **29 tests**, with zero failures, skips or cancellations (32.008 seconds)
 The ballot-status acceptance suite also passed **23 tests** on Node 22.18.0
 (43.587 seconds). Root typecheck, dependency boundaries (the two documented
 inherited D97 edges remain), documentation links, requirement references and
-claims lint passed. The full CLI suite is still running its real-clock election
-journey; its result and publication readback are recorded after completion.
-Earlier hosted passes are not assigned to this new source.
+claims lint passed. The full CLI suite on Linux/Node 24.22.3 passed:
+**209 passed, zero failed/cancelled, 11 existing platform skips**, 750.817 seconds.
+This includes the unchanged real-clock all-executable election journey and the
+independent Python comparison. Earlier hosted passes are not assigned to this
+new source.
+
+The exact candidate was published as commit
+`5ae96e927b2fa63bfe6ec6fe9004efa1bad8fcf7`, tree
+`60d1aed1c298d6e1bdc2b7bc8020e023b126e607`, with sole parent `60e8f179...`.
+GitHub readback and a local fetch verified the complete tree and parent, and the
+new commit's DCO trailer matches its recorded author. Draft
+[PR #75](https://github.com/djshellshoxxx/quietvote/pull/75) stacks on #74.
+[Full-matrix CI](https://github.com/djshellshoxxx/quietvote/actions/runs/46084200298)
+is running; no hosted outcome is claimed before it completes.
 
 A `detect-secrets` 1.5.0 scan of the nine ballot-status changed files found zero
 findings. The synthetic private-key-header positive control was detected when
@@ -114,6 +125,21 @@ The eight observer tests and eight unchanged registration cases passed on
 Linux/Node 24.22.3: **16 passed**, zero failures, skips or cancellations, 8.14
 seconds. Full-root typecheck also passed. This is instrumentation for the next
 native CI run, not evidence that the Windows timeout is repaired.
+
+## Server-export compatibility discovered during R25
+
+A fully witnessed real-server final export exposes the deliberate unresolved
+record boundary documented in `packages/protocol/NOTES.md`: board-level
+`tally-aggregate` and `dec-shares` records are not recognized protocol records.
+The preparer preserves every board body for completeness. The full verifier can
+report raw PASS with `chk.encoding.canonical=fail` and local `E_VERSION` findings
+for these records; the strict ballot-status gate correctly refuses to issue a
+counting status. R24's positive signed fixtures therefore do not establish
+ordinary server-final-export compatibility. R25 retains a real-server regression
+and the exact saved bytes. Filtering those bodies would violate the board's
+one-to-one binding check, and downloaded QVB signer metadata does not settle the
+independent-authority contract. This feature boundary remains unfinished pending
+a reviewed derived-record/author-pin contract; no check is weakened here.
 
 ## Remaining gates
 

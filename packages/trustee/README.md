@@ -8,6 +8,38 @@ bundle or prompts for its passphrase. Supply passphrases through a protected
 `--passphrase-file` or the hidden prompt. `finalize` reports its local result;
 packet-producing commands such as `confirm` accept `--out`.
 
+Hidden prompts require an interactive terminal. For automation, use a protected
+`--passphrase-file` or `QV_TRUSTEE_PASSPHRASE_FILE`; piped passphrases are not
+accepted. Interactive `keygen` asks for the passphrase twice and creates no bundle
+when the answers differ. File-supplied and generated passphrases remain
+noninteractive. Missing terminal input, EOF and a confirmation mismatch return
+exit 2 with a named diagnostic; Ctrl-C at the prompt returns exit 10. Input is
+never echoed, and diagnostic messages omit the supplied passphrase.
+
+## Optional dice input
+
+`keygen` and `commit` accept `--dice-file F`. The file must pass the same
+owner-private, regular-file checks as a passphrase file and contain 1 to 8,192
+six-sided dice digits (`1` through `6`); ASCII spaces, tabs and line endings are
+ignored. The total file limit is 64 KiB. Dice values are never accepted as command
+arguments, printed, written into the bundle as a separate field, or transmitted.
+No entropy estimate is assigned to the dice input.
+
+```sh
+qv trustee keygen --bundle trustee.qvtb --dice-file dice.txt
+qv trustee commit --bundle trustee.qvtb --dice-file dice.txt --out commit.qvp
+```
+
+The optional input supplements the platform CSPRNG through HKDF-SHA256. Fresh
+platform bytes remain mandatory for every expansion block; unavailable, malformed
+or all-zero source output causes an explicit refusal. This limited zero check is
+not a general RNG health guarantee. Omitting the option preserves the existing
+randomness path. Re-running an already persisted commit returns its original
+packet even if the dice file changes; it does not generate new ceremony material.
+Keep the dice file private and remove it according to your existing media policy
+when it is no longer needed. Temporary byte buffers are wiped best-effort; this
+does not guarantee JavaScript memory erasure or physical-media erasure.
+
 ## Relay a trustee output to the server
 
 After generating a ceremony output, export its signed bulletin-board envelope on

@@ -18,6 +18,7 @@ import { cmdOnlineInvitesCreate, cmdOnlineEnroll, cmdOnlineRegistrationPreview, 
 import { ONLINE_EXPORTS } from './cmd-online-exports.ts';
 import { ONLINE_ORGS } from './cmd-online-org.ts';
 import { cmdOnlineBackupCreate } from './cmd-online-backup.ts';
+import { cmdOnlineElectionSpoilPost } from './cmd-online-spoil.ts';
 import { cmdElectionCheckTally } from './cmd-tally-check.ts';
 import { cmdHealth } from './cmd-health.ts';
 import { cmdTrustee } from './cmd-trustee.ts';
@@ -105,12 +106,19 @@ usage:
   qv online election-submit --server <origin> --id <id> --file <signed-entry.json> [--log-key <hex>] [--json]
                                    with an independent log-key pin, verify the returned receipt against this packet;
                                    a valid promise without inclusion exits 3; witness, freshness and counting remain unchecked
+  qv online election-spoil-post --server <origin> --id <id> --post-dir <dir>
+                    --election <bundle> --manifest-hash <hex> [--json]
+                                   check all signed bodies against the pinned election before posting exact bytes;
+                                   stop on first rejection or uncertainty; server acknowledgments are not tally verification
   qv online receipt-check --server <origin> --id <id> --file <receipt.json> --log-key <hex> --leaf-hash <hex>
                     --tree-size <integer> [--read-key-file <file>] [--json]
                                    verify one requested inclusion snapshot and consistency with any supplied prior checkpoint;
                                    absent signed checkpoint evidence exits 3; saved receipt is never overwritten
   qv online election-export --server <origin> --id <id> --out <file> [--format qvb|json]
-                    [--read-key-file <file>] [--json]
+                    [--read-key-file <file>] [--verify --manifest-hash <hex>] [--json]
+                                   --verify checks the saved snapshot and requires an independent manifest pin;
+                                   verified JSON accepts --extra-author-key <hex> (repeat, maximum 32);
+                                   failed/incomplete downloads are retained; freshness and finality remain unchecked
   qv online export-create --server <origin> --id <id> --audience <audience> --key <keyfile> --idempotency-key <key>
   qv online job-inspect --server <origin> --job-id <id> --audience <audience> --key <keyfile>
   qv online export-list --server <origin> --id <id> --audience <audience> --key <keyfile>
@@ -125,7 +133,7 @@ usage:
                                    downloads check exact bytes and tree binding, never acknowledge automatically;
                                    acknowledgement confirms retention; notice starts the server's 30-day deletion grace
                                    all online commands accept --timeout-ms (1..120000, default 20000);
-                                   server responses and downloaded bundles are not independently verified
+                                   server responses and downloads without election-export --verify remain unverified
   qv vectors check [dir] [--strict] [--json]
   qv policy-draft template foundation|association|collective --out <draft.json> [--json]
   qv policy-draft validate <draft.json> [--json]
@@ -156,7 +164,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit, status: cmdBallotStatus },
   board: { verify: cmdBoardVerify },
   election: { 'check-tally': cmdElectionCheckTally, 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
-  online: { ...ONLINE_ORGS, ...ONLINE_EXPORTS, 'backup-create': cmdOnlineBackupCreate, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'receipt-check': cmdOnlineReceiptCheck, 'election-export': cmdOnlineElectionExport },
+  online: { ...ONLINE_ORGS, ...ONLINE_EXPORTS, 'backup-create': cmdOnlineBackupCreate, 'invites-create': cmdOnlineInvitesCreate, enroll: cmdOnlineEnroll, 'registration-preview': cmdOnlineRegistrationPreview, instance: cmdOnlineInstance, 'admin-status': cmdOnlineAdminStatus, 'election-create': cmdOnlineElectionCreate, 'election-pinned-roll': cmdOnlineElectionPinnedRoll, 'election-inspect': cmdOnlineElectionInspect, 'election-draft': cmdOnlineElectionDraft, 'election-tally-draft': cmdOnlineElectionTallyDraft, 'election-submit': cmdOnlineElectionSubmit, 'election-spoil-post': cmdOnlineElectionSpoilPost, 'receipt-check': cmdOnlineReceiptCheck, 'election-export': cmdOnlineElectionExport },
   vectors: { check: cmdVectorsCheck },
   'policy-draft': { template: cmdPolicyDraftTemplate, validate: cmdPolicyDraftValidate },
   governance: { prepare: cmdGovernancePrepare, sign: cmdGovernanceSign, export: cmdGovernanceExport, verify: cmdGovernanceVerify },

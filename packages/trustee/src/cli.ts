@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 import { pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
-import { jcs, parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, utf8, type Rng } from '@quietvote/crypto';
+import { createInterface, type Interface } from 'node:readline';
+import { Writable, type Readable } from 'node:stream';
+import { jcs, parseQvJson, systemRng, hexToBytes, bytesToHex, pointFromBytes, utf8, ctEqual, type Rng } from '@quietvote/crypto';
 import type { Aggregate, Manifest, MultiSignedRecord } from '@quietvote/protocol';
 import { TrusteeError } from './errors.ts';
 import { assertPassphraseStrength, generatePassphrase } from './passphrase.ts';
+import { readDiceRng } from './entropy.ts';
 import { OVERRIDE_NO_LEDGER, OVERRIDE_UNWITNESSED, Trustee, realTarget, type Packet } from './trustee.ts';
 import { atomicWrite, exists, lockPath, readSecretFile } from './fsutil.ts';
 import { ledgerPath } from './ledger.ts';
@@ -26,8 +29,47 @@ export interface CliDeps {
   allowWeak?: boolean;
 }
 
+/** The real executable prompt. Readline's echo goes to a discarded stream, never to the terminal. */
+export async function promptSecret(question: string, input: Readable & { isTTY?: boolean } = process.stdin, output: Writable = process.stderr): Promise<string> {
+  if (input.isTTY !== true) throw new TrusteeError('USAGE', 'NO_TTY', 'a terminal is required for hidden input; supply a protected --passphrase-file (or the corresponding passphrase-file environment variable) for automation');
+  if (input.destroyed || input.readableEnded) throw new TrusteeError('USAGE', 'INPUT_CLOSED', 'passphrase input closed before an answer was received');
+  return new Promise((resolve, reject) => {
+    const muted = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
+    let rl: Interface | undefined;
+    let settled = false;
+    const finish = (result: string | TrusteeError): void => {
+      if (settled) return;
+      settled = true;
+      input.off('end', closed);
+      input.off('close', closed);
+      rl?.off('close', closed);
+      rl?.off('SIGINT', cancelled);
+      rl?.off('error', failed);
+      rl?.close();
+      muted.end();
+      output.write('\n');
+      if (typeof result === 'string') resolve(result);
+      else reject(result);
+    };
+    const closed = (): void => finish(new TrusteeError('USAGE', 'INPUT_CLOSED', 'passphrase input closed before an answer was received'));
+    const cancelled = (): void => finish(new TrusteeError('DECLINED', 'INPUT_CANCELLED', 'passphrase input cancelled'));
+    const failed = (): void => finish(new TrusteeError('USAGE', 'INPUT_FAILED', 'cannot read passphrase input'));
+    // Register before readline so an unterminated partial answer at EOF is refused too.
+    input.once('end', closed);
+    input.once('close', closed);
+    try {
+      rl = createInterface({ input, output: muted, terminal: true, historySize: 0 });
+      rl.once('close', closed);
+      rl.once('SIGINT', cancelled);
+      rl.once('error', failed);
+      output.write(question);
+      rl.question('', finish);
+    } catch { failed(); }
+  });
+}
+
 const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never leave this machine)
-  keygen --bundle F [--generate-passphrase]       new identity; prints public key
+  keygen --bundle F [--generate-passphrase] [--dice-file F]       new identity; prints public key
   join --bundle F --manifest F --manifest-hash HEX [--ceremony-id ID]
   import --bundle F --log F.qvl
   commit|reveal|shares|verify|drill --bundle F [--out F.qvp]
@@ -45,14 +87,17 @@ const USAGE = `qv-trustee <command> [options]   (offline tool; secrets never lea
   export-transcript --bundle F --out F [--mode online-dkg|airgap-dkg|airgap-dealer]
   cosign-transcript --bundle F --in F --out F | verify-transcript --in F [--witness-key NAME=HEX]
 Passphrase: --passphrase-file F (or QV_TRUSTEE_PASSPHRASE_FILE), otherwise a hidden prompt. Never on the command line.
-Options: --max-kdf-logn 18|19|20 (default 18; opening budget only; 19/20 allow roughly 512 MiB/1 GiB per open). --json   Exit codes: 0 ok, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
+Hidden prompts require a terminal; interactive keygen asks twice. For automation use a protected passphrase file.
+Optional --dice-file F on keygen/commit adds protected local dice input to the required platform CSPRNG. Dice values are read only from the file.
+Options: --max-kdf-logn 18|19|20 (default 18; opening budget only; 19/20 allow roughly 512 MiB/1 GiB per open). --json   Exit codes: 0 ok, 2 usage/input error, 10 declined, 20 verification failed, 40 state conflict, 50 locked, 60 refused for safety.`;
 
 /** Only options consumed by that command are accepted; validation precedes prompts and file access. */
 const COMMAND_OPTIONS = new Map<string, readonly string[]>([
-  ['keygen', ['bundle', 'passphrase-file', 'generate-passphrase']],
+  ['keygen', ['bundle', 'passphrase-file', 'generate-passphrase', 'dice-file']],
   ['join', ['bundle', 'passphrase-file', 'manifest', 'manifest-hash', 'ceremony-id']],
   ['import', ['bundle', 'passphrase-file', 'log']],
-  ...['commit', 'reveal', 'shares', 'verify', 'drill'].map((cmd): [string, string[]] => [cmd, ['bundle', 'passphrase-file', 'out']]),
+  ['commit', ['bundle', 'passphrase-file', 'out', 'dice-file']],
+  ...['reveal', 'shares', 'verify', 'drill'].map((cmd): [string, string[]] => [cmd, ['bundle', 'passphrase-file', 'out']]),
   ['finalize', ['bundle', 'passphrase-file']],
   ['export-entry', ['bundle', 'passphrase-file', 'round', 'index', 'out']],
   ['confirm', ['bundle', 'passphrase-file', 'compared-with', 'words', 'out']],
@@ -167,6 +212,7 @@ function parseClaimed(c: unknown): Map<string, Map<string, Aggregate>> {
 /** Runs one command; returns the process exit code. */
 export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record<string, string | undefined> = {}): Promise<number> {
   let json = false;
+  let diceRng: Awaited<ReturnType<typeof readDiceRng>> | undefined;
   try {
     const { cmd, o, flags } = parseArgs(argv);
     json = flags.has('json');
@@ -176,6 +222,11 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       return v;
     };
     const vd: VaultDeps = { maxLogN: Number(o.get('max-kdf-logn') ?? '18'), rng: deps.rng, now: deps.now, ...(deps.logN !== undefined ? { logN: deps.logN } : {}), ...(deps.allowWeak === true ? { allowWeak: true } : {}) };
+    if (o.has('dice-file')) {
+      need('bundle');
+      diceRng = await readDiceRng(need('dice-file'), deps.rng);
+      vd.rng = diceRng;
+    }
     const pass = async (fileOpt: string, envKey: string, q: string): Promise<string> => {
       const f = o.get(fileOpt) ?? env[envKey];
       if (f === undefined) return io.promptSecret(q);
@@ -211,13 +262,23 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
 
     switch (cmd) {
       case 'keygen': {
+        const bundle = need('bundle');
         let p: string;
         if (flags.has('generate-passphrase')) {
-          p = generatePassphrase(deps.rng);
+          p = generatePassphrase(vd.rng);
           io.err(`GENERATED PASSPHRASE (write it on paper now; it is not stored anywhere): ${p}`);
-        } else p = await mainPass();
+        } else {
+          p = await mainPass();
+          if (!o.has('passphrase-file') && env['QV_TRUSTEE_PASSPHRASE_FILE'] === undefined) {
+            const confirmation = await io.promptSecret('Confirm bundle passphrase: ');
+            const entered = utf8(p), confirmed = utf8(confirmation);
+            try {
+              if (!ctEqual(entered, confirmed)) throw new TrusteeError('USAGE', 'PASSPHRASE_MISMATCH', 'the two passphrases differ; no bundle was created');
+            } finally { entered.fill(0); confirmed.fill(0); }
+          }
+        }
         assertPassphraseStrength(p, flags.has('generate-passphrase') || deps.allowWeak === true);
-        const t = await Trustee.keygen(need('bundle'), p, vd);
+        const t = await Trustee.keygen(bundle, p, vd);
         report({ state: t.state, sign_pk: t.signPk });
         return 0;
       }
@@ -350,28 +411,16 @@ export async function main(argv: string[], io: CliIo, deps: CliDeps, env: Record
       return e.exitCode;
     }
     throw e;
-  }
+  } finally { diceRng?.destroy(); }
 }
 
 void OVERRIDE_UNWITNESSED; void OVERRIDE_NO_LEDGER; void bytesToHex;
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { createInterface } = await import('node:readline');
   const io: CliIo = {
     out: (s) => process.stdout.write(`${s}\n`),
     err: (s) => process.stderr.write(`${s}\n`),
-    promptSecret: (q) =>
-      new Promise((res) => {
-        const rl = createInterface({ input: process.stdin, output: process.stderr, terminal: true });
-        const w = rl as unknown as { _writeToOutput: (s: string) => void };
-        process.stderr.write(q);
-        w._writeToOutput = () => {};
-        rl.question('', (a) => {
-          rl.close();
-          process.stderr.write('\n');
-          res(a);
-        });
-      }),
+    promptSecret,
   };
   process.exitCode = await main(process.argv.slice(2), io, { rng: systemRng, now: () => new Date() }, process.env);
 }

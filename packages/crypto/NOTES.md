@@ -27,3 +27,24 @@ replace that review. No wire format, transcript, vector or dependency changed.
 ## ADR-024 vendoring — 2026-11-19
 
 Both existing `@noble/curves` and `@noble/hashes` 2.4.0 tarballs and all 132 published files now live under `vendor/`. The root `VENDOR.lock` binds upstream SHA-512 SRI and archive/file SHA-256 hashes. Explicit `npm run vendor:install` verifies and copies those bytes into normal npm dependency directories; registry lock/audit metadata and public imports are unchanged. CI runs it after every dependency restore, and production web builds verify the installed copies. No upstream source or cryptographic behavior changes. See the [verification and provenance receipt](../../docs/reports/vendored-crypto-20261119.md).
+
+
+## QV-17 REQ-012 supplemental entropy — 2026-11-27
+
+`additionalEntropyRng` implements the optional HKDF mixing accepted by N-28 in
+`docs/plan/DECISIONS-2026-11-04.md`. For each at-most-8,160-byte expansion block,
+IKM is a fresh 32-byte draw from the required caller-supplied platform RNG, salt
+is SHA-256 of the additional input, and info is the fixed UTF-8 local label
+`QuietVote trustee additional entropy v1` followed by a big-endian u64 counter.
+This local wrapper adds no wire encoding, protocol transcript/domain, test-vector
+format or dependency. The trustee CLI uses it only with an explicit dice file.
+
+Missing/throwing/malformed/all-zero source output refuses; no fallback uses the
+additional input alone. The zero check scans the entire source buffer and is not
+a general RNG health test. A request is bounded to 1 MiB; HKDF's expansion limit
+is honored by separate blocks, each with a new platform draw. The caller-owned
+additional input is unchanged. Source and expansion byte arrays are wiped after
+use; `destroy()` wipes the retained salt and prevents further draws. Wiping is
+best effort in JavaScript. Native Node `hkdfSync` independently checks a multi-block
+known composition in the tests. Formal crypto/security approvals remain required
+before main promotion.

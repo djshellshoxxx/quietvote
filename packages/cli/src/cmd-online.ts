@@ -2,14 +2,15 @@
 import { closeSync, constants, existsSync, fstatSync, openSync, readSync } from 'node:fs';
 import { authorKeyId, b64u, unb64u, signRequest } from '@quietvote/board';
 import { ed25519Sign, hexToBytes, parseQvJson, sha256, wipe } from '@quietvote/crypto';
-import { logOrigin, registrationMessage, rollRoot } from '@quietvote/protocol';
+import { logOrigin, registrationMessage, rollRoot, validateExtraAuthorKeys } from '@quietvote/protocol';
 import { FailError, InputError, UsageError, needFlag, needPositional, parseArgs, type FlagSpec, type Parsed } from './args.ts';
-import { PASSPHRASE_FLAGS, isHex, printJson, readPrivateFile } from './common.ts';
+import { PASSPHRASE_FLAGS, isHex, pinnedHash, printJson, readPrivateFile } from './common.ts';
 import { reservePrivateOutput, writePrivateFileSync, type PrivateOutput } from './private-files.ts';
 import { loadVoterKey } from './cmd-keygen.ts';
 import { EXIT, type Io } from './io.ts';
 import { checkSubmissionReceipt, MAX_RETURNED_RECEIPT_BYTES, receiptLogKey, submissionBinding, type SubmissionReceiptReport } from './receipt-check.ts';
 import { checkReceiptConsistency, checkReceiptProof, receiptProofInput } from './receipt-proof.ts';
+import { verifyElectionDownload } from './export-verification.ts';
 
 const BASE = { server: 'value', json: 'bool', 'timeout-ms': 'value' } as const;
 export const AUTH = { key: 'value', audience: 'value', ...PASSPHRASE_FLAGS } as const;
@@ -88,11 +89,30 @@ export async function withManagementKey(p: Parsed, io: Io, work: (key: Managemen
   try { return await work(key); } finally { wipe(key.seed); }
 }
 
-export async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed: boolean | ManagementKey = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void | Promise<void>): Promise<Uint8Array> {
-  const base = serverUrl(p);
+function timeoutMs(p: Parsed): number {
   const timeout = p.get('timeout-ms') ?? '20000';
   if (!/^\d+$/.test(timeout) || !Number.isSafeInteger(Number(timeout)) || Number(timeout) < 1 || Number(timeout) > 120000) throw new UsageError('--timeout-ms must be an integer from 1 to 120000');
-  const bytes = body === undefined ? new Uint8Array() : new TextEncoder().encode(JSON.stringify(body));
+  return Number(timeout);
+}
+
+/** Validate transport options before preparing a multi-request mutation. */
+export function validateOnlineRequest(p: Parsed): void { serverUrl(p); timeoutMs(p); }
+
+export interface HttpReply { status: number; bytes: Uint8Array }
+export class RequestError extends FailError {
+  readonly outcome: 'rejected' | 'unknown';
+  readonly status: number | null;
+  readonly serverCode: string | null;
+  constructor(message: string, outcome: 'rejected' | 'unknown', status: number | null = null, serverCode: string | null = null) {
+    super(message);
+    this.outcome = outcome;
+    this.status = status;
+    this.serverCode = serverCode;
+  }
+}
+
+async function requestBytes(p: Parsed, io: Io, method: string, path: string, bytes: Uint8Array, signed: boolean | ManagementKey, responseLimit: number, beforeSend?: () => void | Promise<void>): Promise<HttpReply> {
+  const base = serverUrl(p), timeout = timeoutMs(p);
   const headers: Record<string, string> = { accept: 'application/json' };
   if (bytes.length) headers['content-type'] = 'application/json';
   if (p.has('read-key-file')) {
@@ -119,7 +139,7 @@ export async function request(p: Parsed, io: Io, method: string, path: string, b
   await beforeSend?.();
   try {
     const response = await fetch(new URL(path, base), {
-      method, headers, redirect: 'error', signal: AbortSignal.timeout(Number(timeout)),
+      method, headers, redirect: 'error', signal: AbortSignal.timeout(timeout),
       ...(bytes.length ? { body: Buffer.from(bytes) } : {}),
     });
     const chunks: Uint8Array[] = [];
@@ -131,7 +151,7 @@ export async function request(p: Parsed, io: Io, method: string, path: string, b
           const { done, value } = await reader.read();
           if (done) break;
           size += value.length;
-          if (size > responseLimit) { await reader.cancel(); throw new FailError(method === 'GET' ? (responseLimit === MAX_RESPONSE ? 'server response exceeds the 64 MiB limit' : 'server response exceeds the configured limit') : 'server response exceeds the limit; submission may have been accepted; inspect server state'); }
+          if (size > responseLimit) { await reader.cancel(); throw new RequestError(method === 'GET' ? (responseLimit === MAX_RESPONSE ? 'server response exceeds the 64 MiB limit' : 'server response exceeds the configured limit') : 'server response exceeds the limit; submission may have been accepted; inspect server state', 'unknown', response.status); }
           chunks.push(value);
         }
       } finally { reader.releaseLock(); }
@@ -143,16 +163,26 @@ export async function request(p: Parsed, io: Io, method: string, path: string, b
         const j = JSON.parse(result.toString('utf8')) as { code?: unknown };
         if (typeof j.code === 'string' && /^[A-Z0-9_]{1,64}$/.test(j.code)) code = j.code;
       } catch { /* no server-supplied text or secrets are echoed */ }
-      throw new FailError(method !== 'GET' && response.status >= 500
+      throw new RequestError(method !== 'GET' && response.status >= 500
         ? `submission outcome unknown: HTTP ${response.status} ${code}; inspect server state before retrying`
-        : `server rejected request: HTTP ${response.status} ${code}`);
+        : `server rejected request: HTTP ${response.status} ${code}`, response.status >= 500 ? 'unknown' : 'rejected', response.status, code);
     }
-    return result;
+    return { status: response.status, bytes: result };
   } catch (e) {
     if (e instanceof FailError) throw e;
     // A network failure after sending is ambiguous: never automatically retry a mutation.
-    throw new FailError(method === 'GET' ? 'server request failed or timed out' : 'submission outcome unknown after a network failure; inspect server state before retrying');
+    throw new RequestError(method === 'GET' ? 'server request failed or timed out' : 'submission outcome unknown after a network failure; inspect server state before retrying', 'unknown');
   }
+}
+
+export async function request(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed: boolean | ManagementKey = false, responseLimit = MAX_RESPONSE, beforeSend?: () => void | Promise<void>): Promise<Uint8Array> {
+  const bytes = body === undefined ? new Uint8Array() : new TextEncoder().encode(JSON.stringify(body));
+  return (await requestBytes(p, io, method, path, bytes, signed, responseLimit, beforeSend)).bytes;
+}
+
+/** Relay an already validated signed JSON body without changing any byte. */
+export async function requestRawJson(p: Parsed, io: Io, path: string, bytes: Uint8Array, responseLimit: number): Promise<HttpReply> {
+  return requestBytes(p, io, 'POST', path, bytes, false, responseLimit);
 }
 export async function jsonRequest(p: Parsed, io: Io, method: string, path: string, body?: unknown, signed = false): Promise<number> {
   const bytes = await request(p, io, method, path, body, signed);
@@ -358,17 +388,30 @@ export async function cmdOnlineReceiptCheck(argv: string[], io: Io): Promise<num
   return report.verification.inclusion === 'VERIFIED' ? EXIT.ok : EXIT.incomplete;
 }
 export async function cmdOnlineElectionExport(argv: string[], io: Io): Promise<number> {
-  const p = args(argv, { id: 'value', out: 'value', format: 'value', 'read-key-file': 'value' });
+  const p = args(argv, { id: 'value', out: 'value', format: 'value', 'read-key-file': 'value',
+    verify: 'bool', 'manifest-hash': 'value', 'extra-author-key': 'multi' });
   const path = electionPath(p);
   const out = needFlag(p, 'out');
   if (existsSync(out)) throw new InputError('export file exists; existing files are never overwritten');
   const format = p.get('format') ?? 'qvb';
   if (format !== 'qvb' && format !== 'json') throw new UsageError('--format must be qvb or json');
-  const bytes = await request(p, io, 'GET', `${path}/export.${format}`);
+  const verify = p.has('verify'), pin = pinnedHash(p);
+  if (verify && pin === undefined) throw new UsageError('--verify requires an independently obtained --manifest-hash');
+  if (!verify && (pin !== undefined || p.has('extra-author-key'))) throw new UsageError('--manifest-hash and --extra-author-key require --verify');
+  if (format !== 'json' && p.has('extra-author-key')) throw new UsageError('--extra-author-key is supported only with --format json --verify');
+  let extraAuthorKeys: string[];
+  try { extraAuthorKeys = validateExtraAuthorKeys(p.all('extra-author-key')); }
+  catch (e) { throw new UsageError(e instanceof Error ? e.message : 'invalid public signing key'); }
+  const bytes = await request(p, io, 'GET', `${path}/export.${format}${verify && format === 'json' ? '?board=1' : ''}`);
   try { writePrivateFileSync(out, bytes); }
   catch { throw new InputError('cannot create export file; existing files are never overwritten'); }
-  printJson(io, { file: out, bytes: bytes.length, format, verified: false });
-  return EXIT.ok;
+  if (!verify) {
+    printJson(io, { file: out, bytes: bytes.length, format, verified: false });
+    return EXIT.ok;
+  }
+  const verification = await verifyElectionDownload(bytes, { format, pin: pin!, electionId: needFlag(p, 'id'), extraAuthorKeys });
+  printJson(io, { file: out, bytes: bytes.length, format, verified: verification.verdict === 'PASS', verification });
+  return verification.verdict === 'PASS' ? EXIT.ok : verification.verdict === 'FAIL' ? EXIT.fail : EXIT.incomplete;
 }
 
 /** Fetch the server's existing public tally proposal for offline coordinator signing. */
