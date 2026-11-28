@@ -213,6 +213,9 @@ CREATE TABLE operation_receipt (
 INSERT INTO operation_receipt SELECT * FROM operation_receipt_v10;
 DROP TABLE operation_receipt_v10;
 ` },
+  { version: 12, name: 'atomic_append_events', sql: `
+ALTER TABLE append_completion ADD COLUMN events_committed INTEGER NOT NULL DEFAULT 0 CHECK (events_committed IN (0,1));
+` },
 ];
 
 /** One row of the event outbox. `data` is a JSON string containing public data only. */
@@ -522,11 +525,14 @@ export class ElectionDb {
     run(this.db, 'UPDATE election SET quarantine=?', reason);
   }
   // ---- event outbox
-  queueAppendCompletion(seq: number, ts: number): void {
-    run(this.db, 'INSERT INTO append_completion(seq,ts) VALUES (?,?)', seq, ts);
+  queueAppendCompletion(seq: number, ts: number, eventsCommitted = false): void {
+    run(this.db, 'INSERT INTO append_completion(seq,ts,events_committed) VALUES (?,?,?)', seq, ts, eventsCommitted ? 1 : 0);
   }
   appendCompletion(seq: number): number | undefined {
     return get<{ ts: number }>(this.db, 'SELECT ts FROM append_completion WHERE seq=?', seq)?.ts;
+  }
+  appendEventsCommitted(seq: number): boolean {
+    return get<{ events_committed: number }>(this.db, 'SELECT events_committed FROM append_completion WHERE seq=?', seq)?.events_committed === 1;
   }
   hasAppendCompletions(): boolean {
     return get(this.db, 'SELECT 1 FROM append_completion LIMIT 1') !== undefined;

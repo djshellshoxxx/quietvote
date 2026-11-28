@@ -2,6 +2,35 @@
 
 Runtime uses node:http, node:sqlite and node:crypto plus the declared workspace crypto/board/protocol packages.
 
+## Atomic append events and legacy completion recovery (2026-11-27)
+
+Server inventory task 5 / QV-28-REQ-005 now commits the leaf, Merkle/checkpoint
+rows, existing ballot/roll projections, persisted lifecycle/title/tree-size
+projection and append-generated entry/checkpoint/phase/alert events in one
+synchronous election transaction. The shared lifecycle-event mapping uses the
+existing transition table for both persisted projection and in-memory application.
+Publication remains after commit and after the independent runtime anchor is
+durable. A failed transaction return after an append was produced also retires the
+handle, including when COMMIT succeeded, so a stale handle cannot return an
+outcome before anchor/projection recovery.
+
+Election migration 12 adds `append_completion.events_committed` with default 0.
+Old pending intents retain their timestamped event reconstruction. New intents
+store 1 atomically with the complete outbox; completion and replay never recreate
+their event rows, including when rows were deliberately pruned in a test. They
+still retain recovery intent until asynchronous DKG/application, archive key
+destruction and registry synchronization finish. Physical archive reader
+retirement remains after completion, and standalone witness/quarantine events
+keep their existing maintenance transactions.
+
+The 11 existing migration descriptors and SQL strings are unchanged. The new
+column is C3 operations metadata in the data inventory. Existing OPEN upgrade
+refusal, migration backups and explicit terminal-archive migration rules remain
+in force; older binaries refuse the new schema. No protocol encoding, signature,
+author authority or verifier policy changes. This section supersedes the earlier
+historical notes that phase/alert generation follows the append transaction.
+See [the implementation and verification report](../../docs/reports/append-outbox-atomicity-20261127.md).
+
 ## Explicit terminal-archive schema upgrades (2026-11-27)
 
 `qv-migrate-archive` implements QV-28 §13's explicit `VACUUM INTO` upgrade path;
@@ -765,8 +794,8 @@ witness rollback/retry, export acknowledgement recovery, lazy 30-day event reten
 spoil. Existing crash recovery, rollback-floor, export integrity, gossip, retention and backup checks remain enforced.
 See [the scoped evidence report](../../docs/reports/archive-readonly-storage-20261127.md).
 
-Historical terminal schemas are deliberately refused before persistent mutation. The separately implemented QV-28 §13
-[`migrate-archive` command](README.md#explicit-archive-schema-migration) upgrades a verified private copy; ordinary reads never migrate archives.
+Historical terminal schemas are deliberately refused before persistent mutation. The QV-28 §13 historical compatibility
+reader / explicit `migrate-archive` command remains a separate follow-on; this change does not silently migrate archives.
 Read-only SQLite connections may create locking side files or retain already committed WAL bytes. Terminal checkpoint
 maintenance reconstructs a keyless `BoardLog` through the existing verifier, which can be linear in log size; it does not
 duplicate or weaken witness verification policy. This local evidence is not native-platform CI or an independent audit.
@@ -789,35 +818,3 @@ production bytes are restored. These are real HTTP/SQLite tests in one server
 process, not throughput, multiple-writer or native durability qualification.
 Zero-witness fixtures do not establish witnessed full-election verification.
 Production limits, invitation widths, wire contracts and trust policy are unchanged.
-
-## Validated migration, retained backups and startup policy (2026-11-27)
-
-Database opening validates the application ID, complete known migration prefix,
-checksums, ledger cardinality and schema version before persistent changes. A
-current-schema read-only opener cannot migrate. Pending SQL executes inside one
-exclusive transaction after a validated native pre-upgrade backup is published.
-Prepared-statement boundaries reject transaction, attach and pragma directives;
-rollback preserves the original chain if any step or invariant fails. Existing
-board leaves/checkpoints, old rows and typed cells survive each step unchanged.
-
-Startup preflights the control database and every registered live election under
-the data-directory lock. A pending upgrade is held when an election may be OPEN,
-including conservative paused/invalidation projections. The explicit one-time
-`qv-server --force-migrate-open` flag bypasses a known opening hold but does not
-bypass unreadable identity/history or invariant failures. Legitimately empty
-initialization cuts remain recoverable; nonempty unclaimed databases refuse.
-
-Completed migration snapshots retain at least 30 days. Deleted-election snapshots
-also observe the 90-day deletion grace; a live database keeps its newest usable
-completed backup. Before deleting older live snapshots, retention verifies the
-newest complete file hash. Partial, unknown, linked and malformed folders are
-preserved. Historical offline verification/restore upgrades only its disposable
-copy or new target, preserving the supplied source and rollback-floor policy.
-
-Actual prior-schema fixtures and a child killed after pending SQL but before
-commit exercise these boundaries. The final composed server suite passes 634
-tests with one existing Windows-only skip. See the [migration evidence and
-operator limits](../../docs/reports/migration-safety-20261127.md) and the separate
-[explicit archive command](../../docs/reports/archive-migration-20261127.md).
-These snapshots do not supply general backup encryption, scheduling, off-site
-retention or native-platform durability qualification.

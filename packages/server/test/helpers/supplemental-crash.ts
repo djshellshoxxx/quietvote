@@ -3,9 +3,10 @@ import { cosignLine } from '@quietvote/board';
 import { signRecord } from '@quietvote/protocol';
 import { fullElection } from './full.ts';
 import { World } from './world.ts';
+import { installLegacyAppendFixture } from './legacy-append-fixture.ts';
 
 const mode = process.argv[2];
-if (mode !== 'append' && mode !== 'witness' && mode !== 'archive' && mode !== 'archive_erase') throw new Error('unknown crash mode');
+if (mode !== 'append' && mode !== 'legacy_append' && mode !== 'witness' && mode !== 'archive' && mode !== 'archive_erase') throw new Error('unknown crash mode');
 const archiving = mode === 'archive' || mode === 'archive_erase';
 const w = archiving
   ? await fullElection('supplemental-crash', { stopAt: 'OPEN' })
@@ -25,6 +26,7 @@ else {
 }
 if (mode === 'witness') await w.publishManifest();
 const rt = (await w.server.pool.get(w.electionId))!;
+const prior = rt.edb.db.prepare('SELECT state,phase_seq,tree_size,title FROM election').get()!;
 await new Promise<void>((resolve, reject) => {
   process.stdout.write(JSON.stringify({ dir: w.dir, electionId: w.electionId, clock: w.clock }) + '\n', (error) => error ? reject(error) : resolve());
 });
@@ -35,10 +37,15 @@ if (mode === 'archive_erase') {
 }
 rt.edb.tx = <T>(fn: () => T): T => {
   const result = tx(fn);
-  if (mode !== 'archive_erase' && (mode === 'witness' ? rt.witnessInfo().have > 0 : rt.edb.hasAppendCompletions())) process.exit(73);
+  if (mode !== 'archive_erase' && (mode === 'witness' ? rt.witnessInfo().have > 0 : rt.edb.hasAppendCompletions())) {
+    if (mode === 'legacy_append') {
+      installLegacyAppendFixture(rt.edb, prior);
+    }
+    process.exit(73);
+  }
   return result;
 };
-if (mode === 'append') await w.publishManifest();
+if (mode === 'append' || mode === 'legacy_append') await w.publishManifest();
 else if (archiving) await w.post('audit_close', w.coord[0]!, w.control('audit-close'));
 else {
   const cp = rt.edb.store.latestCheckpoint()!;

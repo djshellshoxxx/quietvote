@@ -294,11 +294,12 @@ test('schema10 upgrade preserves historical checksums and durable operation rece
           audit_action TEXT CHECK (audit_action IN ('election.create','quarantine.clear')), audit_detail TEXT,
           PRIMARY KEY(principal,idem_key)) STRICT;
         INSERT INTO operation_receipt SELECT * FROM saved_receipts; DROP TABLE saved_receipts;
-        DELETE FROM schema_migration WHERE version=11; PRAGMA user_version=10;`);
+        ALTER TABLE append_completion DROP COLUMN events_committed;
+        DELETE FROM schema_migration WHERE version>10; PRAGMA user_version=10;`);
     } finally { db.close(); }
     await w.start();
     const reopened = (await w.server.pool.get(w.electionId))!;
-    assert.equal(reopened.edb.db.prepare('PRAGMA user_version').get()?.['user_version'], 11);
+    assert.equal(reopened.edb.db.prepare('PRAGMA user_version').get()?.['user_version'], 12);
     assert.deepEqual(reopened.edb.db.prepare('SELECT version,hex(sha256) AS hash FROM schema_migration WHERE version<=10 ORDER BY version').all(), before);
     assert.deepEqual(reopened.edb.db.prepare('SELECT * FROM operation_receipt').all(), receipts);
     assert.deepEqual(reopened.edb.publicExports(), []);

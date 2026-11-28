@@ -56,3 +56,7 @@ jobs:
       # Uncovered Must requirements are reported in trace/gaps.md, not gated (approved item N-23c).
       - name: Check requirement traceability links
         run: node scripts/trace.mjs --check
+      - name: Test release evidence and notes tools
+        run: node --test scripts/release-dossier.test.mjs scripts/lint-release-notes.test.mjs
+      - name: Check release note assurance wording
+        run: node scripts/lint-release-notes.mjs

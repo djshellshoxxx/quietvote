@@ -77,6 +77,7 @@ for (const control of process.platform === 'win32' ? ['IPC'] : ['SIGTERM', 'IPC'
     let stderr = '';
     child.stderr.setEncoding('utf8').on('data', (chunk: string) => { stderr += chunk; });
     const exited = once(child, 'exit');
+    const closed = once(child, 'close');
     try {
       const address = await new Promise<{ host: string; port: number }>((resolve, reject) => {
         let output = '';
@@ -97,8 +98,11 @@ for (const control of process.platform === 'win32' ? ['IPC'] : ['SIGTERM', 'IPC'
       if (control === 'IPC') child.send('qv-server:shutdown');
       else child.kill('SIGTERM');
       const [code, signal] = await exited;
+      await closed;
       assert.equal(code, 0, stderr);
       assert.equal(signal, null);
+      // Verifies QV-27-REQ-006 without adding non-JSON text to the listening stream.
+      assert.equal(stderr.split('\n').filter((line) => line === 'Experimental — not for binding elections').length, 1);
       assert.equal(existsSync(join(f.dataDir, '.qv-server.lock')), false, 'cleanup releases ownership before exit');
     } finally { child.kill('SIGKILL'); await exited; rmSync(f.dir, { recursive: true, force: true }); }
   });

@@ -52,6 +52,7 @@ try {
         process.on('message', (message: unknown) => { if (message === 'qv-server:shutdown') shutdown(); });
       }
       const address = await starting;
+      process.stderr.write('Experimental — not for binding elections\n');
       process.stdout.write(JSON.stringify({ event: 'listening', host: address.host, port: address.port }) + '\n');
     }
   }

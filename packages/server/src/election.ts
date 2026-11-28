@@ -24,7 +24,7 @@ import type { RegistryRow, ElectionStateName } from './controldb.ts';
 import { ElectionDb, type ElectionMaintenance, type EventRow } from './electiondb.ts';
 import type { Env } from './env.ts';
 import { toIso } from './util.ts';
-import { transition, typeAllowed, effectiveState, TERMINAL, type LifecycleEvent } from './lifecycle.ts';
+import { transition, lifecycleEventForEntry, typeAllowed, effectiveState, TERMINAL, type LifecycleEvent } from './lifecycle.ts';
 import { ApiError, conflict, forbidden, invalid, notFound, wrongPhase } from './problem.ts';
 import {
   ACTION_ENTRY, DKG_STEP_MARKERS, aggregateSchema, controlSchema, decSharesSchema,
@@ -328,8 +328,12 @@ export class ElectionRuntime {
     const out: EventRow[] = [];
     let alerted = false;
     this.edb.tx(() => {
-      if (to !== from) out.push(this.edb.insertEvent(at, 'phase', seq, JSON.stringify({ from, to, seq })));
-      alerted = this.quarantineAlert(out, at);
+      // Version-12 intents already committed their complete outbox, including a possible no-phase append.
+      // Legacy default-0 intents retain their original timestamped event reconstruction.
+      if (!this.edb.appendEventsCommitted(seq)) {
+        if (to !== from) out.push(this.edb.insertEvent(at, 'phase', seq, JSON.stringify({ from, to, seq })));
+        alerted = this.quarantineAlert(out, at);
+      }
       this.edb.finishAppendCompletion(seq);
     });
     if (alerted) this.alertedQuarantine = true;
@@ -577,6 +581,11 @@ export class ElectionRuntime {
   private syncState(): void {
     const shown: ElectionStateName = this.imported ? 'IMPORTED' : this.st.state;
     this.edb.setState(shown, this.st.phaseSeq, this.log.size);
+    this.syncRegistryState();
+  }
+
+  private syncRegistryState(): void {
+    const shown: ElectionStateName = this.imported ? 'IMPORTED' : this.st.state;
     const reg = this.env.control.election(this.id);
     if (reg && reg.state !== shown) this.env.control.setState(this.id, shown, this.st.manifest?.title);
   }
@@ -637,12 +646,23 @@ export class ElectionRuntime {
     this.publish(out);
   }
 
-  private fire(e: LifecycleEvent['t'], seq: number, at: number): void {
-    const next = transition(this.st.state, e);
-    if (next === undefined) throw new Error(`lifecycle: ${e} not valid in ${this.st.state}`);
-    this.st.state = next;
+  private projectedPhase(type: EntryType, rec: unknown, seq: number): {
+    state: ElectionStateName; phaseSeq: Record<string, number>; event: LifecycleEvent['t'] | undefined;
+  } {
+    const event = lifecycleEventForEntry(type, rec);
+    if (event === undefined) return { state: this.st.state, phaseSeq: this.st.phaseSeq, event };
+    const next = transition(this.st.state, event);
+    if (next === undefined) throw new Error(`lifecycle: ${event} not valid in ${this.st.state}`);
+    return { state: next, phaseSeq: { ...this.st.phaseSeq,
+      [event === 'election_open' ? 'open' : event === 'election_close' ? 'close' : event]: seq }, event };
+  }
+
+  private fire(type: EntryType, rec: unknown, seq: number, at: number): void {
+    const next = this.projectedPhase(type, rec, seq);
+    if (next.event === undefined) throw new Error('lifecycle: entry has no transition');
+    this.st.state = next.state;
     this.st.lastTransitionAt = at;
-    this.st.phaseSeq[e === 'election_open' ? 'open' : e === 'election_close' ? 'close' : e] = seq;
+    this.st.phaseSeq = next.phaseSeq;
   }
 
   /** Applies an already-admitted entry to the in-memory projection. */
@@ -665,13 +685,13 @@ export class ElectionRuntime {
         st.manifest = r.body;
         st.mh = manifestHash(r.body);
         this.indexManifestKeys(r.body);
-        this.fire('manifest', seq, at);
+        this.fire(type, rec, seq, at);
         if (persist) this.edb.setTitle(r.body.title);
         break;
       }
       case 'ceremony_start':
         st.markers.set('dkg-open', seq);
-        this.fire('ceremony_start', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       case 'notice': {
         const b = (rec as { body: { type: string; name?: string; action?: string } }).body;
@@ -681,10 +701,10 @@ export class ElectionRuntime {
         } else if (b.type === 'control') {
           const a = b.action;
           if (a === 'pause') {
-            this.fire('pause', seq, at);
+            this.fire(type, rec, seq, at);
             st.halts++;
-          } else if (a === 'resume') this.fire('resume', seq, at);
-          else if (a === 'invalidate') this.fire('invalidate', seq, at);
+          } else if (a === 'resume') this.fire(type, rec, seq, at);
+          else if (a === 'invalidate') this.fire(type, rec, seq, at);
         }
         break;
       }
@@ -712,7 +732,7 @@ export class ElectionRuntime {
         const d = st.dkgPre;
         if (d === undefined || st.manifest === undefined || st.mh === undefined) throw new Error('joint_key without DKG outcome');
         st.params = { manifest: st.manifest, mh: st.mh, K: d.K, ctx: d.ctx };
-        this.fire('joint_key', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       }
       case 'roll_commit': {
@@ -728,12 +748,12 @@ export class ElectionRuntime {
         if (pinned !== undefined && st.manifest !== undefined) this.bindPinnedManifest(pinned, st.manifest);
         st.rollSet = new Set(keys);
         st.rollRootHex = body.root;
-        this.fire('roll_commit', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       }
       case 'election_open':
         st.openSeq = seq;
-        this.fire('election_open', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       case 'ballot': case 'ballot_audit': {
         const env = rec as CastEnvelope | SpoilEnvelope;
@@ -754,7 +774,7 @@ export class ElectionRuntime {
       }
       case 'election_close':
         st.closeSeq = seq;
-        this.fire('election_close', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       case 'tally_aggregate': {
         const b = (rec as SignedRecord<AggregateBody>).body;
@@ -767,7 +787,7 @@ export class ElectionRuntime {
         }
         st.aggregateSeq = seq;
         st.tallyingSince = at;
-        this.fire('tally_aggregate', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       }
       case 'decryption_share': {
@@ -784,16 +804,16 @@ export class ElectionRuntime {
       case 'tally_result':
         st.tallySeq = seq;
         st.auditSince = at;
-        this.fire('tally_result', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       case 'audit_close':
-        this.fire('audit_close', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       case 'election_cancel':
-        this.fire('election_cancel', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       case 'ceremony_abort':
-        this.fire('ceremony_abort', seq, at);
+        this.fire(type, rec, seq, at);
         break;
       default:
         break;
@@ -933,28 +953,41 @@ export class ElectionRuntime {
     let receipt: Receipt | undefined;
     const evs: EventRow[] = [];
     const from = this.st.state;
+    let alerted = false;
     try {
       this.edb.tx(() => {
+        const next = this.projectedPhase(h.type, v.rec, seq);
         const r = this.log.append(headerBytes, body);
         if (!r.ok) throw this.mapBoardErr(r.error.code, r.error.message);
         receipt = r.value.receipt;
         this.project(h, seq, v);
+        this.edb.setState(next.state, next.phaseSeq, this.log.size);
         const cp = this.log.checkpoint();
         if (!cp.ok) throw this.mapBoardErr(cp.error.code, cp.error.message);
         // entry events carry no bodies (QV-09 §9); written atomically with the append
         this.record(evs, 'entry', seq, { seq, type: h.type, author: b64u(h.author), leaf_hash: b64u(r.value.receipt.leafHash) });
         this.record(evs, 'checkpoint', seq, this.checkpointData());
-        this.edb.queueAppendCompletion(seq, this.env.nowMs());
+        const completedAt = this.env.nowMs();
+        if (next.state !== from) evs.push(this.edb.insertEvent(completedAt, 'phase', seq, JSON.stringify({ from, to: next.state, seq })));
+        alerted = this.quarantineAlert(evs, completedAt);
+        this.edb.queueAppendCompletion(seq, completedAt, true);
       });
     } catch (e) {
-      if (this.log.size !== this.edb.store.size()) this.poisoned = true; // in-memory tree ran ahead of the rolled-back DB
+      // A failed return can follow COMMIT too. Reopen before exposing an outcome whose anchor/projection completion is unknown.
+      if (receipt !== undefined || this.log.size !== this.edb.store.size()) this.poisoned = true;
       throw e;
     }
-    void receipt;
     this.persistRuntimeAnchor();
-    await this.apply(seq, h.type, v.rec, at);
-    if (h.type === 'audit_close') this.finalizeArchive();
-    this.syncState();
+    if (alerted) this.alertedQuarantine = true;
+    try {
+      await this.apply(seq, h.type, v.rec, at, false); // Durable state/title already share the append transaction.
+      if (h.type === 'audit_close') this.finalizeArchive();
+      this.syncRegistryState();
+    } catch (error) {
+      // Committed phase rows must not escape through a cached handle before archive/registry recovery finishes.
+      this.poisoned = true;
+      throw error;
+    }
     try {
       evs.push(...this.completeAppendEvents(seq, from)); // Never publish rows whose transaction rolled back (their IDs can be reused).
     } catch {
@@ -1000,6 +1033,7 @@ export class ElectionRuntime {
   }
 
   private project(h: EntryHeader, seq: number, v: Validated): void {
+    if (h.type === 'manifest') this.edb.setTitle((v.rec as MultiSignedRecord<Manifest>).body.title);
     if (h.type === 'roll_commit' && v.rollKeys) this.edb.commitRoll(v.rollKeys);
     if (v.ballot) {
       const e = this.edb.store.getEntry(seq)!;

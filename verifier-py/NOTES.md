@@ -3,6 +3,19 @@
 Unaudited reference skeleton; not for real elections. This implementation remains independent of the TypeScript arithmetic and
 does not import or call it. Audit regression tests also consume the synthetic public bundles preserved with the 2026-10-28 report.
 
+## Static import/dependency check, 2026-11-27
+
+`check_imports.py` and `tests/test_import_boundary.py` cover the mechanical
+import-scan part of QV-35-REQ-001 and the current dependency declaration in
+QV-35-REQ-009. The scanner uses Python's AST and never imports or executes the
+scanned runtime. It preserves all 25 runtime modules and the existing guarded
+launcher, and checks before unit execution in CI. Positive fixtures retain
+ordinary stdlib functionality; negative fixtures cover reference-package and
+third-party imports, missing locals, known process/loader/FFI references,
+unrecognized import-state mutation, source/dependency failures and bounded output.
+This provides no authorship or semantic-independence finding. QV-35-REQ-014's
+human review remains required; existing provenance comments are preserved.
+
 ## Definite repairs, 2026-10-30
 
 * **CP-04:** canonical A and R must be nonzero prime-subgroup points (`[L]P = O`), matching the imported TS strict policy. Tests

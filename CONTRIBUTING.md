@@ -4,7 +4,17 @@ QuietVote is in its **specification and early implementation** phase. Specificat
 
 ## Sign-off (DCO)
 
-Every commit must carry a `Signed-off-by:` line certifying the [Developer Certificate of Origin](DCO). Use `git commit -s`. The name and email must match the commit author. Sign-off is required for every contribution. An automated check is **not yet enforced**: no workflow in `.github/workflows/` implements the planned `dco` check, so reviewers must verify the trailer by hand (the pull request template has a checklist item for it). Many commits made before this wording was corrected have no `Signed-off-by` trailer; whether and how to attest to them retroactively is an open decision for the project owner, and this note does not make or imply that attestation. There is no CLA. Contributions are accepted under AGPL-3.0-or-later.
+Every commit must carry a `Signed-off-by:` line certifying the [Developer Certificate of Origin](DCO). Use `git commit -s`. The name and email must match the commit author. Sign-off is required for every contribution. The pull-request [DCO workflow](.github/workflows/dco.yml) checks every commit reachable from the PR head but not its base, including merged side branches. It checks the actual contributor commits rather than GitHub's synthetic merge commit. A matching sign-off must appear in the final Git trailer block; a name in body prose is insufficient. No bot or merge-commit exemption is applied.
+
+Run the same check locally using the intended PR base and head:
+
+```sh
+node scripts/check-dco.mjs --base origin/main --head HEAD
+```
+
+For a stacked PR, use its actual base branch. `--repo DIR` selects another checkout and `--json` emits a deterministic report containing commit IDs and fixed issue codes. Exit status 0 means all selected commits passed, 1 means a sign-off or subject rule failed, and 2 means usage or Git inspection failed. Equal base and head select no commits. The check verifies the exact author name/email, Conventional Commit subject syntax and the 72-character subject limit. Reviewers still assess imperative wording and whether a `Refs:` footer is required; the tool does not infer those judgments.
+
+The workflow becoming a required branch-protection check remains a repository-owner setting. The workflow and checker are editable in the PR, so maintainers must review changes to those files; a green result alone is not independent enforcement against altering the checker. An owner-controlled required workflow or external check would need separate configuration. Many historical commits have no `Signed-off-by` trailer; whether and how to attest to them retroactively remains an owner decision. The checker does not add trailers, rewrite commits, or attest to anyone's contribution. There is no CLA. Contributions are accepted under AGPL-3.0-or-later.
 
 ## Development
 

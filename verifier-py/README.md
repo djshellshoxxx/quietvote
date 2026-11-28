@@ -23,6 +23,35 @@ specifications are silent and the behaviour was taken from a vector, that is rec
 
 Python ≥ 3.11 and the standard library only. `requirements.txt` lists no packages, deliberately.
 
+### Static import and dependency check
+
+```sh
+python3 -I verifier-py/check_imports.py
+python3 -I -m unittest discover -s verifier-py -p test_import_boundary.py -v
+```
+
+The checker parses every runtime `.py` file under `qv_verifier/` without importing
+or executing it. It checks stdlib/internal imports, local import targets, the
+empty dependency declaration, visible execution/loader references and import-state
+mutations. The existing guarded directory-launcher repair is recognized by its
+exact AST shape; other path mutations receive a finding. Ordinary stdlib file
+operations, constants, types, wildcard imports and import-state reads remain
+allowed. Missing, unparseable, oversized or symlinked source receives a finding;
+stdlib shadowing beside the package and native runtime artifacts are also reported.
+
+Output is deterministic JSON; exit 0 means no finding in these static checks,
+exit 1 means findings, and exit 2 is command usage failure. CI runs this check
+before executing the Python unit tests. The interpreter's `sys.stdlib_module_names`
+defines stdlib roots, so the inventory is tied to the Python version used.
+
+This does **not** establish authorship, absence of translated/copied logic,
+arbitrary dynamic behavior, or semantic independence. The human review and
+decision-log evidence required by QV-35-REQ-014 remain separate. The existing
+`Mirrors packages/protocol/src/verify.ts` comment is retained; it is not an
+import, and a static scan cannot decide its provenance. See the
+[scope and focused results](../docs/reports/python-import-boundary-20261127.md).
+The verifier remains unaudited and not for real elections.
+
 ## Running
 
 From the repository root:

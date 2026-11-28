@@ -8,6 +8,10 @@
 
 ## Unreleased
 
+Experimental — not for binding elections
+
+QuietVote has not yet been independently reviewed.
+
 Only changes that are verifiably present in the repository tree are listed. This section is not a version history.
 
 ### Protocol, schema and API version effects
@@ -22,6 +26,7 @@ Only changes that are verifiably present in the repository tree are listed. This
 
 ### Added
 
+- Offline release evidence checklist and release-note wording checks. The checklist records local artifact presence and hashes; it does not evaluate gates, approve releases or raise the assurance level. See the [tooling scope and checks](docs/reports/release-dossier-20261127.md).
 - Signed CLI management of recorded PUBLIC exports: create and inspect jobs, list and inspect snapshots, download with exact artifact checks, acknowledge a retained local file explicitly, or issue an explicit final-tree deletion notice. Downloads never acknowledge retention; the existing server deletion policy and protocol encodings are unchanged. See the [CLI workflow](packages/cli/README.md#recorded-public-export-management).
 - Verbatim vendoring of the existing Noble 2.4.0 production dependencies, hash-bound source archives and expanded files, explicit verified installation, tamper regressions and CI/build checks. Registry audit metadata, dependency versions and cryptographic behavior are unchanged. See the [provenance and verification receipt](docs/reports/vendored-crypto-20261119.md).
 - Immutable recorded PUBLIC export snapshots, explicit signed delivery acknowledgement, an explicit 30-day deletion-notice alternative, bounded storage and durable export-job/response recovery. Full and partial downloads never acknowledge delivery. See the [implementation and verification note](docs/reports/recorded-public-exports-20261118.md).

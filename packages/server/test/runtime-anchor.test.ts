@@ -111,7 +111,9 @@ for (const afterCommit of [false, true]) test(`anchor failure ${afterCommit ? 'a
   try {
     const rt = (await w.server.pool.get(w.electionId))!;
     const live: EventRow[] = [];
+    const webhook: EventRow[] = [];
     rt.subscribe({ event: (row) => live.push(row), close: () => undefined });
+    w.server.env.onEvent = (_who, row) => { webhook.push(row); };
     const ctl = w.server.env.control, raise = ctl.raiseRuntimeAnchor.bind(ctl);
     ctl.raiseRuntimeAnchor = (...args) => {
       if (args[3] === 1) { if (afterCommit) raise(...args); throw new Error('injected runtime anchor failure'); }
@@ -122,9 +124,13 @@ for (const afterCommit of [false, true]) test(`anchor failure ${afterCommit ? 'a
     assert.equal(response.json.code, 'LOG_UNAVAILABLE');
     assert.equal(rt.edb.store.size(), 1);
     assert.equal(rt.edb.hasAppendCompletions(), true);
+    assert.equal(rt.edb.appendEventsCommitted(0), true);
+    const committed = rt.edb.eventsAfter(0, 10);
+    assert.deepEqual(committed.map((row) => row.type), ['entry', 'checkpoint', 'phase']);
     assert.equal(rt.poisoned, true);
     assert.throws(() => rt.assertHealthy(), denied('LOG_UNAVAILABLE'));
     assert.equal(live.length, 0);
+    assert.equal(webhook.length, 0, 'no callback may escape before independent anchor persistence');
     assert.throws(() => rt.outcomeFor(0, true), denied('LOG_UNAVAILABLE'));
     assert.equal(rt.log.getReceipt(0).ok, false);
     const first = rt.edb.store.getEntry(0)!;
@@ -134,6 +140,7 @@ for (const afterCommit of [false, true]) test(`anchor failure ${afterCommit ? 'a
     assert.equal(ctl.runtimeAnchor(w.electionId)!.tree_size, 1);
     assert.equal(recovered.edb.hasAppendCompletions(), false);
     assert.deepEqual(recovered.edb.eventsAfter(0, 10).map((row) => row.type), ['entry', 'checkpoint', 'phase']);
+    assert.deepEqual(recovered.edb.eventsAfter(0, 10), committed);
     assert.equal((await w.submit(first.headerBytes, first.body!)).status, 200);
     assert.equal(recovered.log.size, 1);
     await w.server.stop(); await w.start();

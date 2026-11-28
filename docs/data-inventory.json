@@ -1015,7 +1015,8 @@
           ],
           "columns": [
             {"name":"seq","class":"C3","basis":"operations"},
-            {"name":"ts","class":"C3","basis":"operations"}
+            {"name":"ts","class":"C3","basis":"operations"},
+            {"name":"events_committed","class":"C3","basis":"operations","rationale":"Local recovery flag: 0 retains legacy supplemental-event reconstruction; 1 means append-generated events committed with the entry."}
           ]
         },
         {

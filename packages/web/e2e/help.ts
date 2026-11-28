@@ -15,7 +15,8 @@ const check = (name, ok) => { if (!ok) throw new Error(name); checks.push(name);
 try {
   const requestedDark = new URL(location.href).searchParams.get('dark') === 'true';
   const notices = [...document.querySelectorAll('.banner')].map((node) => node.textContent?.trim() ?? '').join(' ');
-  check('experimental and demo warnings are visible', notices.includes('Experimental software') && notices.includes('DEMO — not for real votes'));
+  // Verifies QV-27-REQ-006 in the rendered production UI.
+  check('experimental and demo warnings are visible', notices.includes('Experimental — not for binding elections') && notices.includes('DEMO — not for real votes'));
   const noticeOverflow = [...document.querySelectorAll('.banner')].some((node) => {
     const box = node.getBoundingClientRect();
     return box.left < -1 || box.right > innerWidth + 1 || node.scrollWidth > node.clientWidth + 1;
