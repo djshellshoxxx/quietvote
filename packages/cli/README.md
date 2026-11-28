@@ -111,7 +111,8 @@ qv election spoil-collect --election <bundle> --code <64-hex> --packet <file> [-
 Combines the `spoil-share` packets produced by `qv-trustee spoil-release` for one trustees-mode spoiled ballot and prints the decoded
 selections. Exit 0 on success, 1 if the code is not a verified trustees-mode spoil (unknown, cast, re-wrapped) or fewer than `t`
 shares verify, 2 usage, 4 unreadable input. `--post-body-out` writes each verified record as `<dir>/<code8>-<j>.json` (the signed
-record, the request body to POST to the coordinator's spoil-shares endpoint, e.g. with `curl --data-binary @file`).
+record, the request body accepted by the coordinator's spoil-shares endpoint). Relay this directory with
+`qv online election-spoil-post`, using the same election bundle and an independently obtained manifest hash.
 
 ## Online organizer and packet relay
 
@@ -129,6 +130,8 @@ qv online election-inspect --server https://vote.example --id ELECTION_ID --json
 qv online election-draft --server https://vote.example --id ELECTION_ID --file draft.json \
   --audience qv:INSTANCE_ID@https://vote.example --key organizer.key --passphrase-file passphrase.txt
 qv online election-submit --server https://vote.example --id ELECTION_ID --file signed-entry.json
+qv online election-spoil-post --server https://vote.example --id ELECTION_ID --post-dir verified-shares \
+  --election election.json --manifest-hash ANNOUNCED_MANIFEST_HASH --json
 qv online election-export --server https://vote.example --id ELECTION_ID --format json --out election.json
 qv verify election.json --manifest-hash ANNOUNCED_MANIFEST_HASH --json
 ```
@@ -139,6 +142,41 @@ framing and accept the existing protected QVKEY1 key format. Seeds and passphras
 Create requires an explicit access choice and stable idempotency key. Reusing the same key/body avoids duplicate
 creation; changing the body requires a new key. A successful link-access creation returns its read key once;
 protect the command output. Read commands accept `--read-key-file` for that key instead of placing it in arguments.
+
+### Posting trustee spoil shares
+
+```sh
+qv online election-spoil-post --server https://vote.example --id ELECTION_ID \
+  --post-dir verified-shares --election election.json \
+  --manifest-hash ANNOUNCED_MANIFEST_HASH [--timeout-ms 20000] [--json]
+```
+
+Use a dedicated directory containing the signed JSON bodies written by `spoil-collect --post-body-out`.
+Both `--election` and the independently obtained `--manifest-hash` are required. The command checks the
+manifest and DKG context, matches the manifest's election ID to `--id`, requires trustee spoil mode, and
+validates every body's schema, context, trustee signature, and point/scalar encodings before its first request.
+Duplicate ballot-code/trustee pairs are refused. These checks establish the stated context and signature scope;
+the server still checks share proofs, spoil eligibility, and its current lifecycle when admitting each record.
+
+Input is limited to 1,024 regular `.json` files, 1 MiB per file and 64 MiB in total. Empty directories,
+unexpected entries, symbolic links and special files are refused. The whole directory is read and checked
+before posting, and the retained original bytes are sent unchanged in filename order. Inputs are never rewritten.
+The POST endpoint authenticates each signed record itself, including for link-access elections: no organizer
+key, audience, read key or idempotency key is needed by this command. The separate GET inspection endpoint
+still requires the link read key.
+
+Matching `201 accepted` and `200 duplicate` responses count as server acknowledgments. The command stops on
+the first rejection or uncertain outcome and never retries automatically. JSON output reports every item as
+`accepted`, `duplicate`, `rejected`, `unknown`, or `not_attempted`, with its code, trustee index, and exact body
+SHA-256. It retains earlier acknowledgments on partial failure. Timeouts, connection loss, refused redirects,
+5xx responses, and oversized, malformed or mismatched acknowledgments leave the current submission `unknown`.
+Retain the exact files and inspect server state before deciding whether to retry. An explicit replay may
+return `duplicate` before tally publication; once the tally is posted, the server rejects further submissions.
+
+Exit 0 means every item was acknowledged; exit 1 includes rejection, uncertainty, and failed context/signature
+checks; exit 2 is usage; exit 4 is unreadable, malformed or excessive input. A server acknowledgment does not
+verify tally inclusion or the election result. Response bodies, server free text and local filenames are not
+printed; the report identifies items using their validated public fields and input hashes.
 
 ### Organization registration
 
@@ -210,10 +248,10 @@ verification. The optional [returned-receipt check](#check-returned-submission-e
 the already-returned evidence against the exact packet and an independent key pin. Retain receipts
 and use the board/election verifiers with the appropriate independent trust anchors.
 
-All online commands print JSON. A non-2xx response exits 1 with its status and bounded error code. Server 5xx responses, malformed successful responses and network
+Online commands print JSON, except `election-spoil-post`, which prints a human-readable summary unless `--json` is supplied. A non-2xx response exits 1 with its status and bounded error code. Server 5xx responses, malformed successful responses and network
 failure during a mutation also exit 1 and explicitly report an unknown outcome; inspect state before retrying.
 Commands never retry a mutation automatically. Downloads use mode 0600, never overwrite an existing path,
-and are labelled `verified: false` until checked separately.
+and are labelled `verified: false` unless the optional `election-export --verify` checks below pass.
 
 The offline [`election check-tally`](#check-an-unsigned-tally-proposal) command recomputes an unsigned
 proposal against a pinned pre-publication archive. The [later receipt check](#check-a-later-receipt-proof)
@@ -221,6 +259,60 @@ below retrieves one requested proof and checks consistency against a supplied pr
 Remaining workflow gaps include automatic receipt retention, latest-checkpoint tracking and off-site backup/restore orchestration.
 `backup-create` requests the existing server-local snapshot;
 the separate server `qv-backup` tool verifies and restores full snapshots as described below.
+
+### Verify a downloaded election snapshot
+
+The existing export command can verify the exact bytes it saves:
+
+```sh
+qv online election-export --server https://vote.example --id ELECTION_ID \
+  --out snapshot.qvb --verify --manifest-hash INDEPENDENT_MANIFEST_HASH --json
+```
+
+Obtain the 64-character lowercase manifest hash through an independent, trusted channel. The command
+requires it with `--verify` and also checks that the authenticated manifest names the requested election
+ID. A hash learned only from the download or its server does not establish that independent trust.
+Without `--verify`, the command keeps its existing download behavior and reports `verified: false`.
+
+Verification reuses the archive preparer and full election/board verifier, including its canary self-tests.
+A successful result requires all relevant protocol checks, witness coverage of the exact saved snapshot
+using the signed manifest's witness keys, and no authenticated outcome control whose effects remain
+uninterpreted. Security notices remain visible in the report. There is no content-only mode or self-test
+opt-out for this command.
+
+| Result | Output and exit |
+| --- | --- |
+| Required snapshot checks pass | `verified: true`, `verification.verdict: "PASS"`; exit 0. |
+| Evidence is incomplete, for example no published tally or no final-snapshot witness quorum | `verified: false`, `verification.verdict: "INCOMPLETE"`; exit 3. |
+| A check fails, the independent pin or election ID disagrees, or the download is malformed | `verified: false`, `verification.verdict: "FAIL"`; exit 1. |
+
+The file remains saved with its exact received bytes for every verification outcome. An existing file is
+never overwritten, including one retained after failed verification. `verification.download_sha256`
+identifies those bytes; `verification.report` contains the existing verifier's report when it could run.
+The command's stricter snapshot verdict is separate from that report's verdict: a protocol-local ballot
+failure or an uninterpreted outcome control can prevent a successful claim even when the underlying
+verifier reports `PASS`.
+
+For JSON, use `--format json --verify`; this requests the server's existing `export.json?board=1` route
+so the file includes board evidence. If server-authored records need supplemental author keys, supply
+independently obtained keys with repeated `--extra-author-key PUBLIC_SIGNING_KEY` options, at most 32.
+Each key is 64 lowercase hexadecimal characters. These pins supplement the existing record-role checks;
+they do not authorize a different manifest signer. This option applies only to verified JSON exports.
+QVB verification retains the archive preparer's current authority rules, including refusal of a manifest
+entry signed solely by a separate organizer key.
+
+**Current server compatibility limit:** ordinary server tally exports contain board-only `tally-aggregate`
+and `dec-shares` records that the protocol verifier deliberately treats as unknown. The underlying verifier
+can report `PASS` while `chk.encoding.canonical` fails for those records; this command reports `FAIL` and
+`verified: false`, including when independently supplied author keys resolve their board headers. The same
+limit prevents offline `ballot status` from establishing a status for such an archive. QVB metadata alone
+does not settle independent trust in a supplemental server author. Supporting these records end to end
+requires a separate reader and author-trust contract; see the
+[compatibility report](../../docs/reports/export-derived-record-compatibility-20261127.md).
+
+The result applies to this downloaded snapshot. `freshnessVerified` and `finalityVerified` remain `false`:
+the command does not establish that the server supplied the newest independently observed view or that
+the election is final. A successful tally check cannot turn a provisional or old snapshot into either claim.
 
 ### Check returned submission evidence
 

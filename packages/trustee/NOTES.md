@@ -2,6 +2,39 @@
 
 Implements QV-17 (normative) on top of QV-16 DKG/threshold decryption as built in `packages/protocol`; ADR-014..024 win over specs.
 
+## Terminal passphrase prompts (2026-11-27)
+
+The executable refuses hidden input without a TTY (`NO_TTY`, exit 2). EOF, closed
+input and read errors settle with named usage errors; Ctrl-C returns
+`INPUT_CANCELLED`, exit 10. Readline sends echo to a discarded writable stream,
+keeps no input history, and closes the prompt to restore terminal mode on every
+handled outcome. Interactive `keygen` asks twice and rejects a mismatch before
+randomness or bundle creation. Protected passphrase files (including the existing
+environment-variable source) and generated passphrases remain noninteractive.
+Confirmation uses the existing byte comparator and wipes its temporary UTF-8
+buffers; JavaScript passphrase strings still have the existing lifetime limits.
+
+`test/cli-prompts.test.ts` covers confirmation, file precedence, prompt lifecycle,
+redaction, terminal-mode cleanup and actual executable no-TTY refusals. Manual
+Linux PTY checks additionally exercised matching keygen with production KDF,
+status, mismatches, EOF at both prompts and Ctrl-C: no typed secret was echoed,
+and terminal flags were restored. Native macOS/Windows PTY checks remain unrun.
+
+## CLI lifecycle and interrupted persistence acceptance (2026-11-27)
+
+Fourteen new integration tests cover every trustee command through `main(argv)`,
+a full 3-of-5 ceremony using public exchanges, and 59 simulated interruptions
+around genuine sealed-state, ledger and destruction persistence. Negative paths
+verify typed exits, exact replay, authenticated reopen, one-shot spoil refusal,
+complaints, disqualification, abort/restart and rejected-tally rollback. Proofs,
+signatures and tally results are independently checked; output/files are scanned
+for private canaries. No additional production defect was found by these tests.
+
+Fault injection is at application persistence boundaries. It does not qualify
+power loss, arbitrary process termination, stale hard-kill locks, native ACLs or
+the backup publication/registration window. The actual-process 2-of-3 test with
+production KDF remains distinct from the faster injected-dependency fixtures.
+
 ## Layout
 `bundle.ts` encrypted vault + data model; `machine.ts` state machine; `ceremonylog.ts` log-slice validation, R1 recomputation;
 `trustee.ts` all operations; `transcript.ts` build/sign/verify; `passphrase.ts`; `fingerprint.ts`; `cli.ts`. Tests: `test/*.test.ts`
@@ -19,7 +52,7 @@ when re-run, so a crash at any point is resumable (tests reopen the bundle for e
 * **Bundle is age-STYLE, not age-compatible** (REQ-021 not met): new `packages/crypto/src/bundle-cipher.ts` (scrypt N=2^18 floor via
   `@noble/hashes`, random file key wrapped under the scrypt key, AES-256-GCM payload, header bound as AAD, fresh key/salt/nonces per
   seal). age proper needs ChaCha20-Poly1305/X25519 (not in the ADR-024 allowlist). Hardware-token/X25519 recipients, layering, SLIP-0039
-  (REQ-024), dice entropy (REQ-012) are NOT implemented. Tests lower the KDF via `VaultDeps.logN` + `allowWeak` (test-only; also skips
+  (REQ-024) are NOT implemented. Optional dice input (REQ-012) is implemented as described below. Tests lower the KDF via `VaultDeps.logN` + `allowWeak` (test-only; also skips
   the passphrase estimator); production code never sets them.
 * Generated passphrase = 20 Crockford-base32 symbols (100 bits); user-chosen < 60 estimated bits refused. 2048-word list (Q4) undecided,
   so check words are a placeholder pronounceable encoding of the first 66 bits of SHA-256(label, K, ctx, mh); hex is authoritative.
@@ -270,3 +303,25 @@ The executable acceptance test now calls `qv election prepare` for ceremony `.qv
 JSON with complete board evidence. It no longer unpacks `.qvb` files in the test harness. Trustee release
 checks, KDF defaults, key custody, protocol rules and the organizer/coordinator authority boundary are
 unchanged. Coordinator setup and voter actions remain harness operations.
+
+## Optional supplemental dice entropy (2026-11-27)
+
+Accepted N-28 / QV-17 REQ-012 is implemented by `--dice-file` on `keygen` and
+`commit`. The existing protected-file reader bounds and authenticates the input
+handle; a byte parser accepts only six-sided digits and ASCII whitespace, with
+8,192 digits / 64 KiB limits. File errors retain their typed exit classification
+but omit the filename and underlying error text. No dice field is serialized.
+
+The crypto wrapper hashes the normalized dice bytes for the HKDF-SHA256 salt and
+requests fresh 32-byte platform RNG input for each expansion block. Its fixed
+local info plus counter separates draws. All-zero, malformed or unavailable
+platform output refuses without falling back to dice. This is optional local
+randomness mixing, with unchanged wire records, bundle formats, KDF floors and
+default RNG path. Raw input, normalized digits, source/expansion buffers and the
+retained salt are wiped best-effort; existing JS/runtime lifetime limitations
+remain. Replay of a saved commit never redraws randomness.
+
+Acceptance includes independent Node HKDF composition, source failure despite
+valid dice, input/permission/filename refusals, different dice and source inputs,
+keygen opening, and exact persisted commit replay. Formal crypto review remains
+a merge gate; these tests are engineering evidence.

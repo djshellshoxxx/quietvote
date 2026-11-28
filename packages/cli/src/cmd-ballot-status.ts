@@ -1,39 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Offline status is a conclusion about one independently pinned, fully checked snapshot.
 import { bytesToHex, hexToBytes } from '@quietvote/crypto';
-import { witnessStatus } from '@quietvote/board';
-import { ballotCode, verifyElection, witnessAnchors, type CheckId, type VerificationReport, type VoterEnvelope } from '@quietvote/protocol';
+import { ballotCode, verifyElection, type VerificationReport, type VoterEnvelope } from '@quietvote/protocol';
 import { needFlag, needPositional, parseArgs, UsageError } from './args.ts';
 import { isHex, pinnedHash, printJson } from './common.ts';
 import { prepareElectionArchive } from './cmd-prepare.ts';
 import { EXIT, type Io } from './io.ts';
+import { hasSnapshotWitness, snapshotEvidenceVerdict, SNAPSHOT_REQUIRED_CHECKS, uninterpretedSnapshotControls } from './snapshot-evidence.ts';
 
-// A protocol PASS can coexist with local ballot failures. Require the actual checks too.
-// No sampled receipt is supplied: the entire unredacted board is bound to this archive.
-const REQUIRED: readonly CheckId[] = [
-  'chk.manifest.hash', 'chk.manifest.sig', 'chk.keys.trustees', 'chk.board.append_only', 'chk.board.witness',
-  'chk.ballots.valid', 'chk.ballots.latest', 'chk.tally.aggregate', 'chk.tally.decrypt', 'chk.result.rules',
-  'chk.benaloh.spoiled', 'chk.encoding.canonical', 'chk.time.window',
-];
 type Status = 'COUNTED' | 'SUPERSEDED' | 'SPOILED' | 'ABSENT' | 'EXCLUDED' | 'UNVERIFIED';
 interface BallotRecord { seq: number; code: string; env: VoterEnvelope }
 
 function evidenceVerdict(report: VerificationReport): VerificationReport['verdict'] {
-  if (report.verdict === 'FAIL' || Object.values(report.checks).includes('fail') ||
-      report.findings.some((f) => f.cls === 'F' || f.cls === 'ALARM')) return 'FAIL';
-  if (report.verdict !== 'PASS' || REQUIRED.some((id) => report.checks[id] !== 'pass') ||
-      report.ctx === undefined || report.countedBallots === undefined) return 'INCOMPLETE';
-  return 'PASS';
-}
-
-function hasSnapshotWitness(prepared: ReturnType<typeof prepareElectionArchive>): boolean {
-  const { content, checkpoints, snapshot } = prepared;
-  const policy = { witnesses: witnessAnchors(content.manifest.body).anchors,
-    quorum: content.manifest.body.bb.witness_quorum, noneAcknowledged: false };
-  // These checkpoints already have verified log signatures and roots. The protocol's
-  // phase witness gate alone can pass without a quorum on this final tally snapshot.
-  return checkpoints.some((cp) => cp.origin === snapshot.origin && cp.size === snapshot.tree_size &&
-    bytesToHex(cp.root) === snapshot.root_hash && witnessStatus(cp, policy).witnessed);
+  const verdict = snapshotEvidenceVerdict(report);
+  return verdict === 'PASS' && (report.ctx === undefined || report.countedBallots === undefined) ? 'INCOMPLETE' : verdict;
 }
 
 /** The full verifier has authenticated all envelopes before this lookup is reachable. */
@@ -83,7 +63,7 @@ export async function cmdBallotStatus(argv: string[], io: Io): Promise<number> {
   const snapshotWitnessed = hasSnapshotWitness(prepared);
   // The verifier reports these authenticated controls but does not interpret their
   // outcome effects. Refuse a status claim without inventing their pending contract.
-  const uninterpretedControls = notices.filter((n) => n.kind !== 'audit-close' && n.kind !== 'security-notice');
+  const uninterpretedControls = uninterpretedSnapshotControls(notices);
   if (verdict === 'PASS' && (!snapshotWitnessed || uninterpretedControls.length > 0)) verdict = 'INCOMPLETE';
   let status: Status = 'UNVERIFIED';
   let intent: 'cast' | 'spoil' | null = null;
@@ -122,7 +102,7 @@ export async function cmdBallotStatus(argv: string[], io: Io): Promise<number> {
     io.out(`snapshot: ${snapshot.origin}; size ${snapshot.tree_size}; root ${snapshot.root_hash}\n`);
     io.out(`verification: ${verdict}\n`);
     io.out(`snapshot witness quorum: ${result.verification.snapshot_witness}; control interpretation: ${result.verification.controls}\n`);
-    for (const id of REQUIRED) if (report.checks[id] !== 'pass') io.out(`${id}: ${report.checks[id]}\n`);
+    for (const id of SNAPSHOT_REQUIRED_CHECKS) if (report.checks[id] !== 'pass') io.out(`${id}: ${report.checks[id]}\n`);
     for (const finding of result.verification.findings) io.out(`${finding.code} (${finding.cls})${finding.seq === undefined ? '' : ` at seq ${finding.seq}`}\n`);
     for (const caveat of result.caveats) io.out(`caveat: ${JSON.stringify(caveat)}\n`);
   }

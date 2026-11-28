@@ -3,6 +3,7 @@ export { ed25519Keypair, ed25519Sign, ed25519Verify, ed25519IsStrictPoint, type 
 export * from './errors.ts';
 export * from './bytes.ts';
 export * from './rng.ts';
+export * from './additional-entropy.ts';
 export * from './ristretto.ts';
 export * from './transcript.ts';
 export * from './elgamal.ts';

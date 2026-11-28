@@ -24,17 +24,23 @@ function readArchive(path: string): Uint8Array {
     while (size < bytes.length && (n = readSync(fd, bytes, size, bytes.length - size, null)) > 0) size += n;
     if (size !== stat.size) throw new Error('archive changed while reading');
     return bytes.subarray(0, size);
-  } catch (e) { throw new InputError(e instanceof Error ? e.message : 'cannot read archive'); }
+  } catch (e) { throw new InputError(`cannot prepare archive: ${e instanceof Error ? e.message : 'cannot read archive'}`); }
   finally { if (fd !== undefined) closeSync(fd); }
 }
 
 /** Authenticates the existing public archive framing; consumers still apply their own protocol stage checks. */
 export function prepareElectionArchive(path: string, pin: string) {
+  return prepareElectionArchiveBytes(readArchive(path), pin);
+}
+
+/** The caller may verify an exact downloaded buffer without reopening a mutable pathname. */
+export function prepareElectionArchiveBytes(bytes: Uint8Array, pin: string) {
   let election: ReturnType<typeof loadBundle> & { ok: true };
   let board: ReturnType<typeof bundleToJson>;
   let serverKey: string;
   try {
-    const files = readChecksummedArchive(readArchive(path), { maxFiles: MAX_ENTRIES + 32 });
+    if (bytes.byteLength > MAX_BYTES) throw new Error('archive exceeds 64 MiB');
+    const files = readChecksummedArchive(bytes, { maxFiles: MAX_ENTRIES + 32 });
     const need = (name: string): Uint8Array => {
       const data = files.get(name);
       if (!data) throw new Error(`${name} is missing`);

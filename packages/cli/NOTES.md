@@ -120,8 +120,37 @@ lacks `spoil_trustee_decrypt`, the spoil has a reveal digest, or its ciphertexts
 gate the trustees apply. Packets must be `qv-ceremony-packet/v1` (else exit 4); non-`spoil-share` rounds and other codes are ignored.
 `collectSpoilShares` then `decryptSpoiled`. Per-trustee validity is decided by running `decryptSpoiled` on that trustee's set alone with
 t=1 (anything other than `E_DEC_PROOF` means every proof verified); this is a heuristic on the error code, not separate crypto. The
-POST body is the signed record as JSON; the server endpoint is not in this tree, so that body shape is an assumption. Files are created
+POST body is the signed record as JSON; the existing `POST /api/v1/elections/:id/spoil-shares` endpoint accepts this exact record schema. Files are created
 with `wx` (never overwritten). Tests: `test/spoil-collect.test.ts` (8; uses `packages/protocol/test/helpers/sim.ts`).
+
+## `qv online election-spoil-post` (2026-11-27)
+
+Completes trustee CLI inventory task 7 and corrects defect D-F above. `src/cmd-online-spoil.ts` relays the
+collector's signed body files to the existing spoil-share endpoint. It requires `--election` and an independent
+`--manifest-hash`, reuses `electionContext` for verified manifest/DKG key material, compares the election ID,
+requires trustee spoil mode, and checks every record with the existing `spoilShareRecordSchema` and
+`collectSpoilShares`. Its verification claim is limited to manifest/context/signatures and share encodings;
+the server remains responsible for proof validity, spoil eligibility and lifecycle admission.
+
+The directory is fully read and validated before any POST: at most 1024 regular JSON files, 1 MiB each,
+64 MiB total, no empty directory, unexpected entries, final symlinks, special files, changed inputs, mixed
+contexts or repeated code/trustee pairs. Files are retained as bytes and sent in deterministic filename order.
+The new explicit raw-JSON wrapper shares `cmd-online.ts` transport without serializing those bytes again;
+existing JSON request callers retain their previous serialization and signed-request framing.
+
+Requests are sequential and stop at the first rejected or unknown result. Matching 201/accepted or
+200/duplicate acknowledgments are checked against the input code and trustee index. Network failures,
+redirects, 5xx, excess responses and invalid acknowledgments are uncertain; no request is automatically retried.
+Structured output preserves prior acknowledgments and marks later items unattempted. It contains only
+validated public identifiers, exact body hashes and sanitized HTTP error codes, never body contents,
+server free text or filenames. No management/read key is sent: the POST authenticates its signed record;
+private-link GETs retain the existing read-key requirement. Duplicate replay is subject to the server's
+current lifecycle and is rejected after tally publication.
+
+Tests: `test/online-spoil.test.ts` exercises byte-preserving local HTTP, complete preflight refusal, input
+bounds, uncertain/partial results, no redirects/retries, output sanitization, and the genuine link-election
+collector → POST → duplicate → tally workflow. No protocol or dependency change.
+
 ## Dependency declaration (DEP-01, 2026-10-21)
 
 `packages/cli/src` imports `@quietvote/verifier` (`cmd-board.ts`, `cmd-vectors.ts`, `cmd-verify.ts`, `common.ts`), but the
@@ -207,3 +236,26 @@ No time or witness guard is bypassed: the summary explicitly leaves witness and
 freshness verification false and the server remains responsible for admission.
 An unpinned roll is labeled `uncommitted-proposal`; its membership still needs
 operator review. Separate-organizer archive refusal and B3-01/D-99 are unchanged.
+
+## Optional verified election downloads — 2026-11-27
+
+`online election-export --verify --manifest-hash HEX` runs the existing archive preparer and
+self-testing verifier against the exact downloaded buffer after saving it exclusively. The default
+download path and output remain unchanged. Verified JSON requests the existing `board=1` export and
+accepts the verifier's bounded independent `--extra-author-key` pins; QVB retains the preparer's
+existing authority rules. The requested election ID is separately bound to the authenticated manifest.
+
+The shared snapshot-evidence gate also serves offline ballot status without changing its outcomes.
+It requires the subordinate checks, rejects fatal/alarm findings, uses signed-manifest witness keys
+for the exact snapshot, and retains the pending interpretation of authenticated outcome controls.
+The export report keeps the verifier's verdict separate from this stricter verdict, includes the exact
+download hash, preserves notices, and leaves freshness/finality false. Failed or incomplete verification
+retains the bytes with `verified: false` and exits 1 or 3; it never overwrites an existing file.
+
+The full ordinary server workflow remains blocked: `protocol/NOTES.md` explicitly keeps the server's
+`tally-aggregate` outside the QV-16 record contract. Both it and `dec-shares` reach the verifier's unknown
+record branch and fail `chk.encoding.canonical`, even when the raw verdict is PASS. The real-server
+regression retains this strict refusal for QVB and JSON and for offline ballot status; it does not filter
+records or exempt the failed check. QVB supplemental-author trust is also unresolved beyond structural
+preparation: transport metadata alone is not an independent author pin. Exact source references and the
+reproduction are in [the compatibility report](../../docs/reports/export-derived-record-compatibility-20261127.md).
