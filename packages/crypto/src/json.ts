@@ -4,6 +4,10 @@ import { utf8 } from './bytes.ts';
 /** QV-JSON value domain (QV-16 §5.5): no null, no floats, safe integers only. */
 export type QvJson = boolean | number | string | QvJson[] | { [k: string]: QvJson };
 
+/** Unsigned container values. This is deliberately separate from the signed QV-JSON domain. */
+export type JsonContainerValue = boolean | number | string | null | JsonContainerValue[] | { [k: string]: JsonContainerValue };
+export type JsonContainerPath = readonly (string | number)[];
+
 export const MAX_SAFE = Number.MAX_SAFE_INTEGER;
 const MAX_DEPTH = 32;
 
@@ -41,9 +45,24 @@ function hasLoneSurrogate(s: string): boolean {
  * nesting deeper than 32. (QV-16 §5.5 items 1, 2, 4.)
  */
 export function parseQvJson(input: string | Uint8Array): QvJson {
+  return parseJsonProfile(input) as QvJson;
+}
+
+/**
+ * Container-only exception: a trusted schema predicate must explicitly return true for each allowed null path.
+ * Array indexes are numbers; object keys are strings. All other QV-JSON parsing rules still apply.
+ * Never use this entry point for signed artifacts; parseQvJson and canonicalize keep their no-null domain.
+ */
+export function parseJsonContainer(input: string | Uint8Array, allowNullAt: (path: JsonContainerPath) => boolean): JsonContainerValue {
+  if (typeof allowNullAt !== 'function') return fail('container null predicate required');
+  return parseJsonProfile(input, allowNullAt);
+}
+
+function parseJsonProfile(input: string | Uint8Array, allowNullAt?: (path: JsonContainerPath) => boolean): JsonContainerValue {
   const text = typeof input === 'string' ? input : decodeUtf8Strict(input);
   if (text.charCodeAt(0) === 0xfeff) fail('BOM not allowed');
   let pos = 0;
+  const path: (string | number)[] = [];
 
   const ws = (): void => {
     while (pos < text.length) {
@@ -111,13 +130,13 @@ export function parseQvJson(input: string | Uint8Array): QvJson {
     return n;
   };
 
-  const parseValue = (depth: number): QvJson => {
+  const parseValue = (depth: number): JsonContainerValue => {
     if (depth > MAX_DEPTH) fail('nesting too deep');
     ws();
     const c = text[pos];
     if (c === '{') {
       pos++;
-      const obj: { [k: string]: QvJson } = Object.create(null) as { [k: string]: QvJson };
+      const obj: { [k: string]: JsonContainerValue } = Object.create(null) as { [k: string]: JsonContainerValue };
       ws();
       if (text[pos] === '}') {
         pos++;
@@ -129,7 +148,9 @@ export function parseQvJson(input: string | Uint8Array): QvJson {
         if (Object.prototype.hasOwnProperty.call(obj, k)) fail('duplicate key');
         ws();
         if (text[pos++] !== ':') fail('expected :');
+        path.push(k);
         obj[k] = parseValue(depth + 1);
+        path.pop();
         ws();
         const d = text[pos++];
         if (d === ',') continue;
@@ -140,14 +161,16 @@ export function parseQvJson(input: string | Uint8Array): QvJson {
     }
     if (c === '[') {
       pos++;
-      const arr: QvJson[] = [];
+      const arr: JsonContainerValue[] = [];
       ws();
       if (text[pos] === ']') {
         pos++;
         return arr;
       }
       for (;;) {
+        path.push(arr.length);
         arr.push(parseValue(depth + 1));
+        path.pop();
         ws();
         const d = text[pos++];
         if (d === ',') continue;
@@ -165,7 +188,12 @@ export function parseQvJson(input: string | Uint8Array): QvJson {
       pos += 5;
       return false;
     }
-    if (text.startsWith('null', pos)) return fail('null not allowed');
+    if (text.startsWith('null', pos)) {
+      // Give the trusted predicate a snapshot, never the parser's mutable traversal stack.
+      if (allowNullAt?.([...path]) !== true) return fail('null not allowed');
+      pos += 4;
+      return null;
+    }
     return parseNumber();
   };
 

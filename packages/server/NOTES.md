@@ -309,8 +309,8 @@ an upload; raise it (hard max 120 s) for large bundles. (g) Unlike QV-28 §11.4,
 **/admin.** `GET /admin/status` (`migrations.control` and `.version` both report the control DB schema version: QV-09 does not define `version`),
 `GET /admin/elections` (registry columns only, `state`/`cursor`/`limit`), `POST /admin/backups` (SQLite online `backup` into `<data>/backups/<job>/`, 0700/0600,
 `PRAGMA quick_check` of each copy, `manifest.json` with SHA-256, never the KEK; NOT encrypted at rest beyond the already-sealed fields; no retention/pruning yet),
-`POST /admin/elections/{id}/self-audit` (leaf hashes, body digests, root, every checkpoint signature/root; mismatch quarantines a live log; no scheduler, REQ-054's
-6 h cycle is not implemented), `POST .../quarantine/clear` (needs `ack` = incident id, `verified_against` = `witness:<election-policy name>` entries, a fresh replay + full
+`POST /admin/elections/{id}/self-audit` (leaf hashes, body digests, root, every checkpoint signature/root; mismatch quarantines a live log; the same audit also runs
+in the six-hour periodic sweep described below), `POST .../quarantine/clear` (needs `ack` = incident id, `verified_against` = `witness:<election-policy name>` entries, a fresh replay + full
 audit, log size >= the largest size our key signed for, a stored checkpoint of at least that size cosigned by each named witness; `fork`/`inconsistent`
 evidence is permanent -> 409 `COMPROMISED`; this uses stored cosignatures, it does not query witnesses live), `DELETE /admin/elections/{id}` (`confirm` = title; same state
 preconditions as the org delete: DRAFT, ARCHIVED, CANCELLED, ABORTED, IMPORTED; ARCHIVED additionally requires the recorded final PUBLIC export and explicit acknowledgement or 30 days after its signed deletion notice).
@@ -818,3 +818,29 @@ production bytes are restored. These are real HTTP/SQLite tests in one server
 process, not throughput, multiple-writer or native durability qualification.
 Zero-witness fixtures do not establish witnessed full-election verification.
 Production limits, invitation widths, wire contracts and trust policy are unchanged.
+
+## Periodic full self-audit and gossip timer acceptance (2026-11-27)
+
+QV-18-REQ-054 now has a six-hour scheduler, armed after successful server startup.
+Each interval admits at most one pending `self_audit` sweep to the existing FIFO
+job runner. The first interval is six hours after startup; the supported offline
+restore path already performs full replay and `auditLog` before publication.
+Each sweep pages all non-deleted elections and uses the existing `selfAuditWork`
+implementation. Native mismatch quarantine and alerts, imported-mirror policy,
+keyless readers and manual clearing requirements are unchanged. Unavailable
+elections do not prevent checking later entries: the job finishes as
+`SELF_AUDIT_INCOMPLETE` with aggregate counts and fixed diagnostics.
+
+The scheduler stops admission before the job runner cancels/drains work and before
+storage or directory ownership closes. Repeated ticks do not accumulate another
+sweep behind a queued/running one. No new configuration knob or database schema
+was added. Deterministic tests cover six-hour boundaries, corruption, queueing,
+cancellation, retry, pagination and actual keyless archive/import byte preservation.
+
+The existing real gossip timer smoke remains. Added mocked-interval coverage proves
+that an authenticated ahead-peer response at a configured 60-second interval
+persists the rollback anchor, quarantine and alert, and refuses another append.
+The accepted `gossipIntervalMs: 0` default remains unchanged; this does not claim
+default 60-second polling. QV-28-REQ-020's scheduled SQLite integrity/quick checks
+and unclean-start obligations are separate from this six-hour log-audit increment.
+See [the scoped evidence report](../../docs/reports/periodic-integrity-20261127.md).

@@ -17,6 +17,7 @@ import { electionBundle, logBundle, qvb } from './export.ts';
 import { registerExtRoutes } from './ext-routes.ts';
 import { GossipService } from './gossip.ts';
 import { RetentionSweeper } from './retention.ts';
+import { SelfAuditScheduler } from './self-audit.ts';
 import { JobRunner } from './jobs.ts';
 import { createHttpApp, type Ctx, type HttpApp, type Reply, type Route } from './http.ts';
 import { loadOrCreateKek, seal, open as unsealBytes } from './kek.ts';
@@ -103,6 +104,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   const gossip = new GossipService(env, pool);
   cleanup.push(() => gossip.stop());
   const retention = new RetentionSweeper(env);
+  const selfAudit = new SelfAuditScheduler(env, pool, jobs);
   env.recoverEvents = (who, db) => webhooks.recover(who, db);
 
   // ---------------------------------------------------------------- helpers
@@ -1049,6 +1051,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       sse.closeAll();
       webhooks.stop();
       // Signal every producer before awaiting any of them; no live task may write after the directory lock is released.
+      selfAudit.stop();
       const gossipStopped = gossip.stop();
       const retentionStopped = retention.stop();
       const jobsStopped = jobs.stop();
@@ -1075,6 +1078,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
         }
         const a = await http.listen();
         retention.start();
+        selfAudit.start();
         return { ...a, url: `http://${a.host}:${a.port}` };
       } catch (error) {
         await stop();

@@ -89,6 +89,13 @@ filesystem access, network access or cryptographic trust decision. Callers bound
 counts, then verify the manifest, authors, board and protocol for their own workflow. This supersedes
 the earlier note assigning all container/checksum handling to CLI/server. No new dependency is added.
 
+The 2026-11-27 framing correction preserves a leading BOM during fatal UTF-8
+decoding of strict tar names and checksum lines, so their existing grammars
+reject it instead of interpreting normalized text. Ordinary names/checksums
+retain their behavior. Two distinguishing regressions and the adjacent actual
+server import/export checks pass; see the
+[framing and policy report](../../docs/reports/board-archive-policy-acceptance-20261127.md).
+
 ## Keyless receipt refusal — 2026-11-17
 
 `BoardLogOptions.secretKey` is optional for mirrors and erased signing keys.
@@ -98,3 +105,17 @@ created. Reads, stored checkpoints, inclusion/consistency proofs and audits stay
 available. Existing callers with a signing key retain their receipt behavior.
 This implements QV-ADR-027 B2-12's interim refusal using the existing Result API;
 it adds no receipt format or database migration.
+
+## Larger Merkle and serialized append acceptance — 2026-11-27
+
+Tests now compare growing/historic roots through 1,025 leaves with an independent
+native-SHA-256 reference, retain the existing checks through 200, and compare
+inclusion/consistency paths at every larger prefix with exhaustive positions at
+nine power-of-two boundary prefixes. A separate fixture releases 1,000 async
+callers into one synchronous `BoardLog`, checks interleaved duplicates, injects
+an atomic precommit store exception, retries, verifies receipts and roots, and
+replays the stored log. A failed-close fixture also checks grammar rollback.
+These are tests and documentation only. The failure injection assumes the
+existing atomic `BoardStore` contract; it does not simulate process termination,
+multiple sequencers or SQLite crash durability. Details and source-bound results
+are in the [acceptance report](../../docs/reports/board-append-merkle-acceptance-20261127.md).

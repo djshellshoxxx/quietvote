@@ -73,7 +73,8 @@ export class TarError extends Error {}
  */
 export function readTarStrict(buf: Uint8Array, limits: { maxFiles: number }): Map<string, Uint8Array> {
   const out = new Map<string, Uint8Array>();
-  const dec = new TextDecoder('utf-8', { fatal: true });
+  // Preserve a leading BOM for the field grammar to reject; never rename a member while decoding it.
+  const dec = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
   const NAME = /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
   let o = 0;
   for (;;) {

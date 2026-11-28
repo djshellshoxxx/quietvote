@@ -440,6 +440,49 @@ test('outbound: the interval timer runs rounds on its own and stops with the ser
   assert.equal(sent.length, n, 'no rounds after stop');
 });
 
+test('outbound: the accepted default keeps periodic gossip disabled even with configured peers', async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  sent.length = 0; dns.clear(); dns.set('good.example', ['93.184.216.34']);
+  const w = await mk('g-timer-default', { ...peerOpts(['https://good.example']), retentionSweepMs: 0 }, 2);
+  try {
+    assert.equal(w.server.env.cfg.gossipIntervalMs, 0);
+    t.mock.timers.tick(120_000);
+    assert.equal(w.server.gossip.stats.runs, 0);
+    assert.equal(sent.length, 0);
+  } finally { await w.stop(); t.mock.timers.reset(); }
+});
+
+test('outbound: an ahead peer quarantines through the configured interval and emits the persistent alert', { timeout: 30_000 }, async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  sent.length = 0; dns.clear(); dns.set('good.example', ['93.184.216.34']);
+  const w = await mk('g-timer-rollback', { ...peerOpts(['https://good.example']), gossipIntervalMs: 60_000, retentionSweepMs: 0 }, 2);
+  try {
+    const rt = (await w.server.pool.get(w.electionId))!;
+    const checkpoint = rt.edb.store.latestCheckpoint()!.note;
+    const ahead = await forge(w, 40, 0x22);
+    let dispatched!: () => void;
+    const exchange = new Promise<void>((resolve) => { dispatched = resolve; });
+    reply = () => { dispatched(); return json({ latest_note: ahead, consistent: false }); };
+    t.mock.timers.tick(59_999);
+    assert.equal(sent.length, 0);
+    assert.equal(rt.quarantineReason(), undefined);
+    t.mock.timers.tick(1);
+    await exchange;
+    await w.server.gossip.stop(); // Drain the real timer-admitted exchange; never call runOnce in this test.
+    assert.equal(sent.length, 1);
+    assert.equal(w.server.gossip.stats.runs, 1);
+    assert.equal(w.server.gossip.stats.evidence, 1);
+    assert.equal(JSON.parse(rt.forcedQuarantine!).code, 'ROLLBACK_SUSPECTED');
+    assert.equal(w.server.env.control.runtimeAnchor(w.electionId)!.tree_size, 40);
+    assert.ok(rt.edb.eventsAfter(0, 100).some((event) => event.type === 'alert' && JSON.parse(event.data).detail_code === 'ROLLBACK_SUSPECTED'));
+    assert.equal((await state(w)).integrity, 'quarantined');
+    assert.equal((await w.post('notice', w.coord[0]!, w.marker('dkg-r1-open', w.mh))).status, 503);
+    assert.equal(rt.edb.store.latestCheckpoint()!.note, checkpoint);
+    t.mock.timers.tick(60_000);
+    assert.equal(sent.length, 1, 'no timer round after stop');
+  } finally { await w.stop(); t.mock.timers.reset(); }
+});
+
 void b64u; void unb64u;
 
 test('outbound: durable health survives restart and reports outage, malformed response, DNS change, recovery and staleness', async () => {

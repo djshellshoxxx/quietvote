@@ -48,3 +48,22 @@ use; `destroy()` wipes the retained salt and prevents further draws. Wiping is
 best effort in JavaScript. Native Node `hkdfSync` independently checks a multi-block
 known composition in the tests. Formal crypto/security approvals remain required
 before main promotion.
+
+## Strict nullable outer containers — 2026-11-27
+
+`parseJsonContainer(input, allowNullAt)` is a separate entry point for QV-18's
+unsigned outer container fields. It shares the existing parser engine and
+requires a trusted schema predicate that returns exactly `true` for each null
+position. Paths distinguish numeric array indexes from string object keys;
+callbacks receive copies of the path so they cannot alter traversal state.
+The verifier authorizes only its outer board entry body fields. This API is not
+for signed artifacts.
+
+`parseQvJson(input)`, its `QvJson` type and `canonicalize` keep the original no-null
+domain. Duplicate-key, UTF-8/BOM, NFC, surrogate, safe-integer and depth checks are
+shared unchanged. Tests cover rejected lookalikes/nesting, required predicates,
+exact-true semantics, path mutation, both public APIs and existing parser rules.
+No canonical bytes, protocol domain, test-vector expectation or dependency was
+changed. This is a parsing boundary change, not an external security review;
+the existing crypto review requirements remain in force. See the
+[source-bound report](../../docs/reports/verifier-redacted-container-20261127.md).

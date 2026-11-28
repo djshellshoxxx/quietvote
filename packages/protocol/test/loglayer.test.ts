@@ -5,14 +5,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bytesToHex, ed25519Keypair, sha256, utf8 } from '@quietvote/crypto';
+import { baseMul, bytesToHex, ed25519Keypair, pointToBytes, sha256, utf8 } from '@quietvote/crypto';
 import { b64, bundleFromJson, bundleToJson, hashLeaf, type ReceiptJson } from '@quietvote/board';
 import {
   manifestHash, signRecordRaw, validateManifest, verifyElection, verifyMultiSig, verifyReceiptChain, type ElectionBundle, type LogEvidence,
-  type ReceiptClaim, type VerificationReport,
+  type MarkerBody, type MultiSignedRecord, type ReceiptClaim, type VerificationReport,
 } from '../src/index.ts';
 import { buildBoard, isoSec, witnessKeys, type BoardView, type Cosig, type Head } from './helpers/board.ts';
-import { bundleOf, castBallot, clone, closeElection, defaultContests, kp, publishTally, setup, type Sim } from './helpers/sim.ts';
+import { bundleOf, castBallot, clone, closeElection, defaultContests, kp, multiSign, publishTally, setup, type Sim } from './helpers/sim.ts';
 import { buildLogView, controlRecord, insertAt, markerSeq, type EntryOverride, type LogView } from './vecgen/logboard.ts';
 import { LOG_DIR, LOG_OPERATION, failedChecks, resolveLogVector, type LogVectorInput } from './vecgen/loglayer.ts';
 
@@ -108,6 +108,54 @@ test('log layer: witnessed, bound log with receipts PASSes every check', async (
   assert.equal(bare.checks['chk.board.append_only'], 'not_run');
   assert.equal(bare.checks['chk.receipts.sample'], 'not_run');
   assert.ok(bare.caveats.some((c) => c.startsWith('log integrity')));
+});
+
+test('log layer: signed altered dkg-final joint-key claim is L-class while recomputed key drives the tally', async () => {
+  await init();
+  const baseline = await verify(honest.bundle, { board: hv.json });
+  assert.equal(baseline.verdict, 'PASS', JSON.stringify(baseline.findings));
+  assert.deepEqual(failedChecks(baseline), []);
+  assert.equal(baseline.counts.counted, 4);
+  assert.ok(baseline.ctx && baseline.results);
+
+  const changed = clone(honest.bundle);
+  const seq = markerSeq(changed, 'dkg-final');
+  const entry = changed.log.find((e) => e.seq === seq)!;
+  const original = entry.entry as MultiSignedRecord<MarkerBody>;
+  const coordinator = changed.manifest.body.coordinator;
+  assert.ok(verifyMultiSig(honest.sim.mh, original, coordinator.keys, coordinator.m));
+  assert.equal(original.body.qmask, honest.sim.outcome!.qmask);
+  const body = { ...original.body, K: H(pointToBytes(baseMul(1n))) };
+  assert.notEqual(body.K, original.body.K, 'different valid group point, rather than malformed encoding');
+
+  // An edited body retaining the old signature cannot exercise the authenticated claim check.
+  const unsigned = { ...original, body };
+  assert.equal(verifyMultiSig(honest.sim.mh, unsigned, coordinator.keys, coordinator.m), false);
+  entry.entry = unsigned;
+  const rejected = await verify(changed, { board: view({ ...honest, bundle: changed }).json });
+  assert.equal(rejected.verdict, 'FAIL');
+  assert.ok(has(rejected, 'E_SIG', 'L') && has(rejected, 'E_DKG_MARKERS', 'F'));
+  assert.ok(!has(rejected, 'E_DKG_FINAL'));
+
+  // Re-sign the sole changed record and rebuild its matching board/heads. Both log checks must pass,
+  // so a stale root or broken signature cannot masquerade as the desired joint-key mismatch.
+  const signed = multiSign(honest.sim, honest.sim.mh, body);
+  assert.ok(verifyMultiSig(honest.sim.mh, signed, coordinator.keys, coordinator.m));
+  entry.entry = signed;
+  const report = await verify(changed, { board: view({ ...honest, bundle: changed }).json });
+  assert.equal(report.verdict, 'PASS', 'existing L-class finding does not change the verdict');
+  assert.deepEqual(failedChecks(report), ['chk.keys.trustees']);
+  assert.deepEqual(report.findings.map(({ code, cls }) => ({ code, cls })), [{ code: 'E_DKG_FINAL', cls: 'L' }]);
+  assert.equal(report.checks['chk.board.append_only'], 'pass');
+  assert.equal(report.checks['chk.board.witness'], 'pass');
+  for (const id of Object.keys(report.checks) as (keyof typeof report.checks)[]) {
+    if (id !== 'chk.keys.trustees') assert.equal(report.checks[id], baseline.checks[id], id);
+  }
+  assert.equal(report.ctx, baseline.ctx);
+  assert.equal(report.counts.counted, baseline.counts.counted);
+  assert.equal(report.counts.cast, baseline.counts.cast);
+  assert.deepEqual(report.countedBallots, baseline.countedBallots);
+  assert.deepEqual(report.results, baseline.results);
 });
 
 test('log layer: entry/record binding (tamper, hidden entry, wrong type/author, origin, log_id)', async () => {

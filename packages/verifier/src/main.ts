@@ -36,7 +36,7 @@ export async function verifyWithSelfTest(bundleText: string | Uint8Array, opts: 
 export const exitCodeFor = (r: VerifierReport): number => (r.verdict === 'PASS' ? EXIT.ok : r.verdict === 'FAIL' ? EXIT.fail : EXIT.incomplete);
 
 export async function verifierMain(argv: string[], io: VerifierIo): Promise<number> {
-  const usage = 'usage: qv-verify <bundle.json> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only] [--extra-author-key <hex>]...\n       --extra-author-key adds an independently obtained public signing key (maximum 32)\n       --content-only explicitly permits a scoped PASS without witnessed log integrity\n       qv-verify --selftest\n';
+  const usage = 'usage: qv-verify <bundle.json|archive.qvb> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only] [--extra-author-key <hex>]...\n       --extra-author-key adds an independently obtained public signing key (maximum 32)\n       --content-only explicitly permits a scoped PASS without witnessed log integrity\n       qv-verify --selftest\n';
   let json = false;
   let skip = false;
   let selftest = false;

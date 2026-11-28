@@ -422,3 +422,36 @@ predecessor, one vote per voter, observations, and specified rejection findings.
 This is test-only coverage of the existing QV-16 §5.14 and adopted X-10/B1-01
 policy. It is TS-only, and does not fulfill QV-07-REQ-025's broader acceptance of
 10,000 histories across implementations. See the [coverage report](../../docs/reports/revote-reference-coverage-20261127.md).
+
+## Vector format and manifest hygiene (inventory board/verifier task 10, 2026-11-27)
+
+The conformance harness now checks the complete corpus with fatal UTF-8 decoding,
+LF newlines, integer decimal JSON tokens outside strings, inclusive byte limits
+of 1,000,000 per file and 25,000,000 total, and a one-to-one MANIFEST mapping of
+canonical relative paths to actual SHA-256 digests. Metadata and MANIFEST count
+toward those limits. Identical bytes at different paths remain valid.
+
+The format visitor uses existing wire schemas to identify lowercase hex and
+manifest UTC timestamps, plus the generator's named hex fields and operation
+inputs/outputs. It does not validate cryptographic lengths, protocol semantics or
+free text. Quoted malformed JSON inputs remain opaque. Two exact, consumed
+field/value/outcome exceptions preserve the intentional `manifest-uppercase-hex`
+and `non-canonical-hex` rejection fixtures; no other fields in those fixtures are
+exempt. No vector, generator, production schema or protocol policy changed.
+
+Distinguishing local fixtures cover invalid UTF-8, lexical floating/exponent
+forms, multibyte size boundaries, corpus overflow, MANIFEST aliases/duplicates/
+hash mismatches, typed hex/timestamps and exception drift. See the
+[hygiene report](../../docs/reports/vector-hygiene-20261127.md).
+
+## Authenticated joint-key claim acceptance (inventory board T2 slice, 2026-11-27)
+
+`test/loglayer.test.ts` now exercises a generated, witnessed and tallied election whose coordinator correctly signs a
+`dkg-final` marker claiming a different valid joint key. The marker retains its original `qmask`; the matching board and
+signed/witnessed heads are rebuilt so a stale root or invalid signature cannot supply an unrelated rejection.
+
+The existing result is preserved: `E_DKG_FINAL` has class L, `chk.keys.trustees` fails, and the overall verdict remains PASS.
+All other named checks match the honest control, with both board checks passing. Context, counted ballots and tally results
+continue to use the key recomputed from the trustee transcript. The corresponding changed body with its old signature is
+rejected before this claim check. No production behavior, error classification or frozen vector changes. See the
+[joint-key claim acceptance report](../../docs/reports/joint-key-claim-acceptance-20261127.md).

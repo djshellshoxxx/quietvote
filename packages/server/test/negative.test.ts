@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { connect } from 'node:net';
 import { join } from 'node:path';
-import { b64u, buildEntry, cosignLine, unb64u } from '@quietvote/board';
+import { b64u, buildEntry, bundleFromJson, cosignLine, unb64u, verifyLog } from '@quietvote/board';
 import { bytesToHex, jcs } from '@quietvote/crypto';
 import { makeCast } from '@quietvote/protocol';
 import { World, kp } from './helpers/world.ts';
@@ -25,6 +25,33 @@ after(async () => {
 });
 
 const code = (r: { json: any }): string => r.json?.code;
+
+test('zero-witness policy is disclosed in state and export; acknowledgement is currently derived', async () => {
+  assert.equal(w.manifest.bb.witness_quorum, 0);
+  assert.equal(Object.hasOwn(w.manifest.bb, 'none_acknowledged'), false);
+  const state = await w.get(`/api/v1/elections/${w.electionId}/state`);
+  assert.equal(state.status, 200, state.text);
+  assert.equal(state.json.phase, 'OPEN');
+  assert.equal(state.json.witnessed, false);
+  assert.deepEqual(state.json.witness_quorum, { required: 0, have: 0 });
+
+  const exported = await w.get(`/api/v1/elections/${w.electionId}/export.json?board=1`);
+  assert.equal(exported.status, 200, exported.text);
+  const parsed = bundleFromJson(exported.json.board);
+  assert.ok(parsed.ok, JSON.stringify(parsed));
+  if (!parsed.ok) return;
+  const policy = parsed.value.policy.witnessPolicy;
+  assert.equal(policy.quorum, 0);
+  assert.equal(policy.noneAcknowledged, true);
+
+  // Characterize the existing derived export flag, not an explicit signed acknowledgement.
+  // No author resolver is supplied, so this check makes no full-verification claim.
+  const checked = verifyLog(parsed.value);
+  assert.ok(checked.warnings.includes('NOT WITNESSED'));
+  assert.deepEqual(checked.witnessed, { have: 0, k: 0, latest: false });
+  const unacknowledged = verifyLog(parsed.value, { witnessPolicy: { ...policy, noneAcknowledged: false } });
+  assert.ok(unacknowledged.failures.some((f) => f.rule === 'QV_BOARD_GRAMMAR' && f.detail.includes('none_acknowledged')));
+});
 
 test('replayed signed management request is rejected; stale and tampered ones too', async () => {
   const nonce = w.rng.bytes(16);

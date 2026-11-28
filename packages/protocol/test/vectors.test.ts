@@ -14,6 +14,7 @@ import {
   validateManifest, verifyElection, verifyEnvelope, verifySpoilReveal, auditSpoil, type ElectionParams, type Manifest,
 } from '../src/index.ts';
 import { dkgInputFromVector, generateAll } from './vecgen/generate.ts';
+import { assertVectorFormats, assertVectorManifest, parseVectorCorpus } from './helpers/vector-hygiene.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'test-vectors');
 const H = bytesToHex;
@@ -41,12 +42,12 @@ test('cds01 vector preimage is 383 bytes (QV-16 Appendix A.4)', () => {
   assert.equal(v.expect.output.preimage_hex.length, 383 * 2);
 });
 
-test('vector files are well-formed: envelope, unique ids, size limits, lowercase hex, no floats', () => {
-  for (const f of walk(join(ROOT, 'v1')).filter((x) => x.endsWith('.json'))) {
-    const text = readFileSync(f, 'utf8');
-    assert.ok(text.length < 1_000_000, `${f} exceeds 1 MB`);
-    assert.ok(!text.includes('\r'));
-    const j = JSON.parse(text) as { vectors?: { id: string }[]; format_version?: number };
+const corpusFiles = (): Map<string, Uint8Array> => new Map(walk(ROOT).map((file) => [relative(ROOT, file).replaceAll('\\', '/'), readFileSync(file)]));
+
+test('vector hygiene: UTF-8/LF, actual byte limits, integer JSON, lowercase hex and UTC timestamps', () => {
+  for (const [f, value] of parseVectorCorpus(corpusFiles())) {
+    assertVectorFormats(value, f);
+    const j = value as { vectors?: { id: string }[]; format_version?: number };
     if (j.vectors !== undefined) {
       assert.equal(j.format_version, 1);
       const ids = j.vectors.map((v) => v.id);
@@ -249,12 +250,7 @@ test('vectors: every mutant fails exactly its named checks; none passes all chec
   assert.equal(r.checks['chk.tally.aggregate'], 'fail');
 });
 
-test('MANIFEST.json lists every vector file with matching SHA-256', () => {
-  const m = JSON.parse(readFileSync(join(ROOT, 'MANIFEST.json'), 'utf8')) as { files: { path: string; sha256: string }[] };
-  for (const e of m.files) assert.equal(H(sha256(readFileSync(join(ROOT, e.path)))), e.sha256, e.path);
-  const listed = new Set(m.files.map((e) => e.path));
-  for (const f of walk(ROOT)) {
-    const rel = relative(ROOT, f).replaceAll('\\', '/');
-    if (rel !== 'MANIFEST.json') assert.ok(listed.has(rel), `${rel} not in MANIFEST`);
-  }
+test('MANIFEST.json binds exactly one canonical path and SHA-256 per corpus file', () => {
+  const files = corpusFiles();
+  assertVectorManifest(files, parseVectorCorpus(files).get('MANIFEST.json'));
 });

@@ -1,15 +1,24 @@
 # Final verification receipt
 
 Status: **local implementation evidence and review scopes recorded below**.
-The latest continuation receipt is [R28](CONTINUATION_R28_20261127.md), on
-[`codex/quietvote-atomic-flows-20261127`](https://github.com/djshellshoxxx/quietvote/tree/codex/quietvote-atomic-flows-20261127),
-stacked on [PR #78](https://github.com/djshellshoxxx/quietvote/pull/78).
+The latest continuation receipt is [R29](CONTINUATION_R29_20261127.md), on
+[`codex/quietvote-board-verifier-20261127`](https://github.com/djshellshoxxx/quietvote/tree/codex/quietvote-board-verifier-20261127),
+stacked on [PR #79](https://github.com/djshellshoxxx/quietvote/pull/79).
 Exact local/remote tree binding and source-specific hosted results are recorded
 in each continuation's draft PR. [PR #71](https://github.com/djshellshoxxx/quietvote/pull/71)
 is the consolidated ancestor, not a receipt for later increments.
 Each table below is a source-bound receipt. A pending native/hosted gate at a
 historical checkpoint is not a claim about a later completed run, and an older
 pass is not assigned to later source. Formal promotion gates remain separate.
+
+R29's complete local suites pass 84 board, 116 crypto, 439 protocol and 65
+verifier cases with zero skips. The complete server run passes 659 cases with
+one existing Windows-only skip and zero failures. Root and explicit-entrypoint
+TypeScript checks pass. Node 22 independently passes the 23 scheduler/gossip
+and thirteen vector-hygiene cases. Fifty shared web/CLI consumer cases and all
+29 checks in the production verifier browser journey pass; the production build
+passes the unchanged budgets. The receipt retains new Windows failures observed on older PR heads;
+neither queued hosted work nor the concurrency adjustment is a native pass.
 
 R28's complete local server suite passes 646 tests with one existing platform
 skip. Its full web suite passes 527/527 before the later Experimental disclosure

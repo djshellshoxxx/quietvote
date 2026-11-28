@@ -260,6 +260,8 @@ test('election-export retains actual server downloads and reports the derived-re
       const command = [...args(w.base, out, w.electionId, format), ...pin,
         ...(format === 'json' ? ['--extra-author-key', serverKey] : [])];
       const result = await qv(command);
+      assert.equal(result.code, 1, result.err + result.out);
+      assert.ok(existsSync(out), `download was not retained: ${result.err}${result.out}`);
       const r = checked(result, 1, out, readFileSync(out));
       // The current protocol deliberately treats these board-only derived records as unknown.
       // Independent author pinning fixes the header binding, not that reader-contract gap.
