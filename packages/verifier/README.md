@@ -26,3 +26,49 @@ A pin allows matching supplemental author signatures to be checked; it does not
 grant coordinator, trustee, voter, or control authority and does not replace
 witness evidence. `verifyWithSelfTest` accepts the same keys as its trusted caller
 option `extraAuthorKeys`.
+
+## Offline archive input
+
+Both entry points accept the existing uncompressed reference-server `.qvb`
+container, as well as election-bundle JSON:
+
+```sh
+qv-verify election.qvb --manifest-hash INDEPENDENT_MANIFEST_HASH --json
+qv verify election.qvb --manifest-hash INDEPENDENT_MANIFEST_HASH --json
+```
+
+The loader uses the shared board tar/checksum reader without extracting files or
+contacting a server. It binds `election.json` to the manifest and entry bodies in
+`log/entries.jsonl`, then verifies **every present board body**, including derived records
+omitted from the server's convenience `election.json`. Its comparison target is
+the JSON election bundle containing all board records and the full `board`
+export. Existing cryptographic checks, self-test, verdicts, exit codes and caller
+trust options apply unchanged. Checksums alone do not authenticate an election.
+Embedded server, organizer and witness keys do not become independently trusted
+caller keys; supplemental authors still need the existing explicit pin option.
+
+Archive parsing is limited to 64 MiB, 10,000 entries, 10,032 files, and 64 KiB per
+descriptor (`bundle.json`, witness policy and redaction list). The current reader
+requires the reference-server `election.json` member. It does not decompress
+`.tar.zst`. Other checksummed members, including receipt and
+OpenTimestamps attachments, optional signatures and convenience copies, are
+**unassessed**: they do not become receipt claims, trusted keys or verified
+anchors. Receipts supplied through the existing verifier caller options retain
+their existing checks.
+
+Redacted `body_b64u: null` fields are accepted only at the outer board entry body
+position in JSONL or election JSON. Every row, retained header and redaction
+record remains in board evidence. Signed protocol bodies still use strict QV-JSON
+and reject null. A missing manifest body is bound to the supplied convenience
+manifest using the retained header's length and digest; this structural comparison
+does not replace signature verification or the independent manifest pin.
+
+Existing partial-verification rules apply unchanged. Redactions degrade board
+integrity to `PARTIAL` when the remaining board checks succeed, and V4 cannot
+pass. Missing protocol records or other failed checks may still make the overall
+verdict `FAIL`; a missing manifest body alone can yield `INCOMPLETE`. Content-only
+mode cannot promote supplied partial board evidence to `PASS`. The archive and
+equivalent full-board JSON produce the same assessment. Ordinary final server
+exports retain their existing derived-record encoding failures and authority
+limitations, so this is not a claim of full `.qvb` compatibility. See the
+[redacted-container report](../../docs/reports/verifier-redacted-container-20261127.md).

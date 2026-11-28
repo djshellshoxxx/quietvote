@@ -42,6 +42,41 @@ class TestAuditRegressions(unittest.TestCase):
         self.assertTrue(ed25519.valid_public_key(pk))
         self.assertTrue(ed25519.verify(pk, b'control', ed25519.sign(sk, b'control')))
 
+    def test_R_policy_rejects_identity_even_when_signature_equation_holds(self):
+        # QV-16 section 5.12.2 / QV-ADR-018: existing strict policy, synthetic key.
+        a = 17
+        A = BASE.mul(a)
+        pk = ed_encode(A)
+        msg = b'synthetic identity R policy control'
+        self.assertTrue(ed25519.valid_public_key(pk))
+        rb = ed_encode(IDENTITY)
+        k = int.from_bytes(hashlib.sha512(rb + pk + msg).digest(), 'little') % L
+        s = k * a % L
+        self.assertTrue(BASE.mul(s).edwards_equal(IDENTITY + A.mul(k)))
+        self.assertFalse(ed25519.verify(pk, msg, rb + s.to_bytes(32, 'little')),
+                         'the equation alone must not admit a small-order R')
+        r = 29
+        good_rb = ed_encode(BASE.mul(r))
+        good_k = int.from_bytes(hashlib.sha512(good_rb + pk + msg).digest(), 'little') % L
+        good_sig = good_rb + ((r + good_k * a) % L).to_bytes(32, 'little')
+        self.assertTrue(ed25519.verify(pk, msg, good_sig))
+
+    def test_R_policy_rejects_noncanonical_identity_encodings(self):
+        a = 17
+        A = BASE.mul(a)
+        pk = ed_encode(A)
+        msg = b'synthetic noncanonical R policy control'
+        # Both alias the identity under a permissive decoder. Recompute the
+        # challenge for each encoding instead of reusing a different R's S.
+        for label, rb in (
+                ('y equals p plus one', (P + 1).to_bytes(32, 'little')),
+                ('x zero with sign bit', ((1 << 255) | 1).to_bytes(32, 'little'))):
+            with self.subTest(encoding=label):
+                k = int.from_bytes(hashlib.sha512(rb + pk + msg).digest(), 'little') % L
+                s = k * a % L
+                self.assertTrue(BASE.mul(s).edwards_equal(IDENTITY + A.mul(k)))
+                self.assertFalse(ed25519.verify(pk, msg, rb + s.to_bytes(32, 'little')))
+
     def test_CP01_rewrapped_published_spoil_is_alarmed(self):
         report = verify_bundle(bundle('K-CP01-rewrap-reveal'))
         self.assertEqual(report['checks']['chk.benaloh.spoiled'], 'fail')

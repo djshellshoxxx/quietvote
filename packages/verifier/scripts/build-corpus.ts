@@ -1,8 +1,9 @@
-// Regenerates canary/corpus.json from test-vectors/v1 (control election, canary election, mutation corpus).
+// Regenerates canary/corpus.json from immutable test-vectors/v1 inputs, including derived board mutants.
 // Usage: node packages/verifier/scripts/build-corpus.ts [--check]   (--check: exit 1 if the checked-in file differs)
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { boardCanaries } from './board-canaries.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const tv = join(here, '..', '..', '..', 'test-vectors', 'v1');
@@ -20,6 +21,7 @@ export function buildCorpus(): string {
     const m = rd(join(tv, 'mutations', f));
     canaries.push({ id: m.id, source: `mutations/${f}`, expect: m.expect, bundle: m.bundle });
   }
+  canaries.push(...boardCanaries());
   return JSON.stringify({ format: 'qv-canary-corpus/v1', protocol_version: 'qv1', control: { id: 'tiny-yesno-3v', expect: { verdict: 'PASS' }, bundle: control }, canaries }) + '\n';
 }
 

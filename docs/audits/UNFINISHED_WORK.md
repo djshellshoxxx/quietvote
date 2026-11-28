@@ -1,7 +1,7 @@
 # Unfinished work and explicit blockers
 
 This consolidation ledger includes the November 27, 2026 continuation through
-[R28](CONTINUATION_R28_20261127.md). Older audits remain historical evidence. An implemented library, passing
+[R29](CONTINUATION_R29_20261127.md). Older audits remain historical evidence. An implemented library, passing
 fixture or proposed contract is not counted as a complete user workflow.
 
 ## Recovered and repaired in this candidate
@@ -13,6 +13,9 @@ require their own source-specific hosted qualification.
 
 | Area | Current implementation | Evidence and limit |
 | --- | --- | --- |
+| Strict offline archive and redaction reading | The verifier consumes checksummed `.qvb` files with exact framing/bindings and retains nullable outer redaction evidence. Signed QV-JSON remains non-null. | [R29](CONTINUATION_R29_20261127.md): complete verifier 65/65; actual-server full JSON/archive parity before and after explicit redaction. Missing bodies remain incomplete. Derived final-server records, scheduled retention and cold redacted import remain separate. |
+| Board, vector and signature acceptance | Larger independent Merkle/serialized-append cases, exact frozen-vector hygiene, three board canaries, authenticated joint-key claims and strict Python R-policy cases are covered. | [R29](CONTINUATION_R29_20261127.md): board 84/84, crypto 116/116 and protocol 439/439. Existing verdict severities and all frozen vector bytes remain. This is bounded acceptance, not independent crypto assurance. |
+| Periodic full integrity audit | Six-hour single-flight jobs reuse full self-audit, quarantine and shutdown machinery; unavailable elections do not hide later results. | [R29](CONTINUATION_R29_20261127.md): complete server 659 passes/one platform skip, plus Node 22 scheduler/gossip 23/23. Hourly SQLite quick-check and unclean-start behavior remain separate. |
 | Atomic append completion and outbox | Migration 12 makes append-generated events and lifecycle projection part of the entry transaction, while retaining legacy intent recovery. Failed post-commit archive/registry completion retires the runtime before reuse or delivery. | [R28](CONTINUATION_R28_20261127.md) and [independent correction](../reports/outbox-postcommit-review-20261127.md). Complete server: 646 passes/one platform skip; no cross-database atomicity or native durability claim. |
 | Key operations and prescribed disclosure | Voter create/unlock/recovery work is single-flight, pending results respect navigation/clear, and organizer preview honors busy state. The exact Experimental wording appears in CLI version, server startup, UI and README. | [R28](CONTINUATION_R28_20261127.md): 527 web cases before the disclosure-copy edit; all 17 production browser journeys pass after it. KDF floors, signers and guarantee catalogs are retained. |
 | Repository evidence tooling | DCO/commit format, bounded current/history secret scanning, deterministic SBOM, security template validation, release dossier/notes and optional coverage reporting are implemented. Workspace options now precede test globs. | [R28](CONTINUATION_R28_20261127.md): 198 composed tooling/workflow cases; final scanner and coverage checks pass on Node 22/24. Historical DCO gaps, owner contacts, formal coverage gates, approvals and hosted qualification remain separate. |

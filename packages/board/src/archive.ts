@@ -15,7 +15,7 @@ export function readChecksummedArchive(buf: Uint8Array, limits: { maxFiles: numb
   const sumsRaw = files.get('SHA256SUMS');
   if (!sumsRaw) throw new ArchiveError('BUNDLE_FORMAT', 'SHA256SUMS is missing');
   let text: string;
-  try { text = new TextDecoder('utf-8', { fatal: true }).decode(sumsRaw); }
+  try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(sumsRaw); }
   catch { throw new ArchiveError('BUNDLE_FORMAT', 'SHA256SUMS is not UTF-8'); }
   if (!text || !text.endsWith('\n')) throw new ArchiveError('BUNDLE_FORMAT', 'SHA256SUMS must end with a newline');
   const sums = new Map<string, string>();

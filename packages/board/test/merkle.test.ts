@@ -5,6 +5,7 @@ import {
   MerkleTree, emptyRoot, hashChildren, hashLeaf, toHex, fromHex, utf8, verifyConsistency, verifyInclusion,
 } from '../src/index.ts';
 import { rng } from './helpers.ts';
+import { ReferenceMerkle, referenceLeafHash } from './reference-merkle.ts';
 
 // RFC 6962 / Certificate Transparency reference leaves and roots.
 const CT_LEAVES = ['', '00', '10', '2021', '3031', '40414243', '5051525354555657', '606162636465666768696a6b6c6d6e6f'].map(fromHex);
@@ -91,6 +92,65 @@ test('consistency proofs for all 0 <= m <= n <= 200 verify and equal naive', () 
       assert.ok(verifyConsistency(m, n, t.root(m), t.root(n), p), `verify ${m}->${n}`);
     }
   }
+});
+
+// @verifies QV-18-REQ-002 (docs/18-bulletin-board-transparency.md)
+const largeBoundaries = new Set([255, 256, 257, 511, 512, 513, 1023, 1024, 1025]);
+
+test('independent roots and inclusion paths through 1025 preserve every prefix and power-of-two boundary', (context) => {
+  const { leaves } = treeOf(1025), tree = new MerkleTree(), reference = new ReferenceMerkle(leaves);
+  const ct = new ReferenceMerkle(CT_LEAVES);
+  CT_ROOTS.forEach((root, i) => assert.equal(toHex(ct.root(i + 1)), root, `reference CT root ${i + 1}`));
+  assert.deepEqual(reference.root(0), emptyRoot());
+  for (let i = 0; i < leaves.length; i++) {
+    assert.equal(tree.appendLeaf(leaves[i]!), i);
+    assert.deepEqual(tree.root(), reference.root(i + 1), `root while growing ${i + 1}`);
+  }
+  let paths = 0;
+  for (let n = 1; n <= 1025; n++) {
+    assert.deepEqual(tree.root(n), reference.root(n), `historic root ${n}`);
+    if (n <= 200) continue; // Keep the existing small-tree exhaustive checks unchanged.
+    const split = 2 ** Math.floor(Math.log2(n - 1));
+    const indices = largeBoundaries.has(n) ? Array.from({ length: n }, (_, i) => i)
+      : [...new Set([0, 1, n >> 1, n - 2, n - 1, split - 1, split])];
+    for (const i of indices) {
+      const proof = tree.inclusionProof(i, n);
+      assert.deepEqual(proof, reference.inclusion(i, n), `reference inclusion ${i}/${n}`);
+      assert.ok(verifyInclusion(referenceLeafHash(leaves[i]!), i, n, proof, reference.root(n)), `verify inclusion ${i}/${n}`);
+      paths++;
+    }
+    if (largeBoundaries.has(n)) assert.deepEqual(reference.root(n), naiveMth(leaves.slice(0, n)), `uncached reference root ${n}`);
+  }
+  for (const i of [0, 512, 1024]) {
+    assert.deepEqual(reference.inclusion(i, 1025), naivePath(i, leaves), `uncached reference inclusion ${i}/1025`);
+    const corrupt = tree.inclusionProof(i, 1025);
+    corrupt[0]![0]! ^= 1;
+    assert.equal(verifyInclusion(referenceLeafHash(leaves[i]!), i, 1025, corrupt, reference.root()), false);
+  }
+  context.diagnostic(`1025 growing and historic roots; ${paths} larger-prefix inclusion paths; all indices at nine power-of-two boundary prefixes`);
+});
+
+test('independent consistency paths through 1025 include empty/equal trees and all old sizes at boundary prefixes', (context) => {
+  const { t: tree, leaves } = treeOf(1025), reference = new ReferenceMerkle(leaves);
+  let paths = 0;
+  for (let n = 201; n <= 1025; n++) {
+    const split = 2 ** Math.floor(Math.log2(n - 1));
+    const oldSizes = largeBoundaries.has(n) ? Array.from({ length: n + 1 }, (_, m) => m)
+      : [...new Set([0, 1, n >> 1, n - 1, n, split - 1, split, split + 1])].filter((m) => m <= n);
+    for (const m of oldSizes) {
+      const proof = tree.consistencyProof(m, n);
+      assert.deepEqual(proof, reference.consistency(m, n), `reference consistency ${m}->${n}`);
+      assert.ok(verifyConsistency(m, n, reference.root(m), reference.root(n), proof), `verify consistency ${m}->${n}`);
+      paths++;
+    }
+  }
+  for (const m of [1, 511, 512, 513, 1023, 1024]) {
+    assert.deepEqual(reference.consistency(m, 1025), naiveSub(m, leaves, true), `uncached reference consistency ${m}->1025`);
+    const corrupt = tree.consistencyProof(m, 1025);
+    corrupt[0]![0]! ^= 1;
+    assert.equal(verifyConsistency(m, 1025, reference.root(m), reference.root(), corrupt), false);
+  }
+  context.diagnostic(`${paths} larger-prefix consistency pairs; all 0<=m<=n at nine power-of-two boundary prefixes`);
 });
 
 test('randomized: any single-bit corruption of a proof is rejected', () => {

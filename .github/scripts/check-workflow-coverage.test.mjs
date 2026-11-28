@@ -81,13 +81,13 @@ test('every CI dependency restore explicitly installs verified vendor bytes befo
   }
 });
 
-test('Windows Node 24 native-file suites cap test-file fan-out but retain all shard tests', () => {
+test('Windows Node 22 and 24 native-file suites cap test-file fan-out but retain all shard tests', () => {
   const source = readFileSync(new URL('../workflows/ci.yml', import.meta.url), 'utf8');
   const testJob = source.split(/^  test:\n/m)[1]?.split(/^  [a-z][a-z0-9_-]*:\n/m)[0];
   assert.ok(testJob, 'review changed test-job layout');
   for (const exact of [
     'for w in ${{ matrix.shard.ws }}; do',
-    'if [[ "${{ matrix.os }}" == "windows-2025" && "${{ matrix.node }}" == "24" && ( "$w" == "cli" || "$w" == "server" ) ]]; then',
+    'if [[ "${{ matrix.os }}" == "windows-2025" && ( "$w" == "cli" || "$w" == "server" ) ]]; then',
     'args=(-- --test-concurrency=2)',
     'npm test -w "@quietvote/$w" "${args[@]}" || { rc=1; echo "::error::@quietvote/$w tests failed"; }',
     'exit $rc',

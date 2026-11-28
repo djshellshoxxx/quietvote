@@ -1,4 +1,4 @@
-// Content-only conformance harness: explicit caller opt-out preserves the corpus scope.
+// Legacy content-only cases retain their scope; board-backed cases also compare their named board failures.
 // Built-in known-bad corpus and self-test (QV-34 section 9.4, QV-10-REQ-014, QV-ADR-P34-3).
 // A verifier that accepts any canary, or rejects the known-good control, is broken and must say so.
 import { readFileSync } from 'node:fs';
@@ -59,8 +59,8 @@ export function syntheticCanaries(control: unknown): { id: string; input: string
   return out;
 }
 
-const failedChecks = (r: VerifierReport): string[] =>
-  Object.entries(r.chk).filter(([k, s]) => s === 'fail' && !k.startsWith('chk.board.')).map(([k]) => k).sort();
+const failedChecks = (r: VerifierReport, includeBoard: boolean): string[] =>
+  Object.entries(r.chk).filter(([k, s]) => s === 'fail' && (includeBoard || !k.startsWith('chk.board.'))).map(([k]) => k).sort();
 
 export interface SelfTestCase {
   id: string;
@@ -81,11 +81,12 @@ export async function runSelfTest(corpus: Corpus = loadCorpus()): Promise<SelfTe
   cases.push({ id: corpus.control.id, kind: 'control', ok: ctlOk, verdict: ctl.verdict, detail: ctlOk ? 'known-good election accepted' : 'known-good election NOT accepted: verifier rejects valid input' });
   for (const k of corpus.canaries) {
     const r = await verifyBundle(k.bundle as object, { allowNoLog: true });
+    const includeBoard = typeof k.bundle === 'object' && k.bundle !== null && Object.hasOwn(k.bundle, 'board');
+    const got = failedChecks(r, includeBoard);
     // QV-34 section 9.3: a mutant is rejected if the verdict is not PASS or at least one named check fails (ignored-ballot
     // and alarm classes legitimately keep the verdict PASS, protocol NOTES X-10/X-11).
-    const rejectedOk = r.verdict !== 'PASS' || failedChecks(r).length > 0;
+    const rejectedOk = r.verdict !== 'PASS' || got.length > 0;
     const want = [...(k.expect.failed_checks ?? [])].sort();
-    const got = failedChecks(r);
     const exact = want.length === 0 || (want.length === got.length && want.every((x, i) => x === got[i]));
     const codesOk = (k.expect.codes ?? []).every((c) => r.findings.some((f) => f.code === c));
     const verdictOk = k.expect.verdict === undefined || r.verdict === k.expect.verdict;
