@@ -26,6 +26,8 @@ export interface RateConfig {
 
 export interface ServerOptions {
   dataDir: string;
+  /** One-time operator choice to permit backed-up schema upgrades while an election is OPEN. */
+  forceMigrateOpen?: boolean;
   /** Audience bound into signed requests, e.g. "https://vote.example". */
   publicUrl?: string;
   host?: string;
@@ -200,8 +202,10 @@ export function resolveConfig(o: ServerOptions): ServerConfig {
       throw new Error(`config gossipPeers: ${e instanceof TargetRejected ? `${e.code}: ${e.message}` : 'invalid url'}`);
     }
   }
+  if (o.forceMigrateOpen !== undefined && typeof o.forceMigrateOpen !== 'boolean') throw new Error('config forceMigrateOpen must be boolean');
   return {
     dataDir: o.dataDir,
+    forceMigrateOpen: o.forceMigrateOpen ?? false,
     publicUrl: o.publicUrl ?? 'http://localhost',
     host: o.host ?? '127.0.0.1',
     port: o.port ?? 0,

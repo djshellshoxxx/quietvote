@@ -6,7 +6,7 @@
 set -u
 export QV_REQUIRE_BROWSER=1
 rc=0
-for journey in run help a11y verifier spoil-shares server registration device-settings split-origin manifest-warnings result-disclosures display-time; do
+for journey in run help a11y a11y-election verifier spoil-shares server registration device-settings vote-methods split-origin manifest-warnings result-disclosures display-time receipt-standing live-server; do
   echo "::group::Browser journey: $journey"
   node "packages/web/e2e/$journey.ts" || {
     rc=1

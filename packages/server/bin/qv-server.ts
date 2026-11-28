@@ -2,19 +2,21 @@
 import type { QuietVoteServer } from '../src/app.ts';
 import { readLauncherConfig } from '../src/launcher-config.ts';
 
-const USAGE = 'Usage: qv-server --config FILE [--check-config]\n       qv-server --help\n';
+const USAGE = 'Usage: qv-server --config FILE [--check-config] [--force-migrate-open]\n       qv-server --help\n';
 const args = process.argv.slice(2);
-function parse(): { path: string; check: boolean } | undefined {
+function parse(): { path: string; check: boolean; forceMigrateOpen: boolean } | undefined {
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(USAGE); return undefined; }
   let path: string | undefined;
   let check = false;
+  let forceMigrateOpen = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--config' && path === undefined && args[i + 1] && !args[i + 1]!.startsWith('-')) path = args[++i];
     else if (args[i] === '--check-config' && !check) check = true;
+    else if (args[i] === '--force-migrate-open' && !forceMigrateOpen) forceMigrateOpen = true;
     else throw new Error('invalid arguments');
   }
   if (!path) throw new Error('--config is required');
-  return { path, check };
+  return { path, check, forceMigrateOpen };
 }
 let server: QuietVoteServer | undefined;
 let launching = false;
@@ -30,6 +32,7 @@ try {
   const parsed = parse();
   if (parsed) {
     const options = readLauncherConfig(parsed.path);
+    options.forceMigrateOpen = parsed.forceMigrateOpen;
     if (parsed.check) process.stdout.write('configuration valid\n');
     else {
       launching = true;

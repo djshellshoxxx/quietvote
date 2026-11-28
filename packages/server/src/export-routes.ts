@@ -74,22 +74,22 @@ export function registerPublicExportRoutes(d: ExtDeps): void {
       const hex = fStr({ min: 64, max: 64, re: /^[0-9a-f]{64}$/ });
       const b = c.parse(fObj({ tree_size: req(fInt(1, Number.MAX_SAFE_INTEGER)), root_hash: req(hex), sha256: req(hex) }));
       return d.idem(c, c.auth!.keyId, async (save, journal) => {
-        const reply = await locked(rt, () => rt.edb.tx(() => {
-          const row = publicExportOf(rt.edb, c.params['export']!);
+        const reply = await locked(rt, () => rt.maintain('export', (db) => db.tx(() => {
+          const row = publicExportOf(db, c.params['export']!);
           requireExportBinding(row, b);
-          checkedPublicExport(rt.edb, row);
+          checkedPublicExport(db, row);
           if (env.nowMs() < row.created_at) throw conflict('the server clock is before this export; retry when its creation time has elapsed');
-          if (action === 'acknowledge') rt.edb.acknowledgePublicExport(row.export_id, env.nowMs());
+          if (action === 'acknowledge') db.acknowledgePublicExport(row.export_id, env.nowMs());
           else {
             if (rt.logState !== 'ARCHIVED' || rt.log.size !== row.tree_size || toHex(rt.log.root()) !== toHex(row.root_hash)) {
               throw conflict('a deletion notice must identify an ARCHIVED election\'s final public export');
             }
-            rt.edb.noticePublicExport(row.export_id, env.nowMs());
+            db.noticePublicExport(row.export_id, env.nowMs());
           }
-          const reply = { status: 200, json: publicExportView(rt.id, publicExportOf(rt.edb, row.export_id)) };
-          journal(rt.edb, reply, { action: action === 'acknowledge' ? 'export.acknowledge' : 'export.notice', detail: { export_id: row.export_id, tree_size: row.tree_size } });
+          const reply = { status: 200, json: publicExportView(rt.id, publicExportOf(db, row.export_id)) };
+          journal(db, reply, { action: action === 'acknowledge' ? 'export.acknowledge' : 'export.notice', detail: { export_id: row.export_id, tree_size: row.tree_size } });
           return reply;
-        }));
+        })));
         env.control.tx(() => {
           env.control.audit(c.auth!.keyId, action === 'acknowledge' ? 'export.acknowledge' : 'export.notice', rt.id, { export_id: c.params['export']!, tree_size: b.tree_size });
           save(reply);

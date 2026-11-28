@@ -24,7 +24,7 @@ let unavailableEventResponses = 0;
 const server = createServer(async (rq, rs) => {
   const url = new URL(rq.url ?? '/', 'http://x');
   if (url.pathname.startsWith('/api/')) {
-    const r = await board.fetch(url.pathname + url.search, { method: rq.method ?? 'GET', headers: rq.headers as Record<string, string>, body: await new Promise<string | undefined>((res) => { const c: Buffer[] = []; rq.on('data', (d: Buffer) => c.push(d)); rq.on('end', () => res(c.length ? Buffer.concat(c).toString() : undefined)); }) }).catch(() => new Response('{}', { status: 502 }));
+    const r = await board.fetch(url.pathname + url.search, { method: rq.method ?? 'GET', headers: rq.headers as Record<string, string>, body: await new Promise<string | null>((res) => { const c: Buffer[] = []; rq.on('data', (d: Buffer) => c.push(d)); rq.on('end', () => res(c.length ? Buffer.concat(c).toString() : null)); }) }).catch(() => new Response('{}', { status: 502 }));
     if (url.pathname.endsWith('/events') && r.status === 404) unavailableEventResponses++;
     rs.writeHead(r.status, { 'Content-Type': r.headers.get('Content-Type') ?? 'application/json' });
     rs.end(Buffer.from(await r.arrayBuffer()));

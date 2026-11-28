@@ -14,8 +14,10 @@ async function ceremony(o: Options, opts?: Parameters<Ceremony['runDkg']>[0]) {
   return { c, outcome };
 }
 
-test('honest 3-of-5: every device derives the same key, fingerprint, share key; R1 survivors equal the adjudicator', async () => {
-  const { c, outcome } = await ceremony({ n: 5, t: 3, seed: 'honest' });
+test('honest 3-of-5: every device derives the same key, fingerprint, share key; R1 survivors equal the adjudicator', async context => {
+  const { c, outcome } = await ceremony({ n: 5, t: 3, seed: 'honest',
+    nativeKeygen: { phase: 'ceremony-honest-keygen', diagnostic: message => context.diagnostic(message) },
+  });
   try {
     assert.deepEqual(outcome.Q, [1, 2, 3, 4, 5]);
     const fps = new Set<string>();
@@ -41,8 +43,8 @@ test('honest 3-of-5: every device derives the same key, fingerprint, share key; 
   }
 });
 
-const scenarios: { name: string; o: Partial<Options>; Q: number[]; honestState?: Record<number, string> }[] = [
-  { name: 'bad share 2 -> 4 (dealer disqualified after the honest complaint)', o: { malicious: { 2: { badShareTo: [4] } } }, Q: [1, 3, 4, 5] },
+const scenarios: { name: string; o: Partial<Options>; Q: number[]; honestState?: Record<number, string>; nativeKeygenPhase?: 'ceremony-bad-share-keygen' }[] = [
+  { name: 'bad share 2 -> 4 (dealer disqualified after the honest complaint)', o: { malicious: { 2: { badShareTo: [4] } } }, Q: [1, 3, 4, 5], nativeKeygenPhase: 'ceremony-bad-share-keygen' },
   { name: 'equivocating commitment (two different commits)', o: { malicious: { 3: { equivocateCommit: true } } }, Q: [1, 2, 4, 5] },
   { name: 'commitment that does not match the later dealing', o: { malicious: { 5: { commitMismatch: true } } }, Q: [1, 2, 3, 4] },
   { name: 'absent trustee', o: { malicious: { 4: { absent: true } } }, Q: [1, 2, 3, 5] },
@@ -51,8 +53,12 @@ const scenarios: { name: string; o: Partial<Options>; Q: number[]; honestState?:
   { name: 'two malicious at once (t = 3 of 5 still completes)', o: { malicious: { 2: { badShareTo: [3] }, 5: { absent: true } } }, Q: [1, 3, 4] },
 ];
 for (const sc of scenarios) {
-  test(`malicious DKG: ${sc.name}`, async () => {
-    const { c, outcome } = await ceremony({ n: 5, t: 3, seed: `m-${sc.name}`, ...sc.o });
+  test(`malicious DKG: ${sc.name}`, async context => {
+    const { c, outcome } = await ceremony({ n: 5, t: 3, seed: `m-${sc.name}`, ...sc.o,
+      ...(sc.nativeKeygenPhase === undefined ? {} : {
+        nativeKeygen: { phase: sc.nativeKeygenPhase, diagnostic: (message: string) => context.diagnostic(message) },
+      }),
+    });
     try {
       assert.deepEqual(outcome.Q, sc.Q);
       for (const i of c.honest()) {

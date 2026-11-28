@@ -14,6 +14,7 @@ import {
 import { computeR1, takeDkg, markerSeq } from '../../src/ceremonylog.ts';
 import { Trustee, LOG_FORMAT, type Packet } from '../../src/trustee.ts';
 import type { VaultDeps } from '../../src/bundle.ts';
+import { observeNativeFixture, type NativeFixtureObservation } from './native-fixture-observation.ts';
 
 const H = bytesToHex;
 export const PASS = 'test-passphrase-for-trustee';
@@ -45,6 +46,8 @@ export interface Options {
   minCounted?: number;
   /** manifest.spoil_trustee_decrypt (QV-ADR-020) */
   spoilDecrypt?: boolean;
+  /** Windows timing only, around the first honest keygen; never changes its outcome. */
+  nativeKeygen?: NativeFixtureObservation;
 }
 
 export const BOARD_CREATED_AT = 1_793_000_000;
@@ -112,6 +115,7 @@ export class Ceremony {
   /** keygen for every honest slot, then the manifest listing all keys, then join. */
   async setup(): Promise<void> {
     const { n, seed } = this.o;
+    let observation = this.o.nativeKeygen;
     for (let i = 1; i <= n; i++) {
       if (this.o.malicious?.[i] !== undefined) {
         this.signKeys.push(kp(seed, `mal${i}`));
@@ -122,7 +126,12 @@ export class Ceremony {
       this.deps.set(i, deps);
       const p = join(this.dir, `t${i}.qvtb`);
       this.paths.set(i, p);
-      const t = await Trustee.keygen(p, PASS, deps);
+      const firstKeygen = observation;
+      observation = undefined;
+      const keygen = () => Trustee.keygen(p, PASS, deps);
+      const t = await (process.platform === 'win32' && firstKeygen
+        ? observeNativeFixture(firstKeygen, keygen)
+        : keygen());
       this.signKeys.push({ secretKey: new Uint8Array(0), publicKey: hexToBytes(t.signPk, 32) });
       this.trusteeKeys.set(i, { secretKey: hexToBytes(t.data.sk_sign, 32), publicKey: hexToBytes(t.signPk, 32) });
     }

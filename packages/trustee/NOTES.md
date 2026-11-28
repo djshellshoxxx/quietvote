@@ -2,6 +2,23 @@
 
 Implements QV-17 (normative) on top of QV-16 DKG/threshold decryption as built in `packages/protocol`; ADR-014..024 win over specs.
 
+## Native Windows fixture timing observations (2026-11-27)
+
+Six fixtures in `audit.test.ts`, `board-export.test.ts` and `ceremony.test.ts`
+observe their first honest trustee keygen on Windows. Test diagnostics contain
+only a fixed fixture label, elapsed milliseconds, heartbeat count and largest
+callback gap; no paths, seeds, passphrases, payloads or exception text are read
+by the observer. The heartbeat stops on success or failure, and unavailable
+diagnostic output preserves the original result or error.
+
+This collects evidence for the six native Node 22 service-startup timeouts
+observed in PR75; it does not repair or establish their cause. The interval
+covers the whole first keygen, so it cannot identify PowerShell startup or
+`Add-Type` timing. Production helper code, its 15-second deadline, retry policy,
+file-protection checks and CI concurrency are unchanged. Native observations
+must come from the Windows matrix; Linux checks only qualify the wrapper and
+existing fixture behavior.
+
 ## Terminal passphrase prompts (2026-11-27)
 
 The executable refuses hidden input without a TTY (`NO_TTY`, exit 2). EOF, closed

@@ -9,8 +9,8 @@ import { ctEq } from './util.ts';
 import { utf8 } from '@quietvote/crypto';
 import type { AuthInfo } from './auth.ts';
 import type { Ctx } from './http.ts';
-import type { ElectionRuntime } from './election.ts';
-import type { ElectionDb } from './electiondb.ts';
+import { SERVER_VERSION, type ElectionRuntime } from './election.ts';
+import { ElectionDb } from './electiondb.ts';
 import type { Env } from './env.ts';
 import { JobError, type JobCtl, type JobOutcome } from './jobs.ts';
 import type { ElectionPool } from './pool.ts';
@@ -75,13 +75,13 @@ async function sha256File(path: string): Promise<string> {
 }
 
 /** Consistent online snapshot of control.sqlite and the election databases (node:sqlite `backup`, QV-28 §12). Never contains the KEK. */
-export async function backupWork(env: Env, pool: ElectionPool, jobId: string, scope: 'all' | 'election', electionId: string | undefined, ctl: JobCtl): Promise<JobOutcome> {
+export async function backupWork(env: Env, pool: ElectionPool, jobId: string, scope: 'all' | 'election', electionId: string | undefined, ctl: JobCtl, copy = backup): Promise<JobOutcome> {
   const dir = join(env.cfg.dataDir, 'backups', jobId);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const files: { name: string; bytes: number; sha256: string }[] = [];
   const done = async (db: DatabaseSync, name: string): Promise<void> => {
     const dest = join(dir, name);
-    await backup(db, dest);
+    await copy(db, dest);
     chmodSync(dest, 0o600);
     // the copy must open and pass a structural check before it is reported
     const t = new DatabaseSync(dest);
@@ -116,9 +116,13 @@ export async function backupWork(env: Env, pool: ElectionPool, jobId: string, sc
       const rt = await pool.get(id);
       if (!rt) throw new JobError('BACKUP_CHANGED', 'an election in the control snapshot is no longer available; retry the backup');
       rt.inUse++;
+      let source: ElectionDb | undefined;
       try {
-        await done(rt.edb.db, `elections/${id}.sqlite`.replace('/', '-'));
+        // backup() borrows its native handle across awaits; archive retirement must not close it.
+        source = new ElectionDb(rt.edb.path, SERVER_VERSION, { readOnly: true });
+        await done(source.db, `elections/${id}.sqlite`.replace('/', '-'));
       } finally {
+        source?.close();
         rt.inUse--;
       }
       ctl.progress(++i / Math.max(1, targets.length));
@@ -286,7 +290,7 @@ export async function clearQuarantine(env: Env, pool: ElectionPool, id: string, 
   }
   const result = { election_id: id, quarantined: false, incident, verified_against: [...names].map((n) => `witness:${n}`) };
   const detail = { incident, witnesses: [...names].join(',') };
-  rt.clearForcedQuarantine(() => committed?.(rt.edb, result, detail));
+  rt.clearForcedQuarantine((db) => committed?.(db, result, detail));
   if (!committed) env.control.audit(actor, 'quarantine.clear', id, detail);
   return result;
 }

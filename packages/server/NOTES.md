@@ -2,6 +2,31 @@
 
 Runtime uses node:http, node:sqlite and node:crypto plus the declared workspace crypto/board/protocol packages.
 
+## Explicit terminal-archive schema upgrades (2026-11-27)
+
+`qv-migrate-archive` implements QV-28 §13's explicit `VACUUM INTO` upgrade path;
+`qv migrate-archive` delegates to that installed server binary. Stable terminal
+read handles remain current-schema/read-only and never silently migrate an old
+archive. The command uses the existing directory lock, retained native SQLite
+backup, unchanged migration catalog and invariant checks, plus exact old-column
+preservation for non-board tables, receipts, erased fields and sequence floors.
+Its publication boundary reports uncertainty for any failed replacement attempt
+or post-rename directory sync. Default text and JSON errors name a completed
+retained backup while withholding arbitrary exception text.
+
+Control storage is inspected read-only and checked against its declared historical
+schema. Existing independent anchors, recovery intents, floors and registry rows
+are never changed. Older matching anchor prefixes remain older; historical
+absence remains absence and cannot become new trust. The report explicitly says
+`storage_preservation`, not a full signature/freshness/finality verdict. Pre-v9
+registration rows receive the already-shipped `legacy-raw-v1` default; the command
+does not reinterpret them as modern invitation credentials. No SQL bytes,
+protocol encoding, public authority or acceptance rule changes.
+
+See [the command and recovery guide](README.md#explicit-archive-schema-migration)
+and [source-bound evidence](../../docs/reports/archive-migration-20261127.md) for
+historical-schema, committed-WAL, refusal, interruption and native-platform limits.
+
 ## Instance administration and organization authority (QV-12-REQ-003)
 
 Organization management now requires a key belonging to that organization.
@@ -665,3 +690,134 @@ all possible encodings, memory/core dumps, backups, traffic inference or forensi
 erasure. It does not establish export verification/finality, change token width,
 retention policy or protocol rules, or resolve the derived-record/server-author
 verification contract. See the [scope and source evidence](../../docs/reports/privacy-marker-coverage-20261127.md).
+
+## Bounded server egress coverage — 2026-11-27
+
+`test/egress.test.ts` runs the actual server in a worker with network guards
+installed before server imports, separating client HTTP traffic from server
+egress. A real 2-of-3 election through archive, JSON/QVB export, an empty-peer
+gossip run and shutdown makes no outbound attempts. Positive controls exercise
+module DNS and resolver instances, HTTP/HTTPS, TLS, TCP and fetch guards.
+
+The webhook case uses the actual system resolver and HTTPS transport with
+deterministic DNS answers and one narrowly mapped local TLS endpoint. It verifies
+the production transport's validated address pin before mapping, then checks real
+TLS/SNI and the delivery HMAC. Static/private target rejection, no redirect
+following and private rebinding are checked without contacting third parties.
+This is a bounded Node API regression test, not an OS network sandbox or coverage
+of unimplemented SMTP/witness polling. Real TLS requires OpenSSL; its case is
+explicitly skipped if the executable is absent. See the
+[egress coverage report](../../docs/reports/product-egress-20261127.md).
+
+## Lifecycle graph and HTTP-pair coverage — 2026-11-27
+
+`test/lifecycle-model.test.ts` checks an independent declared graph, all 266
+state/event and 494 state/type gate pairs, and 1,500 seeded event steps. Its real
+2-of-3 fixture retains cleanly stopped snapshots at signed transitions and uses
+same-election bodies that were actually admitted. Fifty distinct authenticated
+HTTP pairs across 15 reached phases return `WRONG_PHASE` without changing the
+checkpoint, stored body bytes, state, halt count or control counter.
+
+A real witness keeps CLOSED observable until its checkpoint is cosigned. The
+derived STALLED view starts strictly after `stalledMaxSec`; equality stays
+TALLYING, no entry is added, and real trustee shares/tally recover to AUDIT.
+ARCHIVED, INVALIDATED, CANCELLED and ABORTED refuse new packets while their exact
+existing packet retries retain the signed promise without appending. Keyless
+reloaded archives retain their separate `LOG_UNAVAILABLE` contract. No new
+CHALLENGED, extension or second-ceremony policy is introduced. Full scope:
+[lifecycle coverage report](../../docs/reports/product-lifecycle-20261127.md).
+
+## Pause/resume authority and halt-limit coverage — 2026-11-27
+
+`test/pause-resume.test.ts` drives real coordinator-signed pause/resume cycles to
+a configured halt cap, reopens the server, and verifies that the next pause is
+refused without consuming a control counter. Valid single-coordinator signatures
+and a real instance admin's operator signatures are insufficient for pause,
+resume and invalidate. Thirteen refusals preserve the board, voter index, phase,
+halt count and control counter. Quorum-signed invalidate then reaches INVALIDATED.
+
+Ballots are refused while paused and accepted after an in-window resume. A pause
+spanning the original signed close time does not extend it: the resumed state is
+OPEN with its voting-window gate false, and new ballots remain refused. The signed
+manifest stays byte-identical. The test also refuses a fresh ceremony-start packet
+after invalidation; no second-ceremony or close-extension policy is introduced.
+Evidence and verification scope:
+[pause/resume coverage report](../../docs/reports/product-pause-resume-20261127.md).
+
+## Physical archive readers and explicit maintenance (2026-11-27)
+
+Server inventory task 9 now opens current-schema ARCHIVED/IMPORTED election databases with native SQLite `readOnly: true`.
+The stored lifecycle/imported fields are probed read-only before choosing the validated opener, so a stale control-registry
+state cannot silently upgrade a terminal database. Live archive completion retires its writer after the existing durable
+key-erasure, projection, event and receipt ordering; failure to acquire the reader closes and invalidates that runtime.
+Clean replay builds the in-memory projection without rewriting archive bytes. Incomplete durable recovery still runs before
+the pool publishes the reader, using an explicit current-schema writer and the existing recovery ordering.
+
+The normal reader stays unchanged during named, synchronous maintenance. A separate short-lived writer handles retained
+export snapshots/acknowledgements, native witness cosignatures, gossip/quarantine evidence, supported management retries,
+and retention. These paths do not authorize new protocol records or import mutations. In particular, an incomplete imported
+mirror now explicitly refuses trustee spoil shares with `STATE_CONFLICT` instead of reaching the read-only database and
+returning an internal error. Online backup owns a separate reader across its asynchronous native copy, so live archive
+retirement cannot close the handle being copied. Expired operation receipts are purged by retention, not by a read query.
+
+Tests cover stable native readers, actual DB/WAL preservation on clean reload, terminal import, failed retirement, late
+witness rollback/retry, export acknowledgement recovery, lazy 30-day event retention, deletion, and an incomplete imported
+spoil. Existing crash recovery, rollback-floor, export integrity, gossip, retention and backup checks remain enforced.
+See [the scoped evidence report](../../docs/reports/archive-readonly-storage-20261127.md).
+
+Historical terminal schemas are deliberately refused before persistent mutation. The separately implemented QV-28 §13
+[`migrate-archive` command](README.md#explicit-archive-schema-migration) upgrades a verified private copy; ordinary reads never migrate archives.
+Read-only SQLite connections may create locking side files or retain already committed WAL bytes. Terminal checkpoint
+maintenance reconstructs a keyless `BoardLog` through the existing verifier, which can be linear in log size; it does not
+duplicate or weaken witness verification policy. This local evidence is not native-platform CI or an independent audit.
+
+## Ballot limits and overlapping admission acceptance (2026-11-27)
+
+`test/ballot-limits.test.ts` completes the bounded missing server inventory task 3
+checks: over-cap casts stop before proof verification; both directions of
+same-code cast/spoil exclusion leave the checkpoint, body bytes, persisted
+references/indexes and runtime counters unchanged; two valid same-predecessor
+casts overlap behind the real election mutex and yield one append plus
+`E_SUPERSEDES`; and 100 distinct `hashed-pop-v1` registration keys overlap on one
+invite and yield one voter plus 99 `INVITE_USED` refusals. The cast race advances
+the injected clock between queued arrivals, so the interval limiter cannot
+substitute for predecessor admission. Accepted controls exercise real proofs,
+and receipt/board verification uses fixture-owned keys.
+
+Five temporary local mutation controls fail at the intended assertions; all
+production bytes are restored. These are real HTTP/SQLite tests in one server
+process, not throughput, multiple-writer or native durability qualification.
+Zero-witness fixtures do not establish witnessed full-election verification.
+Production limits, invitation widths, wire contracts and trust policy are unchanged.
+
+## Validated migration, retained backups and startup policy (2026-11-27)
+
+Database opening validates the application ID, complete known migration prefix,
+checksums, ledger cardinality and schema version before persistent changes. A
+current-schema read-only opener cannot migrate. Pending SQL executes inside one
+exclusive transaction after a validated native pre-upgrade backup is published.
+Prepared-statement boundaries reject transaction, attach and pragma directives;
+rollback preserves the original chain if any step or invariant fails. Existing
+board leaves/checkpoints, old rows and typed cells survive each step unchanged.
+
+Startup preflights the control database and every registered live election under
+the data-directory lock. A pending upgrade is held when an election may be OPEN,
+including conservative paused/invalidation projections. The explicit one-time
+`qv-server --force-migrate-open` flag bypasses a known opening hold but does not
+bypass unreadable identity/history or invariant failures. Legitimately empty
+initialization cuts remain recoverable; nonempty unclaimed databases refuse.
+
+Completed migration snapshots retain at least 30 days. Deleted-election snapshots
+also observe the 90-day deletion grace; a live database keeps its newest usable
+completed backup. Before deleting older live snapshots, retention verifies the
+newest complete file hash. Partial, unknown, linked and malformed folders are
+preserved. Historical offline verification/restore upgrades only its disposable
+copy or new target, preserving the supplied source and rollback-floor policy.
+
+Actual prior-schema fixtures and a child killed after pending SQL but before
+commit exercise these boundaries. The final composed server suite passes 634
+tests with one existing Windows-only skip. See the [migration evidence and
+operator limits](../../docs/reports/migration-safety-20261127.md) and the separate
+[explicit archive command](../../docs/reports/archive-migration-20261127.md).
+These snapshots do not supply general backup encryption, scheduling, off-site
+retention or native-platform durability qualification.

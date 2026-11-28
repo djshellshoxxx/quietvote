@@ -437,7 +437,7 @@ export async function commitImport(env: Env, vb: VerifiedBundle, orgId: string, 
         election_id: vb.electionId, org_id: orgId, db_path: rel, state: 'IMPORTED', access, title: vb.manifest.title,
         dek_wrapped: null, created_at: nowMs, opened_at: null, closed_at: null, audit_close_at: null, archived_at: null,
         bytes_used: size, imported: 1,
-      });
+      }, false, 'import-staging');
       if (rt.quarantineReason() !== undefined) throw new Error('inconsistent replay');
       treeSize = rt.log.size;
     } catch {

@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 
 const runner = new URL('./run-browser-journeys.sh', import.meta.url).pathname;
-const journeys = ['run', 'help', 'a11y', 'verifier', 'spoil-shares', 'server', 'registration', 'device-settings', 'split-origin', 'manifest-warnings', 'result-disclosures', 'display-time'];
+const journeys = ['run', 'help', 'a11y', 'a11y-election', 'verifier', 'spoil-shares', 'server', 'registration', 'device-settings', 'vote-methods', 'split-origin', 'manifest-warnings', 'result-disclosures', 'display-time', 'receipt-standing', 'live-server'];
 function run({ failed = '', missingNode = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'qv-browser-runner-'));
   try {
@@ -37,7 +37,7 @@ test('runs every required journey with browser tooling required even if caller p
 });
 
 test('first, middle and last journey failures remain failures and cannot hide other journeys', () => {
-  for (const failed of ['run', 'a11y', 'device-settings', 'split-origin', 'manifest-warnings', 'result-disclosures', 'display-time']) {
+  for (const failed of ['run', 'a11y', 'device-settings', 'vote-methods', 'split-origin', 'manifest-warnings', 'result-disclosures', 'a11y-election', 'display-time', 'receipt-standing', 'live-server']) {
     const result = run({ failed: `packages/web/e2e/${failed}.ts` });
     assert.equal(result.status, 1, failed);
     assert.equal(result.calls.trim().split('\n').length, journeys.length, failed);

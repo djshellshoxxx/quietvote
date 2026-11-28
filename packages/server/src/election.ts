@@ -21,7 +21,7 @@ import {
   type ShareSet, type SharesBody, type SignedRecord, type SpoilEnvelope, type SpoilRecord, type SpoilShareBody, type TallyBody,
 } from '@quietvote/protocol';
 import type { RegistryRow, ElectionStateName } from './controldb.ts';
-import { ElectionDb, type EventRow } from './electiondb.ts';
+import { ElectionDb, type ElectionMaintenance, type EventRow } from './electiondb.ts';
 import type { Env } from './env.ts';
 import { toIso } from './util.ts';
 import { transition, typeAllowed, effectiveState, TERMINAL, type LifecycleEvent } from './lifecycle.ts';
@@ -160,27 +160,49 @@ export class ElectionRuntime {
     });
   }
 
-  static async open(env: Env, reg: RegistryRow, freshlyCreated = false): Promise<ElectionRuntime> {
-    const edb = new ElectionDb(join(env.cfg.dataDir, reg.db_path), SERVER_VERSION);
+  static async open(env: Env, reg: RegistryRow, freshlyCreated = false, purpose: 'runtime' | 'import-staging' = 'runtime'): Promise<ElectionRuntime> {
+    const path = join(env.cfg.dataDir, reg.db_path);
+    let edb = purpose === 'import-staging' ? new ElectionDb(path, SERVER_VERSION, { allowMigrations: false }) :
+      ElectionDb.openExisting(path, SERVER_VERSION, reg.imported === 1 || reg.state === 'ARCHIVED' || reg.state === 'IMPORTED',
+        { forceMigrateOpen: env.cfg.forceMigrateOpen });
     try {
-      const row = edb.row();
-      if (row.election_id !== reg.election_id) throw new Error('election db does not match registry');
-      let logSk: Uint8Array | undefined;
-      let srvSk: Uint8Array | undefined;
-      if (reg.dek_wrapped && row.log_sk_enc) {
-        const dek = unseal(env.kek, reg.dek_wrapped, `dek:${reg.election_id}`);
-        logSk = unseal(dek, row.log_sk_enc, 'log_sk');
-        if (row.srv_sk_enc) srvSk = unseal(dek, row.srv_sk_enc, 'srv_sk');
+      const create = (): ElectionRuntime => {
+        const row = edb.row();
+        if (row.election_id !== reg.election_id || row.org_id !== reg.org_id || row.imported !== (reg.imported ?? 0)) throw new Error('election db does not match registry');
+        let logSk: Uint8Array | undefined;
+        let srvSk: Uint8Array | undefined;
+        if (!edb.readOnly && reg.dek_wrapped && row.log_sk_enc) {
+          const dek = unseal(env.kek, reg.dek_wrapped, `dek:${reg.election_id}`);
+          logSk = unseal(dek, row.log_sk_enc, 'log_sk');
+          if (row.srv_sk_enc) srvSk = unseal(dek, row.srv_sk_enc, 'srv_sk');
+        }
+        const rt = new ElectionRuntime(env, reg, edb, logSk, srvSk);
+        rt.freshlyCreated = freshlyCreated;
+        return rt;
+      };
+      let rt = create();
+      const needsRecovery = await rt.replay(!edb.readOnly);
+      if (needsRecovery) {
+        // Explicit bootstrap maintenance, before the pool publishes a handle. No archive schema upgrade.
+        // Reuse full replay so key destruction/projections still precede completion-intent deletion.
+        rt.close();
+        edb = new ElectionDb(path, SERVER_VERSION, { allowMigrations: false });
+        rt = create();
+        await rt.replay(true);
       }
-      const rt = new ElectionRuntime(env, reg, edb, logSk, srvSk);
-      rt.freshlyCreated = freshlyCreated;
-      await rt.replay();
+      if (rt.imported || rt.st.state === 'ARCHIVED') edb.makeReadOnly();
       await rt.refreshRollbackGuard();
       return rt;
     } catch (e) {
       edb.close();
       throw e;
     }
+  }
+
+  /** Named synchronous maintenance never promotes the runtime's stable reader. */
+  maintain<T>(reason: ElectionMaintenance, fn: (writer: ElectionDb) => T): T {
+    if (this.poisoned || !this.env.control.election(this.id)) throw new ApiError(503, 'LOG_UNAVAILABLE', 'election recovery is required');
+    return this.edb.withMaintenance(reason, fn);
   }
 
   private localAnchorMatches(): boolean {
@@ -283,12 +305,12 @@ export class ElectionRuntime {
     return () => void this.subscribers.delete(s);
   }
 
-  private record(out: EventRow[], type: string, seq: number | null, data: Record<string, unknown>): void {
-    out.push(this.edb.insertEvent(this.env.nowMs(), type, seq, JSON.stringify(data)));
+  private record(out: EventRow[], type: string, seq: number | null, data: Record<string, unknown>, db = this.edb): void {
+    out.push(db.insertEvent(this.env.nowMs(), type, seq, JSON.stringify(data)));
   }
 
-  private checkpointData(): Record<string, unknown> {
-    const w = this.witnessInfo();
+  private checkpointData(db = this.edb): Record<string, unknown> {
+    const w = this.witnessInfo(db);
     return { tree_size: this.log.size, root: b64(this.log.root()), witnessed: w.witnessed, cosigners: w.cosigners, issued_at: toIso(this.env.nowSec()) };
   }
 
@@ -346,9 +368,9 @@ export class ElectionRuntime {
   }
 
   /** Records and publishes events outside an append (cosignatures, alerts). */
-  private emitNow(fn: (out: EventRow[]) => void): void {
+  private emitNow(fn: (out: EventRow[], db: ElectionDb) => void): void {
     const out: EventRow[] = [];
-    this.edb.tx(() => fn(out));
+    this.maintain('integrity', (db) => db.tx(() => fn(out, db)));
     this.publish(out);
   }
 
@@ -359,7 +381,7 @@ export class ElectionRuntime {
     if (this.edb.eventBounds() === undefined) return false;
     if (this.edb.hasAppendCompletions()) return false; // Complete retained intents before their history can be pruned.
     if (!this.recoverEvents()) return false; // Do not prune a row that was never admitted to the durable bridge.
-    this.edb.pruneEvents();
+    this.maintain('retention', (db) => db.pruneEvents());
     return true;
   }
 
@@ -416,7 +438,8 @@ export class ElectionRuntime {
       if (this.st.rollSet !== undefined && (this.st.rollSet.size !== pinned.size || pinned.keys.some((key) => !this.st.rollSet!.has(key)))) {
         throw new ApiError(422, 'PINNED_ROLL_MISMATCH', 'pinned_roll differs from the already committed membership');
       }
-      this.edb.tx(() => { this.edb.attachPinnedRoll(pinned); committed?.(this.edb); });
+      // A terminal retry may journal an already attached identical roll, but cannot attach a new one.
+      this.maintain('management', (db) => db.tx(() => { db.attachPinnedRoll(pinned); committed?.(db); }));
     });
   }
   get state(): ElectionStateName {
@@ -441,9 +464,9 @@ export class ElectionRuntime {
   }
 
   /** Latest checkpoint, with cosignature status against the manifest's witness quorum. */
-  witnessInfo(): { required: number; have: number; witnessed: boolean; cosigners: string[]; size: number } {
+  witnessInfo(db = this.edb): { required: number; have: number; witnessed: boolean; cosigners: string[]; size: number } {
     const policy = this.witnessPolicy();
-    const cp = this.edb.store.latestCheckpoint();
+    const cp = db.store.latestCheckpoint();
     if (!cp) return { required: policy.quorum, have: 0, witnessed: false, cosigners: [], size: 0 };
     const p = parseCheckpoint(cp.note);
     if (!p.ok) return { required: policy.quorum, have: 0, witnessed: false, cosigners: [], size: cp.size };
@@ -501,7 +524,7 @@ export class ElectionRuntime {
 
   // ------------------------------------------------------------------ replay (projection rebuild from the stored log)
 
-  private async replay(): Promise<void> {
+  private async replay(persist: boolean): Promise<boolean> {
     const completions: { seq: number; from: ElectionStateName; to: ElectionStateName }[] = [];
     let from = 0;
     for (;;) {
@@ -517,9 +540,9 @@ export class ElectionRuntime {
         const h = decodeHeader(r.headerBytes);
         if (!h.ok) throw new Error(`stored entry ${r.seq} has a bad header`);
         const fromState = this.st.state;
-        await this.apply(r.seq, h.value.type, rec, r.sequencedAt);
+        await this.apply(r.seq, h.value.type, rec, r.sequencedAt, persist);
         // Finish archive key destruction before deleting the intent that causes startup to reopen this election.
-        if (h.value.type === 'audit_close') this.finalizeArchive();
+        if (persist && h.value.type === 'audit_close') this.finalizeArchive();
         // Preserve each sequence's transition, but retain its intent until the final projections are durable.
         // Syncing historical intermediate states would rewind registry lifecycle fields during replay.
         if (this.edb.appendCompletion(r.seq) !== undefined) completions.push({ seq: r.seq, from: fromState, to: this.st.state });
@@ -529,11 +552,26 @@ export class ElectionRuntime {
     }
     const pinned = this.edb.pinnedRoll();
     if (pinned !== undefined && this.manifest !== undefined) this.bindPinnedManifest(pinned, this.manifest);
+    if (!persist) {
+      const row = this.edb.row(), registry = this.env.control.election(this.id);
+      const projection = this.edb.db.prepare('SELECT phase_seq,tree_size FROM election').get()!;
+      const shown = this.imported ? 'IMPORTED' : this.st.state;
+      const board = this.log.status.state === 'quarantine' ? this.log.status.reason : null;
+      return completions.length > 0 || row.state !== shown || (registry !== undefined && registry.state !== shown) ||
+        projection['phase_seq'] !== JSON.stringify(this.st.phaseSeq) || projection['tree_size'] !== this.log.size ||
+        (this.manifest !== undefined && row.title !== this.manifest.title) ||
+        (this.forcedQuarantine === undefined && row.quarantine !== board) ||
+        (registry !== undefined && (registry.quarantine ?? null) !== (this.forcedQuarantine ?? board)) ||
+        ((this.imported || this.st.state === 'ARCHIVED') && !this.edb.store.isReadOnly()) ||
+        (this.st.state === 'ARCHIVED' && (row.log_sk_enc !== null || row.srv_sk_enc !== null));
+    }
+    if (this.imported && !this.edb.store.isReadOnly()) this.edb.store.setReadOnly(true);
     this.syncQuarantineFlags();
     this.syncState();
     // Only explicit intents permit recovery. A second crash cannot strand stale projections without an intent.
     // Each event/intent transaction remains atomic; already completed or pruned events are never regenerated.
     for (const completion of completions) this.completeAppendEvents(completion.seq, completion.from, completion.to);
+    return false;
   }
 
   private syncState(): void {
@@ -563,29 +601,32 @@ export class ElectionRuntime {
     const incident = prev?.incident ?? `inc_${b64u(randomBytes(9))}`;
     const min = Math.max(prev?.min_size ?? 0, minSize);
     const first = this.forcedQuarantine === undefined;
-    this.forcedQuarantine = JSON.stringify({ code, incident, min_size: min });
-    this.edb.setQuarantine(this.forcedQuarantine);
-    this.env.control.setQuarantineFlag(this.id, this.forcedQuarantine);
-    if (first) this.emitNow((out) => this.record(out, 'alert', null, { kind: alertKind, detail_code: code }));
+    const forced = JSON.stringify({ code, incident, min_size: min });
+    this.forcedQuarantine = forced;
+    this.maintain('integrity', (db) => {
+      db.setQuarantine(forced);
+      this.env.control.setQuarantineFlag(this.id, forced);
+      if (first) this.emitNow((out, writer) => this.record(out, 'alert', null, { kind: alertKind, detail_code: code }, writer));
+    });
     return incident;
   }
 
   /** Public `alert` event (SSE / webhooks) that leaves the log's state unchanged. */
   raiseAlert(kind: string, code: string): void {
-    this.emitNow((out) => this.record(out, 'alert', null, { kind, detail_code: code }));
+    this.emitNow((out, db) => this.record(out, 'alert', null, { kind, detail_code: code }, db));
   }
 
   /** Lifts a forced quarantine (admin endpoint only). */
-  clearForcedQuarantine(committed?: () => void): void {
+  clearForcedQuarantine(committed?: (db: ElectionDb) => void): void {
     if (!this.localAnchorMatches()) throw new ApiError(409, 'STATE_CONFLICT', 'restore the log history recorded by the independent runtime anchor before clearing quarantine');
     this.persistRuntimeAnchor(); // Legacy quarantines may predate migration 8; clearing must not enable unanchored receipts.
     const out: EventRow[] = [];
     try {
-      this.edb.tx(() => {
-        this.edb.setQuarantine(null);
-        this.record(out, 'alert', null, { kind: 'quarantine_cleared', detail_code: 'ADMIN_CLEARED' });
-        committed?.();
-      });
+      this.maintain('integrity', (db) => db.tx(() => {
+        db.setQuarantine(null);
+        this.record(out, 'alert', null, { kind: 'quarantine_cleared', detail_code: 'ADMIN_CLEARED' }, db);
+        committed?.(db);
+      }));
     } catch (error) {
       this.poisoned = true; // Reopen from durable state even when completion failed after COMMIT.
       throw error;
@@ -605,7 +646,7 @@ export class ElectionRuntime {
   }
 
   /** Applies an already-admitted entry to the in-memory projection. */
-  private async apply(seq: number, type: EntryType, rec: unknown, at: number): Promise<void> {
+  private async apply(seq: number, type: EntryType, rec: unknown, at: number, persist = true): Promise<void> {
     const st = this.st;
     if ((rec as { body?: { type?: string } })?.body?.type === 'control') {
       const r = rec as MultiSignedRecord<ControlBody>;
@@ -625,7 +666,7 @@ export class ElectionRuntime {
         st.mh = manifestHash(r.body);
         this.indexManifestKeys(r.body);
         this.fire('manifest', seq, at);
-        this.edb.setTitle(r.body.title);
+        if (persist) this.edb.setTitle(r.body.title);
         break;
       }
       case 'ceremony_start':
@@ -924,6 +965,10 @@ export class ElectionRuntime {
     this.env.logger.event('append', { seq, entry_type: h.type, outcome: 'ok', tree_size: seq + 1 }, h.type === 'ballot' || h.type === 'ballot_audit');
     const out = this.outcomeFor(seq, false);
     if (h.type === 'election_close') await this.maybeAggregateLocked();
+    if (this.st.state === 'ARCHIVED') {
+      try { this.edb.makeReadOnly(); }
+      catch (error) { this.close(); throw error; } // Never cache a writable archive after failed reader acquisition.
+    }
     return out;
   }
 
@@ -1390,21 +1435,27 @@ export class ElectionRuntime {
       const beforeNames = witnessStatus(cp.value, policy).valid;
       const had = new Set(this.witnessInfo().cosigners);
       const events: EventRow[] = [];
-      const result = this.edb.tx(() => {
-        const r = this.log.attachCosignatures(size, valid, policy);
+      const result = this.maintain('checkpoint', (db) => db.tx(() => {
+        // A terminal reader stays unchanged; use the existing BoardLog verifier over the maintenance store.
+        const log = db === this.edb ? this.log : new BoardLog({ origin: this.origin, store: db.store, publicKey: this.logPk, clock: () => this.env.nowSec() });
+        if (log.size !== this.log.size || !Buffer.from(log.root()).equals(this.log.root())) {
+          this.poisoned = true;
+          throw new ApiError(503, 'LOG_UNAVAILABLE', 'checkpoint storage changed; recovery is required');
+        }
+        const r = log.attachCosignatures(size, valid, policy);
         if (!r.ok) throw this.mapBoardErr(r.error.code, r.error.message);
         const after = parseCheckpoint(r.value.note);
         const accepted = after.ok ? [...witnessStatus(after.value, policy).valid.keys()].filter((n) => !beforeNames.has(n)) : [];
-        const info = this.witnessInfo();
+        const info = this.witnessInfo(db);
         const fresh = info.cosigners.filter((x) => !had.has(x));
         if (fresh.length > 0) {
-          const e = this.edb.store.getEntry(Math.max(0, size - 1));
+          const e = db.store.getEntry(Math.max(0, size - 1));
           const lag = e ? Math.max(0, this.env.nowSec() - e.sequencedAt) : 0;
-          for (const wname of fresh) this.record(events, 'witness', null, { witness: wname, lag_seconds: lag, quorum_met: r.value.witnessed });
-          if (info.size === size) this.record(events, 'checkpoint', null, this.checkpointData());
+          for (const wname of fresh) this.record(events, 'witness', null, { witness: wname, lag_seconds: lag, quorum_met: r.value.witnessed }, db);
+          if (info.size === size) this.record(events, 'checkpoint', null, this.checkpointData(db), db);
         }
         return { accepted, rejected, witnessed: r.value.witnessed };
-      });
+      }));
       this.publish(events);
       await this.maybeAggregateLocked();
       return result;
@@ -1474,6 +1525,7 @@ export class ElectionRuntime {
     return this.queued(async () => {
       const st = this.st;
       if (this.poisoned) throw new ApiError(503, 'LOG_UNAVAILABLE', 'election runtime is being reloaded');
+      if (this.imported) throw conflict('read-only mirrors do not accept spoil shares');
       if (st.closeSeq === undefined || st.params === undefined || st.dkgPre === undefined || st.manifest === undefined) throw wrongPhase('election is not closed');
       if (st.tallySeq !== undefined) throw wrongPhase('the tally has been posted');
       const m = st.manifest;
@@ -1577,10 +1629,12 @@ export class ElectionRuntime {
   /** Called after an audit_close entry: erase signing keys and make the store read-only (QV-28 §5: deleted at ARCHIVED). */
   finalizeArchive(): void {
     if (this.st.state !== 'ARCHIVED') return;
-    this.edb.tx(() => {
-      this.edb.eraseKeys();
-      this.edb.store.setReadOnly(true);
-    });
+    const row = this.edb.row();
+    if (row.log_sk_enc === null && row.srv_sk_enc === null && this.edb.store.isReadOnly()) return;
+    this.edb.withMaintenance('recovery', (db) => db.tx(() => {
+      db.eraseKeys();
+      db.store.setReadOnly(true);
+    }));
   }
 
   quarantineReason(): string | undefined {

@@ -1,5 +1,23 @@
 # @quietvote/cli: implementation notes
 
+## Archive migration process adapter (2026-11-27)
+
+`qv migrate-archive` forwards to the server-owned `qv-migrate-archive` executable
+for QV-28 §13's explicit offline archive upgrade. The existing trustee resolver
+and bounded process lifecycle were extracted into `installed-command.ts`; the
+trustee adapter keeps its exported resolver, messages, literal arguments, inherited
+streams, signal forwarding and exit behavior. The shared runner recognizes the
+same exact npm Windows wrapper grammar and binds each wrapper to its actual
+declared package binary. There is no shell fallback or added CLI-to-server import.
+
+The new command owns no storage or trust policy inside the CLI. It preserves the
+server report's storage-only scope, anchor absence, retained-backup path and
+possible-publication failure state. Focused tests run both adapters, existing
+trustee cancellation/listener checks, platform-independent Windows wrapper
+resolution, and a real installed archive migration against historical signed
+server data. Native Windows durability and console termination remain separate
+qualification. See [source-bound evidence](../../docs/reports/archive-migration-20261127.md).
+
 
 ## Offline ballot status (2026-11-27)
 

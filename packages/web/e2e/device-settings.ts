@@ -52,6 +52,10 @@ const shared = (page: Page) => page.getByRole('checkbox', { name: 'This is a sha
 const remember = (page: Page) => page.getByRole('checkbox', { name: 'Remember receipts on this device', exact: true });
 const acknowledgment = (page: Page) => page.getByRole('checkbox', { name: 'I have read these rules and privacy limits', exact: true });
 const idle = async (page: Page): Promise<void> => { await page.waitForFunction(() => [...document.querySelectorAll('.device-settings input')].length === 2 && [...document.querySelectorAll('.device-settings input')].every((input) => !(input as HTMLInputElement).disabled)); };
+const requestClearTwice = async (page: Page, label: string): Promise<void> => {
+  await page.getByRole('button', { name: label, exact: true }).evaluate((button) => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  assert.equal(await page.getByRole('dialog').count(), 1, 'repeated requests open one native confirmation dialog');
+};
 const saved = async (page: Page): Promise<{ settings?: DeviceSettings; counts: Record<string, number> }> => page.evaluate(async () => {
   const db = await new Promise<IDBDatabase>((resolve, reject) => { const request = indexedDB.open('quietvote-v1', 1); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
   try {
@@ -268,12 +272,15 @@ try {
       assert.equal((await saved(page)).counts['receipts'], 1, 'turning remembering off never silently removes an existing receipt');
     });
     await step('only confirmed Clear this device removes keys, receipts and preferences', async () => {
-      await page.getByRole('button', { name: 'Clear this device', exact: true }).click();
+      await requestClearTwice(page, 'Clear this device');
       await page.getByRole('dialog', { name: 'Clear this device', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click();
       assert.equal((await saved(page)).counts['keys'], 1); assert.equal((await saved(page)).counts['receipts'], 1);
-      await page.getByRole('button', { name: 'Clear this device', exact: true }).click();
+      await requestClearTwice(page, 'Clear this device');
       await page.getByRole('dialog', { name: 'Clear this device', exact: true }).getByRole('button', { name: 'Remove my key, receipts and drafts from this browser', exact: true }).click();
       await page.getByRole('main').getByText('Your key is locked.', { exact: true }).waitFor(); await idle(page);
+      const completed = 'This device has been cleared. If you saved your receipt file, you can still check your ballot later.';
+      assert.equal(await page.getByText(completed, { exact: true }).count(), 1);
+      assert.equal(await page.evaluate(() => document.activeElement?.textContent), completed);
       const state = await saved(page);
       assert.deepEqual(state.counts, { keys: 0, receipts: 0, heads: 0, settings: 0 });
       assert.equal(await shared(page).isChecked(), false); assert.equal(await remember(page).isChecked(), true);
@@ -350,9 +357,12 @@ try {
       await page.getByRole('button', { name: 'Use this page only', exact: true }).click();
       await page.getByRole('button', { name: 'Create key', exact: true }).waitFor();
       assert.equal(await page.getByRole('button', { name: 'Unlock key', exact: true }).count(), 0, 'reload loses session keys and the mode choice');
-      await page.getByRole('button', { name: 'Clear this page session', exact: true }).click();
+      await requestClearTwice(page, 'Clear this page session');
       await page.getByRole('dialog', { name: 'Clear this page session', exact: true }).getByRole('button', { name: 'Clear this page session', exact: true }).click();
-      await page.getByText('This page session was cleared. Saved browser data was not cleared.', { exact: true }).waitFor();
+      const completed = 'This page session was cleared. Saved browser data was not cleared.';
+      await page.getByText(completed, { exact: true }).waitFor();
+      assert.equal(await page.getByText(completed, { exact: true }).count(), 1);
+      assert.equal(await page.evaluate(() => document.activeElement?.textContent), completed);
       assert.equal(board.requests.filter((request) => request.method === 'POST').length, postsBefore + 2);
     } finally { await context.close(); }
   });

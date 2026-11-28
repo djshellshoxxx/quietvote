@@ -20,6 +20,7 @@
   },
   "bin": {
     "qv-server": "./bin/qv-server.ts",
-    "qv-backup": "./bin/qv-backup.ts"
+    "qv-backup": "./bin/qv-backup.ts",
+    "qv-migrate-archive": "./bin/qv-migrate-archive.ts"
   }
 }

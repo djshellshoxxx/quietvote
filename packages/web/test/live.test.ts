@@ -174,15 +174,12 @@ test('receipt standing: window, revote limit and forged envelopes are handled li
   assert.ok(bytesToHex(ctx.params.ctx).length === 64);
 });
 
-test('wiring: the UI starts the stream per election, stops it when leaving, shows receipt standing with catalog strings only', async () => {
+test('wiring: the UI starts and stops the election stream; status catalogs remain unreviewed drafts', async () => {
   const { readFileSync } = await import('node:fs');
   const app = readFileSync(new URL('../src/ui/app.ts', import.meta.url), 'utf8');
   assert.ok(app.includes('new LiveElection(L,') && app.includes('startLive(L)'));
   assert.ok(/if \(r\.name !== 'election'\) stopLive\(\)/.test(app), 'stream closed when the voter leaves the election pages');
   assert.ok(app.includes("t('qv.live.failed')") || app.includes("t('qv.live.") , 'status text comes from the catalog');
-  for (const k of ['current', 'superseded', 'supersededNote', 'unknown', 'mismatch']) assert.ok(app.includes(`qv.receipt.standing.${k}`), k);
-  assert.ok(app.includes('new BallotIndex('), 'standing uses the incremental index');
-  assert.ok(app.includes('repaint = () =>'), 'receipt standing refreshes in place on live updates');
   // live data never carries a secret: the only request detail is the election id
   const client = readFileSync(new URL('../src/api/client.ts', import.meta.url), 'utf8');
   assert.ok(/`\$\{API\}\/elections\/\$\{enc\(id\)\}\/events`/.test(client));

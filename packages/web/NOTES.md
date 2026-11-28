@@ -372,3 +372,83 @@ parameter bounds and read-only organizer unlock behavior are unchanged. Password
 derived-key, encryption plaintext and failed-signer-import PKCS8 buffers are wiped
 on errors. See the [milestone handoff](../../docs/handoffs/QUIETVOTE-PASSPHRASE-COMPATIBILITY-20261116.md)
 for executed cross-client tests, full web unit results and reciprocal review.
+
+## Single-flight device and page-session clearing (2026-11-27)
+
+Inventory web task 8 now keeps one clearing operation active across its confirmation dialog, storage transaction and
+completion view. Repeated requests during that operation open no extra dialog and start no extra clear. The guard
+releases after cancellation, success or failure so a later explicit action remains available. A storage failure still
+announces `E-KEY-STORAGE`, preserves saved data and shows no success confirmation. Existing signer invalidation,
+page-session isolation and the visible, focused completion message are unchanged.
+
+Actual `startApp` regressions defer storage clearing to cover repeated requests while confirmation and storage are
+pending, one completion, and explicit retry after cancellation or failure, in both storage modes. The production-browser
+device-settings journey checks repeated requests against the native dialog and retains the existing confirmed-clear,
+saved-data and page-session behavior checks. Run with
+`QV_REQUIRE_BROWSER=1 node packages/web/e2e/device-settings.ts` (`QV_CHROMIUM` selects an installed executable).
+
+## Approval, k-of-n and post-sealing DOM acceptance (2026-11-27)
+
+Inventory web task 4 adds a required `vote-methods` browser journey against the production bundle and real protocol
+fixture. It checks approval's counter up to all options even when fewer winners are elected, k-of-n overvote rejection
+and its announcement, deselection and replacement, and the explicit review's selected labels. Unique option-label
+canaries must disappear from the entire document after sealing and after casting, including hidden markup, attributes
+and current form values. The journey also checks that no ballot was posted before Cast, exactly one valid voter-signed
+ballot was recorded, and a receipt download remains available. It uses existing ballot validation and submission behavior.
+These DOM assertions do not establish that JavaScript memory is cleared or replace a manual shared-screen review.
+
+Run with `QV_REQUIRE_BROWSER=1 node packages/web/e2e/vote-methods.ts`; `QV_CHROMIUM` selects an installed executable.
+The required browser-journey runner includes this check without changing assertions or deadlines in other journeys.
+
+## Election-page automated accessibility checks (2026-11-27)
+
+Inventory web task 6 adds the required `a11y-election` browser journey for overview, rules, key setup, vote review,
+receipt lookup and verified results. It checks named landmarks, one primary heading, the offered English locale,
+320/768/1280 px reflow, skip-link operation, visible focus at every native Tab stop, and the existing text-contrast
+thresholds in all five supported theme modes. Native radio groups retain one Tab stop and their arrow-key operation
+is exercised. Closed disclosures omit hidden descendants from the Tab expectations; keyboard expansion then checks
+their newly visible content, reflow and controls as well.
+
+The production bundle imports a real voter key, records a ballot, checks its inclusion and shows a genuine witnessed
+tally before the receipt/results assertions. The fixture uses canonical base32 API IDs so its by-entry route is exercised.
+The six-view run checks 2,040 text-colour samples. The existing ordinary-page accessibility journey and production UI
+are unchanged. These are bounded automated heuristics, not WCAG conformance, native assistive-technology testing or
+native translation review; translated catalogs remain unreviewed and unoffered.
+
+Run with `QV_REQUIRE_BROWSER=1 node packages/web/e2e/a11y-election.ts`; `QV_CHROMIUM` selects an installed executable.
+The composed browser runner retains all 12 R26 journeys and adds `vote-methods` and `a11y-election`.
+
+## Receipt standing for adopted closed snapshots — 2026-11-27
+
+The closed-snapshot portion of inventory task 5 now shares one inclusion/status
+operation across typed codes, uploaded cast receipts and saved cast receipts.
+Inclusion remains usable without a key or login. A separately obtained full
+manifest hash, any independently supplied supplemental author keys, all 13
+snapshot checks, no fatal/alarm findings, exact inclusion-head binding and an
+exact manifest-anchored witness quorum are required before status is qualified.
+Replacement follows the checked same-voter predecessor chain; no global latest,
+ownership, freshness or finality claim is made. Existing verifier caveats remain
+visible. Input changes, cancellation and navigation clear the current panel.
+
+**Ordinary final-server exports still refuse qualified status:** their
+`tally-aggregate` and `dec-shares` records fail the current canonical-encoding
+check, including when independent author pinning resolves their headers. A real
+server test preserves inclusion and verifies this refusal. No records or checks
+are dropped. **Pre-close replacement status also remains unverified** pending
+an adopted prefix-evidence contract; no closing marker is invented. This is a
+bounded increment, not completion of those held contracts.
+
+The new export reader caps streamed data at 64 MiB, covers the body with a deadline,
+supports cancellation and performs no retry. HTTP error bodies are discarded;
+raw failure text is not displayed as status. All 63 English guarantee entries are
+unchanged, translated catalogs remain unreviewed machine drafts, and only English
+is offered. The required browser runner preserves all 14 earlier journeys and adds
+`receipt-standing`. See
+[`product-receipt-standing-20261127.md`](../../docs/reports/product-receipt-standing-20261127.md)
+for the evidence gates, test scope and remaining boundaries.
+
+## Real-server live-update recovery — 2026-11-27
+
+`LiveElection` now rereads missing signed records whenever an event stream opens. This closes the demonstrated initial-load/stream gap and reconnect gap before any event ID has arrived. Existing replay, record verification, coalescing and close semantics remain in use; no API, protocol or freshness contract changed.
+
+The actual-server Node test covers those gaps, retained cursor replay, real outbox-pruned HTTP 410 and stream/runtime release. The required `live-server` browser journey verifies those paths with production assets, then observes a signed tally update an already-open Results view while the existing verification refusal remains intact. It is the sixteenth required journey; all previous journeys remain. See [implementation and acceptance](../../docs/reports/web-live-server-20261127.md).

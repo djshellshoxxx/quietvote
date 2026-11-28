@@ -182,7 +182,8 @@ test('trustee process terminated by signal never reports success', { skip: proce
 });
 
 test('trustee delegation adds no in-process trustee import', () => {
-  const source = readFileSync(new URL('../src/cmd-trustee.ts', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../src/cmd-trustee.ts', import.meta.url), 'utf8') +
+    readFileSync(new URL('../src/installed-command.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /(?:from|import\s*\(|require\s*\()\s*['"][^'"]*trustee/);
   assert.match(source, /stdio: 'inherit', shell: false/);
 });

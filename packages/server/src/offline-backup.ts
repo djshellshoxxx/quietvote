@@ -10,7 +10,9 @@ import { authorKeyId, b64u, checkEntry, type EntryHeader } from '@quietvote/boar
 import { organizerPk } from './export.ts';
 import { auditLog } from './admin.ts';
 import { resolveConfig } from './config.ts';
-import { ControlDb, type RegistryRow } from './controldb.ts';
+import { ControlDb, MIGRATIONS as CONTROL_MIGRATIONS, type RegistryRow } from './controldb.ts';
+import { MIGRATIONS as ELECTION_MIGRATIONS } from './electiondb.ts';
+import { openDb } from './db.ts';
 import { DATA_LOCK_NAME, lockDataDirectory } from './data-lock.ts';
 import { ElectionRuntime, SERVER_VERSION } from './election.ts';
 import type { Env } from './env.ts';
@@ -118,6 +120,17 @@ function pathOf(reg: RegistryRow): string {
   return `elections-${reg.election_id}.sqlite`;
 }
 
+/** The caller owns this new private directory; never apply these overrides to the supplied source. */
+function upgradePrivateCopy(directory: string, manifest: Manifest): void {
+  for (const file of manifest.files) {
+    const control = file.name === 'control.sqlite';
+    const db = openDb({ path: join(directory, restoredPath(file.name)), applicationId: control ? 0x51564343 : 0x51564442,
+      synchronous: 'FULL', migrations: control ? CONTROL_MIGRATIONS : ELECTION_MIGRATIONS, appVersion: SERVER_VERSION,
+      forceMigrateOpen: true, allowArchiveMigration: true });
+    db.close();
+  }
+}
+
 /** The current server author roles, applied to history; revoked organizer keys remain valid for past signatures. */
 function checkAuthors(rt: ElectionRuntime): void {
   const coords = new Map((rt.st.manifest?.coordinator.keys ?? []).map((hex) => {
@@ -171,7 +184,9 @@ async function verifyCopy(dir: string, kek: Buffer, m: Manifest, floor?: Verifie
       copyChecked(dir, f, dest);
       databaseCheck(dest, f.name === 'control.sqlite' ? 0x51564343 : 0x51564442);
     }
-    // Migration checksums and supported schema checks run only on the disposable copy.
+    // Verification is an explicit offline operation on disposable copies, including OPEN and archived
+    // snapshots. Strict schema/invariant/backup checks still apply; automatic live-startup policy does not.
+    upgradePrivateCopy(temp, m);
     control = new ControlDb(temp, Date.now, SERVER_VERSION);
     const security = captureSecurity || floor?.security ? controlSecurityFloor(control.db) : undefined;
     const registry = control.db.prepare('SELECT * FROM election_registry ORDER BY election_id').all() as unknown as RegistryRow[];
@@ -274,6 +289,9 @@ export async function restoreBackup(directory: string, kekPath: string, destinat
         copyChecked(dir, f, dest);
       }
       writeFileSync(join(target, 'kek', 'kek.bin'), kek, { mode: 0o600, flag: 'wx' });
+      // The destination was reserved above and remains locked/offline. Restore current schemas so its
+      // subsequent ordinary startup does not need a voting override or an implicit archive upgrade.
+      upgradePrivateCopy(target, m);
       const control = new ControlDb(target, Date.now, SERVER_VERSION);
       try { control.audit('offline-operator', 'restore', null, { files: report.files }); }
       finally { control.close(); }

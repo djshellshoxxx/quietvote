@@ -7,6 +7,7 @@ import { logOrigin } from '@quietvote/protocol';
 import { ApiError, BAD_RESPONSE, NETWORK, TIMEOUT, isRetryable } from './errors.ts';
 import { qvSigHeader, type RequestSigning } from './signing.ts';
 import { boundedPinnedRollBody, checkedPinnedRoll } from './pinned-roll.ts';
+import { boundedReceiptBundleText } from './receipt-bundle.ts';
 import type {
   AppendResult, ConsistencyProofView, ElectionState, ElectionSummary, EntryPage, EntryView, InclusionProofView,
   Instance, InviteResult, PinnedRollResult, RegistrationBody, RegistrationResult, RollPage, SpoilShareIndex, SpoilShareList, SpoilSharePosted, VoterStatus,
@@ -49,7 +50,7 @@ export class ApiClient {
     this.signing = o.signing;
   }
 
-  private async req(method: string, path: string, opts: { body?: unknown; signed?: boolean; headers?: Record<string, string>; accept?: string; signal?: AbortSignal; query?: Record<string, string | number | undefined> } = {}): Promise<Response> {
+  private async req(method: string, path: string, opts: { body?: unknown; signed?: boolean; headers?: Record<string, string>; accept?: string; signal?: AbortSignal; discardErrorBody?: boolean; query?: Record<string, string | number | undefined> } = {}): Promise<Response> {
     let target = path;
     if (opts.query) {
       const q = Object.entries(opts.query).filter(([, v]) => v !== undefined).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
@@ -90,6 +91,10 @@ export class ApiClient {
     }
     if (!res.ok) {
       outer?.removeEventListener('abort', relay);
+      if (opts.discardErrorBody === true) {
+        void res.body?.cancel().catch(() => {});
+        throw new ApiError({ status: res.status, code: BAD_RESPONSE, message: 'receipt status snapshot is unavailable' });
+      }
       throw await problem(res);
     }
     return res;
@@ -154,6 +159,23 @@ export class ApiClient {
   }
   async exportWithBoard(id: string): Promise<unknown> {
     return this.json(await this.req('GET', `${API}/elections/${enc(id)}/export.json`, { query: { board: 1 } }));
+  }
+
+  /** A receipt status check needs one bounded snapshot, with cancellation and a deadline covering its body too. */
+  async receiptStatusBundle(id: string, signal: AbortSignal): Promise<string> {
+    const scope = new AbortController();
+    const abort = (): void => scope.abort();
+    if (signal.aborted) abort(); else signal.addEventListener('abort', abort, { once: true });
+    const timer = setTimeout(abort, this.timeoutMs);
+    try {
+      scope.signal.throwIfAborted();
+      const response = await this.req('GET', `${API}/elections/${enc(id)}/export.json`, { query: { board: 1 }, signal: scope.signal, discardErrorBody: true });
+      return await boundedReceiptBundleText(response, scope.signal);
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', abort);
+      scope.abort();
+    }
   }
 
   /** Untrusted coordinator proposal; the organizer verifies it locally before publication. */

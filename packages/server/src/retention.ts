@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { SERVER_VERSION } from './election.ts';
 import { ElectionDb } from './electiondb.ts';
+import { DELETED_BACKUP_RETENTION_MS, pruneMigrationBackups } from './migration-backup-retention.ts';
 import type { Env } from './env.ts';
 
 export interface RetentionStatus {
@@ -13,13 +14,14 @@ export interface RetentionStatus {
   consecutiveFailures: number;
   checkedDatabases: number;
   failedDatabases: number;
+  prunedMigrationBackups: number;
 }
 
 export class RetentionSweeper {
   private readonly env: Env;
   private timer: NodeJS.Timeout | undefined;
   private pending: Promise<number> | undefined;
-  private health: RetentionStatus = { lastSuccessAt: null, lastFailureAt: null, consecutiveFailures: 0, checkedDatabases: 0, failedDatabases: 0 };
+  private health: RetentionStatus = { lastSuccessAt: null, lastFailureAt: null, consecutiveFailures: 0, checkedDatabases: 0, failedDatabases: 0, prunedMigrationBackups: 0 };
 
   get status(): Readonly<RetentionStatus> { return { ...this.health }; }
 
@@ -53,22 +55,29 @@ export class RetentionSweeper {
     let total = 0;
     let checked = 0;
     let failed = 0;
+    let backups = 0;
     let complete = false;
     try {
       const { control, cfg } = this.env;
+      backups += pruneMigrationBackups(join(cfg.dataDir, 'control.sqlite'), this.env.nowMs());
       let after: string | undefined;
       for (;;) {
         const page = control.listAllElections(undefined, after, 100);
         if (page.length === 0) break;
         for (const row of page) {
-          if (row.imported === 1 || row.state === 'IMPORTED') continue; // mirrors hold no operator data
           checked++;
           let edb: ElectionDb | undefined;
           let bad = false;
           try {
+            if (!/^[0-9a-f]{32}$/.test(row.election_id) || row.db_path !== join('elections', row.election_id.slice(0, 2), `${row.election_id}.sqlite`)) {
+              throw new Error('invalid election retention path');
+            }
             const path = join(cfg.dataDir, row.db_path);
+            backups += pruneMigrationBackups(path, this.env.nowMs());
+            if (row.imported === 1 || row.state === 'IMPORTED') continue; // mirrors have no private invite/receipt maintenance
             if (!existsSync(path)) throw new Error('missing election database');
-            edb = new ElectionDb(path, SERVER_VERSION);
+            edb = new ElectionDb(path, SERVER_VERSION, { allowMigrations: false });
+            edb.purgeOperationReceipts(this.env.nowMs());
             const n = edb.purgeInviteData(this.env.nowMs(), cfg.inviteRetentionMs);
             if (n > 0) {
               total += n;
@@ -85,12 +94,32 @@ export class RetentionSweeper {
         after = page.at(-1)!.election_id;
         if (page.length < 100) break;
       }
+      // Deleted DB files are absent, but their tombstones still locate dedicated migration snapshots.
+      // This does not purge ordinary instance backups, exported artifacts or independent restore floors.
+      after = undefined;
+      for (;;) {
+        const page = control.db.prepare("SELECT election_id,db_path,deleted_at FROM election_registry WHERE state='DELETED' AND deleted_at<=? AND (? IS NULL OR election_id>?) ORDER BY election_id LIMIT 100")
+          .all(this.env.nowMs() - DELETED_BACKUP_RETENTION_MS, after ?? null, after ?? null) as { election_id: string; db_path: string; deleted_at: number }[];
+        if (page.length === 0) break;
+        for (const row of page) {
+          checked++;
+          try {
+            if (!/^[0-9a-f]{32}$/.test(row.election_id) || row.db_path !== join('elections', row.election_id.slice(0, 2), `${row.election_id}.sqlite`)) {
+              throw new Error('invalid deleted election retention path');
+            }
+            backups += pruneMigrationBackups(join(cfg.dataDir, row.db_path), this.env.nowMs(), row.deleted_at);
+          } catch { failed++; }
+          await new Promise<void>((r) => setImmediate(r));
+        }
+        after = page.at(-1)!.election_id;
+        if (page.length < 100) break;
+      }
       complete = failed === 0;
     } finally {
       let auditFailed = false;
       let auditError: unknown;
       try {
-        this.env.control.audit('system', 'retention.sweep', null, { checked, failed, purged: total, complete });
+        this.env.control.audit('system', 'retention.sweep', null, { checked, failed, purged: total, migration_backups_pruned: backups, complete });
       } catch (error) {
         auditFailed = true;
         auditError = error;
@@ -98,6 +127,7 @@ export class RetentionSweeper {
       }
       this.health.checkedDatabases = checked;
       this.health.failedDatabases = failed;
+      this.health.prunedMigrationBackups = backups;
       if (complete) {
         this.health.lastSuccessAt = this.env.nowMs();
         this.health.consecutiveFailures = 0;
