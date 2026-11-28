@@ -46,7 +46,7 @@ class ImportBoundaryTests(unittest.TestCase):
         result = check_imports.check_tree(ROOT)
         self.assertTrue(result["ok"], result)
         self.assertEqual(result["runtime_files"], len(list((ROOT / "qv_verifier").rglob("*.py"))))
-        self.assertEqual(result["runtime_files"], 25)
+        self.assertEqual(result["runtime_files"], 26)
         self.assertEqual(result["findings"], [])
         self.assertIn("authorship and semantic independence are not assessed", result["scope"])
 

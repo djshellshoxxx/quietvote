@@ -3,6 +3,18 @@
 Unaudited reference skeleton; not for real elections. This implementation remains independent of the TypeScript arithmetic and
 does not import or call it. Audit regression tests also consume the synthetic public bundles preserved with the 2026-10-28 report.
 
+## Direct reference-server archive input (2026-11-28)
+
+`verify election.qvb` now reads uncompressed QV-18 §12 exports with the Python
+standard library. One new runtime module validates the container and assembles
+the existing JSON verifier input. The CLI rejects a conflicting external board.
+The archive cannot supply trusted supplemental authors or witness keys. Full
+JSON and archive input share the existing verification and verdict policy.
+Malformed archive framing or conflicting copies produce an input error. The
+local diagnostic `E_ARCHIVE` identifies container errors outside the signed
+protocol. See the [CLI usage](README.md#running).
+
+
 ## Static import/dependency check, 2026-11-27
 
 `check_imports.py` and `tests/test_import_boundary.py` cover the mechanical
