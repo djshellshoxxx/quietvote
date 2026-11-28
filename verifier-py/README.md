@@ -61,6 +61,7 @@ python3 -I verifier-py/qv_verifier vectors test-vectors/v1            # one line
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --quiet    # only non-PASS lines
 python3 -I verifier-py/qv_verifier vectors test-vectors/v1 --report out.json
 python3 -I verifier-py/qv_verifier verify election.json --board board.json
+python3 -I verifier-py/qv_verifier verify election.qvb
 python3 -I verifier-py/qv_verifier verify election.json --board board.json --receipts receipts.json --observed observed.json
 python3 -I verifier-py/qv_verifier adapter --tree test-vectors/v1
 ```
@@ -80,6 +81,22 @@ verifier without board/witness/receipt evidence checks and cannot produce defaul
 The CLI also accepts an embedded `board` export; `--board` explicitly selects a separate file. Optional `witnesses` (CLI `--witnesses`) supplies trusted `{name,pk}`
 keys only when the manifest has no witness list. `extraAuthorKeys` (`--extra-author-key`)
 never overrides coordinator, trustee or voter authorization for recognised records.
+
+For a reference-server `.qvb` export, pass the uncompressed file directly to
+`verify`. The reader checks each tar member against `SHA256SUMS`, binds the
+descriptor to the entry file, and reconstructs the full election from board
+rows. The convenience copy in `election.json` can omit derived records.
+Every available board record still reaches verification. Missing bodies and
+redaction records remain in the supplied evidence. Use `--observed`,
+`--receipts`, `--witnesses` and `--extra-author-key` as for a JSON bundle.
+The archive supplies its own board. Obtain any trusted supplemental keys
+independently. The archive reader treats key metadata as public input.
+
+The supported transport is a regular file up to 64 MiB, with at most 10,000
+ustar members and 100,000 board entries. It reads in memory without filesystem
+extraction. Compressed wrappers and optional member formats outside the
+reference-server export produce an input error (exit 2). For supported input,
+the JSON and archive paths use the same election verifier and exit codes.
 
 Default verification requires both `chk.board.append_only` and
 `chk.board.witness` to pass. Missing or unverified log evidence yields

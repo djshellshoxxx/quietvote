@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     rules.add_argument('export')
     rules.add_argument('--identity-key', required=True, help='independently obtained group identity public key (lowercase hex)')
     rules.add_argument('--genesis-hash', required=True, help='independently obtained founding rule hash (lowercase hex)')
-    verify = sub.add_parser('verify', help='verify an election JSON bundle with optional QV-18 evidence')
+    verify = sub.add_parser('verify', help='verify an election JSON bundle or reference-server .qvb archive')
     verify.add_argument('bundle')
     verify.add_argument('--content-only', action='store_true', help='explicitly permit a scoped PASS without witnessed log integrity; supplied evidence is still checked')
     verify.add_argument('--board', help='board JSON export (qv-bundle/v1)')
@@ -64,7 +64,14 @@ def main(argv: list[str] | None = None) -> int:
         return {'VERIFIED': 0, 'INVALID': 1, 'INCOMPLETE': 3}[report['status']]
     if args.cmd == 'verify':
         try:
-            bundle = load_json(Path(args.bundle))
+            path = Path(args.bundle)
+            if path.suffix.lower() == '.qvb':
+                from .archive import load_archive
+                if args.board:
+                    ap.error('a .qvb contains its own board; --board cannot replace archive evidence')
+                bundle = load_archive(path)
+            else:
+                bundle = load_json(path)
             if not isinstance(bundle, dict):
                 raise QVError('E_SCHEMA', 'election bundle must be an object')
             log = None
