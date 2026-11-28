@@ -75,6 +75,12 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.election.rulesAckHint`: Optional. This note stays on this device.
 - `qv.election.notFound`: We could not find this election on this server.
 - `qv.election.langNotice`: This election is written in {languages}.
+- `qv.election.warning.title`: Election warnings
+- `qv.election.warning.noThreshold`: The trustee threshold is 1, so there is no threshold protection.
+- `qv.election.warning.secrecy`: The trustee threshold is below a majority of trustees.
+- `qv.election.warning.availability`: Fewer than one third of the trustees can be unavailable for the result to be opened.
+- `qv.election.warning.smallRoll`: With this few voters, the published totals could reveal individual votes.
+- `qv.election.warning.other`: Additional election warning: {warning}
 
 ## Privacy panel (More details)
 
@@ -276,6 +282,11 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.results.notYet`: Results appear after voting closes and the trustees open the total.
 - `qv.results.option`: Option
 - `qv.results.count`: Votes
+- `qv.results.disclosure.smallRoll`: Results may reveal individual votes
+- `qv.results.disclosure.scope`: For this option
+- `qv.results.disclosure.unanimous`: Unanimous result: every participant's choice is known
+- `qv.results.disclosure.all`: All counted voters selected this option.
+- `qv.results.disclosure.none`: No counted voter selected this option.
 - `qv.results.participation`: {count, plural, one {# voter} other {# voters}} took part.
 - `qv.results.quorum`: Quorum: {met, select, true {met} other {not met}}.
 - `qv.results.outcome.passed`: Passed

@@ -587,4 +587,17 @@ export const DE = {
   'qv.org.enrollHelp': "Verwenden Sie eine vorhandene Organisationskennung oder erstellen Sie mit diesem Schlüssel und der Passphrase unten eine Organisation. Der Server kann ein Registrierungstoken verlangen oder neue Organisationen ablehnen.",
   'qv.org.registrationToken': "Registrierungstoken der Organisation (falls erforderlich)",
   'qv.org.enrollRetry': "Die Anfrage könnte den Server erreicht haben. Geben Sie Ihre Passphrase erneut ein und wiederholen Sie die Anfrage mit denselben Organisationsdaten. Lassen Sie diese Seite geöffnet.",
+  // Machine-drafted manifest warnings; native review remains pending.
+  'qv.election.warning.title': "Warnungen zur Wahl",
+  'qv.election.warning.noThreshold': "Der Schwellenwert der Treuhänder ist 1, daher gibt es keinen Schwellenwertschutz.",
+  'qv.election.warning.secrecy': "Der Schwellenwert liegt unter einer Mehrheit der Treuhänder.",
+  'qv.election.warning.availability': "Damit das Ergebnis geöffnet werden kann, darf weniger als ein Drittel der Treuhänder nicht verfügbar sein.",
+  'qv.election.warning.smallRoll': "Bei so wenigen Wählenden könnten die veröffentlichten Summen einzelne Stimmen offenlegen.",
+  'qv.election.warning.other': "Zusätzliche Warnung zur Wahl: {warning}",
+  // Machine-drafted result disclosures; native review remains pending.
+  'qv.results.disclosure.smallRoll': "Ergebnisse können einzelne Stimmen offenlegen",
+  'qv.results.disclosure.scope': "Für diese Option",
+  'qv.results.disclosure.unanimous': "Einstimmiges Ergebnis: Die Wahl jeder teilnehmenden Person ist bekannt",
+  'qv.results.disclosure.all': "Alle gezählten Wählenden haben diese Option gewählt.",
+  'qv.results.disclosure.none': "Keine gezählte Person hat diese Option gewählt.",
 } as const satisfies Record<MessageKey, string>;

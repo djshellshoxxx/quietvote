@@ -1,0 +1,1108 @@
+{
+  "format": "qv-data-inventory/v1",
+  "classification_source": "docs/06-privacy-data-lifecycle.md",
+  "scope": {
+    "included": "Every named table and column in freshly migrated control.sqlite and <election_id>.sqlite, including SQLite-owned sqlite_sequence.",
+    "excluded": "This bounded registry does not enumerate arbitrary nested JSON properties, in-memory state, client/trustee stores, file-only artifacts or unimplemented specification tables.",
+    "enforcement": "packages/server/test/data-inventory.test.ts compares this reviewed inventory with real migrated databases using SQLite schema introspection.",
+    "limitations": [
+      "This analyzes existing storage; it adds no access-control, encryption, deletion or retention guarantee.",
+      "Classes are the C0-C4 definitions in QV-06. QV-28's separate P0-P4 taxonomy is evidence, not an interchangeable set of class names.",
+      "C3 conservatively covers private operational containers by the D24/D25 precedent. It does not imply every field is credential material or encrypted.",
+      "C0 describes public election content and derived values, not a promise that every local cache/index row is immutable or permanent. Read-key access can restrict election readers.",
+      "A container class covers the whole column. Its rationale documents mixed content, without validating arbitrary future JSON fields or future writers.",
+      "C4 means memory-only and cannot classify a persisted column. Signed-request replay nonces are distinct from the D26 session/CSRF model.",
+      "No retention periods are copied here: QV-06's target schedule and current storage behavior are separate questions."
+    ]
+  },
+  "bases": [
+    {
+      "id": "operations",
+      "class": "C3",
+      "rationale": "Private server operation, recovery and accounting data. C3 follows the operator-only operational-data precedent in D24/D25; it does not imply encryption or that every field is a credential.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D24 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D25 |"
+        },
+        {
+          "path": "docs/28-data-model-storage.md",
+          "contains": "| **P4** Operational |"
+        }
+      ]
+    },
+    {
+      "id": "management",
+      "class": "C1",
+      "rationale": "Organization/organizer management data visible through signed management routes. Instance-admin rows can have a narrower audience.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| **C1 Group-visible** |"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "path: '/api/v1/orgs/:org'"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "path: '/api/v1/orgs/:org/keys'"
+        }
+      ]
+    },
+    {
+      "id": "credential",
+      "class": "C3",
+      "rationale": "Credential, credential hash or encrypted key material. Its storage representation does not declassify the underlying secret.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| **C3 Secret** |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D04 |"
+        },
+        {
+          "path": "docs/28-data-model-storage.md",
+          "contains": "| **P3** Secret |"
+        }
+      ]
+    },
+    {
+      "id": "label",
+      "class": "C1",
+      "rationale": "Organizer's optional private display label or invite note; the classification describes content, including when encrypted.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D02 |"
+        },
+        {
+          "path": "docs/28-data-model-storage.md",
+          "contains": "organizer's private note"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "label_enc: it?.label"
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "class": "C3",
+      "rationale": "Optional delivery contact or webhook target, potentially identifying a person or embedding a credential.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D06 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D32 |"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "contact_enc:"
+        },
+        {
+          "path": "packages/server/src/webhooks.ts",
+          "contains": "url_enc:"
+        }
+      ]
+    },
+    {
+      "id": "draft",
+      "class": "C1",
+      "rationale": "Unpublished organizer draft content, distinct from the published manifest and publicly readable election title.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| **C1 Group-visible** |"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "path: '/api/v1/elections/:id/draft'"
+        },
+        {
+          "path": "packages/server/src/electiondb.ts",
+          "contains": "setDraft(json: string)"
+        }
+      ]
+    },
+    {
+      "id": "response_cache",
+      "class": "C3",
+      "rationale": "Private management-request recovery container. Responses can mix C1 management fields and C0 election fields; this is not a voter's C2 inclusion receipt.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D24 |"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "const idem ="
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "const journal: OperationJournal"
+        },
+        {
+          "path": "packages/server/src/operation-receipts.ts",
+          "contains": "receipt.audit_detail"
+        }
+      ]
+    },
+    {
+      "id": "request_replay",
+      "class": "C3",
+      "rationale": "Persisted signed-request replay protection is operational authentication bookkeeping, distinct from D26's memory-only session/CSRF tokens. The nonce alone is not a bearer credential.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D24 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D26 |"
+        },
+        {
+          "path": "packages/server/src/auth.ts",
+          "contains": "pairs are single-use inside the window (persisted in control.sqlite)"
+        },
+        {
+          "path": "packages/server/src/controldb.ts",
+          "contains": "INSERT OR IGNORE INTO replay_nonce"
+        }
+      ]
+    },
+    {
+      "id": "public_election",
+      "class": "C0",
+      "rationale": "Election identifiers, public keys, title and lifecycle metadata returned to election readers. Link access can restrict readers, but these remain election disclosure data.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D12 |"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "path: '/api/v1/elections/:id'"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "const stateView ="
+        }
+      ]
+    },
+    {
+      "id": "public_board",
+      "class": "C0",
+      "rationale": "Published signed board records, ciphertexts, commitments, public participation indexes and checkpoint material, or values derived from that evidence. Public content can contain identifiers.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D01 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D13 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D17 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D21 |"
+        },
+        {
+          "path": "packages/server/src/electiondb.ts",
+          "contains": "export class SqliteBoardStore"
+        },
+        {
+          "path": "packages/server/src/export.ts",
+          "contains": "export function logBundle"
+        }
+      ]
+    },
+    {
+      "id": "public_roll",
+      "class": "C0",
+      "rationale": "Voter public keys, membership status and roll information exposed to election readers, including approved/pinned membership before roll_commit.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D01 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D10 |"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "path: '/api/v1/elections/:id/roll'"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "path: '/api/v1/elections/:id/voters/:kid'"
+        },
+        {
+          "path": "packages/server/src/election.ts",
+          "contains": "canonicalRollKeys():"
+        }
+      ]
+    },
+    {
+      "id": "public_events",
+      "class": "C0",
+      "rationale": "Public event payloads and identifiers delivered through the election reader stream. C0 does not promise indefinite retention of this outbox.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D19 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D21 |"
+        },
+        {
+          "path": "packages/server/src/electiondb.ts",
+          "contains": "event_outbox"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "path: '/api/v1/elections/:id/events'"
+        }
+      ]
+    },
+    {
+      "id": "public_evidence",
+      "class": "C0",
+      "rationale": "Signed checkpoint conflict evidence and its published incident metadata, exposed by the election evidence endpoint.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D21 |"
+        },
+        {
+          "path": "packages/server/src/gossip.ts",
+          "contains": "format: 'qv-equivocation/v1'"
+        },
+        {
+          "path": "packages/server/src/ext-routes.ts",
+          "contains": "path: '/api/v1/elections/:id/log/evidence'"
+        }
+      ]
+    },
+    {
+      "id": "public_spoil",
+      "class": "C0",
+      "rationale": "Signed spoil decryption shares and public ballot/trustee references exposed to readers and used in tally evidence. These are not secret trustee key shares.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D15 |"
+        },
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D18 |"
+        },
+        {
+          "path": "packages/server/src/app.ts",
+          "contains": "path: '/api/v1/elections/:id/spoil-shares'"
+        },
+        {
+          "path": "packages/server/src/electiondb.ts",
+          "contains": "published through tally.spoiled[].shares"
+        }
+      ]
+    },
+    {
+      "id": "public_export",
+      "class": "C0",
+      "rationale": "Recorded public .qvb bytes and content-derived bindings. This public snapshot excludes the optional private group export contemplated by D28.",
+      "evidence": [
+        {
+          "path": "docs/06-privacy-data-lifecycle.md",
+          "contains": "| D28 |"
+        },
+        {
+          "path": "packages/server/src/public-exports.ts",
+          "contains": "export function createPublicExport"
+        },
+        {
+          "path": "packages/server/src/export.ts",
+          "contains": "export function qvb"
+        }
+      ]
+    }
+  ],
+  "databases": [
+    {
+      "id": "control",
+      "schema_source": "packages/server/src/controldb.ts",
+      "tables": [
+        {
+          "name": "schema_migration",
+          "purpose": "Verify migration identity and record local application history.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE schema_migration"
+            }
+          ],
+          "columns": [
+            {"name":"version","class":"C3","basis":"operations"},
+            {"name":"name","class":"C3","basis":"operations"},
+            {"name":"sha256","class":"C3","basis":"operations"},
+            {"name":"applied_at","class":"C3","basis":"operations"},
+            {"name":"app_version","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "instance_meta",
+          "purpose": "Instance identity and operational metadata.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE instance_meta"
+            },
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "instanceId(): string"
+            },
+            {
+              "path": "packages/server/src/admin.ts",
+              "contains": "setMeta('last_backup_at'"
+            }
+          ],
+          "columns": [
+            {"name":"key","class":"C3","basis":"operations"},
+            {"name":"value","class":"C3","basis":"operations","rationale":"Mixed key/value container used for instance_id and last_backup_at. Instance identity can be public while backup history is operational; the whole column remains C3."}
+          ]
+        },
+        {
+          "name": "org",
+          "purpose": "Organization identity and management state.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE org"
+            }
+          ],
+          "columns": [
+            {"name":"org_id","class":"C1","basis":"management"},
+            {"name":"name","class":"C1","basis":"management","rationale":"GET /orgs/:org is signed and organization-scoped. QV-28's conditional 'public if listed' does not establish a public organization-name listing here."},
+            {"name":"created_at","class":"C1","basis":"management"},
+            {"name":"status","class":"C3","basis":"operations"},
+            {"name":"quota_bytes","class":"C3","basis":"operations"},
+            {"name":"deleted_at","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "account_key",
+          "purpose": "Organization and instance-admin public authentication keys.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE account_key"
+            },
+            {
+              "path": "packages/server/src/export.ts",
+              "contains": "export function organizerPk"
+            }
+          ],
+          "columns": [
+            {"name":"key_id","class":"C1","basis":"management"},
+            {"name":"org_id","class":"C1","basis":"management"},
+            {"name":"pk","class":"C1","basis":"management","rationale":"Public verification keys are held in private account records; a key used to sign a manifest is also exported publicly. C1 covers the broader account-table context, including unpublished keys."},
+            {"name":"alg","class":"C1","basis":"management"},
+            {"name":"role","class":"C1","basis":"management"},
+            {"name":"label","class":"C1","basis":"management","rationale":"Optional pseudonym shown to co-organizers by the signed keys route; admin rows can be narrower. Plaintext storage does not mean the text cannot identify a person."},
+            {"name":"created_at","class":"C3","basis":"operations"},
+            {"name":"revoked_at","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "election_registry",
+          "purpose": "Election lookup, storage and lifecycle bookkeeping.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE election_registry"
+            }
+          ],
+          "columns": [
+            {"name":"election_id","class":"C0","basis":"public_election"},
+            {"name":"org_id","class":"C1","basis":"management"},
+            {"name":"db_path","class":"C3","basis":"operations"},
+            {"name":"state","class":"C0","basis":"public_election"},
+            {"name":"access","class":"C0","basis":"public_election"},
+            {"name":"title","class":"C0","basis":"public_election","rationale":"Mirrors the title exposed by election reads; a DRAFT title is already readable. Private draft JSON is the separate election.election.draft column."},
+            {"name":"dek_wrapped","class":"C3","basis":"credential"},
+            {"name":"kek_id","class":"C3","basis":"operations"},
+            {"name":"created_at","class":"C0","basis":"public_election"},
+            {"name":"opened_at","class":"C3","basis":"operations"},
+            {"name":"closed_at","class":"C3","basis":"operations"},
+            {"name":"audit_close_at","class":"C3","basis":"operations"},
+            {"name":"archived_at","class":"C3","basis":"operations"},
+            {"name":"delete_after","class":"C3","basis":"operations"},
+            {"name":"deleted_at","class":"C3","basis":"operations"},
+            {"name":"imported","class":"C3","basis":"operations"},
+            {"name":"bytes_used","class":"C3","basis":"operations"},
+            {"name":"quarantine","class":"C3","basis":"operations","rationale":"Local quarantine reason/cache. Public state exposes an integrity category, not a promise that every stored reason is public evidence."}
+          ]
+        },
+        {
+          "name": "idempotency",
+          "purpose": "Recover management responses without repeating effects.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE idempotency"
+            },
+            {
+              "path": "packages/server/src/app.ts",
+              "contains": "code_withheld"
+            },
+            {
+              "path": "packages/server/src/app.ts",
+              "contains": "delete j['read_key']"
+            },
+            {
+              "path": "packages/server/src/app.ts",
+              "contains": "delete j['url']"
+            }
+          ],
+          "columns": [
+            {"name":"principal","class":"C3","basis":"response_cache"},
+            {"name":"idem_key","class":"C3","basis":"response_cache"},
+            {"name":"method","class":"C3","basis":"response_cache"},
+            {"name":"path","class":"C3","basis":"response_cache"},
+            {"name":"req_sha256","class":"C3","basis":"response_cache","rationale":"Digest of method, target and request body, not the raw request body; retained in private replay state."},
+            {"name":"status","class":"C3","basis":"response_cache"},
+            {"name":"response","class":"C3","basis":"response_cache","rationale":"Mixed response JSON can include organization names, account labels, invite identifiers and job references. Route redactors remove one-time read keys, invite codes and webhook credentials; this classification adds no redaction guarantee."},
+            {"name":"created_at","class":"C3","basis":"response_cache"},
+            {"name":"expires_at","class":"C3","basis":"response_cache"}
+          ]
+        },
+        {
+          "name": "replay_nonce",
+          "purpose": "Prevent replay of signed requests across restarts.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE replay_nonce"
+            }
+          ],
+          "columns": [
+            {"name":"key_id","class":"C3","basis":"request_replay"},
+            {"name":"nonce","class":"C3","basis":"request_replay","rationale":"Persisted Authorization: QV-Sig nonce accepted after signature verification; operational replay state, not a C4 in-memory session nonce."},
+            {"name":"expires_at","class":"C3","basis":"request_replay"}
+          ]
+        },
+        {
+          "name": "operator_audit",
+          "purpose": "Operator and management action history.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE operator_audit"
+            },
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "audit(actor:"
+            },
+            {
+              "path": "packages/server/src/ext-routes.ts",
+              "contains": "'quarantine.clear'"
+            },
+            {
+              "path": "packages/server/src/export-routes.ts",
+              "contains": "detail: { export_id:"
+            }
+          ],
+          "columns": [
+            {"name":"id","class":"C3","basis":"operations"},
+            {"name":"ts","class":"C3","basis":"operations"},
+            {"name":"actor","class":"C3","basis":"operations"},
+            {"name":"action","class":"C3","basis":"operations"},
+            {"name":"target","class":"C3","basis":"operations"},
+            {"name":"detail","class":"C3","basis":"operations","rationale":"JSON from explicit audit call sites can contain counts, incident IDs, witness names and export references. C3 follows D24; this is not a schema-level proof that no personal data can occur."}
+          ]
+        },
+        {
+          "name": "webhook",
+          "purpose": "Notification configuration and delivery health.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE webhook"
+            },
+            {
+              "path": "packages/server/src/webhooks.ts",
+              "contains": "export class WebhookService"
+            }
+          ],
+          "columns": [
+            {"name":"webhook_id","class":"C1","basis":"management"},
+            {"name":"org_id","class":"C1","basis":"management"},
+            {"name":"election_id","class":"C1","basis":"management"},
+            {"name":"url_enc","class":"C3","basis":"contact"},
+            {"name":"secret_enc","class":"C3","basis":"credential"},
+            {"name":"events","class":"C1","basis":"management"},
+            {"name":"created_at","class":"C1","basis":"management"},
+            {"name":"disabled_at","class":"C1","basis":"management"},
+            {"name":"failures","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "webhook_outbox",
+          "purpose": "Pending and retrying notification deliveries.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE webhook_outbox"
+            },
+            {
+              "path": "packages/server/src/webhooks.ts",
+              "contains": "const deliveryId ="
+            },
+            {
+              "path": "packages/server/src/webhooks.ts",
+              "contains": "id: deliveryId, election_id:"
+            }
+          ],
+          "columns": [
+            {"name":"seq","class":"C3","basis":"operations"},
+            {"name":"delivery_id","class":"C3","basis":"operations"},
+            {"name":"webhook_id","class":"C3","basis":"operations"},
+            {"name":"event_type","class":"C0","basis":"public_events"},
+            {"name":"body","class":"C3","basis":"operations","rationale":"Public event data is wrapped with a delivery id derived from webhook_id, election_id and event_id. C3 covers that delivery-specific wrapper despite the historical P0 payload comment; URL and signing secret live separately."},
+            {"name":"attempt","class":"C3","basis":"operations"},
+            {"name":"next_at","class":"C3","basis":"operations"},
+            {"name":"created_at","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "job",
+          "purpose": "Asynchronous management job progress, results and failures.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE job"
+            },
+            {
+              "path": "packages/server/src/jobs.ts",
+              "contains": "function reduceError"
+            },
+            {
+              "path": "packages/server/src/ext-routes.ts",
+              "contains": "visible to its creator and to instance admins"
+            },
+            {
+              "path": "packages/server/src/admin.ts",
+              "contains": "result_ref: `backups/"
+            }
+          ],
+          "columns": [
+            {"name":"job_id","class":"C3","basis":"operations"},
+            {"name":"kind","class":"C3","basis":"operations"},
+            {"name":"election_id","class":"C3","basis":"operations"},
+            {"name":"state","class":"C3","basis":"operations"},
+            {"name":"params","class":"C3","basis":"operations","rationale":"Mixed job configuration: callers supply import org/access/byte count, backup scope or public-export kind. C3 covers the private job context."},
+            {"name":"progress","class":"C3","basis":"operations"},
+            {"name":"result","class":"C3","basis":"operations","rationale":"Mixed import, self-audit, backup, deletion or export JSON, potentially including diagnostics and management identifiers; not automatically a public verification report."},
+            {"name":"result_ref","class":"C3","basis":"operations","rationale":"Management artifact/reference location, including backup paths and export-management URLs. This is not a bearer credential or public-download authorization."},
+            {"name":"error","class":"C3","basis":"operations","rationale":"Reduced job error JSON is private operational diagnostics. Classification does not certify arbitrary custom error fields as non-personal."},
+            {"name":"created_by","class":"C3","basis":"operations"},
+            {"name":"created_at","class":"C3","basis":"operations"},
+            {"name":"started_at","class":"C3","basis":"operations"},
+            {"name":"finished_at","class":"C3","basis":"operations"},
+            {"name":"expires_at","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "gossip_health",
+          "purpose": "Bounded local gossip-peer scheduler health.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE gossip_health"
+            }
+          ],
+          "columns": [
+            {"name":"peer_id","class":"C3","basis":"operations","rationale":"Configured peer hash or scheduler sentinel; this column does not store the peer URL."},
+            {"name":"last_attempt_at","class":"C3","basis":"operations"},
+            {"name":"last_success_at","class":"C3","basis":"operations"},
+            {"name":"last_failure_at","class":"C3","basis":"operations"},
+            {"name":"consecutive_failures","class":"C3","basis":"operations"},
+            {"name":"last_error","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "election_cleanup",
+          "purpose": "Cursor for resuming local deletion cleanup.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE election_cleanup"
+            }
+          ],
+          "columns": [
+            {"name":"election_id","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "webhook_event_cursor",
+          "purpose": "Cross-database delivery bridge progress.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE webhook_event_cursor"
+            }
+          ],
+          "columns": [
+            {"name":"election_id","class":"C3","basis":"operations"},
+            {"name":"event_id","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "runtime_anchor",
+          "purpose": "Public tree bindings retained outside the election DB to detect rollback.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "CREATE TABLE runtime_anchor"
+            }
+          ],
+          "columns": [
+            {"name":"election_id","class":"C0","basis":"public_board"},
+            {"name":"origin","class":"C0","basis":"public_board"},
+            {"name":"log_pk","class":"C0","basis":"public_board"},
+            {"name":"tree_size","class":"C0","basis":"public_board"},
+            {"name":"root","class":"C0","basis":"public_board"},
+            {"name":"conflicted","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "sqlite_sequence",
+          "purpose": "SQLite-owned AUTOINCREMENT bookkeeping, explicitly included as persisted data.",
+          "evidence": [
+            {
+              "path": "packages/server/src/controldb.ts",
+              "contains": "AUTOINCREMENT"
+            }
+          ],
+          "columns": [
+            {"name":"name","class":"C3","basis":"operations"},
+            {"name":"seq","class":"C3","basis":"operations"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "election",
+      "schema_source": "packages/server/src/electiondb.ts",
+      "tables": [
+        {
+          "name": "schema_migration",
+          "purpose": "Verify migration identity and record local application history.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE schema_migration"
+            }
+          ],
+          "columns": [
+            {"name":"version","class":"C3","basis":"operations"},
+            {"name":"name","class":"C3","basis":"operations"},
+            {"name":"sha256","class":"C3","basis":"operations"},
+            {"name":"applied_at","class":"C3","basis":"operations"},
+            {"name":"app_version","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "meta",
+          "purpose": "Mixed election/import metadata and local bridge state.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE meta"
+            },
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "setMeta(key: string"
+            },
+            {
+              "path": "packages/server/src/imports.ts",
+              "contains": "setMeta('organizer_pk'"
+            },
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "webhook_bridge_floor"
+            }
+          ],
+          "columns": [
+            {"name":"key","class":"C3","basis":"operations"},
+            {"name":"value","class":"C3","basis":"operations","rationale":"Known keys include election_id, spec_version, organizer_pk, imported_from_generator and webhook_bridge_floor. Some are public, while internal delivery state and the unconstrained string setter make C3 conservative for the container."}
+          ]
+        },
+        {
+          "name": "election",
+          "purpose": "Public election metadata, unpublished draft and stored server credentials.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE election"
+            }
+          ],
+          "columns": [
+            {"name":"election_id","class":"C0","basis":"public_election"},
+            {"name":"origin","class":"C0","basis":"public_election"},
+            {"name":"state","class":"C0","basis":"public_election"},
+            {"name":"phase_seq","class":"C0","basis":"public_election","rationale":"JSON phase-to-board-sequence map; the reader-facing state view publishes this same projection."},
+            {"name":"log_pk","class":"C0","basis":"public_election"},
+            {"name":"log_sk_enc","class":"C3","basis":"credential"},
+            {"name":"srv_pk","class":"C0","basis":"public_election"},
+            {"name":"srv_sk_enc","class":"C3","basis":"credential"},
+            {"name":"access","class":"C0","basis":"public_election"},
+            {"name":"read_key_hash","class":"C3","basis":"credential"},
+            {"name":"title","class":"C0","basis":"public_election"},
+            {"name":"draft","class":"C1","basis":"draft","rationale":"Arbitrary organizer JSON from PUT /draft, absent from GET /elections/:id and distinct from the signed manifest. C1 does not assert validation or sanitization of all nested fields."},
+            {"name":"org_id","class":"C1","basis":"management"},
+            {"name":"tree_size","class":"C0","basis":"public_election"},
+            {"name":"imported","class":"C3","basis":"operations"},
+            {"name":"quarantine","class":"C3","basis":"operations"},
+            {"name":"created_at","class":"C0","basis":"public_election"},
+            {"name":"registration_scheme","class":"C0","basis":"public_election"}
+          ]
+        },
+        {
+          "name": "log_entry",
+          "purpose": "Signed public board evidence and local indexes.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE log_entry"
+            }
+          ],
+          "columns": [
+            {"name":"seq","class":"C0","basis":"public_board"},
+            {"name":"type","class":"C0","basis":"public_board"},
+            {"name":"author","class":"C0","basis":"public_board"},
+            {"name":"author_nonce","class":"C0","basis":"public_board","rationale":"Nonce in the public signed entry header, distinct from request replay nonces and C4 session nonces."},
+            {"name":"nonce_key","class":"C0","basis":"public_board"},
+            {"name":"header","class":"C0","basis":"public_board"},
+            {"name":"leaf_hash","class":"C0","basis":"public_board"},
+            {"name":"body_digest","class":"C0","basis":"public_board"},
+            {"name":"body","class":"C0","basis":"public_board","rationale":"Canonical bytes of admitted signed public protocol records: ciphertext ballots, proofs, controls and public DKG/tally evidence. Private proposal/challenge stores described in QV-06 are not implemented here."},
+            {"name":"body_len","class":"C0","basis":"public_board"},
+            {"name":"received_at","class":"C3","basis":"operations","rationale":"Local stored sequencing timestamp. The board adapter exports a seconds-rounded sequencedAt derivative; C3 does not imply published timing is private."},
+            {"name":"redacted_at","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "checkpoint",
+          "purpose": "Signed tree heads and local checkpoint cache state.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE checkpoint"
+            }
+          ],
+          "columns": [
+            {"name":"tree_size","class":"C0","basis":"public_board"},
+            {"name":"root_hash","class":"C0","basis":"public_board"},
+            {"name":"note_text","class":"C0","basis":"public_board"},
+            {"name":"issued_at","class":"C3","basis":"operations","rationale":"Local Date.now() storage time supplied by putCheckpoint; not an authenticated timestamp inside the signed note."},
+            {"name":"witnessed","class":"C3","basis":"operations","rationale":"Local cache flag; reader-facing witness status is recomputed from signed notes and policy."}
+          ]
+        },
+        {
+          "name": "voter_invite",
+          "purpose": "Enrollment hash and optional organizer invite metadata.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE voter_invite"
+            }
+          ],
+          "columns": [
+            {"name":"invite_id","class":"C1","basis":"management"},
+            {"name":"code_hash","class":"C3","basis":"credential"},
+            {"name":"label_enc","class":"C1","basis":"label"},
+            {"name":"contact_enc","class":"C3","basis":"contact"},
+            {"name":"state","class":"C1","basis":"management"},
+            {"name":"created_at","class":"C1","basis":"management"},
+            {"name":"expires_at","class":"C1","basis":"management"},
+            {"name":"registered_at","class":"C3","basis":"operations","rationale":"Stored invite redemption time is not returned by the current invite-list view; it remains private operational timing."},
+            {"name":"closed_at","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "voter",
+          "purpose": "Public-key membership and local enrollment timing.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE voter"
+            },
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "addVoter("
+            }
+          ],
+          "columns": [
+            {"name":"voter_kid","class":"C0","basis":"public_roll"},
+            {"name":"pk","class":"C0","basis":"public_roll"},
+            {"name":"alg","class":"C0","basis":"public_roll"},
+            {"name":"status","class":"C0","basis":"public_roll"},
+            {"name":"registered_at","class":"C3","basis":"operations","rationale":"Hour-rounded local enrollment time absent from reader-facing roll/voter views. This table has no invite-to-voter foreign key."},
+            {"name":"roll_index","class":"C0","basis":"public_roll"},
+            {"name":"weight","class":"C0","basis":"public_roll"}
+          ]
+        },
+        {
+          "name": "ballot_index",
+          "purpose": "Public per-voter participation projection.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE ballot_index"
+            }
+          ],
+          "columns": [
+            {"name":"voter_kid","class":"C0","basis":"public_board"},
+            {"name":"first_seq","class":"C0","basis":"public_board"},
+            {"name":"latest_seq","class":"C0","basis":"public_board"},
+            {"name":"ballot_count","class":"C0","basis":"public_board"}
+          ]
+        },
+        {
+          "name": "ballot_ref",
+          "purpose": "Public cast/spoil references per voter.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE ballot_ref"
+            }
+          ],
+          "columns": [
+            {"name":"seq","class":"C0","basis":"public_board"},
+            {"name":"voter_kid","class":"C0","basis":"public_board"},
+            {"name":"kind","class":"C0","basis":"public_board"},
+            {"name":"leaf_hash","class":"C0","basis":"public_board"}
+          ]
+        },
+        {
+          "name": "projection_state",
+          "purpose": "Reserved persisted projection-cache schema.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE projection_state"
+            }
+          ],
+          "columns": [
+            {"name":"key","class":"C3","basis":"operations"},
+            {"name":"value","class":"C3","basis":"operations","rationale":"Generic value column has no active writer in current server source. It is not assumed public; future use requires content/privacy review even without a schema change."},
+            {"name":"as_of_seq","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "redaction",
+          "purpose": "Public description of omitted bodies in exported bundles.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE redaction"
+            },
+            {
+              "path": "packages/server/src/export.ts",
+              "contains": "redactions: rt.edb.redactions()"
+            }
+          ],
+          "columns": [
+            {"name":"seq","class":"C0","basis":"public_board"},
+            {"name":"redacted_at","class":"C0","basis":"public_board"},
+            {"name":"reason","class":"C0","basis":"public_board","rationale":"Published in redactions.json by logBundle. This records disclosure and does not assert a closed reason-code vocabulary."}
+          ]
+        },
+        {
+          "name": "event",
+          "purpose": "Reader-facing event stream and source delivery outbox.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE event"
+            }
+          ],
+          "columns": [
+            {"name":"event_id","class":"C0","basis":"public_events"},
+            {"name":"ts","class":"C0","basis":"public_events"},
+            {"name":"type","class":"C0","basis":"public_events"},
+            {"name":"seq","class":"C0","basis":"public_events"},
+            {"name":"data","class":"C0","basis":"public_events","rationale":"JSON for entry, checkpoint, phase, witness and alert events; distinct from control.webhook_outbox.body's delivery-specific wrapper."}
+          ]
+        },
+        {
+          "name": "gossip_seen",
+          "purpose": "Bounded checkpoint deduplication and consistency bookkeeping.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE gossip_seen"
+            }
+          ],
+          "columns": [
+            {"name":"fingerprint","class":"C3","basis":"operations","rationale":"Digest of public signed note text held in an operational deduplication row; the whole row is not a published checkpoint/evidence record."},
+            {"name":"tree_size","class":"C3","basis":"operations"},
+            {"name":"root_hash","class":"C3","basis":"operations"},
+            {"name":"received_at","class":"C3","basis":"operations"},
+            {"name":"consistent","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "equivocation_evidence",
+          "purpose": "Published checkpoint conflicts and incident metadata.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE equivocation_evidence"
+            }
+          ],
+          "columns": [
+            {"name":"evidence_id","class":"C0","basis":"public_evidence"},
+            {"name":"fingerprint","class":"C0","basis":"public_evidence"},
+            {"name":"kind","class":"C0","basis":"public_evidence"},
+            {"name":"tree_size","class":"C0","basis":"public_evidence"},
+            {"name":"source","class":"C0","basis":"public_evidence"},
+            {"name":"recorded_at","class":"C0","basis":"public_evidence"},
+            {"name":"evidence","class":"C0","basis":"public_evidence","rationale":"Authenticated checkpoint-comparison JSON with notes and optional consistency proof, exposed by GET /log/evidence; it carries no peer URL or signed-request credentials."}
+          ]
+        },
+        {
+          "name": "spoil_share",
+          "purpose": "Published signed spoil-share evidence used in tally assembly.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE spoil_share"
+            }
+          ],
+          "columns": [
+            {"name":"code","class":"C0","basis":"public_spoil"},
+            {"name":"j","class":"C0","basis":"public_spoil"},
+            {"name":"spoil_seq","class":"C0","basis":"public_spoil"},
+            {"name":"record","class":"C0","basis":"public_spoil","rationale":"Public trustee-signed decryption-share record returned by GET /spoil-shares and used in tally.spoiled[].shares; not a trustee's secret DKG share."},
+            {"name":"received_at","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "append_completion",
+          "purpose": "Local append-to-event completion journal.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE append_completion"
+            }
+          ],
+          "columns": [
+            {"name":"seq","class":"C3","basis":"operations"},
+            {"name":"ts","class":"C3","basis":"operations"}
+          ]
+        },
+        {
+          "name": "operation_receipt",
+          "purpose": "Election-owned management response journal for cross-DB recovery.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE operation_receipt"
+            }
+          ],
+          "columns": [
+            {"name":"principal","class":"C3","basis":"response_cache"},
+            {"name":"idem_key","class":"C3","basis":"response_cache"},
+            {"name":"method","class":"C3","basis":"response_cache"},
+            {"name":"path","class":"C3","basis":"response_cache"},
+            {"name":"req_sha256","class":"C3","basis":"response_cache"},
+            {"name":"expires_at","class":"C3","basis":"response_cache"},
+            {"name":"status","class":"C3","basis":"response_cache"},
+            {"name":"response","class":"C3","basis":"response_cache","rationale":"Route-redacted JSON for election creation, pinned-roll attachment, invite creation, quarantine clear and export acknowledgement/notice. C3 covers mixed management/incident data; this is not a public ballot inclusion receipt."},
+            {"name":"audit_action","class":"C3","basis":"response_cache"},
+            {"name":"audit_detail","class":"C3","basis":"response_cache","rationale":"Deferred audit-detail JSON recovered into control.operator_audit, including incident/witness or export references; not uniformly public content."}
+          ]
+        },
+        {
+          "name": "pinned_roll",
+          "purpose": "Complete immutable public membership commitment and key list.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE pinned_roll"
+            }
+          ],
+          "columns": [
+            {"name":"id","class":"C3","basis":"operations"},
+            {"name":"root","class":"C0","basis":"public_roll"},
+            {"name":"size","class":"C0","basis":"public_roll"},
+            {"name":"keys_json","class":"C0","basis":"public_roll","rationale":"Complete organizer-attached public-key list returned by the canonical roll endpoint before roll_commit; distinct from registration timing and invite contacts."}
+          ]
+        },
+        {
+          "name": "export_record",
+          "purpose": "Exact public snapshots and private export-management records.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "CREATE TABLE export_record"
+            },
+            {
+              "path": "packages/server/src/export-routes.ts",
+              "contains": "export function registerPublicExportRoutes"
+            },
+            {
+              "path": "packages/server/src/public-exports.ts",
+              "contains": "export function publicExportView"
+            }
+          ],
+          "columns": [
+            {"name":"export_id","class":"C1","basis":"management"},
+            {"name":"job_id","class":"C3","basis":"operations"},
+            {"name":"kind","class":"C0","basis":"public_export"},
+            {"name":"tree_size","class":"C0","basis":"public_export"},
+            {"name":"root_hash","class":"C0","basis":"public_export"},
+            {"name":"sha256","class":"C0","basis":"public_export"},
+            {"name":"byte_length","class":"C0","basis":"public_export"},
+            {"name":"snapshot","class":"C0","basis":"public_export","rationale":"Exact qvb(rt) bytes assembled from public board/election records. Management authorization protects this particular download record; the snapshot bytes remain public election content."},
+            {"name":"created_at","class":"C1","basis":"management"},
+            {"name":"expires_at","class":"C1","basis":"management"},
+            {"name":"acknowledged_at","class":"C1","basis":"management","rationale":"Stored time of an authenticated organizer acknowledgement; not proof the recipient retained or independently verified the export."},
+            {"name":"notice_at","class":"C1","basis":"management","rationale":"Time of a management deletion-notice action; this inventory adds no deletion authorization or retention guarantee."}
+          ]
+        },
+        {
+          "name": "sqlite_sequence",
+          "purpose": "SQLite-owned AUTOINCREMENT bookkeeping, explicitly included as persisted data.",
+          "evidence": [
+            {
+              "path": "packages/server/src/electiondb.ts",
+              "contains": "AUTOINCREMENT"
+            }
+          ],
+          "columns": [
+            {"name":"name","class":"C3","basis":"operations"},
+            {"name":"seq","class":"C3","basis":"operations"}
+          ]
+        }
+      ]
+    }
+  ]
+}

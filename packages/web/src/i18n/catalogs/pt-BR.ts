@@ -587,4 +587,17 @@ export const PT_BR = {
   'qv.org.enrollHelp': "Use um identificador de organização existente ou crie uma organização com esta chave e a frase secreta abaixo. O servidor pode exigir um token de cadastro ou recusar novas organizações.",
   'qv.org.registrationToken': "Token de cadastro da organização (se necessário)",
   'qv.org.enrollRetry': "A solicitação pode ter chegado ao servidor. Digite novamente sua frase secreta e tente de novo com os mesmos dados da organização. Mantenha esta página aberta.",
+  // Machine-drafted manifest warnings; native review remains pending.
+  'qv.election.warning.title': "Avisos da eleição",
+  'qv.election.warning.noThreshold': "O limiar de custodiantes é 1, portanto não há proteção por limiar.",
+  'qv.election.warning.secrecy': "O limiar de custodiantes está abaixo da maioria dos custodiantes.",
+  'qv.election.warning.availability': "Para que o resultado possa ser aberto, menos de um terço dos custodiantes podem estar indisponíveis.",
+  'qv.election.warning.smallRoll': "Com tão poucos votantes, os totais publicados podem revelar votos individuais.",
+  'qv.election.warning.other': "Aviso adicional da eleição: {warning}",
+  // Machine-drafted result disclosures; native review remains pending.
+  'qv.results.disclosure.smallRoll': "Os resultados podem revelar votos individuais",
+  'qv.results.disclosure.scope': "Para esta opção",
+  'qv.results.disclosure.unanimous': "Resultado unânime: a escolha de cada participante é conhecida",
+  'qv.results.disclosure.all': "Todos os votantes contabilizados selecionaram esta opção.",
+  'qv.results.disclosure.none': "Nenhum votante contabilizado selecionou esta opção.",
 } as const satisfies Record<MessageKey, string>;

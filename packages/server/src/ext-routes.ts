@@ -23,7 +23,7 @@ export interface ExtDeps {
   add(r: Route): void;
   idem(c: Ctx, principal: string, fn: (save: (reply: Reply) => void, journal: OperationJournal) => Promise<Reply>, redact?: (r: Reply) => Reply): Promise<Reply>;
   readable(c: Ctx): Promise<ElectionRuntime>;
-  orgElection(c: Ctx): Promise<ElectionRuntime>;
+  orgElection(c: Ctx, admin?: 'read' | 'delete'): Promise<ElectionRuntime>;
   intQ(c: Ctx, n: string, def: number, max: number): number;
 }
 

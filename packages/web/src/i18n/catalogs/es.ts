@@ -587,4 +587,17 @@ export const ES = {
   'qv.org.enrollHelp': "Usa un identificador de organización existente o crea una organización con esta clave y la frase de contraseña de abajo. El servidor puede exigir un token de registro o rechazar nuevas organizaciones.",
   'qv.org.registrationToken': "Token de registro de la organización (si se requiere)",
   'qv.org.enrollRetry': "La solicitud puede haber llegado al servidor. Vuelve a introducir tu frase de contraseña y reintenta con los mismos datos de organización. Mantén esta página abierta.",
+  // Machine-drafted manifest warnings; native review remains pending.
+  'qv.election.warning.title': "Advertencias de la elección",
+  'qv.election.warning.noThreshold': "El umbral de fideicomisarios es 1, por lo que no hay protección de umbral.",
+  'qv.election.warning.secrecy': "El umbral de fideicomisarios está por debajo de la mayoría de fideicomisarios.",
+  'qv.election.warning.availability': "Para poder abrir el resultado, menos de un tercio de los fideicomisarios pueden estar indisponibles.",
+  'qv.election.warning.smallRoll': "Con tan pocos votantes, los totales publicados podrían revelar votos individuales.",
+  'qv.election.warning.other': "Advertencia adicional de la elección: {warning}",
+  // Machine-drafted result disclosures; native review remains pending.
+  'qv.results.disclosure.smallRoll': "Los resultados pueden revelar votos individuales",
+  'qv.results.disclosure.scope': "Para esta opción",
+  'qv.results.disclosure.unanimous': "Resultado unánime: se conoce la elección de cada participante",
+  'qv.results.disclosure.all': "Todos los votantes contabilizados seleccionaron esta opción.",
+  'qv.results.disclosure.none': "Ningún votante contabilizado seleccionó esta opción.",
 } as const satisfies Record<MessageKey, string>;

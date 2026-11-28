@@ -19,10 +19,10 @@ function offsetLabel(date: Date, zone: string): string {
   return v === 'GMT' ? 'UTC+00:00' : v.replace('GMT', 'UTC');
 }
 
-export function formatDeadline(instantIso: string, electionZone: string, viewerZone: string, locale: string): DeadlineText {
+export function formatDeadline(instantIso: string, electionZone: string, viewerZone: string, locale: string, options: { seconds?: boolean } = {}): DeadlineText {
   const d = new Date(instantIso);
   const fmt = (zone: string): string =>
-    new Intl.DateTimeFormat(locale, { timeZone: zone, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZoneName: 'short' }).format(d);
+    new Intl.DateTimeFormat(locale, { timeZone: zone, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', ...(options.seconds ? { second: '2-digit' as const } : {}), hourCycle: 'h23', timeZoneName: 'short' }).format(d);
   const iso = new Intl.DateTimeFormat('en-CA', { timeZone: electionZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
   const out: DeadlineText = { electionTime: fmt(electionZone), offset: offsetLabel(d, electionZone), zone: electionZone, isoDate: iso, instant: d.toISOString().replace('.000Z', 'Z') };
   if (viewerZone !== electionZone) out.viewerTime = fmt(viewerZone);

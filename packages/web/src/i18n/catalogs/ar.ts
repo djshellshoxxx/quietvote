@@ -588,4 +588,17 @@ export const AR = {
   'qv.org.enrollHelp': "استخدم معرّف منظمة موجودة، أو أنشئ منظمة بهذا المفتاح وعبارة المرور أدناه. قد يطلب الخادم رمز تسجيل أو يرفض إنشاء منظمات جديدة.",
   'qv.org.registrationToken': "رمز تسجيل المنظمة (عند الحاجة)",
   'qv.org.enrollRetry': "ربما وصل الطلب إلى الخادم. أعد إدخال عبارة المرور وحاول مجددًا ببيانات المنظمة نفسها. أبقِ هذه الصفحة مفتوحة.",
+  // Machine-drafted manifest warnings; native review remains pending.
+  'qv.election.warning.title': "تحذيرات الانتخابات",
+  'qv.election.warning.noThreshold': "عتبة الأمناء هي 1، لذلك لا توجد حماية بالعتبة.",
+  'qv.election.warning.secrecy': "عتبة الأمناء أقل من أغلبية الأمناء.",
+  'qv.election.warning.availability': "لكي يمكن فتح النتيجة، يجب أن يكون عدد الأمناء غير المتاحين أقل من الثلث.",
+  'qv.election.warning.smallRoll': "مع هذا العدد القليل من الناخبين، قد تكشف المجاميع المنشورة عن أصوات الأفراد.",
+  'qv.election.warning.other': "تحذير إضافي للانتخابات: {warning}",
+  // Machine-drafted result disclosures; native review remains pending.
+  'qv.results.disclosure.smallRoll': "قد تكشف النتائج عن أصوات الأفراد",
+  'qv.results.disclosure.scope': "بالنسبة إلى هذا الخيار",
+  'qv.results.disclosure.unanimous': "نتيجة بالإجماع: اختيار كل مشارك معروف",
+  'qv.results.disclosure.all': "اختار جميع الناخبين المحتسبة أصواتهم هذا الخيار.",
+  'qv.results.disclosure.none': "لم يختر أي ناخب محتسب صوته هذا الخيار.",
 } as const satisfies Record<MessageKey, string>;

@@ -932,8 +932,12 @@ export class ElectionRuntime {
     if (this.edb.totalBodyBytes() + body.length > cfg.maxLogBytes) throw new ApiError(507, 'LOG_FULL', 'per-election log size cap reached');
     if (cfg.minFreeBytes > 0) {
       try {
-        const fs = statfsSync(cfg.dataDir);
-        if (Number(fs.bavail) * Number(fs.bsize) < cfg.minFreeBytes) throw new ApiError(507, 'LOG_FULL', 'insufficient free disk space; reads continue');
+        const fs = statfsSync(cfg.dataDir, { bigint: true });
+        // QV-29 §6.6: retain a 5% reserve as well as QV-28's configured byte floor.
+        // Integer products preserve the strict boundary even on very large filesystems.
+        if (fs.bavail * fs.bsize < BigInt(Math.ceil(cfg.minFreeBytes)) || fs.bavail * 20n < fs.blocks) {
+          throw new ApiError(507, 'LOG_FULL', 'insufficient free disk space; reads continue');
+        }
       } catch (e) {
         if (e instanceof ApiError) throw e;
       }

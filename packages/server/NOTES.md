@@ -2,6 +2,68 @@
 
 Runtime uses node:http, node:sqlite and node:crypto plus the declared workspace crypto/board/protocol packages.
 
+## Instance administration and organization authority (QV-12-REQ-003)
+
+Organization management now requires a key belonging to that organization.
+Instance-admin keys cannot grant or revoke organization keys, create elections,
+edit drafts, attach pinned rolls, issue or revoke invites, change webhooks, or
+create/acknowledge recorded exports or publish their deletion notices. These
+requests receive the existing `404 NOT_FOUND` organization/election response
+before the corresponding mutation. Closing key management is part of the same
+boundary: an operator cannot obtain organization authority by granting another
+key an owner role.
+
+Existing admin exceptions are explicit at each management read and confirmed
+election-delete route. Imports, job visibility and `/admin/*` retain their own
+authorization checks. Election deletion still requires its existing title,
+lifecycle and export-evidence conditions. Organization owners and organizers keep
+their existing roles; public/link read access and signed protocol authority keep
+their existing checks. No storage or signed-record migration is required.
+
+See [the source-bound plan and verification report](../../docs/reports/admin-org-role-boundary-20261127.md).
+
+## Invitation issuance lifetime
+
+New invitations reject explicit `expires_at` values beyond 30 days from the request's captured issuance time with
+`422 VALIDATION_FAILED`, before invitation purge/creation or idempotency journaling. Exactly 30 days is accepted;
+the default remains 14 days. Malformed timestamps still return `400 BAD_REQUEST`, and explicitly past deadlines
+retain their existing behavior: issuance succeeds, redemption returns `INVITE_EXPIRED`.
+Existing stored expiry values (including longer lifetimes and legacy NULL values) are not rewritten.
+
+Issuance and client parsing retain the current QV-ADR-028 16-byte token contract. The older QV-29 160-bit requirement
+conflicts with that adopted contract and four current client input gates; the unadopted options are recorded in
+`docs/rfcs/invite-token-width-contract.md`. `test/invite-expiry-cap.test.ts` covers the boundary, absence of rejected-request
+mutations, current browser enrollment, legacy raw-code compatibility and reopening with existing expiry policies.
+
+## Data inventory and schema coverage
+
+`docs/data-inventory.json` records the existing control and election SQLite columns using QV-06's C0–C4 classes,
+with source references and field-specific explanations for mixed JSON, unpublished drafts and private operational data.
+It includes SQLite's `sqlite_sequence` tables. QV-28's P0–P4 taxonomy is separate; the inventory does not introduce
+encryption, retention or disclosure guarantees. C3 for operational containers follows the D24/D25 operator-only precedent.
+
+`test/data-inventory.test.ts` runs the actual migrations and compares all tables/columns through SQLite schema introspection
+(`table_xinfo`, the `table_info` superset that includes generated columns). Negative fixtures add real columns/tables,
+including a generated column, and check missing/stale entries, duplicate entries, unknown classes and invalid bases.
+Persisted columns cannot be classified C4 (memory-only). The normal server test glob includes this CI check.
+Nested JSON fields, other stores and unchanged-schema writer changes still require content/privacy review.
+
+## Disk-space admission reserve (2026-11-27)
+
+With the existing disk probe enabled, append admission now refuses when available
+blocks are below 5% of total blocks, as well as below the configured absolute
+byte floor (default 500 MiB). It returns the existing `507 LOG_FULL` error before
+appending; reads and exports continue. Bigint statistics preserve exact boundary
+comparisons on large volumes; fractional configured byte minima retain their
+previous comparison semantics. The log-size cap still precedes filesystem I/O.
+
+`test/disk-guard.test.ts` demonstrates the original missing-percentage check and
+covers strict/equal boundaries, fractional minima, large block counts, unchanged
+board evidence, continued reads and exact-request recovery. Existing explicit
+`minFreeBytes: 0` disabling and unsupported/failed-statfs handling are unchanged.
+This qualifies admission checks, not physical disk-full or power-loss recovery,
+and does not add an operator alert-delivery mechanism.
+
 ## Design summary
 * `http.ts` routing, limits (Content-Length + streamed counter, 413/414/415, header/headers/request timeouts, keep-alive,
   max connections), security headers, CORS (public GET `*`, others only `allowedOrigins`), problem+json, ETag/304.
@@ -547,3 +609,59 @@ Public state adds `control_seq` and `next_control_seq` (null if exhausted). Thes
 are operational hints from the server. Signing clients derive authority and order
 from a verified archive, not from that unauthenticated state response. The counter
 does not establish checkpoint freshness or protection against every rollback.
+
+## Ballot retry after restart
+
+`test/idempotency-restart.test.ts` covers exact ballot resubmission after stopping and reopening a real 2-of-3 election.
+With an unchanged tree, the signed promise and inclusion receipt are identical; public ballot counts, internal cast quota,
+checkpoint and stored body bytes remain unchanged. Valid revotes exhaust the original configured allowance. A second reopen
+preserves that limit, permits the original idempotent retry, and refuses a new over-limit cast without appending.
+The test independently checks receipt signatures/inclusion and all board entry/checkpoint signatures using fixture-owned keys.
+Its zero-witness fixture establishes board integrity, not witnessed full-election verification or power-loss durability.
+
+
+
+## Seeded HTTP eligibility coverage — 2026-11-27
+
+`test/eligibility-property.test.ts` runs three deterministic operation sequences
+against real 2-of-3 elections. An independent per-voter model supplies each
+accepted predecessor, cast count and final selection. Non-roll authors, wrong
+contexts, stale predecessors, copied ballot bodies, exhausted quotas and ballots
+after voting close receive the expected typed refusals. Every refusal leaves the
+checkpoint, all public voter indexes and stored board-body byte count unchanged.
+Accepted receipts and the final board are cryptographically verified; counted
+codes and decrypted totals must match the model.
+
+The code includes the body voter, so a literal copied code under another author's
+entry is refused as `E_VOTER_NOT_ELIGIBLE`; a fresh-nonce copy by its original
+author is refused as `E_SUPERSEDES`. The test does not fabricate a hash collision
+to exercise the deeper `E_DUP_CODE` guard. The standard protocol verifier remains
+`INCOMPLETE` for these zero-witness fixtures; checked ballot/tally evidence is not
+described as full witnessed verification. Details and scope qualifications:
+[eligibility coverage report](../../docs/reports/product-eligibility-20261127.md).
+
+## Privacy marker lifecycle coverage (T7, 2026-11-27)
+
+`test/privacy-markers.test.ts` runs a real local HTTP election from invitation
+issuance and enrollment through casting, public/private spoils, close, tally,
+archive, recorded PUBLIC export and retention. Its 42 private marker families
+cover invitation labels/contacts/raw codes, client signing keys, final trustee
+secret shares, cast/private-spoil `xi`, and complete private selection-map
+serializations. It scans every runtime file, explicitly requires both live
+SQLite database/WAL/SHM sets, captures server logs, and also reads logical
+idempotency/operation responses and decoded JSON/QVB board bodies so page splits
+and base64 wrapping do not make those checks vacuous.
+
+The test asserts that both durable invitation-response writers store only IDs
+and `code_withheld:true` before cleanup; replay returns that redacted response.
+Registered contacts are immediately NULL, labels remain encrypted during grace,
+and a later sweep NULLs registered, revoked and expired invite private fields.
+The second sweep is a no-op. Public options, aggregate tally data and an explicit
+published spoil opening remain positive controls. The persisted server KEK is
+expected and its file is still scanned for forbidden client markers.
+
+This is bounded literal-encoding evidence, not a proof of anonymity or absence of
+all possible encodings, memory/core dumps, backups, traffic inference or forensic
+erasure. It does not establish export verification/finality, change token width,
+retention policy or protocol rules, or resolve the derived-record/server-author
+verification contract. See the [scope and source evidence](../../docs/reports/privacy-marker-coverage-20261127.md).

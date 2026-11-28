@@ -120,10 +120,12 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     }
     return rt;
   };
-  const orgElection = async (c: Ctx): Promise<ElectionRuntime> => {
+  // Organization authority is the default. Operator exceptions are named at individual read/delete routes.
+  const orgElection = async (c: Ctx, admin?: 'read' | 'delete'): Promise<ElectionRuntime> => {
     const rt = await rtOf(c);
-    if (c.auth?.role === 'instance_admin') return rt;
-    if (c.auth?.orgId !== rt.orgId) throw notFound('election'); // cross-org probes look like 404
+    if (c.auth?.role === 'instance_admin') {
+      if (admin === undefined) throw notFound('election');
+    } else if (c.auth?.orgId !== rt.orgId) throw notFound('election'); // cross-org probes look like 404
     return rt;
   };
   /** QV-28 §11.1 lazy purge: invite P2 data past its retention is removed whenever the invites of an election are touched. */
@@ -131,9 +133,11 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     const n = rt.edb.purgeInviteData(nowMs(), cfg.inviteRetentionMs);
     if (n > 0) control.audit('system', 'invite.purge', rt.id, { rows: n });
   };
-  const orgOf = (c: Ctx): string => {
+  const orgOf = (c: Ctx, admin?: 'read'): string => {
     const o = c.params['org']!;
-    if (c.auth?.role !== 'instance_admin' && c.auth?.orgId !== o) throw notFound('organization');
+    if (c.auth?.role === 'instance_admin') {
+      if (admin !== 'read') throw notFound('organization');
+    } else if (c.auth?.orgId !== o) throw notFound('organization');
     if (!control.getOrg(o)) throw notFound('organization');
     return o;
   };
@@ -301,19 +305,19 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   add({
     method: 'GET', path: '/api/v1/orgs/:org', cls: 'M', auth: 'sig',
     handler: (c) => {
-      const o = control.getOrg(orgOf(c))!;
+      const o = control.getOrg(orgOf(c, 'read'))!;
       return { status: 200, json: { org_id: o.org_id, name: o.name, created_at: toIso(o.created_at / 1000) } };
     },
   });
   add({
     method: 'GET', path: '/api/v1/orgs/:org/keys', cls: 'M', auth: 'sig',
-    handler: (c) => ({ status: 200, json: { items: control.orgKeys(orgOf(c)).map((k) => ({ key_id: k.key_id, role: k.role, label: k.label })), next_cursor: null } }),
+    handler: (c) => ({ status: 200, json: { items: control.orgKeys(orgOf(c, 'read')).map((k) => ({ key_id: k.key_id, role: k.role, label: k.label })), next_cursor: null } }),
   });
   add({
     method: 'POST', path: '/api/v1/orgs/:org/keys', cls: 'M', auth: 'sig', body: 'json', maxBody: 4096,
     handler: (c) => {
       const org = orgOf(c);
-      if (c.auth!.role !== 'org_owner' && c.auth!.role !== 'instance_admin') throw forbidden('owner only');
+      if (c.auth!.role !== 'org_owner') throw forbidden('owner only');
       const b = c.parse(fObj({
         pk: req(fStr({ min: 40, max: 50, re: b64uRe })), alg: req(fEnum('ed25519')), role: req(fEnum('org_owner', 'org_organizer')),
         label: opt(fStr({ max: 80 })), pop: req(fStr({ min: 80, max: 90, re: b64uRe })),
@@ -332,7 +336,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
     method: 'DELETE', path: '/api/v1/orgs/:org/keys/:keyid', cls: 'M', auth: 'sig',
     handler: (c) => {
       const org = orgOf(c);
-      if (c.auth!.role !== 'org_owner' && c.auth!.role !== 'instance_admin') throw forbidden('owner only');
+      if (c.auth!.role !== 'org_owner') throw forbidden('owner only');
       const k = control.keyById(c.params['keyid']!);
       if (!k || k.org_id !== org) throw notFound('key');
       if (k.role === 'org_owner' && control.orgKeys(org).filter((x) => x.role === 'org_owner').length <= 1) throw conflict('cannot remove the last owner key');
@@ -343,7 +347,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   add({
     method: 'GET', path: '/api/v1/orgs/:org/elections', cls: 'M', auth: 'sig',
     handler: (c) => {
-      const org = orgOf(c);
+      const org = orgOf(c, 'read');
       const limit = Math.max(1, intQ(c, 'limit', 100, 500));
       const after = c.query.get('cursor') ?? undefined;
       const rows = control.listElections(org, c.query.get('state') ?? undefined, after, limit + 1);
@@ -538,7 +542,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   add({
     method: 'DELETE', path: '/api/v1/elections/:id', cls: 'M', auth: 'sig', body: 'json', maxBody: 1024,
     handler: async (c) => {
-      const rt = await orgElection(c);
+      const rt = await orgElection(c, 'delete');
       if (c.auth!.role !== 'org_owner' && c.auth!.role !== 'instance_admin') throw forbidden('owner only');
       const b = c.parse(fObj({ confirm: req(fStr({ min: 1, max: 200 })) }));
       if (b.confirm !== (rt.st.manifest?.title ?? rt.edb.row().title)) throw new ApiError(422, 'VALIDATION_FAILED', 'confirm must equal the election title');
@@ -564,10 +568,12 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       }));
       if ((b.count === undefined) === (b.items === undefined)) throw new ApiError(400, 'BAD_REQUEST', 'exactly one of count or items is required');
       if (b.deliver) throw new ApiError(422, 'VALIDATION_FAILED', 'server-side delivery is not configured');
-      let exp: number | null = nowMs() + 14 * 86_400_000;
+      const issuedAt = nowMs();
+      let exp: number | null = issuedAt + 14 * 86_400_000;
       if (b.expires_at !== undefined) {
         exp = Date.parse(b.expires_at);
         if (Number.isNaN(exp)) throw new ApiError(400, 'BAD_REQUEST', 'bad expires_at');
+        if (exp > issuedAt + 30 * 86_400_000) throw new ApiError(422, 'VALIDATION_FAILED', 'expires_at must be at most 30 days after issuance');
       }
       const n = b.count ?? b.items!.length;
       return idem(c, c.auth!.keyId, async (_save, journal) => {
@@ -596,7 +602,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   add({
     method: 'GET', path: '/api/v1/elections/:id/invites', cls: 'M', auth: 'sig',
     handler: async (c) => {
-      const rt = await orgElection(c);
+      const rt = await orgElection(c, 'read');
       purgeInvites(rt);
       const limit = Math.max(1, intQ(c, 'limit', 100, 500));
       const rows = rt.edb.invites(c.query.get('state') ?? undefined, c.query.get('cursor') ?? undefined, limit + 1);
@@ -623,7 +629,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   add({
     method: 'GET', path: '/api/v1/elections/:id/registration-migration', cls: 'M', auth: 'sig',
     handler: async (c) => {
-      const rt = await orgElection(c), scheme = rt.edb.row().registration_scheme;
+      const rt = await orgElection(c, 'read'), scheme = rt.edb.row().registration_scheme;
       const outstanding = Number(rt.edb.db.prepare("SELECT COUNT(*) AS n FROM voter_invite WHERE state IN ('issued','sent')").get()!['n']);
       return { status: 200, json: { election_id: rt.id, registration_scheme: scheme,
         target_scheme: 'hashed-pop-v1', outstanding_invites: outstanding,
@@ -909,8 +915,8 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   });
 
   // ---- webhooks (QV-09 §6.3; owner only, public events only)
-  const ownerOnly = (c: Ctx): void => {
-    if (c.auth!.role !== 'org_owner' && c.auth!.role !== 'instance_admin') throw forbidden('owner only');
+  const ownerOnly = (c: Ctx, admin?: 'read'): void => {
+    if (c.auth!.role !== 'org_owner' && !(admin === 'read' && c.auth!.role === 'instance_admin')) throw forbidden('owner only');
   };
   add({
     method: 'POST', path: '/api/v1/orgs/:org/webhooks', cls: 'M', auth: 'sig', body: 'json', maxBody: 4096,
@@ -950,8 +956,8 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   add({
     method: 'GET', path: '/api/v1/orgs/:org/webhooks', cls: 'M', auth: 'sig',
     handler: (c) => {
-      const org = orgOf(c);
-      ownerOnly(c);
+      const org = orgOf(c, 'read');
+      ownerOnly(c, 'read');
       return { status: 200, json: { items: control.webhooksOf(org).map((r) => webhooks.view(r)), next_cursor: null } };
     },
   });
