@@ -41,8 +41,8 @@ for (const mode of ['append', 'archive', 'registry'] as const) test(`second cras
   }
 });
 
-test('failed registry sync retains all replay intents and their sequence-specific phase data', async () => {
-  const w = new World({ seed: 'replay-registry-failure', n: 3, t: 2, voters: 2 });
+for (const legacy of [false, true]) test(`${legacy ? 'legacy' : 'atomic'} failed registry sync retains all replay intents and their sequence-specific phase data`, async () => {
+  const w = new World({ seed: `replay-registry-failure-${legacy}`, n: 3, t: 2, voters: 2 });
   const sync = ControlDb.prototype.setState;
   await w.start();
   try {
@@ -52,6 +52,11 @@ test('failed registry sync retains all replay intents and their sequence-specifi
     assert.equal((await w.publishManifest()).status, 201);
     await w.ok('ceremony_start', w.coord[0]!, w.marker('dkg-open', w.mh));
     const timestamps = rt.edb.eventsAfter(0, 20).filter((row) => row.type === 'entry').map((row) => row.ts);
+    const originalPhases = rt.edb.eventsAfter(0, 20).filter((row) => row.type === 'phase');
+    if (legacy) {
+      // Explicitly model pre-v12 intents, which had no committed supplemental rows.
+      rt.edb.db.exec("DELETE FROM event WHERE type='phase'; UPDATE append_completion SET events_committed=0");
+    }
     // Simulate the durable append crash boundary without rewinding any public log entry.
     rt.edb.db.exec("UPDATE election SET state='DRAFT'");
     w.server.env.control.db.exec("UPDATE election_registry SET state='DRAFT'");
@@ -64,7 +69,7 @@ test('failed registry sync retains all replay intents and their sequence-specifi
     const raw = new DatabaseSync(join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`));
     try {
       assert.equal(raw.prepare('SELECT COUNT(*) AS n FROM append_completion').get()!.n, 2);
-      assert.equal(raw.prepare("SELECT COUNT(*) AS n FROM event WHERE type='phase'").get()!.n, 0);
+      assert.equal(raw.prepare("SELECT COUNT(*) AS n FROM event WHERE type='phase'").get()!.n, legacy ? 0 : 2);
     } finally { raw.close(); }
     await w.server.stop();
     ControlDb.prototype.setState = sync;
@@ -77,6 +82,7 @@ test('failed registry sync retains all replay intents and their sequence-specifi
       { from: 'DRAFT', to: 'SETUP', seq: 0 }, { from: 'SETUP', to: 'CEREMONY', seq: 1 },
     ]);
     assert.deepEqual(phases.map((row) => row.ts), timestamps);
+    if (!legacy) assert.deepEqual(phases, originalPhases, 'new intents cannot allocate replacement event IDs during recovery');
     await w.server.stop(); await w.start();
     assert.deepEqual((await w.server.pool.get(w.electionId))!.edb.eventsAfter(0, 20).filter((row) => row.type === 'phase'), phases);
   } finally {

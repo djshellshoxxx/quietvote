@@ -80,7 +80,7 @@ test('private restore preserves an attached pinned roll beyond request expiry wi
     // Recreate a genuine schema-9 copy: that version could publish a pinned
     // manifest without possessing its full list. Opening it migrates only the
     // disposable verification copy; the source snapshot remains unchanged.
-    db.exec('DROP TABLE export_record; DROP TABLE pinned_roll; DELETE FROM schema_migration WHERE version>=10; PRAGMA user_version=9');
+    db.exec('DROP TABLE export_record; DROP TABLE pinned_roll; ALTER TABLE append_completion DROP COLUMN events_committed; DELETE FROM schema_migration WHERE version>=10; PRAGMA user_version=9');
   }, bound);
   const currentReport = await verifyBackup(bound, key);
   const legacyReport = await verifyBackup(legacy, key);

@@ -1,0 +1,40 @@
+name: dco
+
+# Every contributor commit is checked, including commits merged into the PR branch.
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+
+permissions: {}
+
+concurrency:
+  group: dco-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dco:
+    name: DCO and commit format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Test the DCO and commit format checker
+        run: node --test scripts/check-dco.test.mjs
+      - name: Check every commit in the pull request range
+        env:
+          QV_DCO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          QV_DCO_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/check-dco.mjs --base "$QV_DCO_BASE_SHA" --head "$QV_DCO_HEAD_SHA"

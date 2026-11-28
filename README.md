@@ -62,6 +62,8 @@ The [wiki](wiki/) provides voter, organizer, trustee, auditor and developer guid
 
 ## Current status
 
+**Experimental — not for binding elections**
+
 The [comprehensive consolidation report](docs/audits/CONSOLIDATION_REPORT.md)
 records the current branch recovery and source composition. Its
 [branch inventory](docs/audits/BRANCH_INVENTORY.md),

@@ -182,7 +182,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
       return a === undefined ? EXIT.usage : EXIT.ok;
     }
     if (a === '--version' || a === 'version') {
-      io.out(`qv ${VERSION}\n`);
+      io.out(`qv ${VERSION}\nExperimental — not for binding elections\n`);
       return EXIT.ok;
     }
     const entry = Object.hasOwn(TABLE, a) ? TABLE[a] : undefined;

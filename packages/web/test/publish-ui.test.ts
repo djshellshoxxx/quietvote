@@ -177,7 +177,7 @@ test('publish UI: the create view calls runPublish from the publish button, and 
   assert.match(src, /const pubBtn = btn\(t\('qv\.org\.publish'\)/);
   assert.match(src, /o = await runPublish\(\{/);
   assert.match(src, /prepared = \{ form, rollHex: roll\.keys \};\n\s+add\(publishBox, \[publishSection\(\)\]\);/);
-  assert.match(src, /\}, \{ primary: true \}\), out, publishBox\);/);
+  assert.match(src, /\}, \{ primary: true, disabled: organizerBusy \}\) as HTMLButtonElement, out, publishBox\);/);
 });
 
 

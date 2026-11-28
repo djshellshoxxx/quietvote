@@ -73,7 +73,7 @@ export const EN = {
   'qv.shell.electionTitle': n('Election', 'Document title before an election context can be shown.'),
   'qv.shell.adminTitle': n('Admin', 'Short document title for the organizer console.'),
   'qv.shell.unsupportedBrowser': n('This browser can’t vote here. Use a newer browser or the command-line voter.', 'Complete browser capability fallback message.'),
-  'qv.banner.experimental': n('Experimental software. It has not been independently audited. Do not use it for votes that matter.', 'Banner shown until the audit gate passes.'),
+  'qv.banner.experimental': n('Experimental — not for binding elections. It has not been independently audited. Do not use it for votes that matter.', 'Banner shown until the audit gate passes.'),
   'qv.banner.demo': n('DEMO — not for real votes', 'Banner on the demo instance (QV-ADR-017).'),
   'qv.shell.footer.cdlCredit': n('A Circuit Drift Labs project', 'Visible footer credit link for the Circuit Drift Labs demo host.'),
   'qv.status.draft': n('Draft', 'Election state chip.'),

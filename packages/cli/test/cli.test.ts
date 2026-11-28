@@ -34,12 +34,19 @@ test('help, version, unknown commands and exit codes (in-process and real proces
   assert.equal((await qv(['--help'])).code, 0);
   assert.match((await qv(['--help'])).out, /exit codes:/);
   assert.equal((await qv([])).code, 2);
-  assert.match((await qv(['--version'])).out, /^qv 0\./);
+  // Verifies QV-27-REQ-006 at both public version spellings and the actual executable.
+  for (const command of ['--version', 'version']) {
+    const result = await qv([command]);
+    assert.equal(result.code, 0);
+    assert.match(result.out, /^qv 0\.\d+\.\d+\nExperimental — not for binding elections\n$/);
+    const executable = spawnQv([command]);
+    assert.equal(executable.code, 0);
+    assert.equal(executable.out, result.out);
+  }
   assert.equal((await qv(['frobnicate'])).code, 2);
   assert.equal((await qv(['ballot'])).code, 2);
   assert.equal((await qv(['ballot', 'nope'])).code, 2);
   assert.equal((await qv(['constructor'])).code, 2, 'prototype names are not commands');
-  assert.equal(spawnQv(['--version']).code, 0);
   assert.equal(spawnQv(['frobnicate']).code, 2);
   const r = spawnQv(['verify', TINY, '--skip-selftest']);
   assert.equal(r.code, 3);

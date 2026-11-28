@@ -60,6 +60,15 @@ Status column reflects the repository as observed on 2026-10-21 (see §10 and `v
 
 ## 5. Data and privacy
 
+Import-boundary follow-up (2026-11-27):
+[`verifier-py/check_imports.py`](../verifier-py/check_imports.py) adds the automated
+static import/dependency/obvious-bridge check identified in REQ-001 and REQ-009,
+with dedicated fixtures and a pre-unit CI step. The runtime modules are unchanged.
+This checks source syntax and declarations; it does not establish authorship,
+absence of translated code or semantic independence. REQ-014's human review
+and decision-log evidence remain separate. See the
+[implementation scope and results](reports/python-import-boundary-20261127.md).
+
 Report-dependency resolution (2026-11-16): QV-ADR-027 in the
 [decision log](decision-log.md) adopts the recommendations in the
 [approved decision register](plan/DECISIONS-2026-11-04.md), including

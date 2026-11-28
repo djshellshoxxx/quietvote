@@ -83,12 +83,42 @@ test('every CI dependency restore explicitly installs verified vendor bytes befo
 
 test('Windows Node 24 native-file suites cap test-file fan-out but retain all shard tests', () => {
   const source = readFileSync(new URL('../workflows/ci.yml', import.meta.url), 'utf8');
+  const testJob = source.split(/^  test:\n/m)[1]?.split(/^  [a-z][a-z0-9_-]*:\n/m)[0];
+  assert.ok(testJob, 'review changed test-job layout');
   for (const exact of [
     'for w in ${{ matrix.shard.ws }}; do',
     'if [[ "${{ matrix.os }}" == "windows-2025" && "${{ matrix.node }}" == "24" && ( "$w" == "cli" || "$w" == "server" ) ]]; then',
     'args=(-- --test-concurrency=2)',
     'npm test -w "@quietvote/$w" "${args[@]}" || { rc=1; echo "::error::@quietvote/$w tests failed"; }',
     'exit $rc',
-  ]) assert.ok(source.includes(exact), `CI coverage boundary changed: ${exact}`);
-  assert.equal((source.match(/npm test -w/g) ?? []).length, 1, 'keep one shared test command');
+  ]) assert.ok(testJob.includes(exact), `CI coverage boundary changed: ${exact}`);
+  assert.equal((testJob.match(/npm test -w/g) ?? []).length, 1, 'keep one shared authoritative test command');
+  assert.doesNotMatch(testJob, /QV_COVERAGE_OUTPUT|experimental-test-coverage/, 'normal test gates remain uninstrumented');
+});
+
+test('coverage is explicit, bounded and non-gating, separate from the unchanged normal test matrix', () => {
+  const source = readFileSync(new URL('../workflows/ci.yml', import.meta.url), 'utf8');
+  const job = source.split(/^  coverage:\n/m)[1]?.split(/^  [a-z][a-z0-9_-]*:\n/m)[0];
+  assert.ok(job, 'review changed optional coverage-job layout');
+  const jobHeader = job.split(/^    steps:\n/m)[0];
+  assert.doesNotMatch(jobHeader, /\$\{\{\s*runner\./, 'runner context is allowed in step env, not job env');
+  const output = '          QV_COVERAGE_OUTPUT: ${{ runner.temp }}/quietvote-coverage-${{ github.run_id }}-${{ github.run_attempt }}.json';
+  assert.equal(job.split(output).length - 1, 2, 'measurement and report step env select the same temporary file');
+  assert.match(source, /coverage_workspace:\n[\s\S]*?default: none\n[\s\S]*?type: choice/);
+  for (const exact of [
+    `if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["board","cli","crypto","protocol","server","trustee","verifier","web"]'), inputs.coverage_workspace)`,
+    'runs-on: ubuntu-24.04', 'node-version: 24', 'continue-on-error: true', 'contents: read',
+    'timeout-minutes: 20', 'timeout-minutes: 15', 'if: always()',
+    'rm -f -- "$QV_COVERAGE_OUTPUT"',
+    'npm test -w "@quietvote/$QV_COVERAGE_WORKSPACE"',
+    "QV_COVERAGE_OUTCOME: ${{ steps.measurement.outcome || 'unknown' }}",
+    'node scripts/coverage-report.mjs --report-only --input "$QV_COVERAGE_OUTPUT" --workspace "$QV_COVERAGE_WORKSPACE" --measurement-outcome "$QV_COVERAGE_OUTCOME"',
+  ]) assert.ok(job.includes(exact), `optional coverage integration changed: ${exact}`);
+  assert.equal((job.match(/npm test -w/g) ?? []).length, 1, 'measure only the selected workspace');
+  assert.doesNotMatch(job, /npm test[^\n]*(?:\|\||&&|;)/, 'the instrumented test step keeps its actual exit status');
+  assert.doesNotMatch(job, /steps\.measurement\.conclusion/, 'continue-on-error conclusions must not qualify coverage');
+  const scripts = job.split(/^        run: /m).slice(1).map((part) => part.split(/^      - /m)[0]).join('\n');
+  assert.doesNotMatch(scripts, /\$\{\{/, 'inputs belong in env, never interpolated into shell code');
+  assert.doesNotMatch(job, /--test-coverage-(?:lines|branches|functions)=/, 'reporting must not add or lower a threshold');
+  assert.ok(job.indexOf('npm test -w') < job.indexOf('node scripts/coverage-report.mjs'), 'report after measurement, including failed outcomes');
 });

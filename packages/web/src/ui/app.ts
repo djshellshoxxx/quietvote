@@ -663,13 +663,31 @@ export function startApp(env: AppEnv): void {
     const slot = keySlot(L.apiId);
     const status = h('div', { class: 'hint' });
     const out = h('div', {});
-    const backups = h('div', {});
+    const backups = h('div', { 'aria-busy': 'false' });
+    const act = h('div', { 'aria-busy': 'false' });
+    let busy = false;
+    let controls: (HTMLInputElement | HTMLButtonElement)[] = [];
+    let backupControls: HTMLButtonElement[] = [];
+    const control = (element: HTMLElement): HTMLElement => {
+      const c = element as HTMLInputElement | HTMLButtonElement;
+      controls.push(c); c.disabled = busy; return element;
+    };
+    const backupControl = (element: HTMLElement): HTMLElement => {
+      const c = element as HTMLButtonElement;
+      backupControls.push(c); c.disabled = busy; return element;
+    };
+    const clearBackups = (): void => { clear(backups); backupControls = []; };
+    const setBusy = (value: boolean): void => {
+      busy = value; act.setAttribute('aria-busy', String(value));
+      backups.setAttribute('aria-busy', String(value));
+      for (const c of [...controls, ...backupControls]) c.disabled = value;
+    };
     const recovery = h('input', { type: 'text', autocomplete: 'off', spellcheck: false }) as HTMLInputElement;
     const pass = h('input', { type: 'password', autocomplete: 'new-password', spellcheck: false, autocapitalize: 'off', autocorrect: 'off' }) as HTMLInputElement;
-    const show = h('input', { type: 'checkbox', onchange: () => (pass.type = (show as HTMLInputElement).checked ? 'text' : 'password') });
+    const show = h('input', { type: 'checkbox', onchange: () => { if (!busy) pass.type = show.checked ? 'text' : 'password'; } }) as HTMLInputElement;
     const file = h('input', { type: 'file', accept: '.qvkey,application/json' }) as HTMLInputElement;
     const mode = { v: 'create' };
-    keyLock = () => { work++; pass.value = ''; recovery.value = ''; file.value = ''; clear(backups); clear(out); clear(status); status.append(h('p', {}, t('qv.key.locked'))); };
+    keyLock = () => { work++; pass.value = ''; recovery.value = ''; file.value = ''; clearBackups(); clear(out); clear(status); status.append(h('p', {}, t('qv.key.locked'))); };
     const showErr = (e: unknown): void => {
       if (!here()) return;
       if (e instanceof KeySlotOccupiedError) { clear(status); status.append(h('p', {}, t('qv.key.locked'))); void renderForm(); return; }
@@ -679,11 +697,13 @@ export function startApp(env: AppEnv): void {
       clear(status); status.append(errorBox(ux));
     };
     const run = async (action: (current: () => boolean) => Promise<void>): Promise<void> => {
-      if (!here()) return;
-      clear(backups); clear(out);
+      if (busy || !here()) return;
+      setBusy(true);
+      clearBackups(); clear(out);
       const ticket = ++work, keys = keyGeneration;
       const current = (): boolean => here() && ticket === work && keys === keyGeneration;
       try { await action(current); } catch (e) { if (current()) showErr(e); }
+      finally { setBusy(false); }
     };
     const finish = async (signer: Signer, current: () => boolean): Promise<void> => {
       let container;
@@ -719,68 +739,79 @@ export function startApp(env: AppEnv): void {
           out.append(e instanceof ApiError && e.code === 'REGISTRATION_UNAVAILABLE' ? h('p', { class: 'error' }, t('qv.key.enrollmentUnavailable')) : errorFor(e, { opens: ctx?.manifest.voting_open, closes: ctx?.manifest.voting_close }));
         }
       };
-      clear(backups);
+      clearBackups();
       const recoveryOut = h('div', {});
-      add(backups, [btn(t('qv.key.download'), () => {
-        if (!current() || signer.locked) return;
-        download(`voting-key-${L.apiId.slice(0, 6)}.qvkey`, serializeContainer(container));
-        backedUp.add(backupId); void continueWithKey();
-      }), btn(t('qv.key.showRecovery'), async () => {
+      let preview = 0;
+      add(backups, [backupControl(btn(t('qv.key.download'), async () => {
+        if (busy || !current() || signer.locked) return;
+        setBusy(true);
         try {
-          const c = await recoveryCodeFor(container, pass.value, keyDeps());
-          if (!current() || signer.locked) return;
-          clear(recoveryOut); add(recoveryOut, [h('h2', {}, t('qv.key.recoveryHead')), h('p', {}, t('qv.key.recoveryHelp')), codeEl(c), btn(t('qv.key.recoveryHide'), () => { clear(recoveryOut); })]);
+          download(`voting-key-${L.apiId.slice(0, 6)}.qvkey`, serializeContainer(container));
+          backedUp.add(backupId); await continueWithKey();
         } catch (e) { if (current()) showErr(e); }
-      }), recoveryOut]);
+        finally { setBusy(false); }
+      })), backupControl(btn(t('qv.key.showRecovery'), async () => {
+        if (busy || !current() || signer.locked) return;
+        setBusy(true);
+        const run = ++preview, password = pass.value;
+        try {
+          const c = await recoveryCodeFor(container, password, keyDeps());
+          if (!current() || signer.locked || run !== preview) return;
+          clear(recoveryOut); add(recoveryOut, [h('h2', {}, t('qv.key.recoveryHead')), h('p', {}, t('qv.key.recoveryHelp')), codeEl(c), btn(t('qv.key.recoveryHide'), () => { preview++; clear(recoveryOut); })]);
+        } catch (e) { if (current()) showErr(e); }
+        finally { setBusy(false); }
+      })), recoveryOut]);
       await continueWithKey();
       if (current()) void renderForm();
     };
-    const act = h('div', {});
     const renderForm = async (): Promise<void> => {
       let have;
       try { have = await L.storage.getKey(slot); } catch (e) { showErr(e); return; }
       if (!here()) return;
       clear(act);
+      controls = [pass, show, file, recovery];
+      setBusy(busy);
       if (have) {
         pass.autocomplete = 'current-password';
         add(act, [field(t('qv.key.passphrase'), pass), h('label', {}, show, ' ', t('qv.key.show')),
-          btn(t('qv.key.unlock'), () => run(async (current) => { clear(status); status.textContent = t('qv.key.working'); const u = await unlockKey({ storage: L.storage, slot, passphrase: pass.value, deps: keyDeps(), rewrap: !storage.isSession }); if (current()) status.textContent = ''; await finish(u.signer, current); }), { primary: true })]);
+          control(btn(t('qv.key.unlock'), () => run(async (current) => { const password = pass.value; clear(status); status.textContent = t('qv.key.working'); const u = await unlockKey({ storage: L.storage, slot, passphrase: password, deps: keyDeps(), rewrap: !storage.isSession }); if (current()) status.textContent = ''; await finish(u.signer, current); }), { primary: true }))]);
         return;
       }
-      const gen = btn(t('qv.key.generate'), () => { pass.value = generatePassphrase(systemRng); (show as HTMLInputElement).checked = true; pass.type = 'text'; status.textContent = t('qv.key.generated', { words: pass.value }); });
+      const gen = control(btn(t('qv.key.generate'), () => { if (busy || !here()) return; pass.value = generatePassphrase(systemRng); show.checked = true; pass.type = 'text'; status.textContent = t('qv.key.generated', { words: pass.value }); }));
       add(act, [h('fieldset', {}, h('legend', {}, t('qv.key.title')),
-        h('label', {}, h('input', { type: 'radio', name: 'm', checked: true, onchange: () => (mode.v = 'create') }), ' ', t('qv.key.optCreate')), h('br'),
-        h('label', {}, h('input', { type: 'radio', name: 'm', onchange: () => (mode.v = 'import') }), ' ', t('qv.key.optImport')), h('br'),
-        h('label', {}, h('input', { type: 'radio', name: 'm', onchange: () => (mode.v = 'recovery') }), ' ', t('qv.key.recoveryImport')), field(t('qv.key.recoveryImport'), recovery), h('br'),
-        h('label', {}, h('input', { type: 'radio', name: 'm', onchange: () => { mode.v = 'cli'; status.textContent = t('qv.key.cliHelp'); } }), ' ', t('qv.key.optCli'))),
+        h('label', {}, control(h('input', { type: 'radio', name: 'm', checked: true, onchange: () => { if (!busy) mode.v = 'create'; } })), ' ', t('qv.key.optCreate')), h('br'),
+        h('label', {}, control(h('input', { type: 'radio', name: 'm', onchange: () => { if (!busy) mode.v = 'import'; } })), ' ', t('qv.key.optImport')), h('br'),
+        h('label', {}, control(h('input', { type: 'radio', name: 'm', onchange: () => { if (!busy) mode.v = 'recovery'; } })), ' ', t('qv.key.recoveryImport')), field(t('qv.key.recoveryImport'), recovery), h('br'),
+        h('label', {}, control(h('input', { type: 'radio', name: 'm', onchange: () => { if (!busy) { mode.v = 'cli'; status.textContent = t('qv.key.cliHelp'); } } })), ' ', t('qv.key.optCli'))),
         field(t('qv.key.chooseFile'), file), field(t('qv.key.passphrase'), pass, t('qv.key.passphraseHint')), h('label', {}, show, ' ', t('qv.key.show')), gen,
-        btn(t('qv.key.create'), () => run(async (current) => {
-            if (mode.v === 'cli') return;
-            if (mode.v === 'recovery') {
-              await restoreFromRecovery({ storage: L.storage, slot, code: recovery.value, passphrase: pass.value, onlyIfAbsent: true, canInstall: current });
+        control(btn(t('qv.key.create'), () => run(async (current) => {
+            const selectedMode = mode.v, password = pass.value;
+            if (selectedMode === 'cli') return;
+            if (selectedMode === 'recovery') {
+              await restoreFromRecovery({ storage: L.storage, slot, code: recovery.value, passphrase: password, onlyIfAbsent: true, canInstall: current });
               if (!current()) return;
-              const u = await unlockKey({ storage: L.storage, slot, passphrase: pass.value, deps: keyDeps(), rewrap: !storage.isSession });
+              const u = await unlockKey({ storage: L.storage, slot, passphrase: password, deps: keyDeps(), rewrap: !storage.isSession });
               recovery.value = '';
               return await finish(u.signer, current);
             }
-            if (mode.v === 'import') {
+            if (selectedMode === 'import') {
               const f = file.files?.[0];
               if (!f) { status.textContent = t('qv.key.importMissing'); return; }
-              await importKeyFile({ storage: L.storage, slot, text: await f.text(), passphrase: pass.value, deps: keyDeps(), onlyIfAbsent: true, canInstall: current });
+              await importKeyFile({ storage: L.storage, slot, text: await f.text(), passphrase: password, deps: keyDeps(), onlyIfAbsent: true, canInstall: current });
               if (!current()) return;
-              const u = await unlockKey({ storage: L.storage, slot, passphrase: pass.value, deps: keyDeps(), rewrap: !storage.isSession });
+              const u = await unlockKey({ storage: L.storage, slot, passphrase: password, deps: keyDeps(), rewrap: !storage.isSession });
               return await finish(u.signer, current);
             }
-            const chk = checkPassphrase(pass.value);
+            const chk = checkPassphrase(password);
             if (!chk.ok) { status.textContent = t(`qv.key.pp.${chk.problems[0] ?? 'tooShort'}` as MessageKey); return; }
             status.textContent = t('qv.key.working');
-            const k = await createKey({ storage: L.storage, slot, passphrase: pass.value, onlyIfAbsent: true, canInstall: current });
+            const k = await createKey({ storage: L.storage, slot, passphrase: password, onlyIfAbsent: true, canInstall: current });
             if (!current()) return;
             const persisted = await L.storage.requestPersistence();
-            const u = await unlockKey({ storage: L.storage, slot, passphrase: pass.value, deps: keyDeps(), rewrap: !storage.isSession });
+            const u = await unlockKey({ storage: L.storage, slot, passphrase: password, deps: keyDeps(), rewrap: !storage.isSession });
             if (current()) status.textContent = `${t('qv.key.fingerprint', { words: k.fingerprint.join(' ') })} ${k.atFloor ? t('qv.key.floorWarn') : ''} ${persisted ? '' : t('qv.key.persistDenied')}`;
             await finish(u.signer, current);
-        }), { primary: true })]);
+        }), { primary: true }))]);
     };
     render(t('qv.key.title'), ...head, stepper(2), heading(t('qv.key.title')), h('p', {}, t('qv.vote.keyWhat')), h('p', {}, t('qv.key.backup')), more(h('p', {}, t('qv.key.local')), h('p', {}, t('qv.key.residual')), h('p', {}, t(storage.isSession ? 'qv.storage.loss' : 'qv.device.shared'))),
       token ? null : h('p', { class: 'hint' }, t('qv.key.noInvite')), act, status, backups, out,
@@ -1314,7 +1345,10 @@ export function startApp(env: AppEnv): void {
       () => currentRoute(epoch) && keys === keyGeneration);
     };
     let organizerPk: string | undefined;
+    let organizerBusy = false;
+    let previewButton: HTMLButtonElement | undefined;
     const keys = organizerKeyPanel({ tr, storage: organizerStorage, deps: keyDeps, hasKey: org !== undefined, backupRequired: storage.isSession, current: () => currentRoute(epoch),
+      busyChanged: (busy) => { if (currentRoute(epoch)) { organizerBusy = busy; if (previewButton) previewButton.disabled = busy; } },
       ready: (pk) => { organizerPk = pk; }, error: (e) => errorFor(e), download: (text) => download('organizer.qvkey', text) });
     let lockPublication = (): void => {};
     keyLock = (): void => { keys.lock(); lockPublication(); };
@@ -1399,8 +1433,8 @@ export function startApp(env: AppEnv): void {
       times.element, field(t('qv.org.roll'), rollT, t('qv.org.rollHelp')),
       field(t('qv.org.trustees'), trustees, t('qv.org.trusteeFormat')), field(t('qv.org.threshold'), tt),
       h('p', {}, t('qv.org.translateWarn')), h('p', {}, t('qv.org.freeze')),
-      btn(t('qv.org.freezeConfirm'), () => {
-        if (!currentRoute(epoch)) return;
+      previewButton = btn(t('qv.org.freezeConfirm'), () => {
+        if (!currentRoute(epoch) || organizerBusy) return;
         clear(out);
         clear(publishBox);
         prepared = undefined;
@@ -1418,7 +1452,7 @@ export function startApp(env: AppEnv): void {
         prepared = { form, rollHex: roll.keys };
         add(publishBox, [publishSection()]);
         add(out, [manifestWarnings(res.warnings, tr), h('p', {}, t('qv.org.rollSummary', { count: roll.keys.length, root: roll.rootHex ?? '' }))]);
-      }, { primary: true }), out, publishBox);
+      }, { primary: true, disabled: organizerBusy }) as HTMLButtonElement, out, publishBox);
   }
 
   // ---------------------------------------------------------------- shell

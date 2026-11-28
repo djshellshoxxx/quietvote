@@ -29,6 +29,24 @@ export function transition(s: ElectionStateName, e: LifecycleEvent['t']): Electi
   return STEPS[s]?.[e];
 }
 
+/** The existing lifecycle event carried by an admitted/replayed entry; authentication remains with the caller. */
+export function lifecycleEventForEntry(type: EntryType, record: unknown): LifecycleEvent['t'] | undefined {
+  switch (type) {
+    case 'manifest': case 'ceremony_start': case 'joint_key': case 'roll_commit': case 'election_open':
+    case 'election_close': case 'tally_aggregate': case 'tally_result': case 'audit_close': case 'election_cancel': case 'ceremony_abort':
+      return type;
+    case 'notice': {
+      const body = (record as { body?: unknown } | null)?.body;
+      if (body !== null && typeof body === 'object' && 'type' in body && body.type === 'control' && 'action' in body) {
+        const action = body.action;
+        if (action === 'pause' || action === 'resume' || action === 'invalidate') return action;
+      }
+      return undefined;
+    }
+    default: return undefined;
+  }
+}
+
 /** Terminal states: the log is read-only apart from nothing. */
 export const TERMINAL: ReadonlySet<ElectionStateName> = new Set(['ARCHIVED', 'INVALIDATED', 'CANCELLED', 'ABORTED', 'DELETED', 'IMPORTED']);
 

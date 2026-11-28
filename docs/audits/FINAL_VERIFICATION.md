@@ -1,9 +1,9 @@
 # Final verification receipt
 
 Status: **local implementation evidence and review scopes recorded below**.
-The latest continuation receipt is [R27](CONTINUATION_R27_20261127.md), on
-[`codex/quietvote-lifecycle-storage-20261127`](https://github.com/djshellshoxxx/quietvote/tree/codex/quietvote-lifecycle-storage-20261127),
-stacked on [PR #77](https://github.com/djshellshoxxx/quietvote/pull/77).
+The latest continuation receipt is [R28](CONTINUATION_R28_20261127.md), on
+[`codex/quietvote-atomic-flows-20261127`](https://github.com/djshellshoxxx/quietvote/tree/codex/quietvote-atomic-flows-20261127),
+stacked on [PR #78](https://github.com/djshellshoxxx/quietvote/pull/78).
 Exact local/remote tree binding and source-specific hosted results are recorded
 in each continuation's draft PR. [PR #71](https://github.com/djshellshoxxx/quietvote/pull/71)
 is the consolidated ancestor, not a receipt for later increments.
@@ -11,13 +11,17 @@ Each table below is a source-bound receipt. A pending native/hosted gate at a
 historical checkpoint is not a claim about a later completed run, and an older
 pass is not assigned to later source. Formal promotion gates remain separate.
 
-R27's complete local server suite passes 634 tests with one existing platform
-skip; its web suite passes 510/510. All sixteen required browser journeys pass
-in one combined execution, with a separate main-journey rerun after a test-only
-typing correction. Root and explicit entrypoint TypeScript, nineteen installed
-CLI adapter cases, 71 tooling tests and 21 workflow/runner tests pass. The report
-retains failed earlier attempts, source/build limits, exact snapshot standing
-refusals, native timeout diagnostics and the unmerged/human-review boundary.
+R28's complete local server suite passes 646 tests with one existing platform
+skip. Its full web suite passes 527/527 before the later Experimental disclosure
+copy edit; scoped i18n and all seventeen production browser journeys pass after
+that edit, with the browser journeys in one combined execution. Root and explicit
+entrypoint TypeScript, nineteen installed CLI adapter cases and all 198 composed
+root tooling/workflow/runner tests pass. The final scanner's 22 cases and the
+coverage/launcher/workflow batch's 39 cases pass on both Node 22 and Node 24.
+The Python static boundary adds seventeen passing cases without changing its
+25-module runtime. The receipt retains failed earlier attempts and distinguishes
+local evidence, unassessed release items, current-source hosted qualification,
+contract holds and the human-review boundary.
 
 The [R20–R21 native diagnostic continuation](CONTINUATION_R20_R21_20261120.md)
 records six further completed workers, four passing outer wrappers containing

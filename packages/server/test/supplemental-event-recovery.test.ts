@@ -10,7 +10,7 @@ import { DATA_LOCK_NAME } from '../src/data-lock.ts';
 import type { EventRow } from '../src/electiondb.ts';
 import { World } from './helpers/world.ts';
 
-async function crashedWorld(mode: 'append' | 'witness' | 'archive' | 'archive_erase'): Promise<World> {
+async function crashedWorld(mode: 'append' | 'legacy_append' | 'witness' | 'archive' | 'archive_erase'): Promise<World> {
   const info = await new Promise<{ dir: string; electionId: string; clock: number }>((resolve, reject) => {
     execFile(process.execPath, ['--max-old-space-size=256', fileURLToPath(new URL('./helpers/supplemental-crash.ts', import.meta.url)), mode],
       { timeout: 120_000 }, (error, stdout, stderr) => {
@@ -26,14 +26,23 @@ async function crashedWorld(mode: 'append' | 'witness' | 'archive' | 'archive_er
   return w;
 }
 
-test('process exit after append commit reconstructs its phase exactly once at startup', async () => {
-  const w = await crashedWorld('append');
+for (const mode of ['append', 'legacy_append'] as const) test(`${mode} process exit retains or reconstructs its phase exactly once at startup`, async () => {
+  const w = await crashedWorld(mode);
+  const before = new DatabaseSync(join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`), { readOnly: true });
+  const oldHashes = before.prepare('SELECT version,sha256 FROM schema_migration WHERE version<=11 ORDER BY version').all();
+  try {
+    assert.equal(before.prepare("SELECT COUNT(*) AS n FROM event WHERE type='phase'").get()!['n'], mode === 'append' ? 1 : 0);
+    if (mode === 'legacy_append') assert.equal(before.prepare('PRAGMA user_version').get()!['user_version'], 11);
+    else assert.equal(before.prepare('SELECT events_committed FROM append_completion').get()!['events_committed'], 1);
+  } finally { before.close(); }
   await w.start();
   try {
     const stored = new DatabaseSync(join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`));
     try {
       assert.equal(stored.prepare('SELECT COUNT(*) AS n FROM append_completion').get()!.n, 0, 'startup resolves the intent without a client runtime request');
       assert.equal(stored.prepare("SELECT COUNT(*) AS n FROM event WHERE type='phase'").get()!.n, 1);
+      assert.deepEqual(stored.prepare('SELECT version,sha256 FROM schema_migration WHERE version<=11 ORDER BY version').all(), oldHashes);
+      assert.ok(stored.prepare('PRAGMA table_info(append_completion)').all().some((column) => column['name'] === 'events_committed'));
     } finally { stored.close(); }
     const rt = (await w.server.pool.get(w.electionId))!;
     assert.equal(rt.log.size, 1);
@@ -47,7 +56,7 @@ test('process exit after append commit reconstructs its phase exactly once at st
   } finally { await w.stop(); }
 });
 
-test('supplemental completion rollback retains the intent and never publishes the rolled-back event ID', async () => {
+test('new-intent completion rollback retains the intent without losing or regenerating committed event IDs', async () => {
   const w = new World({ seed: 'supplemental-intent-rollback', n: 3, t: 2, voters: 2 });
   await w.start();
   try {
@@ -60,14 +69,15 @@ test('supplemental completion rollback retains the intent and never publishes th
     const r = await w.publishManifest();
     assert.equal(r.status, 201, r.text);
     assert.equal(rt.edb.hasAppendCompletions(), true);
-    assert.deepEqual(rt.edb.eventsAfter(0, 20).map((r) => r.type), ['entry', 'checkpoint']);
-    assert.deepEqual(live.map((r) => r.type), ['entry', 'checkpoint']);
+    assert.equal(rt.edb.appendEventsCommitted(0), true);
+    assert.deepEqual(rt.edb.eventsAfter(0, 20).map((r) => r.type), ['entry', 'checkpoint', 'phase']);
+    assert.deepEqual(live.map((r) => r.type), ['entry', 'checkpoint', 'phase']);
     // Exercise the archive-retention guard with this real failed completion still pending.
     rt.st.state = 'ARCHIVED';
     w.server.env.control.setState(w.electionId, 'ARCHIVED');
     w.tick(31 * 86400);
     assert.equal(rt.pruneEventsIfExpired(), false, 'retention cannot discard history before its pending events complete');
-    assert.equal(rt.edb.eventsAfter(0, 20).length, 2);
+    assert.equal(rt.edb.eventsAfter(0, 20).length, 3);
     rt.st.state = 'SETUP';
     w.tick(60);
     await w.server.stop(); await w.start();
@@ -76,7 +86,7 @@ test('supplemental completion rollback retains the intent and never publishes th
     assert.equal(recovered.edb.hasAppendCompletions(), false);
     assert.deepEqual(rows.map((r) => r.type), ['entry', 'checkpoint', 'phase']);
     assert.equal(rows[2]!.ts, live[0]!.ts);
-    assert.equal(rows[2]!.id, live.at(-1)!.id + 1);
+    assert.deepEqual(rows.map((row) => ({ ...row })), live, 'recovery must retain the already-committed event IDs exactly');
   } finally { await w.stop(); }
 });
 
@@ -95,6 +105,28 @@ test('replay never regenerates completed, pruned or pre-upgrade supplemental eve
     assert.equal(reopened.log.size, 1);
     assert.equal(reopened.edb.hasAppendCompletions(), false);
     assert.deepEqual(reopened.edb.eventsAfter(0, 20), []);
+    await w.server.stop(); await w.start();
+    assert.deepEqual((await w.server.pool.get(w.electionId))!.edb.eventsAfter(0, 20), []);
+  } finally { await w.stop(); }
+});
+
+test('a flag-1 pending intent never regenerates deliberately pruned events', async () => {
+  const w = new World({ seed: 'atomic-intent-no-regeneration', n: 3, t: 2, voters: 2 });
+  await w.start();
+  try {
+    await w.setupOrgAndElection();
+    const rt = (await w.server.pool.get(w.electionId))!;
+    rt.edb.finishAppendCompletion = () => { throw new Error('retain the committed intent'); };
+    assert.equal((await w.publishManifest()).status, 201);
+    assert.equal(rt.edb.appendEventsCommitted(0), true);
+    const floor = rt.edb.lastEventId();
+    // Ordinary retention refuses pending intents; direct fixture pruning checks that recovery does not infer old format from absence.
+    rt.edb.pruneEvents();
+    await w.server.stop(); await w.start();
+    const reopened = (await w.server.pool.get(w.electionId))!;
+    assert.equal(reopened.edb.hasAppendCompletions(), false);
+    assert.deepEqual(reopened.edb.eventsAfter(0, 20), []);
+    assert.equal(reopened.edb.lastEventId(), floor);
     await w.server.stop(); await w.start();
     assert.deepEqual((await w.server.pool.get(w.electionId))!.edb.eventsAfter(0, 20), []);
   } finally { await w.stop(); }
@@ -148,10 +180,11 @@ for (const mode of ['archive', 'archive_erase'] as const) test(`process exit at 
   const raw = new DatabaseSync(join(w.dir, 'elections', w.electionId.slice(0, 2), `${w.electionId}.sqlite`));
   try {
     const row = raw.prepare('SELECT log_sk_enc,srv_sk_enc,state FROM election').get()!;
-    assert.equal(row.state, 'AUDIT', 'crash occurred before archive projection and key destruction');
+    assert.equal(row.state, 'ARCHIVED', 'archive phase projection committed with its entry; key destruction remains pending');
     assert.ok(row.log_sk_enc && row.srv_sk_enc);
     assert.equal(raw.prepare("SELECT value FROM meta WHERE key='read_only'").get(), undefined);
     assert.equal(raw.prepare('SELECT COUNT(*) AS n FROM append_completion').get()!.n, 1);
+    assert.equal(raw.prepare('SELECT events_committed FROM append_completion').get()!['events_committed'], 1);
   } finally { raw.close(); }
   await w.start();
   try {

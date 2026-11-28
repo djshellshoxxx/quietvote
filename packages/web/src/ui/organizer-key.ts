@@ -19,6 +19,7 @@ export function organizerKeyPanel(d: {
   hasKey: boolean;
   backupRequired?: boolean;
   current: () => boolean;
+  busyChanged?: (busy: boolean) => void;
   ready: (publicKey: string) => void;
   error: (e: unknown) => HTMLElement;
   download: (text: string) => void;
@@ -35,6 +36,9 @@ export function organizerKeyPanel(d: {
   };
   let exists = d.hasKey;
   let busy = false;
+  const notifyBusy = (value: boolean): void => {
+    try { d.busyChanged?.(value); } catch { /* An observer cannot interrupt key cleanup or release the panel's own guard. */ }
+  };
   let generation = 0;
   const controls: HTMLButtonElement[] = [];
   const lock = (): void => { generation++; pass.value = ''; file.value = ''; clear(out); clear(backup); };
@@ -42,6 +46,7 @@ export function organizerKeyPanel(d: {
     const button = h('button', { type: 'button', class: 'btn', onclick: async () => {
       if (busy || !d.current() || ((kind === 'create' || kind === 'import') && exists)) return;
       busy = true;
+      notifyBusy(true);
       const run = generation;
       const password = pass.value;
       pass.value = '';
@@ -109,6 +114,7 @@ export function organizerKeyPanel(d: {
           file.disabled = exists; pass.disabled = false;
           root.setAttribute('aria-busy', 'false');
         }
+        notifyBusy(false);
       }
     } }, label) as HTMLButtonElement;
     controls.push(button);

@@ -1,0 +1,13 @@
+# Unpublished owner template. This file is not an operational reporting channel.
+# Replace every owner-supplied value before running the validator with --release.
+# See SECURITY.md for the current unconfirmed private-channel and key open items.
+# List operator contacts first; additional Contact lines follow in preference order.
+Contact: [OWNER_CONTACT_URI]
+# Use an RFC 3339 timestamp at least 30 days out and before the next UTC anniversary.
+Expires: [OWNER_EXPIRES_RFC3339]
+# Supply the actual HTTPS /.well-known/security.txt location for this deployment.
+Canonical: [OWNER_CANONICAL_URI]
+# Supply comma-separated language tags that the receiving team actually supports.
+Preferred-Languages: [OWNER_PREFERRED_LANGUAGES]
+# Add Encryption or Policy only after the owner has selected and verified their URIs.
+# Local validation does not establish delivery, hosting, TLS, ownership or signatures.

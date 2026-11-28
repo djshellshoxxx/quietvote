@@ -65,7 +65,7 @@ test('terminal state is probed before migration even when the control registry i
     await w.server.pool.evict(w.electionId);
     const raw = new DatabaseSync(path);
     // A deliberately unsupported version marker tests refusal, not historical schema compatibility.
-    raw.exec("UPDATE election SET state='ARCHIVED'; DELETE FROM schema_migration WHERE version=11; PRAGMA user_version=10"); raw.close();
+    raw.exec("UPDATE election SET state='ARCHIVED'; DELETE FROM schema_migration WHERE version>10; PRAGMA user_version=10"); raw.close();
     const before = readFileSync(path);
     assert.throws(() => ElectionDb.openExisting(path, SERVER_VERSION), /requires explicit migration/);
     await assert.rejects(w.server.pool.get(w.electionId), /requires explicit migration/);

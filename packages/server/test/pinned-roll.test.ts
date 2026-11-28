@@ -37,7 +37,7 @@ async function schema9WithoutList(w: World): Promise<void> {
   const relative = w.server.env.control.election(w.electionId)!.db_path;
   await w.server.pool.evict(w.electionId);
   const db = new DatabaseSync(join(w.dir, relative));
-  try { db.exec('DROP TABLE export_record; DROP TABLE pinned_roll; DELETE FROM schema_migration WHERE version>=10; PRAGMA user_version=9'); }
+  try { db.exec('DROP TABLE export_record; DROP TABLE pinned_roll; ALTER TABLE append_completion DROP COLUMN events_committed; DELETE FROM schema_migration WHERE version>=10; PRAGMA user_version=9'); }
   finally { db.close(); }
 }
 
@@ -219,7 +219,7 @@ test('legacy drafts can attach a list; conflicting attachments serialize and the
     await schema9WithoutList(w);
     const rt = (await w.server.pool.get(w.electionId))!, keys = keysOf(w);
     const before = rt.edb.db.prepare('SELECT version,hex(sha256) AS checksum FROM schema_migration WHERE version<=9 ORDER BY version').all();
-    assert.equal(rt.edb.db.prepare('PRAGMA user_version').get()!.user_version, 11);
+    assert.equal(rt.edb.db.prepare('PRAGMA user_version').get()!.user_version, 12);
     const first = attach(w, keys), other = attach(w, keys.slice(1));
     const results = await Promise.all([first, other]);
     assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);

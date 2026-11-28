@@ -42,6 +42,22 @@ on:
   schedule:
     - cron: '17 9 * * *'
   workflow_dispatch:
+    inputs:
+      coverage_workspace:
+        description: 'Optional report-only Node coverage for one workspace; normal test jobs remain uninstrumented'
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - board
+          - cli
+          - crypto
+          - protocol
+          - server
+          - trustee
+          - verifier
+          - web
 
 # Deny everything by default; each job grants only what it needs.
 permissions: {}
@@ -82,6 +98,10 @@ jobs:
       # Supply-chain gates (docs/30-engineering-standards.md, R-02).
       - name: Lint package-lock.json sources and integrity
         run: npm run lockfile:lint
+      - name: Emit deterministic CycloneDX production SBOM
+        run: node scripts/sbom.mjs --stdout
+      - name: Validate the unpublished security.txt owner template
+        run: node scripts/check-security-txt.mjs
       - run: npm ci --ignore-scripts
       - name: Install and verify the pinned vendored crypto bytes
         run: npm run vendor:install
@@ -143,6 +163,51 @@ jobs:
           done
           exit $rc
 
+  coverage:
+    name: optional coverage report (${{ inputs.coverage_workspace }})
+    # Coverage overhead is not qualified for every production-cost test. It must not change normal test gates.
+    # An explicit manual selection measures one workspace, rather than duplicating the matrix silently.
+    if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["board","cli","crypto","protocol","server","trustee","verifier","web"]'), inputs.coverage_workspace)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    continue-on-error: true
+    permissions:
+      contents: read
+    env:
+      QV_COVERAGE_WORKSPACE: ${{ inputs.coverage_workspace }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Install and verify the pinned vendored crypto bytes
+        run: npm run vendor:install
+      - name: Measure the selected workspace (optional; test exit remains visible)
+        id: measurement
+        timeout-minutes: 15
+        shell: bash
+        env:
+          QV_COVERAGE_OUTPUT: ${{ runner.temp }}/quietvote-coverage-${{ github.run_id }}-${{ github.run_attempt }}.json
+        run: |
+          case "$QV_COVERAGE_WORKSPACE" in
+            board|cli|crypto|protocol|server|trustee|verifier|web) ;;
+            *) echo '::error::Unsupported coverage workspace'; exit 2 ;;
+          esac
+          rm -f -- "$QV_COVERAGE_OUTPUT"
+          npm test -w "@quietvote/$QV_COVERAGE_WORKSPACE"
+      - name: Print report-only coverage evidence, including unavailable outcomes
+        if: always()
+        shell: bash
+        env:
+          QV_COVERAGE_OUTPUT: ${{ runner.temp }}/quietvote-coverage-${{ github.run_id }}-${{ github.run_attempt }}.json
+          QV_COVERAGE_OUTCOME: ${{ steps.measurement.outcome || 'unknown' }}
+        run: node scripts/coverage-report.mjs --report-only --input "$QV_COVERAGE_OUTPUT" --workspace "$QV_COVERAGE_WORKSPACE" --measurement-outcome "$QV_COVERAGE_OUTCOME"
+
   conformance:
     name: vectors, Python verifier and production build
     runs-on: ubuntu-24.04
@@ -161,6 +226,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Install and verify the pinned vendored crypto bytes
         run: npm run vendor:install
+      - name: Check Python verifier static import and dependency boundary
+        run: python3 -I verifier-py/check_imports.py
       - name: Python verifier unit and regression tests
         working-directory: verifier-py
         run: python3 -I -m unittest

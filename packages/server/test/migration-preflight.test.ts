@@ -203,25 +203,23 @@ test('an interrupted signed creation preserves current-schema startup but blocks
 });
 
 for (const cut of ['registry', 'both projections'] as const) {
-  test(`durable election_open blocks migration after interruption before ${cut} update`, async (t) => {
+  test(`durable election_open blocks migration with ${cut === 'registry' ? 'a pending registry update' : 'legacy stale projections'}`, async (t) => {
     const world = await preparedWorld(t, `migration-preflight-${cut}`);
     const runtime = (await world.server.pool.get(world.electionId))!;
     const electionPath = join(world.dir, runtime.registry.db_path);
     const controlPath = join(world.dir, 'control.sqlite');
     const originalControl = world.server.env.control.setState.bind(world.server.env.control);
-    const originalElection = runtime.edb.setState.bind(runtime.edb);
+    const previous = runtime.edb.db.prepare('SELECT phase_seq,tree_size FROM election').get()!;
     let reached = 0;
-    const fault = cut === 'registry'
-      ? t.mock.method(world.server.env.control, 'setState', (...args: Parameters<typeof originalControl>) => {
+    const fault = t.mock.method(world.server.env.control, 'setState', (...args: Parameters<typeof originalControl>) => {
         if (args[1] === 'OPEN') { reached++; throw new Error('simulated interruption before registry update'); }
         return originalControl(...args);
-      })
-      : t.mock.method(runtime.edb, 'setState', (...args: Parameters<typeof originalElection>) => {
-        if (args[0] === 'OPEN') { reached++; throw new Error('simulated interruption before election projection update'); }
-        return originalElection(...args);
       });
     const response = await world.open();
     fault.mock.restore();
+    // Before atomic phase persistence, both projections could lag this authentic committed opening.
+    // Preserve that historical preflight case explicitly; new appends roll back when their election projection fails.
+    if (cut === 'both projections') runtime.edb.setState('READY', JSON.parse(String(previous['phase_seq'])) as Record<string, number>, Number(previous['tree_size']));
     assert.equal(reached, 1, 'the requested post-append cut must be reached');
     assert.equal(response.status, 500, response.text);
     assert.equal(runtime.logState, 'OPEN');
