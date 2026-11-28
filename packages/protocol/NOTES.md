@@ -404,3 +404,21 @@ Owner-approved register defaults (`docs/plan/DECISIONS-2026-11-04.md` §B); spec
   field list; its spec model now includes `pt(A)`, `pt(B)` (spoil: `pt(alpha)`, `pt(beta)`), so it still kills M15 against
   the revised registry. Ported 2026-11-18 onto `38192a5`: crypto 101/101 there; vectors regenerated again on that base
   (outcome diff: 0 removed, 0 outcome changes, 3 `tagged-*` added).
+
+## Seeded revote reference coverage (inventory product T4, 2026-11-27)
+
+`test/revote-property.test.ts` compares `analyzeBallotLog` with an independent
+symbolic predecessor-graph model for six deterministic histories at cast limits
+1, 2 and 4. Each history uses real DKG context, voter signatures and ballot proofs.
+Guaranteed cases cover first-ballot forks, children of rejected forks, spoil then
+cast, later spoiling of an earlier cast, recovery from an excluded candidate, and
+cast-limit overruns. A seeded suffix adds fresh/repeated casts and spoils; a second
+interleaving preserves each voter's order while changing global board order.
+
+The oracle removes authenticated-spoiled candidate IDs and follows the earliest
+remaining successor at each hop. It reads neither analyzer results nor its
+streaming bookkeeping. Checks compare exact counted voter/code/sequence and
+predecessor, one vote per voter, observations, and specified rejection findings.
+This is test-only coverage of the existing QV-16 §5.14 and adopted X-10/B1-01
+policy. It is TS-only, and does not fulfill QV-07-REQ-025's broader acceptance of
+10,000 histories across implementations. See the [coverage report](../../docs/reports/revote-reference-coverage-20261127.md).

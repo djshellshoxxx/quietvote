@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 
 const runner = new URL('./run-browser-journeys.sh', import.meta.url).pathname;
-const journeys = ['run', 'help', 'a11y', 'verifier', 'spoil-shares', 'server', 'registration', 'device-settings', 'split-origin'];
+const journeys = ['run', 'help', 'a11y', 'verifier', 'spoil-shares', 'server', 'registration', 'device-settings', 'split-origin', 'manifest-warnings', 'result-disclosures', 'display-time'];
 function run({ failed = '', missingNode = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'qv-browser-runner-'));
   try {
@@ -29,7 +29,7 @@ if [[ "$1" == "$QV_TEST_FAIL" ]]; then exit 7; fi
   }
 }
 
-test('runs all nine journeys with browser tooling required even if caller permits skips', () => {
+test('runs every required journey with browser tooling required even if caller permits skips', () => {
   const result = run();
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.calls.trim().split('\n'), journeys.map((name) => `1 packages/web/e2e/${name}.ts`));
@@ -37,7 +37,7 @@ test('runs all nine journeys with browser tooling required even if caller permit
 });
 
 test('first, middle and last journey failures remain failures and cannot hide other journeys', () => {
-  for (const failed of ['run', 'a11y', 'device-settings', 'split-origin']) {
+  for (const failed of ['run', 'a11y', 'device-settings', 'split-origin', 'manifest-warnings', 'result-disclosures', 'display-time']) {
     const result = run({ failed: `packages/web/e2e/${failed}.ts` });
     assert.equal(result.status, 1, failed);
     assert.equal(result.calls.trim().split('\n').length, journeys.length, failed);

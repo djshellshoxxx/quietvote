@@ -28,7 +28,7 @@ import type { ConnStatus } from '../net/sse.ts';
 import { inlineSealer, type Sealer } from '../flow/seal.ts';
 import { createTranslator, offeredLocales, negotiateLocale, SOURCE_ONLY, type LocaleDef, type MessageKey, type Translator, type Args } from '../i18n/index.ts';
 import { writeLanguagePreference } from '../i18n/preference.ts';
-import { formatDeadline } from '../i18n/datetime.ts';
+import { formatDisplayTime, formatReceiptTime } from './display-time.ts';
 import { KeyError, defaultDeps, keyIdOf, serializeContainer, type KdfParams, type KeystoreDeps } from '../key/keystore.ts';
 import { checkPassphrase, generatePassphrase } from '../key/passphrase.ts';
 import type { Signer } from '../key/signer.ts';
@@ -47,6 +47,8 @@ import { isCurrentPage, shouldHandleNavigation } from './navigation.ts';
 import { spoilSharesPanel } from './spoil-shares.ts';
 import { pinnedPreloads } from '../util/pinned-preload.ts';
 import { adminPanel } from './admin.ts';
+import { manifestWarnings } from './manifest-warnings.ts';
+import { optionDisclosure, smallRollDisclosure } from './result-disclosures.ts';
 
 export interface AppEnv {
   root: HTMLElement;
@@ -596,11 +598,11 @@ export function startApp(env: AppEnv): void {
       let settings: DeviceSettings;
       try { settings = await storage.current.getSettings(); }
       catch {
-        if (currentRoute(epoch)) render(t('qv.nav.home'), ...head, stepper(1), heading(ctx.manifest.title), errorBox('E-KEY-STORAGE'), link(electionPath(r.id, 'rules') + location.hash, t('qv.nav.rules')));
+        if (currentRoute(epoch)) render(t('qv.nav.home'), ...head, stepper(1), heading(ctx.manifest.title), manifestWarnings(ctx.warnings, tr), errorBox('E-KEY-STORAGE'), link(electionPath(r.id, 'rules') + location.hash, t('qv.nav.rules')));
         return;
       }
       if (!currentRoute(epoch)) return;
-      const fmt = (iso: string): string => { const d = formatDeadline(iso, Intl.DateTimeFormat().resolvedOptions().timeZone, Intl.DateTimeFormat().resolvedOptions().timeZone, locale); return d.electionTime; };
+      const fmt = (iso: string): string => formatDisplayTime(iso, tr);
       const typed = h('input', { type: 'text', autocomplete: 'off', spellcheck: false });
       const confirmed = settings.confirmed[ctx.manifestHashHex] === true;
       const msg = h('div', {});
@@ -608,6 +610,7 @@ export function startApp(env: AppEnv): void {
       return render(t('qv.nav.home'), ...head, stepper(1), heading(ctx.manifest.title), h('p', {}, t('qv.election.invited')),
         h('p', {}, t('qv.election.opens', { when: fmt(ctx.manifest.voting_open) })), h('p', {}, t('qv.election.closes', { when: fmt(ctx.manifest.voting_close) })),
         h('p', {}, t('qv.election.contests', { count: ctx.manifest.contests.length }), ' · ', t('qv.election.roll', { count: ctx.rollSize })),
+        manifestWarnings(ctx.warnings, tr),
         confirmed ? h('p', {}, t('qv.election.v1.confirmed')) : h('section', {}, h('p', {}, t('qv.election.v1.ask')),
           field(t('qv.election.v1.typeIt'), typed),
           h('div', { class: 'row' },
@@ -621,7 +624,7 @@ export function startApp(env: AppEnv): void {
             btn(t('qv.election.v1.none'), () => go(electionPath(r.id, 'rules') + location.hash))), msg),
         h('p', {}, link(electionPath(r.id, 'rules') + location.hash, t('qv.nav.rules'))));
     }
-    if (sub === 'rules') return render(t('qv.nav.rules'), ...head, stepper(1), heading(t('qv.nav.rules')), h('p', {}, t('qv.vote.privacyNote')), guaranteePanel(L),
+    if (sub === 'rules') return render(t('qv.nav.rules'), ...head, stepper(1), heading(t('qv.nav.rules')), manifestWarnings(ctx.warnings, tr), h('p', {}, t('qv.vote.privacyNote')), guaranteePanel(L),
       settingsChoice('qv.election.rulesAck', (s) => s.rulesSeen[ctx.manifestHashHex] === true,
         (s, checked) => ({ ...s, rulesSeen: { ...s.rulesSeen, [ctx.manifestHashHex]: checked } }), () => currentRoute(epoch)),
       h('p', { class: 'hint' }, t('qv.election.rulesAckHint')), link(electionPath(r.id, 'key') + location.hash, t('qv.shell.continue'), 'btn primary'));
@@ -955,9 +958,10 @@ export function startApp(env: AppEnv): void {
           btn(t('qv.ballot.newSeal'), () => { ctl.newSeal(); draw(); }, { primary: true }), h('p', { class: 'hint' }, t('qv.ballot.newCodeDifferent'))]);
       } else if (s.kind === 'cast') {
         const rep = ctl.lastCast;
+        const loggedAt = formatReceiptTime(rep?.sequencedAt, tr);
         const titleKey = receiptTitle(s.outcome);
         add(area, [h('h2', { tabindex: -1, class: 'step-heading' }, t(titleKey)), rep?.codeDisplay ? h('p', {}, t('qv.ballot.code'), ': ', codeEl(rep.codeDisplay)) : null,
-          rep?.seq !== undefined && s.outcome === 'ACCEPTED_RECORDED' ? h('p', {}, t('qv.receipt.logged', { time: new Date((rep.sequencedAt ?? 0) * 1000).toLocaleString(locale), seq: rep.seq })) : null,
+          rep?.seq !== undefined && loggedAt !== undefined && s.outcome === 'ACCEPTED_RECORDED' ? h('p', {}, t('qv.receipt.logged', { time: loggedAt, seq: rep.seq })) : null,
           s.outcome === 'ACCEPTED_RECORDED' ? h('p', {}, t('qv.receipt.proves')) : s.outcome === 'PENDING_UNCONFIRMED' ? h('p', {}, t('qv.receipt.pendingBody')) : null, h('p', {}, t('qv.receipt.doesnt')), h('p', {}, t('qv.receipt.shared')),
           rep?.error ? errorFor(undefined, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }, rep.error.ux, rep.error.requestId) : null,
           rep?.storageFailed ? errorBox('E-KEY-STORAGE') : null,
@@ -1167,13 +1171,13 @@ export function startApp(env: AppEnv): void {
             return h('section', {}, h('h2', {}, c?.title ?? res.contest),
               charts ? charts.renderBarChart({ t, rtl: tr.dir === 'rtl' }, c?.title ?? res.contest, { options: opts.map((o) => ({ id: o.id, label: label(o.id), count: o.T })), winners }) : null,
               h('table', {}, h('caption', {}, c?.title ?? res.contest), h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, t('qv.results.option')), h('th', { scope: 'col' }, t('qv.results.count')))),
-                h('tbody', {}, ...opts.map((o) => h('tr', {}, h('th', { scope: 'row' }, label(o.id)), h('td', {}, String(o.T)))))),
+                h('tbody', {}, ...opts.map((o) => h('tr', {}, h('th', { scope: 'row' }, label(o.id)), h('td', {}, String(o.T), optionDisclosure(o.T, report.counts.counted, tr)))))),
               h('p', {}, t('qv.results.summary', { text })), h('p', {}, t('qv.results.participation', { count: res.participation })),
               h('p', {}, t('qv.results.quorum', { met: String(res.quorum_met) })),
               h('p', {}, res.outcome.kind === 'winners' ? t('qv.results.outcome.winners', { names: winners.map(label) }) : t(`qv.results.outcome.${res.outcome.kind}` as MessageKey)));
           });
         };
-        add(out, [...reportContent(report), ...sections(), h('details', {}, h('summary', {}, t('qv.results.how')), h('p', {}, t('qv.results.howBody')), link('/verify', t('qv.nav.verify')))]);
+        add(out, [...reportContent(report), smallRollDisclosure(ctx.rollSize, tr), ...sections(), h('details', {}, h('summary', {}, t('qv.results.how')), h('p', {}, t('qv.results.howBody')), link('/verify', t('qv.nav.verify')))]);
       } catch (e) {
         if (!current(run)) return;
         clear(out); add(out, [h('h2', {}, t('qv.verify.verdict.FAIL')), h('p', {}, e instanceof Error ? e.message : t('qv.err.E-GEN-UNKNOWN.body'))]);
@@ -1419,7 +1423,7 @@ export function startApp(env: AppEnv): void {
         if (!res.ok) return void add(out, [errorBox(res.code, { detail: res.detail })]);
         prepared = { form, rollHex: roll.keys };
         add(publishBox, [publishSection()]);
-        add(out, [h('p', {}, t('qv.org.rollSummary', { count: roll.keys.length, root: roll.rootHex ?? '' }))]);
+        add(out, [manifestWarnings(res.warnings, tr), h('p', {}, t('qv.org.rollSummary', { count: roll.keys.length, root: roll.rootHex ?? '' }))]);
       }, { primary: true }), out, publishBox);
   }
 

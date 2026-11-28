@@ -3,6 +3,57 @@
 Framework-free TypeScript SPA (QV-19). `npm run build -w @quietvote/web` -> `dist/` (hashed assets, SRI, CSP meta + `_headers`,
 `asset-manifest.json`, offline `verifier.html`). `npm run e2e -w @quietvote/web` uses the pinned Playwright development dependency and supported shared loader against `test/helpers/fake-board.ts`. Set `QV_REQUIRE_BROWSER=1` to fail on unavailable tooling, as CI does; only optional local runs may skip. Browser checks are separate from `npm test`.
 
+## Explicit deadline and receipt time zones (2026-11-27)
+
+Inventory web task 3 now uses the existing deadline templates and `formatDeadline` output for the overview's opening
+and closing times and the accepted-recorded receipt line. Each shown time includes its numeric UTC offset and IANA
+zone name. The current manifest has no display-zone field, so these views use the browser's actual local display zone
+once. The shared formatter can show a distinct independently selected display/viewer pair without duplicating equal
+zones; this does not add a signed field, saved preference, organizer-input behavior or inferred election zone.
+
+Offsets are calculated for each displayed instant. Deadlines retain minute precision, while receipt timestamps retain
+seconds through an additive `formatDeadline` option. Receipts use only `rep.sequencedAt` from the verified signed promise,
+not the device clock. Missing or unrenderable presentation timestamps omit the logged-time line instead of inventing
+epoch zero; this is defensive handling of an optional field, not a claim that ordinary accepted reports lacked a time.
+No clock-freshness, skew-correction or countdown behavior is introduced. Existing locale templates and review metadata
+remain unchanged. Tests cover DST gaps/folds in Berlin and New York, a half-hour zone, distinct/equal display zones,
+timestamp precision and absence. The built-app journey imports a real key and records a ballot in each browser zone:
+`QV_REQUIRE_BROWSER=1 node packages/web/e2e/display-time.ts` (`QV_CHROMIUM` selects an installed executable).
+
+## Result disclosure notices (2026-11-27)
+
+The results page now shows the display-only notices from inventory product task T2 / QV-07-REQ-017, after the existing
+`canShowResults` verification gate succeeds. A roll below 10 shows the specified "Results may reveal individual votes"
+message. Each option with zero votes or the full positive counted-voter total has a notice inside that option's table
+row. The required unanimity wording is explicitly prefixed "For this option" and followed by whether all counted voters
+selected it or none did. It does not claim the rest of a ballot is known. The denominator is `report.counts.counted`,
+not the roll size or the sum of option counts. No participant-choice notice is produced for a zero counted-voter total.
+
+This adds no manifest fields, publication thresholds, count suppression or verifier semantics. Missing/failed evidence
+and absent tallies continue to withhold counts and their disclosure inferences. Existing guarantee copy and locale
+review metadata are unchanged; the five translated catalogs remain unreviewed and unoffered. Tests use real manifests,
+ballots, threshold tallies and witness evidence at the roll-size 9/10 boundary, for single-choice and approval contests.
+The built-app journey also covers a fully selected single-choice option, zero-valued options, no notices, an empty
+election, missing evidence and a coordinator-signed false tally. Run with
+`QV_REQUIRE_BROWSER=1 node packages/web/e2e/result-disclosures.ts` (set `QV_CHROMIUM` when needed).
+
+## Manifest warning visibility (2026-11-27)
+
+The election overview, rules page and successful organizer preview now display the warnings already returned by
+`validateManifest` (inventory product task T1, QV-03-REQ-012 / QV-02-REQ-032 / QV-06-REQ-010). The shared
+`ui/manifest-warnings.ts` renderer covers `W-NO-THRESHOLD`, `W-SECRECY`, `W-AVAILABILITY` and `W-SMALL-ROLL`.
+It does not calculate thresholds or alter manifest acceptance, frozen rules, tally behavior or existing guarantee copy.
+Known codes use fixed advisory copy; unknown diagnostics stay visible as literal text. No warnings means no panel,
+without making an all-clear claim. The panel is a labelled section and does not add a live announcement region.
+
+The small-roll message uses QV-06 section 9 M1 wording. New catalog entries follow the existing machine-draft policy;
+all translated locale review maps remain empty, and only English is offered. `COPY.md` is regenerated from the catalog.
+Focused unit tests cover real validated manifest triggers, multiple/empty warnings, unknown and prototype-like codes,
+hostile diagnostic text and locale gating. The built-app journey covers overview, rules, changing organizer previews
+and literal-text rendering under the page CSP. Run it with
+`QV_REQUIRE_BROWSER=1 node packages/web/e2e/manifest-warnings.ts`; `QV_CHROMIUM` can select an installed executable.
+This UI change does not implement the proposed minimum-turnout publication policy.
+
 ## Current audit consolidation (2026-10-30)
 
 This section supersedes older gap/status statements in the implementation history below. The original B1/B2/B3 reports

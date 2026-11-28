@@ -587,4 +587,17 @@ export const FR = {
   'qv.org.enrollHelp': "Utilisez un identifiant d’organisation existant ou créez une organisation avec cette clé et la phrase secrète ci-dessous. Le serveur peut exiger un jeton d’inscription ou refuser de nouvelles organisations.",
   'qv.org.registrationToken': "Jeton d’inscription de l’organisation (si nécessaire)",
   'qv.org.enrollRetry': "La requête a peut-être atteint le serveur. Saisissez à nouveau votre phrase secrète et réessayez avec les mêmes informations d’organisation. Gardez cette page ouverte.",
+  // Machine-drafted manifest warnings; native review remains pending.
+  'qv.election.warning.title': "Avertissements sur l’élection",
+  'qv.election.warning.noThreshold': "Le seuil de responsables est de 1, donc il n’y a aucune protection par seuil.",
+  'qv.election.warning.secrecy': "Le seuil de responsables est inférieur à une majorité des responsables.",
+  'qv.election.warning.availability': "Pour pouvoir ouvrir le résultat, moins d’un tiers des responsables peuvent être indisponibles.",
+  'qv.election.warning.smallRoll': "Avec si peu de votants, les totaux publiés pourraient révéler des votes individuels.",
+  'qv.election.warning.other': "Avertissement supplémentaire sur l’élection : {warning}",
+  // Machine-drafted result disclosures; native review remains pending.
+  'qv.results.disclosure.smallRoll': "Les résultats peuvent révéler des votes individuels",
+  'qv.results.disclosure.scope': "Pour cette option",
+  'qv.results.disclosure.unanimous': "Résultat unanime : le choix de chaque participant est connu",
+  'qv.results.disclosure.all': "Tous les votants comptabilisés ont sélectionné cette option.",
+  'qv.results.disclosure.none': "Aucun votant comptabilisé n’a sélectionné cette option.",
 } as const satisfies Record<MessageKey, string>;

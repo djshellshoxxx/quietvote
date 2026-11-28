@@ -46,21 +46,21 @@ export function registerPublicExportRoutes(d: ExtDeps): void {
   add({
     method: 'GET', path: '/api/v1/elections/:id/exports', cls: 'M', auth: 'sig',
     handler: async (c) => {
-      const rt = await d.orgElection(c);
+      const rt = await d.orgElection(c, 'read');
       return { status: 200, cache: 'no-store', json: { items: rt.edb.publicExports().map((r) => publicExportView(rt.id, r)), next_cursor: null } };
     },
   });
   add({
     method: 'GET', path: '/api/v1/elections/:id/exports/:export', cls: 'M', auth: 'sig',
     handler: async (c) => {
-      const rt = await d.orgElection(c);
+      const rt = await d.orgElection(c, 'read');
       return { status: 200, cache: 'no-store', json: publicExportView(rt.id, publicExportOf(rt.edb, c.params['export']!)) };
     },
   });
   add({
     method: 'GET', path: '/api/v1/elections/:id/exports/:export/download', cls: 'M', auth: 'sig',
     handler: async (c) => {
-      const rt = await d.orgElection(c), row = publicExportOf(rt.edb, c.params['export']!);
+      const rt = await d.orgElection(c, 'read'), row = publicExportOf(rt.edb, c.params['export']!);
       if (env.nowMs() >= row.expires_at) throw new ApiError(410, 'EXPORT_EXPIRED', 'this download has expired; request a new public export');
       const bytes = checkedPublicExport(rt.edb, row);
       return { status: 200, bytes, ranges: true, contentType: 'application/x-tar', cache: 'no-store', etag: `"${toHex(row.sha256)}"`,
