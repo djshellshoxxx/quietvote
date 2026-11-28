@@ -11,7 +11,7 @@ export const ELECTION_STATES = [
 ] as const;
 export type ElectionStateName = (typeof ELECTION_STATES)[number];
 
-const MIGRATIONS: Migration[] = [
+export const MIGRATIONS: Migration[] = [
   {
     version: 1,
     name: 'initial',
@@ -268,10 +268,10 @@ export class ControlDb {
     else run(this.db, `UPDATE gossip_health SET last_attempt_at=?, last_failure_at=?, consecutive_failures=MIN(consecutive_failures+1,2147483647), last_error=? WHERE peer_id=?`, now, now, error, peerId);
   }
   private readonly now: () => number;
-  constructor(dataDir: string, now: () => number, appVersion: string) {
+  constructor(dataDir: string, now: () => number, appVersion: string, forceMigrateOpen = false) {
     this.now = now;
     // Recovery anchors must survive power loss before any corresponding signed result is released.
-    this.db = openDb({ path: join(dataDir, 'control.sqlite'), applicationId: 0x51564343, synchronous: 'FULL', migrations: MIGRATIONS, appVersion });
+    this.db = openDb({ path: join(dataDir, 'control.sqlite'), applicationId: 0x51564343, synchronous: 'FULL', migrations: MIGRATIONS, appVersion, forceMigrateOpen });
   }
   close(): void {
     closeDb(this.db);

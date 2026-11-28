@@ -186,6 +186,74 @@ test('cancelled or failed clearing never shows a success confirmation or removes
   assert.ok(hasButton('Unlock key'));
 });
 
+for (const sessionOnly of [false, true]) test(`single-flight ${sessionOnly ? 'page-session' : 'device'} clearing covers confirmation and pending storage, then permits another action`, async () => {
+  const { session, durable } = await boot(sessionOnly);
+  if (sessionOnly) { button('Use this page only').click(); await drain(); await durable.putKey('sentinel', otherKey.container); }
+  await session.current.putKey(keySlot(id), wrapped.container); await navigate('key');
+  const label = sessionOnly ? 'Clear this page session' : 'Clear this device';
+  const message = sessionOnly ? 'This page session was cleared. Saved browser data was not cleared.'
+    : 'This device has been cleared. If you saved your receipt file, you can still check your ballot later.';
+  const original = session.clear.bind(session);
+  let release!: () => void, clears = 0;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  session.clear = async () => { clears++; await pending; await original(); };
+  try {
+    const trigger = button(label);
+    trigger.click(); trigger.click();
+    assert.equal(root.find((element) => element.tag === 'dialog').length, 1, 'repeated requests must share one confirmation');
+    const dialog = get((element) => element.tag === 'dialog');
+    dialog.find((element) => element.tag === 'button' && element.textContent !== 'Cancel')[0]!.click();
+    await tick(); trigger.click(); trigger.click(); await drain();
+    assert.equal(clears, 1, 'storage clearing must start once');
+    assert.equal(root.find((element) => element.tag === 'dialog').length, 0, 'a pending clear cannot ask again');
+    assert.equal(await session.current.getKey(keySlot(id)), wrapped.container);
+    assert.equal(main().textContent.includes(message), false, 'pending clearing must not claim success');
+    release(); await until(() => main().textContent.includes(message)); await drain();
+    assert.deepEqual(await session.current.listKeySlots(), []);
+    assert.equal(main().find((element) => element.tag === 'p' && element.textContent === message).length, 1);
+    assert.equal(focused?.textContent, message);
+    assert.equal(clears, 1);
+    if (sessionOnly) assert.equal(await durable.getKey('sentinel'), otherKey.container);
+    await session.current.putKey(keySlot(id), wrapped.container); await navigate('key');
+    button(label).click();
+    assert.equal(root.find((element) => element.tag === 'dialog').length, 1, 'success releases the guard for a later independent action');
+    get((element) => element.tag === 'dialog').dispatch('cancel'); await drain();
+    assert.equal(clears, 1);
+  } finally { release(); session.clear = original; await navigate('/', ''); }
+});
+
+for (const sessionOnly of [false, true]) test(`single-flight ${sessionOnly ? 'page-session' : 'device'} clearing releases after cancel and after a failed clear`, async () => {
+  const { session } = await boot(sessionOnly);
+  if (sessionOnly) { button('Use this page only').click(); await drain(); }
+  await session.current.putKey(keySlot(id), wrapped.container); await navigate('key');
+  const label = sessionOnly ? 'Clear this page session' : 'Clear this device';
+  const original = session.clear.bind(session);
+  let reject!: (reason: Error) => void, clears = 0;
+  const pending = new Promise<void>((_resolve, no) => { reject = no; });
+  session.clear = async () => { clears++; await pending; };
+  try {
+    button(label).click(); button(label).click();
+    assert.equal(root.find((element) => element.tag === 'dialog').length, 1);
+    get((element) => element.tag === 'dialog').find((element) => element.tag === 'button' && element.textContent === 'Cancel')[0]!.click();
+    await drain(); assert.equal(clears, 0);
+    button(label).click();
+    const urgent = get((element) => element.id === 'live-urgent'), before = urgent.writes.length;
+    get((element) => element.tag === 'dialog').find((element) => element.tag === 'button' && element.textContent !== 'Cancel')[0]!.click();
+    await tick(); button(label).click(); await drain();
+    assert.equal(root.find((element) => element.tag === 'dialog').length, 0); assert.equal(clears, 1);
+    reject(new Error('test clear unavailable')); await drain();
+    assert.equal(await session.current.getKey(keySlot(id)), wrapped.container);
+    assert.equal(main().textContent.includes('has been cleared.'), false); assert.equal(main().textContent.includes('session was cleared.'), false);
+    assert.ok(urgent.textContent); assert.equal(urgent.writes.slice(before).filter((text) => text === urgent.textContent).length, 1, 'one failed operation announces once');
+    session.clear = original;
+    button(label).click();
+    assert.equal(root.find((element) => element.tag === 'dialog').length, 1, 'failure releases the guard for an explicit retry');
+    get((element) => element.tag === 'dialog').find((element) => element.tag === 'button' && element.textContent !== 'Cancel')[0]!.click();
+    await until(() => main().textContent.includes(sessionOnly ? 'session was cleared.' : 'has been cleared.'));
+    assert.deepEqual(await session.current.listKeySlots(), []);
+  } finally { session.clear = original; await navigate('/', ''); }
+});
+
 for (const clearBeforeResponse of [false, true]) test(`late receipt handoff ${clearBeforeResponse ? 'cannot reinstall a result after explicit clearing' : 'refreshes a returned pending view once and preserves the download opt-out'}`, async () => {
   const { session, durable } = await boot(false);
   await durable.putKey(keySlot(id), wrapped.container);

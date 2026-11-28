@@ -12,8 +12,10 @@ const rejects = async (p: Promise<unknown>, code: string): Promise<void> => {
   await assert.rejects(p, (e: unknown) => e instanceof TrusteeError && e.code === code, code);
 };
 
-test('TR-01: a cast ballot re-wrapped as a trustee-mode spoil under a new code (same ciphertexts) is never decrypted', async () => {
-  const fx = await electionFixture({ n: 4, t: 3, seed: 'audit-tr01', spoilDecrypt: true, close: false });
+test('TR-01: a cast ballot re-wrapped as a trustee-mode spoil under a new code (same ciphertexts) is never decrypted', async context => {
+  const fx = await electionFixture({ n: 4, t: 3, seed: 'audit-tr01', spoilDecrypt: true, close: false,
+    nativeKeygen: { phase: 'audit-cast-rewrap-keygen', diagnostic: message => context.diagnostic(message) },
+  });
   const c = fx.c;
   try {
     const o = fx.outcome;
@@ -41,8 +43,10 @@ test('TR-01: a cast ballot re-wrapped as a trustee-mode spoil under a new code (
   }
 });
 
-test('TR-02: tally release before the trustee imported election-open is refused cleanly (WRONG_STATE), then works after import', async () => {
-  const c = new Ceremony({ n: 3, t: 2, seed: 'audit-tr02', voters: 6 });
+test('TR-02: tally release before the trustee imported election-open is refused cleanly (WRONG_STATE), then works after import', async context => {
+  const c = new Ceremony({ n: 3, t: 2, seed: 'audit-tr02', voters: 6,
+    nativeKeygen: { phase: 'audit-before-open-keygen', diagnostic: message => context.diagnostic(message) },
+  });
   await c.setup();
   try {
     const o = await c.runDkg({ drill: false }); // trustees stay in CONFIRMED, never see election-open

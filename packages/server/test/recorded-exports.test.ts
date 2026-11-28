@@ -137,10 +137,13 @@ test('both deletion APIs and direct pool removal refuse an unacknowledged ARCHIV
     const ack = await w.signed('POST', record.acknowledgement_url, binding(record), w.owner, w.idemKey());
     assert.equal(ack.status, 200, ack.text);
     const rt = (await w.server.pool.get(w.electionId))!;
-    rt.edb.db.exec('DROP TRIGGER export_record_noupdate');
     const damaged = rt.edb.publicExportBytes(record.export_id)!;
     damaged[damaged.length - 1] = damaged[damaged.length - 1]! ^ 1;
-    rt.edb.db.prepare('UPDATE export_record SET snapshot=? WHERE export_id=?').run(damaged, record.export_id);
+    // Fault injection needs an explicit writer now that ordinary archived readers are physically read-only.
+    rt.edb.withMaintenance('recovery', (db) => {
+      db.db.exec('DROP TRIGGER export_record_noupdate');
+      db.db.prepare('UPDATE export_record SET snapshot=? WHERE export_id=?').run(damaged, record.export_id);
+    });
     await assert.rejects(w.server.pool.remove(w.electionId), /recorded public export/);
     const replacement = await makeExport(w);
     assert.equal((await w.signed('POST', replacement.acknowledgement_url, binding(replacement), w.owner, w.idemKey())).status, 200);
@@ -189,9 +192,11 @@ test('acknowledging an earlier tree cannot authorize final-tree deletion, and da
     await assert.rejects(w.server.pool.remove(w.electionId), /recorded public export/);
     assert.equal((await w.signed('POST', early.deletion_notice_url, binding(early), w.owner, w.idemKey())).status, 409);
     const current = await makeExport(w), rt = (await w.server.pool.get(w.electionId))!;
-    rt.edb.db.exec('DROP TRIGGER export_record_noupdate');
     const bytes = rt.edb.publicExportBytes(current.export_id)!; bytes[bytes.length - 1] = bytes[bytes.length - 1]! ^ 1;
-    rt.edb.db.prepare('UPDATE export_record SET snapshot=? WHERE export_id=?').run(bytes, current.export_id);
+    rt.edb.withMaintenance('recovery', (db) => {
+      db.db.exec('DROP TRIGGER export_record_noupdate');
+      db.db.prepare('UPDATE export_record SET snapshot=? WHERE export_id=?').run(bytes, current.export_id);
+    });
     const damaged = await rawDownload(w, current.download_url);
     assert.equal(damaged.status, 409); await damaged.arrayBuffer();
     const ack = await w.signed('POST', current.acknowledgement_url, binding(current), w.owner, w.idemKey());

@@ -63,7 +63,12 @@ export class LiveElection {
       open: (last, signal) => this.t.api.events(this.t.apiId, { lastEventId: last, signal }),
       onEvent: (e) => this.hint(e),
       onResync: () => this.schedule(),
-      ...(this.o.onStatus ? { onStatus: this.o.onStatus } : {}),
+      onStatus: (status) => {
+        // A new stream starts at the server's current tip when it has no cursor. Read after it is attached so appends
+        // between the initial load and connection (or a cursorless reconnect) cannot fall into that gap.
+        if (status.state === 'live') this.schedule();
+        this.o.onStatus?.(status);
+      },
       ...(this.o.sleep ? { sleep: this.o.sleep } : {}),
       ...(this.o.random ? { random: this.o.random } : {}),
       ...(this.o.baseMs !== undefined ? { baseMs: this.o.baseMs } : {}),

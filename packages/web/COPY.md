@@ -269,12 +269,19 @@ Voter-facing rules: sentences of at most 20 words and none of: ciphertext, ciphe
 - `qv.receipt.none`: No receipts are saved on this device.
 - `qv.receipt.remember`: Remember receipts on this device
 - `qv.receipt.qrMissing`: A QR code is not available in this version. Use the Save button.
-- `qv.receipt.standing.title`: Status of this ballot
-- `qv.receipt.standing.current`: Latest. No newer ballot from you is in the public record.
-- `qv.receipt.standing.superseded`: Replaced. Your newer ballot at entry #{seq} counts instead of this one.
-- `qv.receipt.standing.supersededNote`: This receipt still shows that the earlier ballot was recorded. Only your newest ballot is counted.
-- `qv.receipt.standing.unknown`: Not checked yet. This ballot is not in the record loaded on this page.
-- `qv.receipt.standing.mismatch`: This receipt does not match the public record. Check it again, or ask the organizer.
+- `qv.receipt.standing.title`: Ballot status
+- `qv.receipt.standing.counted`: This ballot is included in the checked tally in this snapshot.
+- `qv.receipt.standing.superseded`: Replaced by a newer ballot from the same voter at entry #{seq} in this checked snapshot.
+- `qv.receipt.standing.excluded`: This ballot is recorded but is not counted or proved replaced in this snapshot.
+- `qv.receipt.standing.unknown`: Inclusion was checked. Replacement status has not been established.
+- `qv.receipt.standing.scope`: This result describes the checked snapshot. It does not establish that the record is up to date or that the result is final.
+- `qv.receipt.standing.pin`: Saved rules code (64 characters, using 0–9 and a–f)
+- `qv.receipt.standing.pinHint`: Optional for inclusion. Enter the code for the election rules from a separate trusted source to check replacement status.
+- `qv.receipt.standing.incomplete`: Replacement status requires a complete checked tally snapshot. It is not established while voting is open.
+- `qv.receipt.standing.refused`: The required snapshot checks did not pass. Replacement status remains unverified.
+- `qv.receipt.standing.anchorMismatch`: The supplied code for the election rules does not match this snapshot.
+- `qv.receipt.standing.snapshot`: Snapshot size {size}; root {root}.
+- `qv.receipt.standing.replacementCode`: Replacement ballot code: {code}.
 
 ## Results
 

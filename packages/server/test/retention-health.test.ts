@@ -23,7 +23,7 @@ test('BT-12: missing and corrupt databases produce durable count-only failures a
     const rows = s.env.control.db.prepare("SELECT target,detail FROM operator_audit WHERE action='retention.sweep'").all();
     assert.equal(rows.length, 1);
     assert.equal(rows[0]!['target'], null);
-    assert.deepEqual(JSON.parse(String(rows[0]!['detail'])), { checked: 2, failed: 2, purged: 0, complete: false });
+    assert.deepEqual(JSON.parse(String(rows[0]!['detail'])), { checked: 2, failed: 2, purged: 0, migration_backups_pruned: 0, complete: false });
     const event = logs.map((l) => JSON.parse(l)).find((r) => r.event === 'retention_sweep');
     assert.equal(event.code, 'RETENTION_SWEEP_FAILED');
     assert.ok(!logs.join('').includes('canary'));

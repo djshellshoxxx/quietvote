@@ -21,9 +21,9 @@ import { runPublish, type PublishOutcome } from '../flow/publish-ui.ts';
 import type { PublishForm, PublishState } from '../flow/publish.ts';
 import { BoardIntegrityError, MAX_RECEIPT_FILE_BYTES, parseReceiptFile } from '../flow/receipt.ts';
 import { checkBallotCodeEntry, lookupBallotCode } from '../flow/receipt-code.ts';
-import { ReceiptCheckGate } from '../flow/receipt-check-gate.ts';
+import { standingManifestHash, unverifiedStanding, verifyReceiptStanding } from '../flow/receipt-standing.ts';
+import { receiptStandingPanel } from './receipt-standing.ts';
 import { LiveElection } from '../flow/live.ts';
-import { BallotIndex } from '../flow/supersede.ts';
 import type { ConnStatus } from '../net/sse.ts';
 import { inlineSealer, type Sealer } from '../flow/seal.ts';
 import { createTranslator, offeredLocales, negotiateLocale, SOURCE_ONLY, type LocaleDef, type MessageKey, type Translator, type Args } from '../i18n/index.ts';
@@ -79,8 +79,6 @@ interface Loaded {
   records: { seq: number; record: unknown }[];
   /** Live update connection (SSE), started when the election is first opened. */
   live?: LiveElection;
-  /** Incremental index of ballots, for receipt standing. */
-  ballots?: BallotIndex;
 }
 
 export function startApp(env: AppEnv): void {
@@ -166,7 +164,7 @@ export function startApp(env: AppEnv): void {
   const keyDeps = (): KeystoreDeps => ({ ...defaultDeps(), confirmCost: confirmKdfCost });
 
   /** Clears this device's keys and receipts; a failure is announced (E-KEY-STORAGE), never reported as cleared (W9). */
-  const clearDevice = async (): Promise<boolean> => {
+  const clearDeviceOnce = async (): Promise<boolean> => {
     const confirmed = await new Promise<boolean>((resolve) => {
       const dialog = h('dialog', { 'aria-label': storage.isSession ? t('qv.storage.clear') : t('qv.key.forget') });
       const finish = (v: boolean): void => { (dialog as HTMLDialogElement).close(); dialog.remove(); resolve(v); };
@@ -187,8 +185,16 @@ export function startApp(env: AppEnv): void {
     organizerStorage = boardStorage(storage.current, policy.defaultBoard, location.origin);
     // A live-connection announcement must not erase the result of an explicit clearing action.
     clearConfirmation = h('p', { class: 'hint', tabindex: -1 }, storage.isSession ? t('qv.storage.cleared') : t('qv.device.cleared'));
-    void route();
+    await route();
     return true;
+  };
+  // Keep one operation active through confirmation, storage clearing and the completion view.
+  let clearing = false;
+  const clearDevice = async (): Promise<boolean> => {
+    if (clearing) return false;
+    clearing = true;
+    try { return await clearDeviceOnce(); }
+    finally { clearing = false; }
   };
   const link = (href: string, text: string, cls = '', current?: Route): HTMLElement =>
     h('a', { href, class: cls, 'aria-current': current && isCurrentPage(href, current) ? 'page' : undefined, onclick: (e: Event) => {
@@ -338,7 +344,7 @@ export function startApp(env: AppEnv): void {
     storageNotice.hidden = storageNotice.children.length === 0;
   }
 
-  /** Set by views that can refresh themselves in place when live data arrives (receipt standing, results). */
+  /** Set by views that can refresh themselves in place when live data arrives. */
   let repaint: (() => void) | undefined;
   let stopVerification: (() => void) | undefined;
   window.addEventListener('pagehide', () => stopVerification?.());
@@ -578,7 +584,7 @@ export function startApp(env: AppEnv): void {
       const next = await deriveElectionContext(records, L.ctx?.manifestHashHex);
       if (!currentRoute(epoch)) return;
       if (!next.ok) throw new Error(next.detail);
-      L.records = records; L.ctx = next.value; delete L.ballots;
+      L.records = records; L.ctx = next.value;
     }
     startLive(L);
     const sub = r.view;
@@ -986,131 +992,119 @@ export function startApp(env: AppEnv): void {
   async function receiptView(L: Loaded, ctx: ElectionContext, head: Child[], epoch: number): Promise<void> {
     const stored = await L.storage.getReceipts(L.apiId);
     if (!currentRoute(epoch)) return;
-    const out = h('div', {});
-    const checks = new ReceiptCheckGate();
+    const out = h('div', {}), detail = h('p', { class: 'hint' });
+    const progress = h('progress', { 'aria-label': t('qv.verify.progressLabel'), hidden: true }) as HTMLProgressElement;
     const checkButtons: HTMLButtonElement[] = [];
-    const invalidate = (): void => { checks.invalidate(); clear(out); };
-    const runCheck = async (operation: (current: () => boolean) => Promise<void>): Promise<void> => {
-      invalidate();
-      await checks.run(async (valid) => {
-        codeInput.disabled = true;
-        (file as HTMLInputElement).disabled = true;
-        for (const button of checkButtons) button.disabled = true;
-        try { await operation(() => currentRoute(epoch) && valid()); }
-        finally {
-          codeInput.disabled = false;
-          (file as HTMLInputElement).disabled = false;
-          for (const button of checkButtons) button.disabled = false;
-        }
-      });
+    let generation = 0;
+    let active: AbortController | undefined;
+    const busy = (value: boolean): void => {
+      codeInput.disabled = value; file.disabled = value; pin.disabled = value; keys.disabled = value;
+      for (const button of checkButtons) button.disabled = value;
+      cancel.disabled = !value; progress.hidden = !value; out.setAttribute('aria-busy', String(value));
     };
+    const invalidate = (): void => {
+      generation++; active?.abort(); active = undefined;
+      busy(false); clear(out); detail.textContent = '';
+    };
+    stopVerification = invalidate;
     const codeInput = h('input', { type: 'text', autocomplete: 'off', spellcheck: false, maxlength: 256, oninput: invalidate }) as HTMLInputElement;
-    const checkCode = btn(t('qv.receipt.checkCode'), () => runCheck(async (current) => {
-      const input = codeInput.value;
+    const pin = h('input', { type: 'text', autocomplete: 'off', spellcheck: false, maxlength: 64, oninput: invalidate }) as HTMLInputElement;
+    const keys = authorKeyInput(); keys.addEventListener('input', invalidate);
+    const cancel = btn(t('qv.key.cancel'), () => {
+      invalidate(); out.append(h('p', {}, t('qv.verify.cancelled'))); checkCode.focus();
+    }, { disabled: true }) as HTMLButtonElement;
+    type Included = Extract<Awaited<ReturnType<typeof checkBallotCodeEntry>>, { state: 'included' }> & { code: string };
+    const runCheck = async (operation: (current: () => boolean) => Promise<Included | undefined>): Promise<void> => {
+      if (active !== undefined) return;
+      invalidate();
+      const run = ++generation, scope = new AbortController(); active = scope;
+      const current = (): boolean => currentRoute(epoch) && generation === run && !scope.signal.aborted;
+      const pinText = pin.value, keyText = keys.value;
+      busy(true);
       try {
-        const result = await lookupBallotCode({ input, api: L.api, apiElectionId: L.apiId,
-          ctx: ctx.params.ctx, logPk: L.logPk, expectedOrigin: L.origin, pinned: await L.storage.getHead(L.apiId) });
+        const included = await operation(current);
+        if (!included || !current()) return;
+        await L.storage.putHead({ ...included.head, electionId: L.apiId });
         if (!current()) return;
         clear(out);
-        if (result.state === 'included') {
-          await L.storage.putHead({ ...result.head, electionId: L.apiId });
+        out.append(codeEl(ballotCodeDisplay(hexToBytes(included.code, 32), true)),
+          h('p', {}, t('qv.receipt.included', { seq: included.seq, size: included.treeSize })), h('p', {}, t('qv.receipt.consistent')));
+        const standing = h('div', {}); out.append(standing);
+        const manifestHash = standingManifestHash(pinText);
+        if (manifestHash === undefined) { standing.append(receiptStandingPanel(unverifiedStanding('anchor'), included.code, tr)); return; }
+        if (manifestHash !== ctx.manifestHashHex) { standing.append(receiptStandingPanel(unverifiedStanding('anchor-mismatch'), included.code, tr)); return; }
+        standing.append(h('p', {}, t('qv.verify.running')));
+        let lastYield = 0;
+        let lastStage: VerificationProgress['stage'] | undefined;
+        try {
+          const extraAuthorKeys = parseAuthorKeyInput(keyText);
+          const text = await L.api.receiptStatusBundle(L.apiId, scope.signal);
           if (!current()) return;
-          out.append(codeEl(ballotCodeDisplay(hexToBytes(result.code, 32), true)), h('p', {}, t('qv.receipt.included', { seq: result.seq, size: result.treeSize })), h('p', {}, t('qv.receipt.consistent')));
-        } else out.append(h('p', {}, t(result.state === 'invalid-code' ? 'qv.receipt.invalidCode' : result.state === 'ambiguous' ? 'qv.receipt.ambiguousCode' : 'qv.receipt.notFound')));
+          const result = await verifyReceiptStanding(text, { manifestHash, seq: included.seq, code: included.code, head: included.head, extraAuthorKeys,
+            cooperative: { signal: scope.signal, checkpoint: async (p) => {
+              if (!current()) { scope.abort(); return; }
+              progress.max = Math.max(1, p.total); progress.value = p.completed; progress.setAttribute('data-stage', p.stage);
+              detail.textContent = t('qv.verify.progress', { done: p.completed, total: p.total });
+              const newStage = lastStage !== p.stage; lastStage = p.stage;
+              if (newStage || performance.now() - lastYield >= 16) { await new Promise<void>((resolve) => setTimeout(resolve, 0)); lastYield = performance.now(); }
+            } } });
+          if (!current()) return;
+          clear(standing); standing.append(receiptStandingPanel(result, included.code, tr));
+        } catch {
+          if (!current()) return;
+          clear(standing); standing.append(receiptStandingPanel(unverifiedStanding('unavailable'), included.code, tr));
+        }
       } catch (error) {
         if (!current()) return;
-        clear(out);
-        out.append(error instanceof BoardIntegrityError ? errorBox(error.code) : errorFor(error));
-        say.say(t('qv.err.E-BOARD-INCL-FAIL.title'), true);
+        clear(out); out.append(error instanceof BoardIntegrityError ? errorBox(error.code) : errorFor(error));
+        say.say(t('qv.err.E-BOARD-INCL-FAIL.title'), true, current);
+      } finally {
+        if (current()) { active = undefined; busy(false); detail.textContent = ''; }
       }
-    }));
-    checkButtons.push(checkCode as HTMLButtonElement);
-    const check = async (seq: number, leafB64u: string, code: string, current: () => boolean): Promise<boolean> => {
-      try {
-        const leaf = b64uDecode(leafB64u);
-        if (!leaf) throw new Error('bad receipt');
-        const r = await checkBallotCodeEntry({ api: L.api, apiElectionId: L.apiId, ctx: ctx.params.ctx, logPk: L.logPk, expectedLeaf: leaf, seq, code, pinned: await L.storage.getHead(L.apiId), expectedOrigin: L.origin });
-        if (!current()) return false;
-        clear(out);
-        if (r.state === 'included') {
-          await L.storage.putHead({ ...r.head, electionId: L.apiId });
-          if (!current()) return false;
-          out.append(codeEl(ballotCodeDisplay(hexToBytes(code, 32), true)), h('p', {}, t('qv.receipt.included', { seq: r.seq, size: r.treeSize })), h('p', {}, t('qv.receipt.consistent')));
-          return true;
-        }
-        out.append(h('p', {}, t('qv.receipt.notFound')));
-      } catch (e) {
-        if (!current()) return false;
-        clear(out);
-        out.append(e instanceof BoardIntegrityError ? errorBox(e.code) : errorFor(e, { opens: ctx.manifest.voting_open, closes: ctx.manifest.voting_close }));
-        say.say(t('qv.err.E-GEN-UNKNOWN.title'), true);
-      }
-      return false;
+    };
+    const checkCode = btn(t('qv.receipt.checkCode'), () => runCheck(async (current) => {
+      const result = await lookupBallotCode({ input: codeInput.value, api: L.api, apiElectionId: L.apiId,
+        ctx: ctx.params.ctx, logPk: L.logPk, expectedOrigin: L.origin, pinned: await L.storage.getHead(L.apiId) });
+      if (!current()) return;
+      if (result.state === 'included') return result;
+      out.append(h('p', {}, t(result.state === 'invalid-code' ? 'qv.receipt.invalidCode' : result.state === 'ambiguous' ? 'qv.receipt.ambiguousCode' : 'qv.receipt.notFound')));
+    })) as HTMLButtonElement;
+    checkButtons.push(checkCode);
+    const check = async (seq: number, leafB64u: string, code: string, current: () => boolean): Promise<Included | undefined> => {
+      const leaf = b64uDecode(leafB64u);
+      if (!leaf) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt leaf is malformed');
+      const result = await checkBallotCodeEntry({ api: L.api, apiElectionId: L.apiId, ctx: ctx.params.ctx, logPk: L.logPk, expectedLeaf: leaf, seq, code,
+        pinned: await L.storage.getHead(L.apiId), expectedOrigin: L.origin });
+      if (!current()) return;
+      if (result.state === 'included') return { ...result, code };
+      out.append(h('p', {}, t('qv.receipt.notFound')));
     };
     const binding = { election: L.apiId, manifestHash: ctx.manifestHashHex };
     const file = h('input', { type: 'file', accept: 'application/json', onchange: async (e: Event) => {
       const f = (e.target as HTMLInputElement).files?.[0];
-      invalidate();
-      if (!f) return;
+      invalidate(); if (!f) return;
       await runCheck(async (current) => {
-        try {
-          if (f.size > MAX_RECEIPT_FILE_BYTES) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is too large');
-          const p = parseReceiptFile(await f.text(), binding);
-          if (!current()) return;
-          if (!p) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is malformed or belongs to another election');
-          const included = await check(p.seq, p.leaf_hash, p.ballot_code, current);
-          if (included && current()) addStanding(p.seq, p.ballot_code);
-        } catch (error) {
-          if (!current()) return;
-          clear(out);
-          out.append(error instanceof BoardIntegrityError ? errorBox(error.code) : errorFor(error));
-          say.say(t('qv.err.E-BOARD-INCL-FAIL.title'), true);
-        }
+        if (f.size > MAX_RECEIPT_FILE_BYTES) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is too large');
+        const receipt = parseReceiptFile(await f.text(), binding);
+        if (!current()) return;
+        if (!receipt) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'receipt file is malformed or belongs to another election');
+        return check(receipt.seq, receipt.leaf_hash, receipt.ballot_code, current);
       });
-    } });
-    // Standing: is this receipt still the voter's newest ballot? Derived from the public log we hold; refreshed in place on live updates.
-    const standings: { seq: number; code: string; el: HTMLElement }[] = [];
-    const standingText = (seq: number, code: string): { text: string; kind: string; note?: string } => {
-      const cur = L.ctx;
-      if (cur === undefined) return { text: t('qv.receipt.standing.unknown'), kind: 'unknown' };
-      L.ballots ??= new BallotIndex(cur.params.ctx);
-      L.ballots.update(L.records);
-      const st = L.ballots.standing(seq, code, { openSeq: cur.openSeq, closeSeq: cur.closeSeq, maxPerVoter: cur.manifest.ballots.max_per_voter });
-      switch (st.state) {
-        case 'current': return { text: t('qv.receipt.standing.current'), kind: 'current' };
-        case 'superseded': return { text: t('qv.receipt.standing.superseded', { seq: st.bySeq }), kind: 'superseded', note: t('qv.receipt.standing.supersededNote') };
-        case 'mismatch': return { text: t('qv.receipt.standing.mismatch'), kind: 'mismatch' };
-        default: return { text: t('qv.receipt.standing.unknown'), kind: 'unknown' };
-      }
-    };
-    const paintStanding = (x: { seq: number; code: string; el: HTMLElement }): void => {
-      const r = standingText(x.seq, x.code);
-      clear(x.el);
-      x.el.className = `qv-standing ${r.kind}`;
-      add(x.el, [h('strong', {}, t('qv.receipt.standing.title'), ': '), r.text, r.note ? h('span', { class: 'hint' }, ' ', r.note) : null]);
-    };
-    const addStanding = (seq: number, code: string): void => {
-      const el = h('p', {});
-      const x = { seq, code, el };
-      standings.push(x);
-      paintStanding(x);
-      standingBox.append(el);
-    };
-    const standingBox = h('div', {});
-    const items = stored.map((s) => {
-      const f = parseReceiptFile(s.json, binding);
-      const el = h('span', {});
-      if (f) standings.push({ seq: f.seq, code: s.code, el });
-      const button = btn(t('qv.receipt.check'), () => runCheck(async (current) => { if (f) await check(f.seq, f.leaf_hash, f.ballot_code, current); }));
-      checkButtons.push(button as HTMLButtonElement);
-      return h('li', {}, codeEl(ballotCodeDisplay(hexToBytes(s.code, 32), true)), ' ', button, h('div', {}, el));
+    } }) as HTMLInputElement;
+    const items = stored.map((saved) => {
+      const receipt = parseReceiptFile(saved.json, binding);
+      const button = btn(t('qv.receipt.check'), () => runCheck(async (current) => {
+        if (!receipt) throw new BoardIntegrityError('E-BOARD-INCL-FAIL', 'saved receipt is malformed or belongs to another election');
+        return check(receipt.seq, receipt.leaf_hash, receipt.ballot_code, current);
+      })) as HTMLButtonElement;
+      checkButtons.push(button);
+      return h('li', {}, codeEl(ballotCodeDisplay(hexToBytes(saved.code, 32), true)), ' ', button);
     });
-    for (const x of standings) paintStanding(x);
     render(t('qv.nav.receipt'), ...head, heading(t('qv.receipt.checkTitle')), h('p', {}, t('qv.receipt.proves')),
-      field(t('qv.receipt.enterCode'), codeInput), h('p', { class: 'hint' }, t('qv.receipt.codeHelp')), checkCode, field(t('qv.receipt.orFile'), file), standingBox,
-      h('h2', {}, t('qv.receipt.stored')), stored.length === 0 ? h('p', {}, t('qv.receipt.none')) : h('ul', {}, ...items), out);
-    repaint = () => { for (const x of standings) paintStanding(x); };
-    void ctx;
+      field(t('qv.receipt.enterCode'), codeInput), h('p', { class: 'hint' }, t('qv.receipt.codeHelp')),
+      field(t('qv.receipt.standing.pin'), pin, t('qv.receipt.standing.pinHint')), field(t('qv.verify.authorKeys'), keys, t('qv.verify.authorKeysHint')),
+      checkCode, field(t('qv.receipt.orFile'), file),
+      h('h2', {}, t('qv.receipt.stored')), stored.length === 0 ? h('p', {}, t('qv.receipt.none')) : h('ul', {}, ...items), cancel, progress, detail, out);
   }
 
   function authorKeyInput(): HTMLTextAreaElement {

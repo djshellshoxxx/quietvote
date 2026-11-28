@@ -9,8 +9,10 @@ import { logOrigin, verifySig, type Sig } from '@quietvote/protocol';
 import { trusteeMain } from '../src/index.ts';
 import { Ceremony, electionFixture, mkDeps, PASS } from './helpers/harness.ts';
 
-test('board export signs only generated outputs for the joined election and detects stale bundles', async () => {
-  const c = new Ceremony({ n: 3, t: 2, seed: 'board-export' });
+test('board export signs only generated outputs for the joined election and detects stale bundles', async context => {
+  const c = new Ceremony({ n: 3, t: 2, seed: 'board-export',
+    nativeKeygen: { phase: 'board-export-keygen', diagnostic: message => context.diagnostic(message) },
+  });
   await c.setup();
   try {
     const t = await c.act(1, async (x) => x);
@@ -41,8 +43,10 @@ test('board export signs only generated outputs for the joined election and dete
   } finally { c.cleanup(); }
 });
 
-test('board tally export reuses a gated, ledger-backed release and preserves every proof', async () => {
-  const { c } = await electionFixture({ n: 3, t: 2, seed: 'board-tally-export' });
+test('board tally export reuses a gated, ledger-backed release and preserves every proof', async context => {
+  const { c } = await electionFixture({ n: 3, t: 2, seed: 'board-tally-export',
+    nativeKeygen: { phase: 'board-tally-export-keygen', diagnostic: message => context.diagnostic(message) },
+  });
   try {
     const t = await c.act(1, async (x) => x);
     await assert.rejects(t.exportBoardEntry('tally-share'), { code: 'OUTPUT_NOT_READY' });

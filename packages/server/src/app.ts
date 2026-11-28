@@ -10,6 +10,7 @@ import { audienceOf, authenticate, keyIdOf } from './auth.ts';
 import { resolveConfig, type ServerConfig, type ServerOptions } from './config.ts';
 import { ControlDb } from './controldb.ts';
 import { lockDataDirectory } from './data-lock.ts';
+import { preflightOpenMigrations } from './migration-policy.ts';
 import { SERVER_VERSION, type ElectionRuntime } from './election.ts';
 import type { Env } from './env.ts';
 import { electionBundle, logBundle, qvb } from './export.ts';
@@ -66,7 +67,8 @@ export function buildServer(opts: ServerOptions): QuietVoteServer {
   let control: ControlDb | undefined;
   const cleanup: (() => void | Promise<void>)[] = [];
   try {
-    control = new ControlDb(cfg.dataDir, cfg.now, SERVER_VERSION);
+    preflightOpenMigrations(cfg.dataDir, cfg.forceMigrateOpen);
+    control = new ControlDb(cfg.dataDir, cfg.now, SERVER_VERSION, cfg.forceMigrateOpen);
     return assembleServer(cfg, control, lock.release, cleanup);
   } catch (error) {
     const finish = (): void => { try { control?.close(); } finally { lock.release(); } };
@@ -130,7 +132,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
   };
   /** QV-28 §11.1 lazy purge: invite P2 data past its retention is removed whenever the invites of an election are touched. */
   const purgeInvites = (rt: ElectionRuntime): void => {
-    const n = rt.edb.purgeInviteData(nowMs(), cfg.inviteRetentionMs);
+    const n = rt.maintain('retention', (db) => db.purgeInviteData(nowMs(), cfg.inviteRetentionMs));
     if (n > 0) control.audit('system', 'invite.purge', rt.id, { rows: n });
   };
   const orgOf = (c: Ctx, admin?: 'read'): string => {
@@ -621,7 +623,7 @@ function assembleServer(cfg: ServerConfig, control: ControlDb, releaseLock: () =
       const rt = await orgElection(c);
       const inv = rt.edb.inviteById(c.params['invite']!);
       if (!inv) throw notFound('invite');
-      if (inv.state === 'issued' || inv.state === 'sent') rt.edb.setInviteState(inv.invite_id, 'revoked', Math.floor(nowMs() / 3_600_000) * 3_600_000);
+      if (inv.state === 'issued' || inv.state === 'sent') rt.maintain('management', (db) => db.setInviteState(inv.invite_id, 'revoked', Math.floor(nowMs() / 3_600_000) * 3_600_000));
       purgeInvites(rt);
       return { status: 204 };
     },

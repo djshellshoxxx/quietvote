@@ -175,7 +175,7 @@ export class ElectionPool {
       if (!/^[0-9a-f]{32}$/.test(reg.election_id) || reg.db_path !== join('elections', reg.election_id.slice(0, 2), `${reg.election_id}.sqlite`)) throw new Error('invalid election path');
       const path = join(this.env.cfg.dataDir, reg.db_path);
       if (!lstatSync(path).isFile() || realpathSync.native(path) !== path) throw new Error('election path must be a canonical regular file');
-      db = new ElectionDb(path, SERVER_VERSION);
+      db = ElectionDb.openExisting(path, SERVER_VERSION, reg.imported === 1 || reg.state === 'ARCHIVED' || reg.state === 'IMPORTED');
       const row = db.row();
       if (row.election_id !== reg.election_id || row.org_id !== reg.org_id) throw new Error('election registry mismatch');
       visit(db);

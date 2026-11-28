@@ -128,7 +128,7 @@ export class WebhookService {
       }
       const path = join(this.env.cfg.dataDir, reg.db_path);
       if (!lstatSync(path).isFile() || realpathSync.native(path) !== path) throw new Error('election path must be a canonical regular file');
-      db = new ElectionDb(path, SERVER_VERSION);
+      db = new ElectionDb(path, SERVER_VERSION, { readOnly: true });
       const row = db.row();
       if (row.election_id !== reg.election_id || row.org_id !== reg.org_id) throw new Error('election registry mismatch');
       if (!anchoredEvents(this.env.control, db)) return false;

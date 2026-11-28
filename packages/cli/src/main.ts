@@ -22,6 +22,7 @@ import { cmdOnlineElectionSpoilPost } from './cmd-online-spoil.ts';
 import { cmdElectionCheckTally } from './cmd-tally-check.ts';
 import { cmdHealth } from './cmd-health.ts';
 import { cmdTrustee } from './cmd-trustee.ts';
+import { cmdMigrateArchive } from './cmd-migrate-archive.ts';
 
 export const VERSION = '0.1.0';
 
@@ -33,6 +34,8 @@ usage:
                                    check service health, database readiness and instance metadata (availability only)
   qv trustee <args...>              run the separate offline qv-trustee command from PATH;
                                    native input/output and trustee exit codes are preserved (help: qv trustee help)
+  qv migrate-archive <args...>      run the separate offline qv-migrate-archive command from PATH;
+                                   stop the server first (help: qv migrate-archive --help)
   qv verify <bundle> [--json] [--skip-selftest] [--manifest-hash <hex>] [--content-only] [--extra-author-key <hex>]...
                                    verify an election bundle (V1..V14); runs the canary self-test first
                                    extra author keys: at most 32 independently obtained public signing keys
@@ -161,6 +164,7 @@ const TABLE: Record<string, Cmd | Record<string, Cmd>> = {
   selftest: cmdSelftest,
   keygen: cmdKeygen,
   trustee: cmdTrustee,
+  'migrate-archive': cmdMigrateArchive,
   ballot: { encrypt: cmdBallotEncrypt, audit: cmdBallotAudit, status: cmdBallotStatus },
   board: { verify: cmdBoardVerify },
   election: { 'check-tally': cmdElectionCheckTally, 'draft-record': cmdElectionDraftRecord, 'sign-record': cmdElectionSignRecord, 'export-entry': cmdElectionExportEntry, prepare: cmdElectionPrepare, inspect: cmdElectionInspect, 'spoil-collect': cmdElectionSpoilCollect },
@@ -184,7 +188,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
     const entry = Object.hasOwn(TABLE, a) ? TABLE[a] : undefined;
     if (entry === undefined) throw new UsageError(`unknown command "${a}"`);
     if (typeof entry === 'function') {
-      if (a !== 'trustee' && rest.includes('--help')) {
+      if (a !== 'trustee' && a !== 'migrate-archive' && rest.includes('--help')) {
         io.out(HELP);
         return EXIT.ok;
       }

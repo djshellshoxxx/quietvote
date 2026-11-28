@@ -1,12 +1,23 @@
 # Final verification receipt
 
 Status: **local implementation evidence and review scopes recorded below**.
-The current published head, exact local/remote tree binding and hosted results
-are maintained in [PR #71](https://github.com/djshellshoxxx/quietvote/pull/71)
-and [its checks](https://github.com/djshellshoxxx/quietvote/pull/71/checks).
+The latest continuation receipt is [R27](CONTINUATION_R27_20261127.md), on
+[`codex/quietvote-lifecycle-storage-20261127`](https://github.com/djshellshoxxx/quietvote/tree/codex/quietvote-lifecycle-storage-20261127),
+stacked on [PR #77](https://github.com/djshellshoxxx/quietvote/pull/77).
+Exact local/remote tree binding and source-specific hosted results are recorded
+in each continuation's draft PR. [PR #71](https://github.com/djshellshoxxx/quietvote/pull/71)
+is the consolidated ancestor, not a receipt for later increments.
 Each table below is a source-bound receipt. A pending native/hosted gate at a
 historical checkpoint is not a claim about a later completed run, and an older
 pass is not assigned to later source. Formal promotion gates remain separate.
+
+R27's complete local server suite passes 634 tests with one existing platform
+skip; its web suite passes 510/510. All sixteen required browser journeys pass
+in one combined execution, with a separate main-journey rerun after a test-only
+typing correction. Root and explicit entrypoint TypeScript, nineteen installed
+CLI adapter cases, 71 tooling tests and 21 workflow/runner tests pass. The report
+retains failed earlier attempts, source/build limits, exact snapshot standing
+refusals, native timeout diagnostics and the unmerged/human-review boundary.
 
 The [R20–R21 native diagnostic continuation](CONTINUATION_R20_R21_20261120.md)
 records six further completed workers, four passing outer wrappers containing

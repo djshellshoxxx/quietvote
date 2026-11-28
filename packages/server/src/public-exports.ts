@@ -55,7 +55,7 @@ export function createPublicExport(rt: ElectionRuntime, jobId: string): PublicEx
   if (typeof source !== 'number' || source > MAX_PUBLIC_EXPORT_BYTES / 4) {
     throw new ApiError(413, 'EXPORT_TOO_LARGE', 'the recorded snapshot exceeds the bounded public-export source size');
   }
-  return rt.edb.tx(() => {
+  return rt.maintain('export', (db) => db.tx(() => {
     const created = rt.env.nowMs(), root = rt.log.root(), size = rt.log.size;
     const bytes = qvb(rt);
     if (bytes.length > MAX_PUBLIC_EXPORT_BYTES) throw new ApiError(413, 'EXPORT_TOO_LARGE', 'the recorded public export exceeds 128 MiB');
@@ -63,18 +63,18 @@ export function createPublicExport(rt: ElectionRuntime, jobId: string): PublicEx
       export_id: randomId(), job_id: jobId, kind: 'public', tree_size: size, root_hash: root, sha256: sha256(bytes),
       byte_length: bytes.length, created_at: created, expires_at: created + EXPORT_DOWNLOAD_MS, acknowledged_at: null, notice_at: null,
     };
-    const candidates = rt.edb.publicExports().filter((r) => r.tree_size === size && ctEq(new Uint8Array(r.root_hash), root) &&
+    const candidates = db.publicExports().filter((r) => r.tree_size === size && ctEq(new Uint8Array(r.root_hash), root) &&
       (r.acknowledged_at !== null || r.notice_at !== null)).sort((a, b) =>
       Number(b.acknowledged_at !== null) - Number(a.acknowledged_at !== null) || (a.notice_at ?? a.created_at) - (b.notice_at ?? b.created_at));
     let keep: string | undefined;
     for (const candidate of candidates) {
-      try { checkedPublicExport(rt.edb, candidate); keep = candidate.export_id; break; }
+      try { checkedPublicExport(db, candidate); keep = candidate.export_id; break; }
       catch (error) { if (!(error instanceof ApiError) || error.code !== 'STATE_CONFLICT') throw error; }
     }
-    rt.edb.prunePublicExports(created, keep);
-    rt.edb.addPublicExport(row, bytes);
+    db.prunePublicExports(created, keep);
+    db.addPublicExport(row, bytes);
     return row;
-  });
+  }));
 }
 
 /** A complete election-owned snapshot is the durable completion receipt for its control-database job. */

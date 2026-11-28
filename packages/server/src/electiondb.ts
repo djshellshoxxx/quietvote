@@ -1,5 +1,5 @@
 // <election_id>.sqlite (QV-28 §8.2) and the SQLite BoardStore adapter (QV-ADR-014: all board access goes through BoardStore).
-import type { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync } from 'node:sqlite';
 import { decodeHeader, toHex, type BoardStore, type StoredCheckpoint, type StoredEntry } from '@quietvote/board';
 import { all, closeDb, get, openDb, run, tx, type Migration } from './db.ts';
 import { b64u } from '@quietvote/board';
@@ -9,7 +9,7 @@ import { ApiError } from './problem.ts';
 import type { OperationReceipt } from './operation-receipts.ts';
 import { MAX_PUBLIC_EXPORT_BYTES, MAX_PUBLIC_EXPORTS, type PublicExportRow } from './export-model.ts';
 
-const MIGRATIONS: Migration[] = [
+export const MIGRATIONS: Migration[] = [
   {
     version: 1,
     name: 'initial',
@@ -285,10 +285,9 @@ interface EntryRow {
 const u8 = (x: Uint8Array): Uint8Array => new Uint8Array(x);
 
 export class SqliteBoardStore implements BoardStore {
-  private readonly db: DatabaseSync;
-  constructor(db: DatabaseSync) {
-    this.db = db;
-  }
+  private readonly connection: () => DatabaseSync;
+  constructor(db: DatabaseSync | (() => DatabaseSync)) { this.connection = typeof db === 'function' ? db : () => db; }
+  private get db(): DatabaseSync { return this.connection(); }
   size(): number {
     return get<{ n: number }>(this.db, 'SELECT COALESCE(MAX(seq)+1,0) AS n FROM log_entry')!.n;
   }
@@ -342,21 +341,84 @@ export class SqliteBoardStore implements BoardStore {
   }
 }
 
+export interface ElectionDbOptions { readOnly?: boolean; allowMigrations?: boolean; forceMigrateOpen?: boolean }
+export type ElectionMaintenance = 'recovery' | 'export' | 'checkpoint' | 'integrity' | 'retention' | 'management';
+const MAINTENANCE = new Set<ElectionMaintenance>(['recovery', 'export', 'checkpoint', 'integrity', 'retention', 'management']);
+
 export class ElectionDb {
-  readonly db: DatabaseSync;
+  private connection: DatabaseSync;
   readonly store: SqliteBoardStore;
   readonly path: string;
+  private readonly appVersion: string;
+  private reader: boolean;
+  private maintenance: ElectionDb | undefined;
+  private transactionDepth = 0;
   private pinnedCache: { encoded: string; value: PinnedRoll } | undefined;
-  constructor(path: string, appVersion: string, readOnly = false) {
+  constructor(path: string, appVersion: string, options: boolean | ElectionDbOptions = false) {
+    const o = typeof options === 'boolean' ? { readOnly: options } : options;
     this.path = path;
-    this.db = openDb({ path, applicationId: 0x51564442, synchronous: 'FULL', migrations: MIGRATIONS, appVersion, readOnly });
-    this.store = new SqliteBoardStore(this.db);
+    this.appVersion = appVersion;
+    this.reader = o.readOnly === true;
+    this.connection = openDb({ path, applicationId: 0x51564442, synchronous: 'FULL', migrations: MIGRATIONS, appVersion, ...o });
+    this.store = new SqliteBoardStore(() => this.connection);
   }
+  /**
+   * A minimal read-only probe prevents a stale registry from silently migrating a terminal database.
+   * State/imported exist in the initial schema; the normal opener then validates identity and all checksums.
+   */
+  static openExisting(path: string, appVersion: string, preferReadOnly = false,
+    options: Pick<ElectionDbOptions, 'forceMigrateOpen'> = {}): ElectionDb {
+    const probe = new DatabaseSync(path, { readOnly: true, allowExtension: false });
+    let terminal: boolean;
+    try {
+      probe.exec('PRAGMA trusted_schema=OFF');
+      const row = get<{ state: string; imported: number }>(probe, 'SELECT state,imported FROM election');
+      if (!row) throw new Error('election row missing');
+      terminal = row.imported === 1 || row.state === 'ARCHIVED' || row.state === 'IMPORTED';
+    } finally { probe.close(); }
+    return new ElectionDb(path, appVersion, { ...options, readOnly: preferReadOnly || terminal });
+  }
+  get db(): DatabaseSync { return this.connection; }
+  get readOnly(): boolean { return this.reader; }
   close(): void {
+    if (this.maintenance) throw new Error('cannot close a reader during maintenance');
     closeDb(this.db);
   }
   tx<T>(fn: () => T): T {
-    return tx(this.db, fn);
+    this.transactionDepth++;
+    try { return tx(this.db, fn); }
+    finally { this.transactionDepth--; }
+  }
+  /** One-way transition after archive completion. Existing BoardStore users keep the same adapter. */
+  makeReadOnly(): void {
+    if (this.reader) return;
+    if (this.transactionDepth !== 0 || this.maintenance) throw new Error('cannot retire a writer inside a transaction');
+    const next = openDb({ path: this.path, applicationId: 0x51564442, synchronous: 'FULL', migrations: MIGRATIONS,
+      appVersion: this.appVersion, readOnly: true, allowMigrations: false });
+    try { this.connection.close(); }
+    catch (error) { next.close(); throw error; }
+    this.connection = next;
+    this.reader = true;
+  }
+  /**
+   * Explicit synchronous maintenance; the normal reader is never promoted or replaced.
+   * Callers retain their existing runtime lock/transaction and must not let the writer escape.
+   */
+  withMaintenance<T>(reason: ElectionMaintenance, fn: (writer: ElectionDb) => T): T {
+    if (!MAINTENANCE.has(reason)) throw new Error('unknown election maintenance operation');
+    if (!this.db.isOpen) throw new Error('election database is closed');
+    const invoke = (writer: ElectionDb): T => {
+      const result = fn(writer);
+      if (result !== null && (typeof result === 'object' || typeof result === 'function') &&
+          typeof (result as { then?: unknown }).then === 'function') throw new Error('election maintenance callback must be synchronous');
+      return result;
+    };
+    if (!this.reader) return invoke(this);
+    if (this.maintenance) return invoke(this.maintenance);
+    const writer = new ElectionDb(this.path, this.appVersion, { allowMigrations: false });
+    this.maintenance = writer;
+    try { return invoke(writer); }
+    finally { this.maintenance = undefined; writer.close(); }
   }
 
   init(row: Omit<ElectionRow, 'quarantine' | 'draft' | 'imported' | 'registration_scheme'>): void {
@@ -532,8 +594,10 @@ export class ElectionDb {
     return get<OperationReceipt>(this.db, 'SELECT * FROM operation_receipt WHERE principal=? AND idem_key=?', principal, key);
   }
   operationReceipts(now: number): OperationReceipt[] {
+    return all<OperationReceipt>(this.db, 'SELECT * FROM operation_receipt WHERE expires_at>? ORDER BY principal,idem_key', now);
+  }
+  purgeOperationReceipts(now: number): void {
     run(this.db, 'DELETE FROM operation_receipt WHERE expires_at<=?', now);
-    return all<OperationReceipt>(this.db, 'SELECT * FROM operation_receipt ORDER BY principal,idem_key');
   }
 
   // ---- recorded exports: immutable exact bytes, separate delivery acknowledgement and deletion notice

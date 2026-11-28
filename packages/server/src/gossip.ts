@@ -124,21 +124,23 @@ export interface Judged {
  */
 export function judge(env: Env, rt: ElectionRuntime, theirs: Checkpoint, theirNote: string, source: 'inbound' | 'outbound'): Judged {
   const a = assess(rt, theirs, theirNote);
-  rt.recordExternalAnchor(theirNote);
-  const now = env.nowMs();
-  rt.edb.recordGossip(textFingerprint(theirs), theirs.size, theirs.root, now, a.consistent, env.cfg.gossipSeenMax, SEEN_RETENTION_MS);
-  if (a.evidence === undefined) return { assessment: a, recorded: false };
-  const fp = new Uint8Array(createHash('sha256').update(a.evidence.kind).update('\0').update(a.evidence.notes.map((n) => parseCheckpoint(n)).map((p) => (p.ok ? p.value.text : '')).join('\0')).digest());
-  const size = Math.max(theirs.size, rt.log.size);
-  const recorded = rt.edb.addEvidence(fp, a.evidence.kind, size, source, now, JSON.stringify(a.evidence), MAX_EVIDENCE_ROWS);
-  let incident: string | undefined;
-  if (!rt.imported) {
-    incident = rt.markQuarantine(a.evidence.kind === 'rollback' ? 'ROLLBACK_SUSPECTED' : 'EQUIVOCATION', a.evidence.kind === 'rollback' ? theirs.size : 0, a.evidence.kind === 'rollback' ? 'rollback' : 'equivocation');
-  } else if (recorded) {
-    rt.raiseAlert(a.evidence.kind === 'rollback' ? 'rollback' : 'equivocation', 'GOSSIP_EVIDENCE');
-  }
-  env.logger.event('gossip_evidence', { election_id: rt.id, note: `${a.evidence.kind}/${source}`, outcome: 'rejected' });
-  return incident === undefined ? { assessment: a, recorded } : { assessment: a, recorded, incident };
+  return rt.maintain('integrity', (db) => {
+    rt.recordExternalAnchor(theirNote);
+    const now = env.nowMs();
+    db.recordGossip(textFingerprint(theirs), theirs.size, theirs.root, now, a.consistent, env.cfg.gossipSeenMax, SEEN_RETENTION_MS);
+    if (a.evidence === undefined) return { assessment: a, recorded: false };
+    const fp = new Uint8Array(createHash('sha256').update(a.evidence.kind).update('\0').update(a.evidence.notes.map((n) => parseCheckpoint(n)).map((p) => (p.ok ? p.value.text : '')).join('\0')).digest());
+    const size = Math.max(theirs.size, rt.log.size);
+    const recorded = db.addEvidence(fp, a.evidence.kind, size, source, now, JSON.stringify(a.evidence), MAX_EVIDENCE_ROWS);
+    let incident: string | undefined;
+    if (!rt.imported) {
+      incident = rt.markQuarantine(a.evidence.kind === 'rollback' ? 'ROLLBACK_SUSPECTED' : 'EQUIVOCATION', a.evidence.kind === 'rollback' ? theirs.size : 0, a.evidence.kind === 'rollback' ? 'rollback' : 'equivocation');
+    } else if (recorded) {
+      rt.raiseAlert(a.evidence.kind === 'rollback' ? 'rollback' : 'equivocation', 'GOSSIP_EVIDENCE');
+    }
+    env.logger.event('gossip_evidence', { election_id: rt.id, note: `${a.evidence.kind}/${source}`, outcome: 'rejected' });
+    return incident === undefined ? { assessment: a, recorded } : { assessment: a, recorded, incident };
+  });
 }
 
 /** Body of the 200 answer (QV-09: `{latest_note, consistent, proof?}` plus additive `relation`, `tree_size`). */

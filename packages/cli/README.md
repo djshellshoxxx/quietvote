@@ -1,7 +1,7 @@
 # @quietvote/cli
 
 `qv`: command line over `crypto`, `protocol`, `board`, `verifier` and shared board authentication framing. Run `node packages/cli/bin/qv.ts --help`.
-Commands: `health`, `trustee`, `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit|status`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|receipt-check|election-tally-draft|election-export`, and the recorded-export management commands below.
+Commands: `health`, `trustee`, `migrate-archive`, `verify`, `verify-receipt`, `selftest`, `keygen`, `ballot encrypt|audit|status`, `board verify`, `election inspect`, `election prepare`, `election check-tally`, `election sign-record|export-entry`, `election spoil-collect`, `vectors check`, `online instance|admin-status|backup-create|org-create|org-inspect|election-create|election-pinned-roll|election-inspect|election-draft|election-submit|receipt-check|election-tally-draft|election-export`, and the recorded-export management commands below.
 
 Experimental signed-rule workflows are available as `governance prepare`,
 `governance sign`, `governance export` and `governance verify`. They require
@@ -58,6 +58,39 @@ the three endpoint results. Availability and basic response shape do not prove
 API-version compatibility, election integrity, server identity, release
 authenticity or sustained uptime. Extra response fields and raw server messages
 are omitted.
+
+## Offline archive migration
+
+```sh
+qv migrate-archive --data-dir /absolute/path/data \
+  --election 0123456789abcdef0123456789abcdef --json
+qv migrate-archive --help
+```
+
+Stop every server process using that data directory first. This delegates to the
+separately installed `qv-migrate-archive` from `@quietvote/server`, using the same
+shell-free installed-command runner as `qv trustee`. Put `node_modules/.bin` on
+PATH for a workspace checkout. The CLI imports no server package, loads no KEK,
+and passes arguments, streams and the maintenance command's exit status through.
+The server command returns 0 for success/current schema, 1 for a maintenance
+failure, and 2 for invalid usage; a missing/unlaunchable delegate returns CLI exit 4.
+
+The server command upgrades one supported native `ARCHIVED` or `IMPORTED`
+database using a verified private copy and a retained original SQLite snapshot.
+It reports storage preservation and the unchanged presence/absence of independent
+recovery anchors. It does not create a protocol-signature, freshness or finality
+verdict. A failed replacement attempt can report `possibly_published`; default
+text and JSON failures identify a completed retained backup. Inspect the current
+archive before recovery or retry. Cancellation can leave a stale maintenance lock
+and staging directory; the wrapper's existing bounded signal forwarding cannot
+promise cleanup after forced termination.
+
+POSIX uses the installed executable's real path. Windows accepts a native
+`qv-migrate-archive.exe` or the recognized standard npm wrapper only when its exact
+target matches `@quietvote/server`'s declared binary. Custom wrappers refuse.
+PATH directories remain trusted executable locations. Windows replacement,
+directory durability and interactive termination need native qualification.
+See the [server migration and recovery guide](../server/README.md#explicit-archive-schema-migration).
 
 ## Offline trustee delegation
 
